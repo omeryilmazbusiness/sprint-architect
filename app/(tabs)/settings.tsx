@@ -197,7 +197,16 @@ export default function SettingsScreen() {
           {user?.role === "ADMIN" && (
             <SettingRow icon="people-outline" label="User Management" colors={colors} accent={colors.primary} />
           )}
-          <SettingRow icon="document-text-outline" label="Invoices" value="Monthly" colors={colors} accent={colors.primary} />
+          {(user?.role === "MANAGER" || user?.role === "ADMIN") && (
+            <SettingRow 
+              icon="document-text-outline" 
+              label="Invoices" 
+              value="Monthly" 
+              colors={colors} 
+              accent={colors.primary} 
+              onPress={() => router.push("/(manager)/invoices")}
+            />
+          )}
           <SettingRow icon="shield-checkmark-outline" label="Roles & Permissions" value={user?.role} colors={colors} accent={colors.primary} last />
         </View>
 

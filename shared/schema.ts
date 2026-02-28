@@ -8,6 +8,7 @@ import {
   boolean,
   integer,
   doublePrecision,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -49,12 +50,20 @@ export const documentStatusEnum = pgEnum("document_status", [
   "REJECTED",
 ]);
 
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "DRAFT",
+  "ISSUED",
+  "PAID",
+]);
+
 export const clinics = pgTable("clinics", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   status: clinicStatusEnum("status").notNull().default("ACTIVE"),
+  billingUnitPrice: doublePrecision("billing_unit_price"),
+  currency: text("currency").notNull().default("EUR"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -206,8 +215,63 @@ export const patientDocuments = pgTable("patient_documents", {
     .references(() => documentTypes.id),
   status: documentStatusEnum("status").notNull().default("ASSIGNED"),
   fileUrl: text("file_url"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  patientId: varchar("patient_id").references(() => patients.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const devices = pgTable("devices", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  patientId: varchar("patient_id")
+    .notNull()
+    .references(() => patients.id),
+  deviceId: text("device_id").notNull(),
+  boundAt: timestamp("bound_at").notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+});
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  clinicId: varchar("clinic_id")
+    .notNull()
+    .references(() => clinics.id),
+  period: text("period").notNull(),
+  patientCount: integer("patient_count").notNull().default(0),
+  unitPrice: doublePrecision("unit_price").notNull().default(0),
+  currency: text("currency").notNull().default("EUR"),
+  total: doublePrecision("total").notNull().default(0),
+  status: invoiceStatusEnum("status").notNull().default("DRAFT"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  clinicId: varchar("clinic_id"),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(),
+  resourceType: text("resource_type"),
+  resourceId: text("resource_id"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertClinicSchema = createInsertSchema(clinics).pick({
@@ -234,11 +298,16 @@ export type PatientPlan = typeof patientPlans.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type DocumentType = typeof documentTypes.$inferSelect;
 export type PatientDocument = typeof patientDocuments.$inferSelect;
+export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type Device = typeof devices.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 export const patientsRelations = relations(patients, ({ one, many }) => ({
   plan: one(patientPlans, { fields: [patients.id], references: [patientPlans.patientId] }),
   appointments: many(appointments),
   documents: many(patientDocuments),
+  devices: many(devices),
 }));
 
 export const patientPlansRelations = relations(patientPlans, ({ one }) => ({
@@ -272,4 +341,21 @@ export const transportsRelations = relations(transports, ({ many }) => ({
 
 export const documentTypesRelations = relations(documentTypes, ({ many }) => ({
   patientDocuments: many(patientDocuments),
+}));
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, { fields: [refreshTokens.userId], references: [users.id] }),
+  patient: one(patients, { fields: [refreshTokens.patientId], references: [patients.id] }),
+}));
+
+export const devicesRelations = relations(devices, ({ one }) => ({
+  patient: one(patients, { fields: [devices.patientId], references: [patients.id] }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  clinic: one(clinics, { fields: [invoices.clinicId], references: [clinics.id] }),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  clinic: one(clinics, { fields: [users.clinicId], references: [clinics.id] }),
 }));

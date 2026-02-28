@@ -9,8 +9,10 @@ import {
   patientPlans,
   appointments,
   patientDocuments,
+  users,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { hashPassword } from "./auth/password";
 
 const CLINIC_ID = "clinic-demo-001";
 
@@ -25,6 +27,30 @@ export async function seedDatabase() {
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
     })
     .onConflictDoNothing();
+
+  // Seed Users
+  const adminPasswordHash = await hashPassword("Admin123!");
+  const managerPasswordHash = await hashPassword("Manager123!");
+
+  await db.insert(users).values([
+    {
+      id: "user-admin-001",
+      email: "admin@demo.com",
+      passwordHash: adminPasswordHash,
+      role: "ADMIN",
+      clinicId: null,
+      status: "ACTIVE",
+    },
+    {
+      id: "user-manager-001",
+      email: "manager@demo.com",
+      passwordHash: managerPasswordHash,
+      role: "MANAGER",
+      clinicId: CLINIC_ID,
+      status: "ACTIVE",
+    }
+  ]).onConflictDoNothing();
+  console.log("[seed] Users seeded (admin, manager)");
 
   const [doc1, doc2, doc3] = await Promise.all([
     db.insert(doctors).values({

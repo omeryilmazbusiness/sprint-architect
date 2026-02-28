@@ -4,12 +4,12 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprint 4 complete):** Fully functional app with real PostgreSQL persistence, complete manager CRUD workflows, patient detail screens, resource management (doctors/hotels/transports), real-time dashboard metrics, and a dedicated patient dashboard. All screens are connected to live APIs.
+**Current state (Sprint 5 complete):** Production-critical features added — PDF document upload/download, DB-persisted auth tokens/device bindings, invoicing MVP, rate limiting, and audit logging. All screens connected to live APIs.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
-- **Staff login** uses email + password → JWT access + refresh tokens.
-- **Patient login** uses a `patientKey` + `deviceId` with single-device binding enforcement.
+- **Staff login** uses email + password → JWT access + refresh tokens (now DB-persisted).
+- **Patient login** uses a `patientKey` + `deviceId` with single-device binding enforcement (now DB-persisted).
 - **Patient Plan** = treatment plan per patient (assigned doctor, hotel, transport, documents).
 
 ---
@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
   - `app/index.tsx` → redirects based on auth state + role
   - `app/(auth)/login.tsx` → staff and patient login
   - `app/(tabs)/` → manager/admin tabs: Dashboard, Patients, Operations, Settings
-  - `app/(manager)/` → stack screens: patient detail, doctors, hotels, transports
+  - `app/(manager)/` → stack screens: patient detail, doctors, hotels, transports, invoices
   - `app/(patient)/` → patient dashboard (role-gated redirect)
 - **State management:** React Query for server state; React Context (`AuthContext`) for auth.
 - **Auth tokens** stored in `AsyncStorage`, injected via query client.
@@ -55,35 +55,46 @@ Preferred communication style: Simple, everyday language.
   - `server/index.ts` → bootstrap, CORS, static file serving, DB seed
   - `server/routes.ts` → route mounting
   - `server/db.ts` → Drizzle PostgreSQL client singleton
-  - `server/auth/` → auth subsystem (JWT, bcrypt, in-memory token store)
-  - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo)
-  - `server/api/managerRoutes.ts` → all manager CRUD + assignment endpoints
+  - `server/auth/` → auth subsystem (JWT, bcrypt)
+  - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo, authRepo, invoiceRepo)
+  - `server/api/managerRoutes.ts` → all manager CRUD + assignment endpoints + invoices
+  - `server/api/adminRoutes.ts` → admin-only endpoints (invoice generation/management)
+  - `server/api/uploadRoutes.ts` → PDF upload (POST) + download (GET) with RBAC
+  - `server/api/auditLogger.ts` → fire-and-forget audit logging to DB
   - `server/api/patientDashboardRoute.ts` → patient self-service dashboard
-  - `server/seed.ts` → seeds demo data on startup (dev only)
+  - `server/storage/` → LocalDiskStorageProvider (file storage abstraction)
+  - `server/seed.ts` → seeds demo data + admin/manager users on startup (dev only)
 - **Auth system:**
   - JWT access tokens (15 min TTL) + refresh tokens (30 days)
   - `authMiddleware`, `requireRole()`, `clinicScopeMiddleware` for RBAC + tenancy
-  - **Note:** JWT/refresh tokens and device bindings are stored in RAM (ephemeral). Server restart logs everyone out. Migration to DB storage is a future task.
+  - **Tokens and device bindings are DB-persisted** via `refreshTokens` + `devices` tables. Server restart preserves sessions.
+- **Rate limiting:** Login endpoints (10 req/15min), upload endpoint (5 req/min)
+- **File uploads:** PDF only, 10MB max, stored in `uploads/{clinicId}/{patientId}/`
 
 ### Database (Drizzle ORM + PostgreSQL)
 
 - **Schema** (`shared/schema.ts`) defines:
-  - `clinics`, `users` — auth/tenancy
+  - `clinics`, `users` — auth/tenancy (clinics now have `billingUnitPrice`, `currency`)
   - `patients`, `doctors`, `hotels`, `transports` — core resources
   - `patientPlans` — treatment plan per patient (with doctorId, hotelId, transportId)
   - `appointments` — scheduled meetings (with patient, doctor, clinic)
-  - `documentTypes`, `patientDocuments` — document tracking workflow
+  - `documentTypes`, `patientDocuments` — document tracking workflow (`fileUrl`, `rejectionReason` on patientDocuments)
+  - `refreshTokens` — DB-persisted JWT refresh tokens (hashed with SHA-256)
+  - `devices` — patient device bindings (single-device enforcement)
+  - `invoices` — billing invoices per clinic per period (DRAFT/ISSUED/PAID)
+  - `auditLogs` — immutable audit trail for key actions
 - **Migration:** `npm run db:push` (drizzle-kit push)
 
 ### API Routes
 
 All manager routes: `/v1/manager/*` (require MANAGER or ADMIN + clinic scope)
+All admin routes: `/v1/admin/*` (require ADMIN)
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET/POST | /v1/manager/patients | List / create patients |
 | GET/PUT/DELETE | /v1/manager/patients/:id | Get / update / delete patient |
-| GET | /v1/manager/metrics | Dashboard metrics (totalPatients, upcomingToday, pendingDocuments) |
+| GET | /v1/manager/metrics | Dashboard metrics |
 | GET | /v1/manager/upcoming-appointments | Upcoming appointments list |
 | GET/POST | /v1/manager/doctors | List / create doctors |
 | PUT/DELETE | /v1/manager/doctors/:id | Update / delete doctor |
@@ -97,14 +108,21 @@ All manager routes: `/v1/manager/*` (require MANAGER or ADMIN + clinic scope)
 | PUT | /v1/manager/patients/:id/assign-transport | Assign transport to patient plan |
 | POST | /v1/manager/patients/:id/assign-documents | Assign document types to patient |
 | GET | /v1/manager/patients/:id/documents | List patient documents |
-| PUT | /v1/manager/documents/:id | Update document status |
+| PUT | /v1/manager/documents/:id | Update document status (APPROVED/REJECTED + rejectionReason) |
 | GET | /v1/manager/patients/:id/appointments | List patient appointments |
 | POST | /v1/manager/appointments | Create appointment |
 | PUT/DELETE | /v1/manager/appointments/:id | Update / delete appointment |
 | GET | /v1/manager/document-types | List available document types |
+| GET | /v1/manager/invoices | List invoices for manager's clinic |
+| GET | /v1/manager/invoices/:id | Get specific invoice |
+| POST | /v1/admin/invoices/generate | Generate invoices for all clinics (?period=YYYY-MM) |
+| GET | /v1/admin/invoices | List all invoices (admin) |
+| PUT | /v1/admin/invoices/:id/status | Update invoice status |
+| POST | /v1/patient/documents/:id/upload | Upload PDF (patient auth, PDF only, 10MB, 5/min) |
+| GET | /v1/documents/:id/download | Download PDF (auth required; ?token= query param supported) |
 | GET | /v1/patient/dashboard | Patient self-service dashboard |
 | POST | /v1/patient/auth/login | Patient login (patientKey + deviceId) |
-| POST | /v1/auth/login | Staff login |
+| POST | /v1/auth/login | Staff login (rate-limited: 10/15min) |
 | POST | /v1/auth/refresh | Token refresh |
 | POST | /v1/auth/logout | Logout |
 
@@ -138,6 +156,9 @@ The transport API accepts `phone` (internally `driverPhone`), `vehicleType` + `l
 | `express` | Backend HTTP server |
 | `jsonwebtoken` + `bcryptjs` | Auth tokens + password hashing |
 | `zod` | API input validation |
+| `multer` | Multipart file upload handling |
+| `express-rate-limit` | API rate limiting |
+| `expo-document-picker` | PDF file selection on mobile |
 | `expo-linear-gradient` + `expo-blur` | UI effects |
 | `expo-glass-effect` | Native liquid glass tab bar (iOS 26+) |
 | `react-native-keyboard-controller` | Keyboard handling |

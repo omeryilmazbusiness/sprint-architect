@@ -64,7 +64,14 @@ export const documentRepo = {
     });
   },
 
-  async updateDocument(id: string, clinicId: string, data: { status?: string; notes?: string }) {
+  async findById(id: string) {
+    return db.query.patientDocuments.findFirst({
+      where: eq(patientDocuments.id, id),
+      with: { documentType: true },
+    });
+  },
+
+  async updateDocument(id: string, clinicId: string, data: { status?: "ASSIGNED" | "UPLOADED" | "APPROVED" | "REJECTED"; notes?: string; fileUrl?: string; rejectionReason?: string | null }) {
     const [updated] = await db
       .update(patientDocuments)
       .set(data)

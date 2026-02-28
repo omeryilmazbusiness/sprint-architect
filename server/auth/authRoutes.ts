@@ -6,9 +6,18 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "./jwt";
-import { authStore } from "./store";
+import { authRepo } from "../repositories/authRepo";
 import { Errors } from "./errors";
 import { authMiddleware } from "./middleware";
+import rateLimit from "express-rate-limit";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many requests, please try again later." },
+});
 
 const router = Router();
 
@@ -34,7 +43,7 @@ function issueTokens(user: { id: string; role: "ADMIN" | "MANAGER" | "PATIENT"; 
   const accessToken = signAccessToken(actor);
   const refreshToken = signRefreshToken({ sub: user.id, type: "user" });
 
-  authStore.storeRefreshToken({
+  authRepo.storeRefreshToken({
     userId: user.id,
     token: refreshToken,
     expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
@@ -43,7 +52,7 @@ function issueTokens(user: { id: string; role: "ADMIN" | "MANAGER" | "PATIENT"; 
   return { accessToken, refreshToken };
 }
 
-router.post("/login", async (req: Request, res: Response): Promise<void> => {
+router.post("/login", loginLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     const e = Errors.VALIDATION_ERROR(parsed.error.issues[0].message);
@@ -52,7 +61,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
   }
 
   const { email, password } = parsed.data;
-  const user = authStore.findUserByEmail(email);
+  const user = await authRepo.findUserByEmail(email);
 
   if (!user || user.status !== "ACTIVE") {
     const e = Errors.INVALID_CREDENTIALS();
@@ -94,17 +103,17 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
   try {
     const payload = verifyRefreshToken(refreshToken);
 
-    const stored = authStore.findActiveRefreshToken(refreshToken);
+    const stored = await authRepo.findActiveRefreshToken(refreshToken);
     if (!stored) {
       const e = Errors.TOKEN_INVALID();
       res.status(e.statusCode).json({ code: e.code, message: e.message });
       return;
     }
 
-    authStore.revokeRefreshToken(refreshToken);
+    await authRepo.revokeRefreshToken(refreshToken);
 
     if (payload.type === "user") {
-      const user = authStore.findUserById(payload.sub);
+      const user = await authRepo.findUserById(payload.sub);
       if (!user || user.status !== "ACTIVE") {
         const e = Errors.UNAUTHORIZED();
         res.status(e.statusCode).json({ code: e.code, message: e.message });
@@ -114,7 +123,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
       const tokens = issueTokens(user);
       res.json(tokens);
     } else {
-      const patient = authStore.findPatientById(payload.sub);
+      const patient = await authRepo.findPatientById(payload.sub);
       if (!patient || patient.status !== "ACTIVE") {
         const e = Errors.UNAUTHORIZED();
         res.status(e.statusCode).json({ code: e.code, message: e.message });
@@ -129,7 +138,7 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         type: "patient",
       });
       const newRefresh = signRefreshToken({ sub: patient.id, type: "patient" });
-      authStore.storeRefreshToken({
+      await authRepo.storeRefreshToken({
         patientId: patient.id,
         token: newRefresh,
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
@@ -142,13 +151,17 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post("/logout", authMiddleware, (req: Request, res: Response): void => {
+router.post("/logout", authMiddleware, async (req: Request, res: Response): Promise<void> => {
   const { refreshToken } = req.body;
   if (refreshToken) {
-    authStore.revokeRefreshToken(refreshToken);
+    await authRepo.revokeRefreshToken(refreshToken);
   }
   if (req.actor?.sub) {
-    authStore.revokeAllRefreshTokensForUser(req.actor.sub);
+    if (req.actor.type === "patient") {
+      await authRepo.revokeAllRefreshTokensForPatient(req.actor.sub);
+    } else {
+      await authRepo.revokeAllRefreshTokensForUser(req.actor.sub);
+    }
   }
   res.sendStatus(204);
 });

@@ -1,10 +1,20 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { signAccessToken, signRefreshToken } from "./jwt";
-import { authStore } from "./store";
+import { authRepo } from "../repositories/authRepo";
 import { Errors } from "./errors";
 import { authMiddleware, requireRole } from "./middleware";
 import { patientRepo } from "../repositories/patientRepo";
+import rateLimit from "express-rate-limit";
+import { auditLog } from "../api/auditLogger";
+
+const patientLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many requests, please try again later." },
+});
 
 const router = Router();
 
@@ -15,7 +25,7 @@ const patientLoginSchema = z.object({
   deviceId: z.string().min(1),
 });
 
-router.post("/auth/login", async (req: Request, res: Response): Promise<void> => {
+router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = patientLoginSchema.safeParse(req.body);
   if (!parsed.success) {
     const e = Errors.VALIDATION_ERROR(parsed.error.issues[0].message);
@@ -40,7 +50,7 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  const existingDevice = authStore.getActiveDeviceForPatient(patient.id);
+  const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);
 
   if (existingDevice) {
     if (existingDevice.deviceId !== deviceId) {
@@ -49,7 +59,7 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
       return;
     }
   } else {
-    authStore.bindDevice(patient.id, deviceId);
+    await authRepo.bindDevice(patient.id, deviceId);
   }
 
   const accessToken = signAccessToken({
@@ -61,7 +71,7 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
   });
 
   const refreshToken = signRefreshToken({ sub: patient.id, type: "patient" });
-  authStore.storeRefreshToken({
+  await authRepo.storeRefreshToken({
     patientId: patient.id,
     token: refreshToken,
     expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
@@ -84,7 +94,7 @@ router.post(
   authMiddleware,
   requireRole("ADMIN", "MANAGER"),
   async (req: Request, res: Response): Promise<void> => {
-    const { patientId } = req.params;
+    const { patientId } = req.params as { patientId: string };
 
     let patient: Awaited<ReturnType<typeof patientRepo.findById>>;
     try {
@@ -114,7 +124,16 @@ router.post(
       return;
     }
 
-    authStore.revokeDevice(patientId);
+    await authRepo.revokeDevice(patientId);
+
+    auditLog({
+      clinicId: patient.clinicId,
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "DEVICE_RESET",
+      resourceType: "patient",
+      resourceId: patientId,
+    });
 
     res.json({ message: "Device binding reset. Patient can now bind a new device." });
   },

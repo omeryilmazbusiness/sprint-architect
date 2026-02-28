@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,7 +23,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingView } from "@/components/LoadingView";
 import { ErrorView } from "@/components/ErrorView";
 import { EmptyState } from "@/components/EmptyState";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { useAuth } from "@/context/AuthContext";
 
 type TabType = "Overview" | "Assign" | "Appointments" | "Documents";
 
@@ -54,6 +56,8 @@ interface Document {
   id: string;
   documentTypeId: string;
   status: "ASSIGNED" | "UPLOADED" | "APPROVED" | "REJECTED";
+  fileUrl?: string;
+  rejectionReason?: string;
   documentType?: { name: string };
 }
 
@@ -80,11 +84,8 @@ export default function PatientDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabType>("Overview");
   const [refreshing, setRefreshing] = useState(false);
 
-  const isDark = Colors.light.text === "#F0F6FC"; // Simple check, or useColorScheme
-  const colors = Colors.light; // Default to light for now, but we'll use useColorScheme later if needed. 
-  // Wait, I should use useColorScheme properly.
+  const colors = Colors.light; 
   
-  // Re-fetch helpers
   const { data: patient, isLoading: loadingPatient, error: patientError, refetch: refetchPatient } = useQuery<Patient>({
     queryKey: [`/v1/manager/patients/${id}`],
   });
@@ -206,13 +207,13 @@ function OverviewTab({ patient, colors }: { patient: Patient; colors: any }) {
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.modalBody}>
-            <FormField label="Full Name" value={form.fullName} onChangeText={v => setForm(f => ({...f, fullName: v}))} colors={colors} />
-            <FormField label="Phone" value={form.phone || ""} onChangeText={v => setForm(f => ({...f, phone: v}))} colors={colors} keyboardType="phone-pad" />
-            <FormField label="Email" value={form.email || ""} onChangeText={v => setForm(f => ({...f, email: v}))} colors={colors} keyboardType="email-address" autoCapitalize="none" />
-            <FormField label="Nationality" value={form.nationality || ""} onChangeText={v => setForm(f => ({...f, nationality: v}))} colors={colors} />
-            <FormField label="Arrival Date (YYYY-MM-DD)" value={form.arrivalDate || ""} onChangeText={v => setForm(f => ({...f, arrivalDate: v}))} colors={colors} />
-            <FormField label="Departure Date (YYYY-MM-DD)" value={form.departureDate || ""} onChangeText={v => setForm(f => ({...f, departureDate: v}))} colors={colors} />
-            <FormField label="Notes" value={form.notes || ""} onChangeText={v => setForm(f => ({...f, notes: v}))} colors={colors} multiline />
+            <FormField label="Full Name" value={form.fullName} onChangeText={(v: string) => setForm(f => ({...f, fullName: v}))} colors={colors} />
+            <FormField label="Phone" value={form.phone || ""} onChangeText={(v: string) => setForm(f => ({...f, phone: v}))} colors={colors} keyboardType="phone-pad" />
+            <FormField label="Email" value={form.email || ""} onChangeText={(v: string) => setForm(f => ({...f, email: v}))} colors={colors} keyboardType="email-address" autoCapitalize="none" />
+            <FormField label="Nationality" value={form.nationality || ""} onChangeText={(v: string) => setForm(f => ({...f, nationality: v}))} colors={colors} />
+            <FormField label="Arrival Date (YYYY-MM-DD)" value={form.arrivalDate || ""} onChangeText={(v: string) => setForm(f => ({...f, arrivalDate: v}))} colors={colors} />
+            <FormField label="Departure Date (YYYY-MM-DD)" value={form.departureDate || ""} onChangeText={(v: string) => setForm(f => ({...f, departureDate: v}))} colors={colors} />
+            <FormField label="Notes" value={form.notes || ""} onChangeText={(v: string) => setForm(f => ({...f, notes: v}))} colors={colors} multiline />
           </ScrollView>
         </View>
       </Modal>
@@ -485,20 +486,58 @@ function CreateAppointmentModal({ visible, onClose, patientId, colors }: any) {
 
 function DocumentsTab({ patientId, colors }: { patientId: string; colors: any }) {
   const qc = useQueryClient();
+  const { accessToken } = useAuth();
   const [showAssign, setShowAssign] = useState(false);
   const { data: documents, isLoading, refetch } = useQuery<Document[]>({
     queryKey: [`/v1/manager/patients/${patientId}/documents`],
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ docId, status }: { docId: string; status: string }) => {
-      await apiRequest("PUT", `/v1/manager/documents/${docId}`, { status });
+    mutationFn: async ({ docId, status, rejectionReason }: { docId: string; status: string; rejectionReason?: string }) => {
+      await apiRequest("PUT", `/v1/manager/documents/${docId}`, { status, rejectionReason });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [`/v1/manager/patients/${patientId}/documents`] });
     },
     onError: (err: any) => Alert.alert("Error", err.message),
   });
+
+  const handleReject = (docId: string) => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        "Reject Document",
+        "Please enter the reason for rejection:",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Reject", 
+            style: "destructive", 
+            onPress: (reason) => updateStatusMutation.mutate({ docId, status: "REJECTED", rejectionReason: reason }) 
+          }
+        ]
+      );
+    } else {
+      // For Android/Web, use simple alert or we'd need a custom modal. 
+      // Using prompt-like approach with Alert for now as per instructions.
+      Alert.alert(
+        "Reject Document",
+        "Confirm rejection of this document?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Reject", 
+            style: "destructive", 
+            onPress: () => updateStatusMutation.mutate({ docId, status: "REJECTED", rejectionReason: "Document requirements not met." }) 
+          }
+        ]
+      );
+    }
+  };
+
+  const handleViewPdf = (docId: string) => {
+    const url = `${getApiUrl()}v1/documents/${docId}/download?token=${accessToken}`;
+    Linking.openURL(url);
+  };
 
   if (isLoading) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
@@ -509,30 +548,51 @@ function DocumentsTab({ patientId, colors }: { patientId: string; colors: any })
         keyExtractor={item => item.id}
         contentContainerStyle={[styles.tabContent, { paddingBottom: 100 }]}
         renderItem={({ item }) => (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={[styles.cardTitle, { color: colors.text, fontFamily: "Inter_600SemiBold", flex: 1 }]}>
                 {item.documentType?.name || "Unknown Document"}
               </Text>
               <StatusBadge status={item.status as any} small />
             </View>
-            
-            {item.status === "ASSIGNED" && (
-              <View style={styles.docActions}>
-                <Pressable 
-                  onPress={() => updateStatusMutation.mutate({ docId: item.id, status: "APPROVED" })}
-                  style={[styles.docBtn, { backgroundColor: colors.success + "15" }]}
-                >
-                  <Text style={{ color: colors.success, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Approve</Text>
-                </Pressable>
-                <Pressable 
-                  onPress={() => updateStatusMutation.mutate({ docId: item.id, status: "REJECTED" })}
-                  style={[styles.docBtn, { backgroundColor: colors.error + "15" }]}
-                >
-                  <Text style={{ color: colors.error, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Reject</Text>
-                </Pressable>
+
+            {item.rejectionReason && (
+              <View style={styles.rejectionInfo}>
+                <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
+                <Text style={styles.rejectionText}>{item.rejectionReason}</Text>
               </View>
             )}
+            
+            <View style={styles.docActions}>
+              {item.fileUrl && (
+                <Pressable 
+                  onPress={() => handleViewPdf(item.id)}
+                  style={[styles.docBtn, { backgroundColor: colors.accent + "15", flex: 1 }]}
+                >
+                  <Ionicons name="eye-outline" size={16} color={colors.accent} />
+                  <Text style={{ color: colors.accent, fontSize: 12, fontFamily: "Inter_600SemiBold", marginLeft: 4 }}>View PDF</Text>
+                </Pressable>
+              )}
+              
+              {item.status === "UPLOADED" && (
+                <>
+                  <Pressable 
+                    onPress={() => updateStatusMutation.mutate({ docId: item.id, status: "APPROVED" })}
+                    style={[styles.docBtn, { backgroundColor: colors.success + "15", flex: 1 }]}
+                  >
+                    <Ionicons name="checkmark" size={16} color={colors.success} />
+                    <Text style={{ color: colors.success, fontSize: 12, fontFamily: "Inter_600SemiBold", marginLeft: 4 }}>Approve</Text>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => handleReject(item.id)}
+                    style={[styles.docBtn, { backgroundColor: colors.error + "15", flex: 1 }]}
+                  >
+                    <Ionicons name="close" size={16} color={colors.error} />
+                    <Text style={{ color: colors.error, fontSize: 12, fontFamily: "Inter_600SemiBold", marginLeft: 4 }}>Reject</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
           </View>
         )}
         ListEmptyComponent={<EmptyState title="No documents" subtitle="Assign required documents for this patient" icon="document-text-outline" />}
@@ -587,7 +647,7 @@ function AssignDocumentsModal({ visible, onClose, patientId, colors }: any) {
       <View style={[styles.modalRoot, { backgroundColor: colors.background }]}>
         <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
           <Pressable onPress={onClose}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
-          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Assign Docs</Text>
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Assign Documents</Text>
           <Pressable onPress={() => mutation.mutate()} disabled={mutation.isPending || selected.length === 0}>
             {mutation.isPending ? <ActivityIndicator size="small" color={colors.accent} /> : 
               <Text style={{ color: selected.length > 0 ? colors.accent : colors.textMuted, fontFamily: "Inter_600SemiBold" }}>Assign</Text>}
@@ -596,7 +656,7 @@ function AssignDocumentsModal({ visible, onClose, patientId, colors }: any) {
         
         {isLoading ? <ActivityIndicator style={{ marginTop: 20 }} /> : (
           <FlatList
-            data={types || []}
+            data={types}
             keyExtractor={item => item.id}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
@@ -609,9 +669,13 @@ function AssignDocumentsModal({ visible, onClose, patientId, colors }: any) {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.pickerItemText, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{item.description}</Text>
+                  {item.description && <Text style={{ fontSize: 12, color: colors.textSecondary }}>{item.description}</Text>}
                 </View>
-                {selected.includes(item.id) && <Ionicons name="checkmark-circle" size={20} color={colors.accent} />}
+                <Ionicons 
+                  name={selected.includes(item.id) ? "checkbox" : "square-outline"} 
+                  size={24} 
+                  color={selected.includes(item.id) ? colors.accent : colors.textSecondary} 
+                />
               </Pressable>
             )}
           />
@@ -623,46 +687,215 @@ function AssignDocumentsModal({ visible, onClose, patientId, colors }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, borderBottomWidth: 1 },
-  headerTop: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
-  backBtn: { marginRight: 15 },
-  headerTitleContainer: { flex: 1 },
-  headerTitle: { fontSize: 20 },
-  headerSubtitle: { fontSize: 13 },
-  tabBar: { flexDirection: "row", justifyContent: "space-between" },
-  tabItem: { paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: "transparent" },
-  tabText: { fontSize: 13 },
-  tabContent: { padding: 20 },
-  section: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 20 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
-  sectionTitle: { fontSize: 16 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1 },
-  infoLabel: { fontSize: 13 },
-  infoValue: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  notesContainer: { marginTop: 15 },
-  modalRoot: { flex: 1 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 18 },
-  modalBody: { padding: 20, gap: 16 },
-  field: { gap: 6 },
-  fieldLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
-  assignmentHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  assignmentTitleRow: { flexDirection: "row", alignItems: "center" },
-  changeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  assignmentName: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  pickerItem: { flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 10 },
-  pickerItemText: { fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1 },
-  card: { padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 12 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  cardTitle: { fontSize: 15 },
-  cardMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-  cardMetaText: { fontSize: 12 },
-  cardSubtitle: { fontSize: 13 },
-  fab: { position: "absolute", width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", elevation: 4, shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
-  docActions: { flexDirection: "row", gap: 10, marginTop: 12 },
-  docBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  bottomBar: { padding: 20, position: "absolute", bottom: 0, left: 0, right: 0 },
-  mainBtn: { height: 50, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  header: {
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  backBtn: {
+    padding: 4,
+    marginRight: 12,
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+  },
+  tabBar: {
+    flexDirection: "row",
+    gap: 20,
+  },
+  tabItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabText: {
+    fontSize: 14,
+  },
+  tabContent: {
+    padding: 16,
+  },
+  section: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  infoLabel: {
+    fontSize: 14,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  notesContainer: {
+    marginTop: 16,
+  },
+  modalRoot: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+  },
+  modalBody: {
+    padding: 16,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontFamily: "Inter_500Medium",
+  },
+  input: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 15,
+  },
+  assignmentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  assignmentTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  changeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  assignmentName: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  pickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  pickerItemText: {
+    fontSize: 16,
+    fontFamily: "Inter_500Medium",
+  },
+  card: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  cardMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardMetaText: {
+    fontSize: 13,
+  },
+  fab: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  docActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  docBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  bottomBar: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
+  },
+  mainBtn: {
+    height: 50,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   mainBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  rejectionInfo: {
+    backgroundColor: 'rgba(211, 47, 47, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#d32f2f',
+  },
+  rejectionLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: '#d32f2f',
+    marginBottom: 2,
+  },
+  rejectionText: {
+    fontSize: 13,
+    color: '#b71c1c',
+  },
 });

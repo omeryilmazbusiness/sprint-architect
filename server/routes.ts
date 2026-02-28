@@ -4,6 +4,8 @@ import authRoutes from "./auth/authRoutes";
 import patientRoutes from "./auth/patientRoutes";
 import meRoutes from "./auth/meRoutes";
 import managerRoutes from "./api/managerRoutes";
+import adminRoutes from "./api/adminRoutes";
+import uploadRoutes from "./api/uploadRoutes";
 import patientDashboardRoute from "./api/patientDashboardRoute";
 import { errorHandler } from "./auth/middleware";
 
@@ -34,6 +36,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/v1/patient", patientDashboardRoute);
   app.use("/v1", meRoutes);
   app.use("/v1/manager", managerRoutes);
+  app.use("/v1/admin", adminRoutes);
+  app.use("/v1", uploadRoutes);
 
   app.use(errorHandler);
 

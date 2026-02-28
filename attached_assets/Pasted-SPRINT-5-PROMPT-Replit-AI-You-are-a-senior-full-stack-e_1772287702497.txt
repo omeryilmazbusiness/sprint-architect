@@ -1,0 +1,187 @@
+SPRINT 5 PROMPT (Replit AI)
+
+You are a senior full-stack engineer continuing the SAME existing codebase. Do NOT re-scaffold.
+Current stack (confirmed): Expo React Native mobile + Express/TypeScript backend + PostgreSQL + Drizzle ORM.
+Sprint 1–3 backend PASS; Sprint 4 completed most mobile screens + missing assign-doctor/metrics routes (if applicable).
+Sprint 5 focuses on PRODUCTION-CRITICAL features and monetization foundation:
+1) REAL document PDF upload & download flow (Patient uploads, Manager reviews)
+2) Remove in-memory auth/session risks by persisting refresh tokens + device binding in PostgreSQL reliably
+3) Add Invoicing MVP (monthly invoices per clinic based on patient count) + minimal Admin/Manager UI to view invoices
+4) Add hardening: rate limits for login/key, file size limits, audit logs for key actions, and tests
+
+NON-NEGOTIABLE RULES:
+- Keep RBAC strict: ADMIN / MANAGER / PATIENT
+- Keep clinic scoping strict: MANAGER only within own clinicId
+- Keep SOLID boundaries: route -> controller -> service/use-case -> repository (Drizzle only in repositories)
+- All inputs validated (zod). All errors use standard error codes.
+- No breaking changes: existing endpoints must continue to work.
+- Every new feature must include manual test steps + automated tests for critical logic.
+
+========================================================
+A) FEATURE 1 — PDF FILE UPLOAD (REAL)
+========================================================
+Problem:
+Currently documents have statuses but no real file upload mechanism. Sprint 5 must implement end-to-end PDF upload.
+
+Requirements:
+1) Storage strategy (MVP but extensible):
+- Implement a StorageProvider abstraction:
+  - LocalDiskStorageProvider (default for Replit)
+  - Keep interface ready for S3/Cloudinary later
+- Save files under a safe directory, e.g. /uploads/{clinicId}/{patientId}/...
+- Generate a stable file URL served by backend (static route) OR an authenticated download endpoint.
+
+2) Upload endpoint (PATIENT):
+- POST /v1/patient/documents/:patientDocumentId/upload
+  - multipart/form-data with a single file field: "file"
+  - Validate:
+    - file type must be PDF (application/pdf)
+    - file size max 10MB (configurable env)
+  - Security:
+    - PATIENT can only upload for their own patientDocument row
+    - patientDocument must belong to same clinic as patient
+  - Behavior:
+    - upload file -> save fileUrl -> set status to UPLOADED
+    - return updated patientDocument DTO
+
+3) Download/view endpoint:
+Option A (preferred for security): authenticated download endpoint
+- GET /v1/documents/:patientDocumentId/download
+  - Allowed: MANAGER of same clinic OR PATIENT owner OR ADMIN
+  - Streams the PDF with correct headers
+Option B: static URL but must be non-guessable + scoped (only if you implement signed tokens)
+
+4) Manager review endpoints:
+- PUT /v1/manager/documents/:id/status
+  body: { status: "APPROVED" | "REJECTED" }
+  - Only MANAGER of same clinic
+  - Add optional rejectionReason field (store in patient_documents.rejectionReason nullable)
+
+5) Mobile UI:
+PATIENT:
+- In patient dashboard documents list, for status ASSIGNED/REJECTED show an "Upload PDF" button
+- Use document picker to select PDF, upload, show progress and final status
+- For UPLOADED show “Waiting for approval”
+MANAGER:
+- In patient detail -> Documents tab:
+  - show list with status badges
+  - if UPLOADED: show buttons Approve / Reject
+  - add View/Download button to open the PDF
+
+========================================================
+B) FEATURE 2 — AUTH PERSISTENCE (REMOVE IN-MEMORY RISK)
+========================================================
+Problem:
+Audit report indicates refresh tokens / bindings may be in-memory. Sprint 5 must ensure that:
+- Refresh tokens are persisted in PostgreSQL with rotation
+- Device bindings persist and are enforced even after server restart
+- Logout revokes refresh token
+
+Requirements:
+1) Refresh token persistence:
+- Table refresh_tokens already exists or create it if needed:
+  - id, userId nullable, patientId nullable, tokenHash, expiresAt, revokedAt, createdAt, replacedByTokenId nullable
+- Never store raw refresh token; store a hash (SHA-256) or bcrypt hash.
+- Implement rotation:
+  - /v1/auth/refresh and /v1/patient/auth/refresh (if patient refresh exists; if not, keep shared refresh endpoint)
+  - When refreshing: revoke old token, issue new token, link replacedByTokenId
+
+2) Device binding persistence:
+- Table devices should persist:
+  - id, patientId, deviceId, boundAt, revokedAt nullable
+- Login rule must be DB-driven:
+  - If active binding exists and deviceId differs -> throw DEVICE_ALREADY_BOUND
+  - Reset device marks revokedAt and allows re-bind
+
+3) Tests:
+- Add tests verifying:
+  - refresh token rotation and revocation survives “simulated restart” (i.e., new repository instance still validates via DB)
+  - patient device binding denies second device, allows after reset
+
+========================================================
+C) FEATURE 3 — INVOICING MVP (MONETIZATION FOUNDATION)
+========================================================
+Goal:
+Generate monthly invoices per clinic based on number of patients created/active in that month.
+Expose endpoints for ADMIN and MANAGER to view invoices.
+
+Business rules (MVP):
+- Billing period = YYYY-MM
+- Patient count = number of patients created within that period for that clinic
+- Unit price = clinic.billingUnitPrice (add field) OR global env default
+- total = patientCount * unitPrice
+- Invoice statuses: DRAFT, ISSUED, PAID (MVP)
+
+DB models (Drizzle):
+- clinics: add billingUnitPrice (nullable), currency default "EUR"
+- invoices:
+  - id, clinicId, period (YYYY-MM), patientCount, unitPrice, currency, total, status, createdAt
+  - unique(clinicId, period)
+- invoice_events (optional audit):
+  - id, invoiceId, action, actorId, actorRole, createdAt
+
+Backend endpoints:
+ADMIN:
+- POST /v1/admin/invoices/generate?period=YYYY-MM
+  - Creates invoices for all clinics for that period (idempotent; upsert)
+- GET /v1/admin/invoices?period=&clinicId=&status=
+- GET /v1/admin/invoices/:id
+- PUT /v1/admin/invoices/:id/status  body:{status}
+MANAGER:
+- GET /v1/manager/invoices?period=&status=
+- GET /v1/manager/invoices/:id  (only own clinic)
+
+Optional PDF (if time allows, otherwise Sprint 6):
+- GET /v1/invoices/:id/pdf  (ADMIN + MANAGER own clinic)
+Generate a basic PDF invoice with clinic name, period, counts, totals.
+
+Mobile UI (minimal but real):
+ADMIN (if admin is used in mobile):
+- In Settings tab or a new Admin tab: Invoices list + filter by period
+MANAGER:
+- In Settings tab: “Invoices” screen listing invoices for own clinic + details
+
+========================================================
+D) HARDENING & OBSERVABILITY
+========================================================
+- Rate limit:
+  - POST /v1/auth/login
+  - POST /v1/patient/auth/login
+  - Upload endpoint
+- File safety:
+  - enforce max size
+  - accept only pdf mime
+  - generate safe filenames
+- Audit logs:
+  - Log actions: patient created, document uploaded, document approved/rejected, invoice generated, invoice status changed, device reset
+- Improve error UX in mobile:
+  - show friendly messages for DEVICE_ALREADY_BOUND, VALIDATION_ERROR, FILE_TOO_LARGE
+
+========================================================
+E) OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing Sprint 5, print:
+1) Summary of files changed (server + mobile)
+2) New DB migrations / drizzle schema changes and exact commands
+3) New/updated endpoint list + sample curl commands for:
+   - patient upload pdf
+   - manager approve/reject doc
+   - admin generate invoices
+   - manager list invoices
+4) Mobile screens added/updated and how to navigate
+5) Manual verification checklist (step-by-step)
+6) Automated tests added + how to run them
+7) Remaining Sprint 6 suggestions (notifications, timeline tracking, invoice PDF if not done)
+
+========================================================
+IMPLEMENTATION ORDER (DO THIS ORDER)
+========================================================
+1) Backend: storage provider + upload/download endpoints + doc status update (with tests)
+2) Backend: ensure refresh tokens + device binding are truly DB persisted (remove in-memory usage) + tests
+3) Backend: invoicing schema + generate/list endpoints + tests
+4) Mobile: patient upload UI + manager review UI
+5) Mobile: invoices screens (admin/manager minimal)
+6) Hardening: rate limits + audit logs + polish
+
+Proceed now. Extend the existing system cleanly; no large rewrites.
+END.

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/context/AuthContext";
+import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingView } from "@/components/LoadingView";
@@ -37,6 +41,7 @@ interface PatientDashboardData {
   documents: Array<{
     id: string;
     status: string;
+    rejectionReason?: string;
     documentType: {
       name: string;
     };
@@ -58,11 +63,115 @@ interface PatientDashboardData {
   };
 }
 
+function DocumentCard({ doc, colors, accessToken, onUploadSuccess }: { 
+  doc: PatientDashboardData["documents"][0]; 
+  colors: any; 
+  accessToken: string | null;
+  onUploadSuccess: () => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      setIsUploading(true);
+      const file = result.assets[0];
+      
+      const formData = new FormData();
+      // @ts-ignore - React Native FormData expects this structure for files
+      formData.append("file", {
+        uri: file.uri,
+        name: file.name || "document.pdf",
+        type: "application/pdf",
+      });
+
+      const uploadUrl = `${getApiUrl()}v1/patient/documents/${doc.id}/upload`;
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // Do not set Content-Type header when using FormData in RN
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Upload failed");
+      }
+
+      onUploadSuccess();
+      Alert.alert("Success", "Document uploaded successfully");
+    } catch (error: any) {
+      console.error("[Upload Error]", error);
+      Alert.alert("Upload Failed", error.message || "An unexpected error occurred");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={styles.cardMain}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>{doc.documentType.name}</Text>
+        </View>
+        <StatusBadge status={doc.status as any} small />
+      </View>
+
+      {doc.status === "REJECTED" && doc.rejectionReason && (
+        <View style={styles.rejectionContainer}>
+          <Text style={styles.rejectionLabel}>Reason for rejection:</Text>
+          <Text style={styles.rejectionText}>{doc.rejectionReason}</Text>
+        </View>
+      )}
+
+      {(doc.status === "ASSIGNED" || doc.status === "REJECTED") && (
+        <Pressable 
+          onPress={handleUpload} 
+          disabled={isUploading}
+          style={[styles.uploadBtn, { backgroundColor: colors.primary }]}
+        >
+          {isUploading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Text style={styles.uploadBtnText}>Upload PDF</Text>
+            </>
+          )}
+        </Pressable>
+      )}
+
+      {doc.status === "UPLOADED" && (
+        <View style={styles.statusInfo}>
+          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+          <Text style={[styles.statusInfoText, { color: colors.textSecondary }]}>Waiting for review</Text>
+        </View>
+      )}
+
+      {doc.status === "APPROVED" && (
+        <View style={styles.statusInfo}>
+          <Ionicons name="checkmark-circle-outline" size={16} color={Colors.light.success} />
+          <Text style={[styles.statusInfoText, { color: Colors.light.success }]}>Document approved</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function PatientDashboard() {
-  const { logout, user } = useAuth();
+  const { logout, user, accessToken } = useAuth();
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<PatientDashboardData>({
     queryKey: ["/v1/patient/dashboard"],
@@ -125,12 +234,13 @@ export default function PatientDashboard() {
             <EmptyState title="No documents found" />
           ) : (
             documents.map((doc) => (
-              <View key={doc.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.cardMain}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{doc.documentType.name}</Text>
-                </View>
-                <StatusBadge status={doc.status as any} small />
-              </View>
+              <DocumentCard 
+                key={doc.id} 
+                doc={doc} 
+                colors={colors} 
+                accessToken={accessToken}
+                onUploadSuccess={() => queryClient.invalidateQueries({ queryKey: ["/v1/patient/dashboard"] })}
+              />
             ))
           )}
 
@@ -225,5 +335,48 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  uploadBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  statusInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  statusInfoText: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+  },
+  rejectionContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#D32F2F',
+  },
+  rejectionLabel: {
+    fontSize: 12,
+    color: '#D32F2F',
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 2,
+  },
+  rejectionText: {
+    fontSize: 13,
+    color: '#B71C1C',
+    fontFamily: 'Inter_400Regular',
   },
 });

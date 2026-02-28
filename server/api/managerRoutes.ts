@@ -13,6 +13,9 @@ import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { planRepo } from "../repositories/planRepo";
 
+import { invoiceRepo } from "../repositories/invoiceRepo";
+import { auditLog } from "./auditLogger";
+
 const router = Router();
 
 router.use(authMiddleware, requireRole("MANAGER", "ADMIN"), clinicScopeMiddleware);
@@ -53,6 +56,16 @@ router.post("/patients", async (req, res, next) => {
     const clinicId = getClinicId(req);
     const body = validateBody(createPatientSchema, req.body);
     const patient = await patientRepo.create({ clinicId, ...body });
+    
+    auditLog({
+      clinicId,
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "PATIENT_CREATED",
+      resourceType: "patient",
+      resourceId: patient.id,
+    });
+
     res.status(201).json(patient);
   } catch (e) { next(e); }
 });
@@ -495,11 +508,28 @@ router.put("/documents/:id", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(
-      z.object({ status: z.string().optional(), notes: z.string().optional() }),
+      z.object({ 
+        status: z.enum(["ASSIGNED", "UPLOADED", "APPROVED", "REJECTED"]).optional(), 
+        notes: z.string().optional(),
+        rejectionReason: z.string().nullable().optional()
+      }),
       req.body
     );
     const doc = await documentRepo.updateDocument(req.params.id, clinicId, body);
     if (!doc) notFound("Document");
+
+    if (body.status === "APPROVED" || body.status === "REJECTED") {
+      auditLog({
+        clinicId,
+        actorId: req.actor!.sub,
+        actorRole: req.actor!.role,
+        action: body.status === "APPROVED" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
+        resourceType: "patient_document",
+        resourceId: doc.id,
+        metadata: body.status === "REJECTED" ? { reason: (body as any).rejectionReason } : undefined,
+      });
+    }
+
     res.json(doc);
   } catch (e) { next(e); }
 });
@@ -540,6 +570,24 @@ router.get("/upcoming-appointments", async (req, res, next) => {
     const clinicId = getClinicId(req);
     const appts = await appointmentRepo.listUpcoming(clinicId);
     res.json(appts);
+  } catch (e) { next(e); }
+});
+
+router.get("/invoices", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { period, status } = req.query as Record<string, string>;
+    const invoices = await invoiceRepo.list({ clinicId, period, status });
+    res.json(invoices);
+  } catch (e) { next(e); }
+});
+
+router.get("/invoices/:id", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const invoice = await invoiceRepo.findById(req.params.id, clinicId);
+    if (!invoice) notFound("Invoice");
+    res.json(invoice);
   } catch (e) { next(e); }
 });
 
