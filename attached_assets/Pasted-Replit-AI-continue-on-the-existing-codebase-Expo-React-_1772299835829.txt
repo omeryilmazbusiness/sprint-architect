@@ -1,0 +1,147 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TS + Postgres + Drizzle). Do NOT re-scaffold.
+We need Admin UX polish + bug fixes.
+
+SCOPE (what to implement now):
+1) After “Create Clinic” succeeds, do NOT stay on the form. Navigate back to Clinics list / Admin Dashboard and show the newly created clinic.
+2) Rebuild the Clinic Detail screen with a modern, premium UI.
+3) Fix the Invoices filter/search bug (it throws an error).
+4) Upgrade the Admin Settings tab to a professional, complete screen with necessary admin actions and information.
+
+NON-NEGOTIABLE:
+- Keep RBAC: ADMIN only screens/actions.
+- Keep clinic scoping rules.
+- Use existing API client, token refresh logic, and navigation conventions.
+- Every screen must have loading / empty / error states.
+- Provide clean component structure and reusable UI blocks.
+- No “Attention needed” section anywhere.
+
+========================================================
+A) FIX #1 — Create Clinic navigation
+========================================================
+Current issue:
+After successfully creating a clinic, the app remains on the Create Clinic form.
+
+Required behavior:
+- On success:
+  - Show a success toast/alert (brief)
+  - Navigate to the Clinics list screen (or Admin Dashboard clinics section)
+  - Refresh the clinics list so the new clinic appears immediately
+Implementation details:
+- Use react-navigation router/back logic (expo-router):
+  - Prefer: router.replace("/(admin)/clinics") OR router.back() + trigger refresh
+- If list screen uses cached query, invalidate/refetch.
+- Ensure no double-submission: disable button while submitting.
+
+Acceptance tests:
+- Create clinic -> success -> automatically redirected -> new clinic visible.
+
+========================================================
+B) BUILD — Clinic Detail screen (modern premium design)
+========================================================
+Create or rebuild:
+- app/(admin)/clinics/[id].tsx   (or match existing routing; keep consistent)
+
+Design requirements (modern, premium):
+- Professional header with clinic name + status pill + actions menu
+- Use card layout with good spacing, subtle shadows, clean typography
+- Sections (cards):
+  1) Overview
+     - Clinic name
+     - Status (ACTIVE/PASSIVE/SUSPENDED)
+     - Services chips (Rinoplasti / Göz / Diş)
+  2) Contact & Address
+     - Address (multiline)
+     - Phone (tap-to-call)
+     - Email (tap-to-mail)
+  3) Monthly Summary (mini KPI row)
+     - Patients this month (if endpoint exists; else show placeholder “Coming soon” without breaking)
+     - Invoices: last invoice status (if available)
+  4) Managers (optional if endpoint exists; else omit)
+- Bottom actions:
+  - Edit clinic (if edit exists; otherwise do not show)
+  - View invoices (navigate to invoices filtered for this clinic)
+
+Data:
+- Load clinic detail from API:
+  - GET /v1/admin/clinics/:id  (if not exists, implement)
+- Ensure fields: name, status, address, contactPhone, contactEmail, services, createdAt.
+
+========================================================
+C) FIX #2 — Invoices filter/search bug
+========================================================
+Problem:
+Invoices filter/search causes an error.
+
+Required:
+- Identify the root cause by reproducing it in dev (console logs + error boundary).
+- Fix the bug robustly:
+  - Validate filter params before sending
+  - Ensure API expects correct types (period format YYYY-MM, status enums)
+  - Handle empty/undefined values (don’t send invalid query strings)
+- Add tests for invoices query building (unit) or at least a manual test checklist.
+
+If backend bug:
+- Fix endpoint parsing/validation.
+If frontend bug:
+- Fix filter state handling and query builder.
+If both:
+- Fix both.
+
+Acceptance tests:
+- Filter by period only -> works
+- Filter by status only -> works
+- Filter by clinicId + period -> works
+- Clear filters -> works
+- No crashes, clean UI.
+
+========================================================
+D) UPGRADE — Admin Settings tab (professional, complete)
+========================================================
+Rebuild:
+- app/(tabs)/settings.tsx (admin variant) OR app/(admin)/settings.tsx based on routing.
+Must look premium and feel “real product”.
+
+Include sections:
+1) Profile
+- admin email, role
+- environment label (DEV/TEST/PROD) from config
+2) Security
+- “Change password” (if not implemented, show disabled with “Coming soon” but no errors)
+- “Logout” (revokes refresh token, clears storage)
+3) Administration
+- “Manage Clinics” (navigate)
+- “Manage Invoices” (navigate)
+- “System Health” card:
+  - shows API health status via /health
+4) App info
+- version/build number
+- legal links placeholders (Privacy Policy / Terms) as external links or “Coming soon”
+
+UI requirements:
+- Use reusable SettingsRow component (icon + title + subtitle + chevron)
+- Consistent spacing and touch feedback
+- Must handle role: if user not ADMIN, do not show admin sections.
+
+========================================================
+REQUIRED OUTPUT (after implementation)
+========================================================
+Print:
+1) Files changed/added
+2) Routes added/updated
+3) Any backend endpoints added:
+   - GET /v1/admin/clinics/:id (if created)
+   - Any invoice query fixes
+4) How to verify (manual checklist)
+5) If you changed DB schema, list migrations and commands
+
+========================================================
+IMPLEMENTATION ORDER (do exactly this order)
+========================================================
+1) Fix Create Clinic navigation + list refresh
+2) Implement/rebuild Clinic Detail screen (premium UI)
+3) Reproduce & fix invoices filter/search bug (backend+frontend as needed)
+4) Rebuild Admin Settings tab (premium UI + sections)
+5) Final pass: loading/error/empty states and remove any leftover “Attention needed”
+
+Proceed now. Do not re-architect; extend cleanly within current structure.
+END.

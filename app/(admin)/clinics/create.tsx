@@ -42,9 +42,7 @@ export default function CreateClinicScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/clinics"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-      Alert.alert("Clinic Created", `"${name}" was added successfully.`, [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.replace("/(admin)/clinics");
     },
     onError: (err: any) =>
       Alert.alert("Error", err.message || "Failed to create clinic"),
