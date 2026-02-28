@@ -67,6 +67,7 @@ export function clinicScopeMiddleware(
     return;
   }
 
+  (req as any).clinicId = req.actor.clinicId;
   next();
 }
 

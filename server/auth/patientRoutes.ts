@@ -4,6 +4,7 @@ import { signAccessToken, signRefreshToken } from "./jwt";
 import { authStore } from "./store";
 import { Errors } from "./errors";
 import { authMiddleware, requireRole } from "./middleware";
+import { patientRepo } from "../repositories/patientRepo";
 
 const router = Router();
 
@@ -23,7 +24,15 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
   }
 
   const { patientKey, deviceId } = parsed.data;
-  const patient = authStore.findPatientByKey(patientKey);
+
+  let patient: Awaited<ReturnType<typeof patientRepo.findByKey>>;
+  try {
+    patient = await patientRepo.findByKey(patientKey);
+  } catch (err) {
+    const e = Errors.PATIENT_KEY_INVALID();
+    res.status(e.statusCode).json({ code: e.code, message: e.message });
+    return;
+  }
 
   if (!patient || patient.status !== "ACTIVE") {
     const e = Errors.PATIENT_KEY_INVALID();
@@ -74,9 +83,21 @@ router.post(
   "/:patientId/reset-device",
   authMiddleware,
   requireRole("ADMIN", "MANAGER"),
-  (req: Request, res: Response): void => {
+  async (req: Request, res: Response): Promise<void> => {
     const { patientId } = req.params;
-    const patient = authStore.findPatientById(patientId);
+
+    let patient: Awaited<ReturnType<typeof patientRepo.findById>>;
+    try {
+      const clinicId = req.actor?.clinicId || null;
+      if (req.actor?.role === "MANAGER" && clinicId) {
+        patient = await patientRepo.findById(patientId, clinicId);
+      } else {
+        const allPatient = await patientRepo.findByKey(patientId).catch(() => null);
+        patient = allPatient as any;
+      }
+    } catch {
+      patient = undefined;
+    }
 
     if (!patient) {
       const e = Errors.NOT_FOUND("Patient not found");

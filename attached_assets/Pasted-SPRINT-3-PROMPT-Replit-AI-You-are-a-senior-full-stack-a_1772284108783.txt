@@ -1,0 +1,184 @@
+SPRINT 3 PROMPT (Replit AI)
+
+You are a senior full-stack architect. Continue the existing monorepo (Sprint 1 + Sprint 2 are already implemented).
+Do NOT re-scaffold. Implement Sprint 3 features using the existing Clean Architecture structure.
+
+SPRINT 3 GOAL:
+Deliver the core operational modules for Clinic Manager (and minimal Admin support):
+- Manager can manage (CRUD): Patients, Doctors, Hotels, Transports
+- Manager can assign to a patient: Transport, Hotel, Necessary Documents
+- Manager can create/manage patient Appointments (calendar-like data)
+- Provide a Patient “Dashboard payload” API (for future mobile) that returns all assigned data in one response
+- Build professional but minimal web UI pages for Manager to operate end-to-end
+- Keep strict multi-tenant rules: MANAGER only operates inside own clinicId automatically enforced
+
+MUST KEEP ARCHITECTURE & SOLID:
+- Use-case based application layer (single responsibility)
+- Ports/interfaces for repositories/providers
+- No Prisma calls in application layer
+- Central clinic scope enforcement stays in middleware/guards
+- Zod validation for all request bodies
+- Standard error codes/messages stay consistent
+
+FEATURES TO IMPLEMENT (Sprint 3):
+
+A) Database (Prisma) – Add models & migrations
+1) doctors:
+- id, clinicId, fullName, specialty nullable, phone nullable, photoUrl nullable, createdAt
+2) hotels:
+- id, clinicId, name, address nullable, latitude nullable, longitude nullable, notes nullable, createdAt
+3) transports:
+- id, clinicId, driverName nullable, driverPhone, vehicleInfo nullable, meetingPointText nullable, latitude nullable, longitude nullable, createdAt
+4) patient_assignments (or separate fields on patients – choose clean approach):
+- patientId, clinicId
+- hotelId nullable
+- transportId nullable
+- hotelStayDays nullable
+- roomNo nullable
+- checkInDate nullable
+- checkOutDate nullable
+(Prefer: patient_profile / patient_plan table to avoid bloating patients table.)
+5) appointments:
+- id, clinicId, patientId, title, type (enum optional), startAt (datetime), endAt nullable, locationText nullable, latitude nullable, longitude nullable, notes nullable, status enum (SCHEDULED|DONE|CANCELLED), createdAt
+6) document_types:
+- id, clinicId, name, description nullable, isRequired boolean default true, createdAt
+7) patient_documents:
+- id, clinicId, patientId, documentTypeId, status (ASSIGNED|UPLOADED|APPROVED|REJECTED), fileUrl nullable, createdAt, updatedAt
+8) audit_logs (if not already):
+- id, clinicId nullable, actorType (USER|PATIENT), actorId, action, entityType, entityId, metadata json, createdAt
+
+B) Key business rules
+- Patient creation generates a non-guessable unique patientKey (crypto random). Ensure uniqueness (retry on conflict).
+- Manager can only access patients/doctors/hotels/transports belonging to their clinic.
+- Assignments must validate clinic ownership: you cannot assign a hotel/transport from another clinic.
+- Appointment dates: startAt required; endAt optional but if provided must be >= startAt.
+- Documents: Manager assigns document types to patient; patient upload will be in future sprint, but now the assignment and listing must exist.
+
+C) API Endpoints (versioned: /v1)
+Implement these endpoints in interfaces layer with zod validation and proper RBAC:
+
+ADMIN (minimal – only if needed for verification)
+- GET /v1/admin/clinics/:id/summary  (optional): counts of patients, doctors, upcoming appointments (for later dashboards)
+
+MANAGER – Clinic scoped
+Patients:
+- POST   /v1/manager/patients
+- GET    /v1/manager/patients?search=&page=&pageSize=
+- GET    /v1/manager/patients/:id
+- PUT    /v1/manager/patients/:id
+- DELETE /v1/manager/patients/:id  (soft delete recommended: status=INACTIVE)
+
+Doctors:
+- POST/GET/GET:id/PUT/DELETE  /v1/manager/doctors...
+
+Hotels:
+- POST/GET/GET:id/PUT/DELETE  /v1/manager/hotels...
+
+Transports:
+- POST/GET/GET:id/PUT/DELETE  /v1/manager/transports...
+
+Assignments:
+- PUT /v1/manager/patients/:id/assign-hotel       body: { hotelId, stayDays, roomNo, checkInDate, checkOutDate }
+- PUT /v1/manager/patients/:id/assign-transport   body: { transportId }
+- POST /v1/manager/patients/:id/assign-documents  body: { documentTypeIds: string[] } (idempotent; avoid duplicates)
+
+Appointments:
+- POST   /v1/manager/patients/:id/appointments
+- GET    /v1/manager/patients/:id/appointments?from=&to=
+- PUT    /v1/manager/appointments/:appointmentId
+- DELETE /v1/manager/appointments/:appointmentId (or status=CANCELLED)
+
+Patient dashboard payload (for future mobile – but implement now):
+- GET /v1/patient/dashboard
+This endpoint should work for PATIENT role (from Sprint 2 login) and return:
+{
+  patient: { id, fullName, arrivalDate, departureDate },
+  transport: { id, driverPhone, meetingPointText, latitude, longitude, ... } | null,
+  hotel: { id, name, latitude, longitude, stayDays, roomNo, checkInDate, checkOutDate } | null,
+  appointments: [ ... ],
+  doctors: [ ... ],
+  documents: [ {id, documentType, status, fileUrl?} ... ]
+}
+Note: PATIENT role must be clinic-scoped too via token context.
+
+D) Application layer (Use-cases) – keep them small & testable
+Create separate use-cases such as:
+- CreatePatient (generates patientKey)
+- ListPatients (with search + pagination)
+- GetPatientDetails
+- UpdatePatient
+- UpsertDoctor, UpsertHotel, UpsertTransport (or CRUD use-cases)
+- AssignHotelToPatient
+- AssignTransportToPatient
+- AssignDocumentsToPatient (idempotent)
+- CreateAppointment, UpdateAppointment, CancelAppointment
+- GetPatientDashboard (aggregates data in one query layer but keep repo boundaries clear)
+
+Repositories (ports):
+- PatientRepository, DoctorRepository, HotelRepository, TransportRepository
+- PatientPlanRepository (assignments)
+- AppointmentRepository
+- DocumentTypeRepository, PatientDocumentRepository
+- AuditLogRepository
+
+E) Web UI (React) – Manager operational screens (minimal but professional)
+Implement routes under /app/manager with protected role:
+
+1) /app/manager/patients
+- patient list with search + pagination
+- “New Patient” button
+2) /app/manager/patients/new
+- create patient form (fullName, arrivalDate, departureDate)
+- after save: show patientKey clearly + “Copy” button + QR generation (client-side QR ok)
+3) /app/manager/patients/:id
+- tabs/sections:
+  - Overview (patient info + patientKey + status)
+  - Assignments (hotel + transport assign dropdowns)
+  - Appointments (list + add form)
+  - Documents (assign document types list + current statuses)
+4) /app/manager/doctors, /hotels, /transports
+- simple CRUD pages (table + create/edit modal or dedicated page)
+
+UI requirements:
+- Keep components clean: /components, /pages, /routes, /api client
+- Use the shared typed API client and automatic refresh logic from Sprint 2
+- Handle errors nicely using the standard error codes from API
+- Do not add heavy UI libs; basic CSS or minimal utility is fine
+
+F) Performance & correctness
+- Use pagination on list endpoints.
+- For dashboard aggregation, avoid N+1. Use Prisma includes in infra layer, but keep application layer clean.
+- Add at least minimal unit tests OR provide a thorough manual test checklist.
+
+G) Seeds
+Extend seed script:
+- Create demo doctors/hotels/transports/document_types for Demo Clinic
+- Create at least 2 patients (with generated patientKeys)
+- Create sample appointments and assigned documents for one patient
+
+OUTPUT REQUIREMENTS (mandatory):
+After finishing Sprint 3, print:
+1) File tree changes (high-level)
+2) DB models added + migration commands
+3) Endpoint list + sample curl requests for:
+   - manager create patient
+   - assign hotel/transport/documents
+   - create appointment
+   - patient dashboard payload
+4) Web routes created + what to click to verify
+5) Manual verification checklist:
+   - manager CRUD works
+   - assignments enforce clinic ownership
+   - patient dashboard returns correct aggregated data
+   - pagination/search works
+6) Notes for Sprint 4 (PDF upload + patient mobile + notifications) to add into README
+
+NOW IMPLEMENT SPRINT 3 IN THIS ORDER:
+1) Prisma schema + migrations + seeds
+2) Domain + application use-cases + ports
+3) Infrastructure repositories (Prisma) with clinic scoping
+4) Interface controllers + routes + zod validation + RBAC
+5) Web UI pages and wiring
+6) Update README with Sprint 3
+
+END.

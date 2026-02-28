@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { seedAuthStore } from "./auth/store";
+import { seedDatabase } from "./seed";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -163,6 +164,9 @@ function setupErrorHandler(app: express.Application) {
 
 (async () => {
   await seedAuthStore();
+  if (process.env.NODE_ENV !== "production") {
+    await seedDatabase().catch(err => console.error("[seed] DB seed failed:", err));
+  }
 
   setupCors(app);
   setupBodyParsing(app);
