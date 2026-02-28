@@ -1,0 +1,75 @@
+You are a senior full-stack architect. Build the Sprint-1 foundation for a multi-tenant Health Tourism Operations SaaS.
+
+GOAL (Sprint 1):
+Set up a production-grade monorepo on Replit with:
+1) React (Vite + TypeScript) web app for Admin/Clinic Manager roles (no mobile yet),
+2) Node.js TypeScript API (Fastify) with Clean Architecture structure,
+3) Prisma + Postgres database integration,
+4) Strict SOLID-friendly modular structure, linting, validation, error handling,
+5) A minimal working vertical slice: /health endpoint + basic frontend page hitting it.
+
+CONTEXT / PRODUCT REQUIREMENTS (do not implement all now, just design for it):
+- Multi-tenant: “Clinic” is a tenant. All clinic-scoped entities must include clinicId and be isolated.
+- Roles: ADMIN, MANAGER, PATIENT.
+  - ADMIN: create clinics, create managers, view all, manage invoices.
+  - MANAGER: belongs to one clinic; can CRUD patients/doctors/hotels/transports; assign documents/appointments/hotel/transport to patients.
+  - PATIENT: will be mobile later. Uses patientKey login without email; single-device rule (device binding).
+- Patient dashboard (later): Transport (map+driver phone), Documents (pdf upload), Hotel info, Appointments calendar, Doctors cards.
+- Invoicing (later): monthly invoices per clinic based on patient count.
+- Auth rules (later but plan for it): 
+  - Admin/Manager login with email+password.
+  - Patient login with patientKey + deviceId, only one device allowed, reset device by admin/manager.
+
+SPRINT 1 DELIVERABLES:
+A) Monorepo structure:
+- /apps/web  -> React (Vite) + TS
+- /apps/api  -> Fastify + TS
+- /packages/shared -> shared types, zod schemas, and API client types
+B) API runs locally in Replit and connects to Postgres with Prisma.
+C) Clean Architecture in /apps/api:
+- src/domain (entities, value objects, domain errors)
+- src/application (use-cases, ports/interfaces)
+- src/interfaces (http controllers, DTO mappers, validators)
+- src/infrastructure (prisma repositories, config, providers)
+D) Baseline quality:
+- ESLint + Prettier for all packages
+- env management (Replit secrets), typed config
+- standard error response format (code, message, details, traceId)
+- request logging with requestId/traceId
+- zod validation for request bodies
+E) Minimal vertical slice:
+- API: GET /health returns {status:"ok", time: ISO}
+- Web: home page shows API status by calling /health through a typed fetch client
+- Add a simple API proxy or CORS config so web can call api in Replit
+F) DB:
+- Prisma schema with initial tables ONLY needed for Sprint 1 foundation:
+  - clinics (id, name, status, createdAt)
+  - users (id, email, passwordHash, role, clinicId nullable, status, createdAt)
+  - (No auth endpoints yet, only schema and seeds)
+- Prisma migrate command scripts
+- Seed script: create 1 clinic and 1 admin user (password can be placeholder, hashed)
+G) Documentation:
+- README with setup steps, scripts, env vars
+- Provide a “Sprint 2 plan” section in README describing next work: auth, RBAC, clinic guard, patientKey device binding, CRUD modules, documents upload, invoices.
+
+TECHNICAL CONSTRAINTS:
+- Use TypeScript everywhere.
+- Use Fastify for API (not Express).
+- Use Prisma for DB.
+- Use React + Vite for web.
+- Use pnpm workspaces (preferred) OR npm workspaces if pnpm is not available in Replit.
+- The code must be clean, readable, and ready to extend.
+- No heavy UI frameworks yet; keep UI minimal but structured (components folder + routes).
+- Do NOT implement all features now; only Sprint 1 foundation + health check.
+- Avoid premature complexity, but do set the right boundaries (ports/adapters, providers, shared types).
+
+OUTPUT REQUIREMENTS:
+1) Create/modify all necessary files. After changes, print:
+   - a) File tree overview
+   - b) Key files with short explanations
+   - c) Exact commands to run (dev for api + web)
+   - d) A manual verification checklist for Sprint 1
+2) Ensure everything runs inside Replit.
+3) If any Replit-specific adjustments are needed (ports, proxy), apply them.
+
+START NOW by scaffolding the monorepo, then implement the API+web minimal vertical slice, then Prisma + seed, then README.
