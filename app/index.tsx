@@ -20,6 +20,9 @@ export default function Index() {
     if (user?.role === "PATIENT") {
       return <Redirect href="/(patient)/dashboard" />;
     }
+    if (user?.role === "ADMIN") {
+      return <Redirect href="/(admin)/dashboard" />;
+    }
     return <Redirect href="/(tabs)" />;
   }
 

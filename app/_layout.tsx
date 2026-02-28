@@ -45,6 +45,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(patient)" />
                 <Stack.Screen name="(manager)" />
+                <Stack.Screen name="(admin)" />
               </Stack>
             </AuthProvider>
           </KeyboardProvider>

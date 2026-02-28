@@ -45,16 +45,6 @@ router.get("/me", authMiddleware, async (req: Request, res: Response): Promise<v
 });
 
 router.get(
-  "/admin/clinics",
-  authMiddleware,
-  requireRole("ADMIN"),
-  async (_req: Request, res: Response): Promise<void> => {
-    const allClinics = await db.query.clinics.findMany();
-    res.json(allClinics);
-  },
-);
-
-router.get(
   "/manager/clinic",
   authMiddleware,
   requireRole("MANAGER"),

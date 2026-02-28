@@ -46,9 +46,10 @@ export default function LoginScreen() {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      const role = await login(email.trim(), password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)");
+      if (role === "ADMIN") router.replace("/(admin)/dashboard");
+      else router.replace("/(tabs)");
     } catch (e: any) {
       setError(e.message ?? "Login failed. Please check your credentials.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -67,7 +68,7 @@ export default function LoginScreen() {
     try {
       await loginAsPatient(patientKey.trim(), deviceId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (e: any) {
       setError(e.message ?? "Patient login failed.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

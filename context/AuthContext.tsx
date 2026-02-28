@@ -30,7 +30,7 @@ interface AuthContextValue {
   accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserRole>;
   loginAsPatient: (patientKey: string, deviceId: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string): Promise<UserRole> => {
       const data = await apiPost<{
         accessToken: string;
         refreshToken: string;
@@ -131,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { accessToken: data.accessToken, refreshToken: data.refreshToken },
         { id: data.user.id, email: data.user.email, role: data.user.role, clinicId: data.user.clinicId },
       );
+      return data.user.role;
     },
     [persistSession],
   );

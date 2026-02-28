@@ -1,0 +1,246 @@
+You are a principal full-stack TypeScript engineer. You will design and implement a **first-class Admin Console** for an existing monorepo:
+
+- Mobile: **Expo React Native + expo-router** (file-based routing)
+- Backend: **Express + TypeScript**
+- DB: **PostgreSQL + Drizzle ORM**
+- Existing features: staff & patient auth (JWT + refresh), manager workflows, document approvals, invoices APIs, audit logging, rate limits.
+
+Your objective: **start from the Admin experience** and deliver a production-grade Admin area where an ADMIN can:
+1) Create and manage **Clinics** (full CRUD)
+2) Create and manage **Users** (staff accounts) + view **User Details**
+3) View and manage **Invoices** + view **Invoice Details**
+4) Navigate all of the above cleanly immediately after logging in as ADMIN
+
+This must be implemented professionally: minimal breaking changes, strong RBAC, clean API contracts, typed DTOs, validation (Zod), audit logging, and consistent UI patterns (React Query, loading/empty/error states).
+
+========================================================
+ADMIN EXPERIENCE — WHAT MUST EXIST AFTER ADMIN LOGIN
+========================================================
+
+When a user with role === "ADMIN" logs in:
+- They must be routed to a dedicated Admin area (NOT the manager tabs).
+- Admin area must present a clear navigation structure with the following sections:
+  1) **Admin Dashboard** (high-level metrics + quick actions)
+  2) **Clinics** (CRUD)
+  3) **Users** (CRUD + details view)
+  4) **Invoices** (list + filters + invoice details + status actions)
+  5) **Settings** (optional: profile/logout; keep consistent with current app)
+
+Use expo-router layouts and tabs/stack patterns appropriately.
+Keep the existing Manager and Patient areas intact and regression-free.
+
+========================================================
+SCOPE — BACKEND (EXPRESS + DRIZZLE)
+========================================================
+
+A) Admin Clinics API (RBAC: ADMIN only)
+---------------------------------------
+Implement clinic administration endpoints under /v1/admin.
+
+Endpoints:
+- GET    /v1/admin/clinics?search=&status=&page=&pageSize=
+- POST   /v1/admin/clinics
+- GET    /v1/admin/clinics/:id
+- PUT    /v1/admin/clinics/:id
+- DELETE /v1/admin/clinics/:id   (prefer “soft” via status=INACTIVE unless you already hard-delete clinics safely)
+
+Clinic fields (based on existing schema; extend only if necessary):
+- name (required)
+- status (ACTIVE/INACTIVE)
+- billingUnitPrice (nullable; falls back to DEFAULT_UNIT_PRICE)
+- currency (default "EUR")
+
+Rules:
+- Validate all inputs with Zod.
+- Search should match clinic name (case-insensitive).
+- Pagination defaults: pageSize=20, max=100.
+- Audit log: log create/update/delete with metadata (actorId, clinicId, changed fields).
+
+Acceptance:
+- Admin can create a clinic and it appears in list immediately.
+- Updating billingUnitPrice/currency affects invoice generation behavior as designed.
+
+B) Admin Users API (RBAC: ADMIN only)
+-------------------------------------
+Implement staff user management (users table already exists).
+
+Endpoints:
+- GET    /v1/admin/users?search=&role=&status=&clinicId=&page=&pageSize=
+- POST   /v1/admin/users
+- GET    /v1/admin/users/:id
+- PUT    /v1/admin/users/:id
+- PUT    /v1/admin/users/:id/password      (optional but recommended for enterprise ops)
+- DELETE /v1/admin/users/:id               (prefer status=INACTIVE)
+
+User fields:
+- email (unique, required)
+- role (ADMIN / MANAGER)
+- clinicId (required for MANAGER; optional/null for ADMIN if your model allows)
+- status (ACTIVE/INACTIVE)
+- createdAt
+
+Rules:
+- Hash passwords with existing bcrypt utilities.
+- Enforce: MANAGER must have a valid clinicId.
+- Enforce unique email.
+- Provide a “User Details” response that includes:
+  - user profile fields
+  - clinic summary (if assigned)
+  - basic security metadata (e.g., createdAt, status, role)
+  - optionally lastLoginAt if you track it (do NOT invent if not stored)
+
+Audit logging required for:
+- user created
+- role/clinic/status changes
+- password reset (do not log the password; only action metadata)
+
+Acceptance:
+- Admin can create a MANAGER tied to a clinic and that user can log in.
+- Admin can deactivate a user and that user can no longer authenticate.
+
+C) Admin Invoices API (mostly exists — verify + enhance)
+--------------------------------------------------------
+You already have invoice APIs (generate/list/detail/status). Ensure they are complete and admin-friendly.
+
+Required endpoints (confirm exist; implement if missing):
+- POST /v1/admin/invoices/generate?period=YYYY-MM
+- GET  /v1/admin/invoices?period=&clinicId=&status=&page=&pageSize=
+- GET  /v1/admin/invoices/:id
+- PUT  /v1/admin/invoices/:id/status   { status: DRAFT|ISSUED|PAID }
+
+Enhancements (if not already present):
+- Pagination for list.
+- Invoice detail should include clinic info (name, currency, unit price) to avoid extra round trips.
+- Audit log invoice generation and status changes.
+
+Acceptance:
+- Admin can filter invoices by period + clinic + status.
+- Admin can open invoice details and change status.
+
+D) Security & Middleware (non-negotiable)
+-----------------------------------------
+- All admin endpoints must be protected by authMiddleware + requireRole("ADMIN").
+- Keep clinic scoping rules for manager endpoints unchanged.
+- Validate all request bodies and query params with Zod.
+- Consistent error responses via AppError factory.
+
+========================================================
+SCOPE — MOBILE ADMIN CONSOLE (EXPO ROUTER)
+========================================================
+
+A) Routing / Layout
+-------------------
+Implement a dedicated admin route group, for example:
+
+app/
+  (admin)/
+    _layout.tsx          // Admin Tabs layout (or Stack + drawer-like list)
+    dashboard.tsx
+    clinics/
+      index.tsx          // list + search + create
+      [id].tsx           // detail + edit
+    users/
+      index.tsx          // list + filters + create
+      [id].tsx           // user details + edit + deactivate + reset password
+    invoices/
+      index.tsx          // list + filters
+      [id].tsx           // invoice detail + status actions
+    settings.tsx         // logout etc.
+
+Then update app/index.tsx role routing:
+- ADMIN -> /(admin)/dashboard
+- MANAGER -> /(tabs)/index
+- PATIENT -> /(patient)/dashboard
+- unauth -> /(auth)/login
+
+Acceptance:
+- Admin login lands in admin dashboard every time.
+- Manager and patient flows remain unchanged.
+
+B) Admin UI Requirements (professional UX)
+------------------------------------------
+For each screen, use consistent states:
+- LoadingView / ErrorView / EmptyState
+- Pull-to-refresh on lists
+- Debounced search input
+- Pagination (Load more or infinite list)
+
+Clinics:
+- Clinic list cards: name, status badge, currency, unit price
+- Create clinic: modal or dedicated screen
+- Clinic detail: editable fields + save
+- Deactivate clinic (with confirmation)
+
+Users:
+- Users list: email, role, status, clinic (if any)
+- Create user:
+  - email
+  - role
+  - clinic selection (required when role=MANAGER)
+  - initial password (or generate + copy)
+  - status
+- User detail:
+  - editable role/status/clinic assignment
+  - reset password action (optional but recommended)
+  - deactivate action (confirm)
+
+Invoices:
+- Invoice list:
+  - period, clinic name, patientCount, total, currency, status badge
+  - filters: period, clinic, status
+- Invoice detail:
+  - all invoice fields + clinic billing configuration
+  - actions: set status DRAFT/ISSUED/PAID (with confirm)
+  - (optional) regenerate invoice for period if status is DRAFT
+
+Dashboard:
+- Basic metrics:
+  - total clinics (active vs inactive)
+  - total users
+  - invoices by status for selected period (optional)
+- Quick actions:
+  - “Create Clinic”
+  - “Create User”
+  - “Generate Invoices (period)”
+
+C) Data Layer (React Query)
+---------------------------
+- Reuse the existing query client + auth header injection pattern.
+- Create typed API client functions:
+  - lib/api/adminClinics.ts
+  - lib/api/adminUsers.ts
+  - lib/api/adminInvoices.ts
+- Ensure invalidations are correct (e.g., create clinic invalidates clinics list, etc.).
+
+========================================================
+NON-FUNCTIONAL REQUIREMENTS
+========================================================
+
+- TypeScript strictness preserved; no “any” escapes unless absolutely justified.
+- Input validation on both client and server (Zod server-side; client-side basic required checks).
+- Audit logging for all admin mutations.
+- No regressions to manager/patient areas.
+- Clean code organization: routes thin, repositories handle DB, schemas in shared/schema.ts.
+
+========================================================
+DELIVERABLES
+========================================================
+
+1) A concise implementation plan (bullet points) listing:
+   - New/modified backend files
+   - New/modified mobile files
+   - DB migrations/Drizzle schema changes (only if needed)
+
+2) Implementation (code):
+   - Admin Clinics CRUD end-to-end
+   - Admin Users CRUD + user details end-to-end
+   - Admin Invoices list + detail + status actions end-to-end
+   - Admin routing and navigation
+
+3) “How to Test” checklist:
+   - Admin can create clinic -> visible -> editable -> deactivate
+   - Admin can create manager user assigned to clinic -> manager can login
+   - Admin can list invoices for a period and open invoice details -> change status
+   - Confirm managers and patients still behave as before
+
+Work iteratively, keep commits small, and produce a short “What changed” summary at the end.

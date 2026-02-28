@@ -34,9 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/v1/auth", authRoutes);
   app.use("/v1/patient", patientRoutes);
   app.use("/v1/patient", patientDashboardRoute);
-  app.use("/v1", meRoutes);
-  app.use("/v1/manager", managerRoutes);
   app.use("/v1/admin", adminRoutes);
+  app.use("/v1/manager", managerRoutes);
+  app.use("/v1", meRoutes);
   app.use("/v1", uploadRoutes);
 
   app.use(errorHandler);

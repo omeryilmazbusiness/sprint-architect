@@ -4,7 +4,7 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprint 6 complete):** All Sprint 5 features plus: rejection reason fix (patient dashboard now returns it), pluggable S3/local PDF storage, and full removal of the legacy in-memory auth store.
+**Current state (Sprint 7 complete):** Full Admin Console — ADMIN role now has a dedicated route group `(admin)` with tabs for Dashboard, Clinics, Users, Invoices, and Settings. Full CRUD for clinics and staff users, metrics endpoint, invoice management. Login routing is now role-deterministic (returns role from API, navigates directly).
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
@@ -39,9 +39,14 @@ Preferred communication style: Simple, everyday language.
 - **Navigation structure:**
   - `app/index.tsx` → redirects based on auth state + role
   - `app/(auth)/login.tsx` → staff and patient login
-  - `app/(tabs)/` → manager/admin tabs: Dashboard, Patients, Operations, Settings
+  - `app/(tabs)/` → manager tabs: Dashboard, Patients, Operations, Settings
+  - `app/(admin)/` → admin tabs: Dashboard, Clinics, Users, Invoices, Settings
+  - `app/(admin)/clinics/` → Clinics list + detail (CRUD)
+  - `app/(admin)/users/` → Users list + detail (CRUD + password reset)
+  - `app/(admin)/invoices/` → Invoices list + detail (status management)
   - `app/(manager)/` → stack screens: patient detail, doctors, hotels, transports, invoices
   - `app/(patient)/` → patient dashboard (role-gated redirect)
+- **API client layer:** `lib/api/adminClinics.ts`, `lib/api/adminUsers.ts`, `lib/api/adminInvoices.ts`
 - **State management:** React Query for server state; React Context (`AuthContext`) for auth.
 - **Auth tokens** stored in `AsyncStorage`, injected via query client.
 - **Fonts:** Inter (400, 500, 600, 700) via `@expo-google-fonts/inter`.
@@ -56,9 +61,9 @@ Preferred communication style: Simple, everyday language.
   - `server/routes.ts` → route mounting
   - `server/db.ts` → Drizzle PostgreSQL client singleton
   - `server/auth/` → auth subsystem (JWT, bcrypt, middleware, errors) — legacy `store.ts` removed
-  - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo, authRepo, invoiceRepo)
+  - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo, authRepo, invoiceRepo, **clinicRepo**, **userRepo**)
   - `server/api/managerRoutes.ts` → all manager CRUD + assignment endpoints + invoices
-  - `server/api/adminRoutes.ts` → admin-only endpoints (invoice generation/management)
+  - `server/api/adminRoutes.ts` → ADMIN-only: metrics endpoint, clinic CRUD, user CRUD, invoice management
   - `server/api/uploadRoutes.ts` → PDF upload (POST) + download (GET) with RBAC; streams files via storage provider
   - `server/api/auditLogger.ts` → fire-and-forget audit logging to DB
   - `server/api/patientDashboardRoute.ts` → patient self-service dashboard (includes rejectionReason)
