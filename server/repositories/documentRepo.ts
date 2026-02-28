@@ -63,4 +63,13 @@ export const documentRepo = {
       with: { documentType: true },
     });
   },
+
+  async updateDocument(id: string, clinicId: string, data: { status?: string; notes?: string }) {
+    const [updated] = await db
+      .update(patientDocuments)
+      .set(data)
+      .where(and(eq(patientDocuments.id, id), eq(patientDocuments.clinicId, clinicId)))
+      .returning();
+    return updated;
+  },
 };

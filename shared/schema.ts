@@ -115,6 +115,9 @@ export const hotels = pgTable("hotels", {
   address: text("address"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  stars: integer("stars"),
+  phone: text("phone"),
+  website: text("website"),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

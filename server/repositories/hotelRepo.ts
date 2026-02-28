@@ -8,6 +8,9 @@ export interface CreateHotelInput {
   address?: string;
   latitude?: number;
   longitude?: number;
+  stars?: number;
+  phone?: string;
+  website?: string;
   notes?: string;
 }
 
@@ -31,9 +34,10 @@ export const hotelRepo = {
   },
 
   async update(id: string, clinicId: string, input: Partial<CreateHotelInput>) {
+    const { clinicId: _cid, ...safeInput } = input as any;
     const [updated] = await db
       .update(hotels)
-      .set(input)
+      .set(safeInput)
       .where(and(eq(hotels.id, id), eq(hotels.clinicId, clinicId)))
       .returning();
     return updated;

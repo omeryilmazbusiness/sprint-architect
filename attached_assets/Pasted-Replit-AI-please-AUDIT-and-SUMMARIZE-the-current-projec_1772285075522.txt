@@ -1,0 +1,44 @@
+Replit AI, please AUDIT and SUMMARIZE the current project state.
+
+CONTEXT:
+We have been building a multi-tenant Health Tourism Operations SaaS with a monorepo:
+- /apps/api (Fastify + TypeScript + Prisma + Postgres, Clean Architecture)
+- /apps/web (React Vite + TypeScript)
+- /packages/shared (shared types/schemas/api client)
+Sprint 1: scaffold + /health + prisma base + seed
+Sprint 2: auth (admin/manager) + RBAC + multi-tenant clinic scoping + patientKey login + device binding + refresh tokens
+Sprint 3: manager core modules (patients/doctors/hotels/transports CRUD, assignments, appointments, document assignment) + patient dashboard payload + web manager pages
+
+TASK:
+1) CHECK WHAT EXISTS NOW:
+- Inspect the repository structure and list major folders and key files.
+- Identify which Sprint items are implemented vs missing or partially done.
+
+2) RUN VERIFICATION (inside Replit):
+- Run database migrations (if needed) and seed.
+- Start API and Web (in dev mode).
+- Call and verify key endpoints with example curl commands:
+  - GET /v1/health (or /health)
+  - POST /v1/auth/login (admin + manager)
+  - GET /v1/me
+  - POST /v1/patient/auth/login (patientKey + deviceId) and verify single-device rule
+  - Manager endpoints: create patient, list patients, assign hotel/transport/documents, create appointment
+  - GET /v1/patient/dashboard (as patient token)
+- Verify tenant scoping: manager cannot access other clinic data (if demo data supports it).
+
+3) REPORT IN A VERY CLEAR FORMAT (for a non-technical reader but still detailed):
+- A) “What we built so far” (short bullets)
+- B) “What is working” (tested and confirmed)
+- C) “What is missing / broken / risky”
+- D) “Exact commands to run” (step-by-step)
+- E) “Current DB models” (list tables/models)
+- F) “Current Web routes/pages” (list routes)
+- G) “Next recommended steps (Sprint 4 plan)” (top 10 tasks in priority order)
+
+IMPORTANT OUTPUT RULES:
+- Do not just describe; actually verify by running the project and calling endpoints.
+- If something fails, show the error and explain the fix with exact file changes.
+- Be honest: mark items as “CONFIRMED” only if you tested them.
+- Provide a final “PASS/FAIL” status for Sprint 1, Sprint 2, Sprint 3.
+
+Start by printing the current file tree, then run the verification steps.

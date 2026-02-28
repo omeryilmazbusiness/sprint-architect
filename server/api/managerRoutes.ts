@@ -304,6 +304,9 @@ const createHotelSchema = z.object({
   address: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  stars: z.number().int().min(1).max(5).optional(),
+  phone: z.string().optional(),
+  website: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -353,8 +356,11 @@ router.delete("/hotels/:id", async (req, res, next) => {
 });
 
 const createTransportSchema = z.object({
-  driverPhone: z.string().min(1),
+  driverPhone: z.string().optional(),
+  phone: z.string().optional(),
   driverName: z.string().optional(),
+  vehicleType: z.string().optional(),
+  licensePlate: z.string().optional(),
   vehicleInfo: z.string().optional(),
   meetingPointText: z.string().optional(),
   latitude: z.number().optional(),
@@ -365,7 +371,10 @@ router.post("/transports", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(createTransportSchema, req.body);
-    const transport = await transportRepo.create({ clinicId, ...body });
+    const { phone, driverPhone, vehicleType, licensePlate, vehicleInfo, ...rest } = body;
+    const resolvedPhone = driverPhone || phone || "";
+    const resolvedVehicleInfo = vehicleInfo || [vehicleType, licensePlate].filter(Boolean).join(" / ") || undefined;
+    const transport = await transportRepo.create({ clinicId, driverPhone: resolvedPhone, vehicleInfo: resolvedVehicleInfo, ...rest });
     res.status(201).json(transport);
   } catch (e) { next(e); }
 });
@@ -391,7 +400,13 @@ router.put("/transports/:id", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(createTransportSchema.partial(), req.body);
-    const transport = await transportRepo.update(req.params.id, clinicId, body);
+    const { phone, driverPhone, vehicleType, licensePlate, vehicleInfo, ...rest } = body;
+    const update: Record<string, unknown> = { ...rest };
+    if (driverPhone || phone) update.driverPhone = driverPhone || phone;
+    if (vehicleInfo || vehicleType || licensePlate) {
+      update.vehicleInfo = vehicleInfo || [vehicleType, licensePlate].filter(Boolean).join(" / ");
+    }
+    const transport = await transportRepo.update(req.params.id, clinicId, update as any);
     if (!transport) notFound("Transport");
     res.json(transport);
   } catch (e) { next(e); }
@@ -445,6 +460,19 @@ router.get("/patients/:id/documents", async (req, res, next) => {
     if (!patient) notFound("Patient");
     const docs = await documentRepo.listPatientDocuments(req.params.id, clinicId);
     res.json(docs);
+  } catch (e) { next(e); }
+});
+
+router.put("/documents/:id", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const body = validateBody(
+      z.object({ status: z.string().optional(), notes: z.string().optional() }),
+      req.body
+    );
+    const doc = await documentRepo.updateDocument(req.params.id, clinicId, body);
+    if (!doc) notFound("Document");
+    res.json(doc);
   } catch (e) { next(e); }
 });
 
