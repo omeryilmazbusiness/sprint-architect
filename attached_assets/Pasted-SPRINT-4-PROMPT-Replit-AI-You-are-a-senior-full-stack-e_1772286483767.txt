@@ -1,0 +1,139 @@
+SPRINT 4 PROMPT (Replit AI)
+
+You are a senior full-stack engineer continuing the SAME existing codebase. Do NOT re-scaffold.
+Current stack (confirmed): Expo React Native mobile + Express/TypeScript backend + PostgreSQL + Drizzle ORM.
+Sprint 1–3 backend is PASS with tests; Sprint 4 focuses on completing the MOBILE product + a few missing backend routes.
+
+SPRINT 4 OBJECTIVE:
+Make the app реально usable for both MANAGER and PATIENT by completing the missing mobile screens, wiring real data, and adding the few missing backend endpoints:
+1) Manager operational screens: Patient Detail, Doctors, Hotels, Transports
+2) Patient-facing dashboard UI using existing /v1/patient/dashboard endpoint
+3) Wire Dashboard metrics and Operations tab to real endpoints
+4) Add missing backend routes: assign-doctor, appointment doctor selection (if needed)
+5) Add minimal UI/UX polish, consistent loading/error states, and keep SOLID boundaries
+
+NON-NEGOTIABLE RULES:
+- Use existing navigation structure: app/(auth), app/(tabs), app/(manager)
+- Use the existing API client + auth refresh logic already implemented
+- Respect RBAC + clinic scoping always (MANAGER can only access own clinic)
+- Keep changes minimal but professional: clean components, reusable hooks, no heavy UI library unless already present
+- Every screen must handle: loading, empty state, error state
+- Keep document_status enum rules: ASSIGNED, UPLOADED, APPROVED, REJECTED (mobile must reflect this)
+- Do not implement file upload in this sprint unless the codebase already contains storage plumbing; focus on UI + status for now
+
+DELIVERABLES (Sprint 4):
+A) Mobile Screens for MANAGER
+1) app/(manager)/patients/[id].tsx  (MOST IMPORTANT)
+- Header: Patient name + status + patientKey (copy button)
+- Tabs (4):
+  i) Overview: arrival/departure dates, basic info
+  ii) Assignments:
+      - Assign Hotel: dropdown of hotels (GET /v1/manager/hotels), fields (stayDays, roomNo, checkInDate, checkOutDate), submit PUT /v1/manager/patients/:id/assign-hotel
+      - Assign Transport: dropdown of transports (GET /v1/manager/transports), submit PUT /v1/manager/patients/:id/assign-transport
+      - Assign Doctor: dropdown of doctors (GET /v1/manager/doctors), submit PUT /v1/manager/patients/:id/assign-doctor  (ADD BACKEND ROUTE if missing)
+  iii) Appointments:
+      - List patient appointments (GET /v1/manager/patients/:id/appointments?from=&to=)
+      - Create appointment form: title/type, startAt, endAt, locationText, notes, (doctorId optional if backend supports)
+      - Edit appointment (PUT /v1/manager/appointments/:id) and Cancel/Delete
+  iv) Documents:
+      - List assigned documents (GET /v1/manager/patients/:id/documents)
+      - Assign document types: multi-select from GET /v1/manager/document-types then POST /v1/manager/patients/:id/assign-documents
+      - Update document status (PUT /v1/manager/documents/:id) and show status badges
+
+2) app/(manager)/doctors/index.tsx
+- List doctors (search optional)
+- Create/edit modal: fullName, specialty, phone, photoUrl
+- Delete action
+
+3) app/(manager)/hotels/index.tsx
+- List hotels
+- Create/edit modal: name, stars, address, phone, website
+- Delete action
+
+4) app/(manager)/transports/index.tsx
+- List transports
+- Create/edit modal: driverName, driverPhone, vehicleType, licensePlate, meetingPointText, latitude, longitude
+- Delete action
+
+B) Mobile Screens for PATIENT
+1) Create patient role entry point after patient login:
+- After PATIENT login, route to a new patient dashboard screen (either within tabs or a PATIENT stack)
+2) Patient Dashboard UI (uses GET /v1/patient/dashboard):
+- Sections/cards:
+  - Transport: driver phone + meeting point + map location (if lat/lng exists) + Call button
+  - Hotel: name + address + roomNo + dates + map
+  - Appointments: chronological timeline list (today highlighted)
+  - Doctors: cards list (name + specialty + phone)
+  - Documents: list with status badges (ASSIGNED/UPLOADED/APPROVED/REJECTED)
+- No file upload this sprint unless backend already supports it; show “Upload coming soon” for ASSIGNED docs.
+
+C) Wire existing Tabs to real data (Manager experience)
+1) app/(tabs)/index.tsx (Dashboard)
+Replace hardcoded zeros with real metrics:
+- totalPatients (GET /v1/manager/patients?pageSize=1 to get totalCount OR add /v1/manager/metrics endpoint)
+- upcomingAppointmentsToday (GET /v1/manager/upcoming-appointments filtered by today)
+- pendingDocuments (count docs where status=ASSIGNED or REJECTED)
+If metrics endpoint does not exist, implement a minimal backend endpoint:
+- GET /v1/manager/metrics -> { totalPatients, upcomingAppointmentsToday, pendingDocuments }
+
+2) app/(tabs)/operations.tsx
+Replace placeholder data with:
+- Upcoming appointments list (GET /v1/manager/upcoming-appointments)
+- Simple filters: date range (today/this week)
+- Optional: Quick links to patient detail screen
+
+D) Backend changes required (only what Sprint 4 needs)
+1) Add PUT /v1/manager/patients/:id/assign-doctor
+- Validate doctor belongs to manager clinic
+- Save to patient_plans.doctorId (or equivalent)
+- Add tests similar to assign-hotel/assign-transport
+2) Appointment doctor assignment (if not present)
+- Allow doctorId optional in create/update appointment DTO
+- Validate doctor clinic ownership
+- Return doctor info in appointment list where possible
+3) (Optional but recommended) GET /v1/manager/metrics endpoint
+- clinic scoped
+- compute counts efficiently using Drizzle
+
+E) Mobile Engineering Quality
+- Create reusable hooks:
+  - usePatients(), usePatientDetails(id)
+  - useDoctors(), useHotels(), useTransports()
+  - useAppointments(patientId)
+  - useDocuments(patientId)
+- Create reusable UI components:
+  - LoadingView, ErrorView, EmptyState
+  - StatusBadge for document/appointment statuses
+  - EntityListRow
+- Ensure navigation works:
+  - From Patients tab to patient detail screen
+  - From Operations list item to patient detail
+
+F) Tests (backend)
+- Add tests for:
+  - assign-doctor route works
+  - doctorId validation
+  - metrics endpoint (if implemented)
+
+OUTPUT REQUIREMENTS:
+After implementing Sprint 4, print:
+1) Files changed summary (mobile + server)
+2) New/updated endpoints list + sample curl calls
+3) Screens list and how to navigate to each
+4) Manual verification checklist:
+   - Manager: open patients list, create patient, open patient detail, assign hotel/transport/doctor, add appointment, assign documents, update doc status
+   - Dashboard shows real counts
+   - Operations shows real upcoming appointments
+   - Patient: login via patientKey, see dashboard data populated
+5) Note remaining Sprint 5 items (file upload, invoices UI, production hardening)
+
+IMPLEMENTATION ORDER (do it in this order):
+1) Backend: assign-doctor (+ tests) and metrics endpoint if needed
+2) Mobile: Manager patient detail screen (biggest value)
+3) Mobile: Doctors/Hotels/Transports screens
+4) Mobile: Wire Dashboard and Operations to real API
+5) Mobile: Patient dashboard screen
+6) Final polish (loading/error states, navigation, consistency)
+
+Proceed now. Do not re-architect; extend what exists cleanly.
+END.

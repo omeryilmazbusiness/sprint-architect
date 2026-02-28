@@ -4,12 +4,24 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state:** The app has a working authentication foundation, a tab-based navigation for staff (Dashboard, Patients, Operations, Settings), and a backend API with in-memory storage. The database schema is defined with Drizzle ORM targeting PostgreSQL but the backend currently uses in-memory storage (`MemStorage`) rather than the actual database.
+**Current state (Sprint 4 complete):** Fully functional app with real PostgreSQL persistence, complete manager CRUD workflows, patient detail screens, resource management (doctors/hotels/transports), real-time dashboard metrics, and a dedicated patient dashboard. All screens are connected to live APIs.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
 - **Staff login** uses email + password → JWT access + refresh tokens.
 - **Patient login** uses a `patientKey` + `deviceId` with single-device binding enforcement.
+- **Patient Plan** = treatment plan per patient (assigned doctor, hotel, transport, documents).
+
+---
+
+## Demo Accounts
+
+| Role | Credential | Notes |
+|------|-----------|-------|
+| Admin | admin@demo.com / Admin123! | Full platform access |
+| Manager | manager@demo.com / Manager123! | Clinic-scoped access |
+| Patient | Key: PATIENT-TEST-0001 | Sarah Mitchell |
+| Patient | Key: PATIENT-TEST-0002 | James Thornton |
 
 ---
 
@@ -23,102 +35,110 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend (React Native / Expo)
 
-- **Framework:** Expo with `expo-router` for file-based routing (similar to Next.js but for mobile/web).
+- **Framework:** Expo with `expo-router` for file-based routing.
 - **Navigation structure:**
-  - `app/index.tsx` → redirects to `/(auth)/login` or `/(tabs)` based on auth state.
-  - `app/(auth)/login.tsx` → login screen supporting both staff and patient modes.
-  - `app/(tabs)/` → main app with Dashboard, Patients, Operations, Settings tabs.
-- **State management:** React Query (`@tanstack/react-query`) for server state; React Context (`AuthContext`) for authentication state.
-- **Auth tokens** are stored in `AsyncStorage` and injected into API requests via the query client.
-- **Fonts:** Inter (400, 500, 600, 700) loaded via `@expo-google-fonts/inter`.
-- **Theme:** Dual light/dark theme defined in `constants/colors.ts` using `useColorScheme()`.
-- **Platform support:** iOS, Android, and Web (with platform-specific adaptations like `KeyboardAwareScrollViewCompat`).
+  - `app/index.tsx` → redirects based on auth state + role
+  - `app/(auth)/login.tsx` → staff and patient login
+  - `app/(tabs)/` → manager/admin tabs: Dashboard, Patients, Operations, Settings
+  - `app/(manager)/` → stack screens: patient detail, doctors, hotels, transports
+  - `app/(patient)/` → patient dashboard (role-gated redirect)
+- **State management:** React Query for server state; React Context (`AuthContext`) for auth.
+- **Auth tokens** stored in `AsyncStorage`, injected via query client.
+- **Fonts:** Inter (400, 500, 600, 700) via `@expo-google-fonts/inter`.
+- **Theme:** Light/dark using `useColorScheme()` + `constants/colors.ts` (navy #0A3D62 / teal #00B4D8).
+- **Shared components:** `StatusBadge`, `MetricCard`, `LoadingView`, `ErrorView`, `EmptyState`, `ErrorBoundary`.
 
 ### Backend (Express.js)
 
 - **Framework:** Express 5 with TypeScript, run via `tsx` in development.
 - **File structure:**
-  - `server/index.ts` → app bootstrap, CORS setup, static file serving.
-  - `server/routes.ts` → route registration, mock data endpoints.
-  - `server/auth/` → auth subsystem (routes, middleware, JWT, password hashing, in-memory store).
-  - `server/storage.ts` → `IStorage` interface + `MemStorage` implementation.
+  - `server/index.ts` → bootstrap, CORS, static file serving, DB seed
+  - `server/routes.ts` → route mounting
+  - `server/db.ts` → Drizzle PostgreSQL client singleton
+  - `server/auth/` → auth subsystem (JWT, bcrypt, in-memory token store)
+  - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo)
+  - `server/api/managerRoutes.ts` → all manager CRUD + assignment endpoints
+  - `server/api/patientDashboardRoute.ts` → patient self-service dashboard
+  - `server/seed.ts` → seeds demo data on startup (dev only)
 - **Auth system:**
-  - JWT access tokens (15 min TTL) and refresh tokens (30 days).
-  - `authMiddleware` verifies Bearer tokens and attaches `actor` to `req`.
-  - `requireRole()` middleware enforces RBAC.
-  - `clinicScopeMiddleware` enforces tenant isolation for MANAGER role.
-  - Passwords hashed with bcryptjs (12 rounds).
-- **Current data layer:** In-memory store (`server/auth/store.ts`) with seeded demo data. The actual PostgreSQL integration via Drizzle is defined but not yet wired into the Express routes.
-- **CORS:** Dynamic CORS based on `REPLIT_DEV_DOMAIN` and `REPLIT_DOMAINS` environment variables.
+  - JWT access tokens (15 min TTL) + refresh tokens (30 days)
+  - `authMiddleware`, `requireRole()`, `clinicScopeMiddleware` for RBAC + tenancy
+  - **Note:** JWT/refresh tokens and device bindings are stored in RAM (ephemeral). Server restart logs everyone out. Migration to DB storage is a future task.
 
 ### Database (Drizzle ORM + PostgreSQL)
 
-- **ORM:** Drizzle with `drizzle-kit` for migrations.
 - **Schema** (`shared/schema.ts`) defines:
-  - `clinics` table: `id`, `name`, `status` (ACTIVE/INACTIVE/SUSPENDED), `createdAt`.
-  - `users` table: `id`, `email`, `passwordHash`, `role` (ADMIN/MANAGER/PATIENT), `clinicId` (FK to clinics, nullable), `status`, `createdAt`.
-  - Postgres enums: `clinic_status`, `user_role`, `user_status`.
-- **Migration command:** `npm run db:push` (uses `drizzle-kit push`).
-- **Config:** `drizzle.config.ts` reads `DATABASE_URL` from environment.
-- **Note:** The backend currently uses in-memory storage. Connecting the Drizzle/Postgres layer to Express routes is a pending task.
+  - `clinics`, `users` — auth/tenancy
+  - `patients`, `doctors`, `hotels`, `transports` — core resources
+  - `patientPlans` — treatment plan per patient (with doctorId, hotelId, transportId)
+  - `appointments` — scheduled meetings (with patient, doctor, clinic)
+  - `documentTypes`, `patientDocuments` — document tracking workflow
+- **Migration:** `npm run db:push` (drizzle-kit push)
 
-### Shared Code
+### API Routes
 
-- `shared/schema.ts` contains Drizzle table definitions, Zod insert schemas, and TypeScript types used by both server and (potentially) client.
-- Path alias `@shared/*` maps to `./shared/*` in TypeScript config.
+All manager routes: `/v1/manager/*` (require MANAGER or ADMIN + clinic scope)
 
-### API Communication
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/POST | /v1/manager/patients | List / create patients |
+| GET/PUT/DELETE | /v1/manager/patients/:id | Get / update / delete patient |
+| GET | /v1/manager/metrics | Dashboard metrics (totalPatients, upcomingToday, pendingDocuments) |
+| GET | /v1/manager/upcoming-appointments | Upcoming appointments list |
+| GET/POST | /v1/manager/doctors | List / create doctors |
+| PUT/DELETE | /v1/manager/doctors/:id | Update / delete doctor |
+| GET/POST | /v1/manager/hotels | List / create hotels |
+| PUT/DELETE | /v1/manager/hotels/:id | Update / delete hotel |
+| GET/POST | /v1/manager/transports | List / create transports |
+| PUT/DELETE | /v1/manager/transports/:id | Update / delete transport |
+| GET | /v1/manager/patients/:id/plan | Get patient treatment plan |
+| PUT | /v1/manager/patients/:id/assign-doctor | Assign doctor to patient plan |
+| PUT | /v1/manager/patients/:id/assign-hotel | Assign hotel to patient plan |
+| PUT | /v1/manager/patients/:id/assign-transport | Assign transport to patient plan |
+| POST | /v1/manager/patients/:id/assign-documents | Assign document types to patient |
+| GET | /v1/manager/patients/:id/documents | List patient documents |
+| PUT | /v1/manager/documents/:id | Update document status |
+| GET | /v1/manager/patients/:id/appointments | List patient appointments |
+| POST | /v1/manager/appointments | Create appointment |
+| PUT/DELETE | /v1/manager/appointments/:id | Update / delete appointment |
+| GET | /v1/manager/document-types | List available document types |
+| GET | /v1/patient/dashboard | Patient self-service dashboard |
+| POST | /v1/patient/auth/login | Patient login (patientKey + deviceId) |
+| POST | /v1/auth/login | Staff login |
+| POST | /v1/auth/refresh | Token refresh |
+| POST | /v1/auth/logout | Logout |
 
-- The mobile app calls the backend at the URL constructed from `EXPO_PUBLIC_DOMAIN` environment variable.
-- `lib/query-client.ts` handles:
-  - Base URL resolution.
-  - Automatic token refresh on 401 responses.
-  - Injecting `Authorization: Bearer <token>` headers.
-- API routes are prefixed: `/api/*` for data endpoints, `/v1/auth/*` for auth, `/v1/patient/*` for patient auth, `/v1/me/*` for profile.
+### Transport Field Mapping
 
-### Multi-Tenancy Pattern
-
-- Every clinic-owned resource includes `clinicId`.
-- MANAGER requests are scoped to their clinic via `clinicScopeMiddleware`.
-- The `ActorContext` (from JWT payload) carries `role`, `sub` (userId), and `clinicId`.
-- Repository/storage methods for clinic-owned entities require `clinicId` to prevent cross-tenant data leaks.
+The transport API accepts `phone` (internally `driverPhone`), `vehicleType` + `licensePlate` (combined into `vehicleInfo` as "type|plate"). When reading, split `vehicleInfo` on `|` to get type and plate separately.
 
 ---
 
 ## External Dependencies
 
 ### Runtime Services
-- **PostgreSQL database** — Required. Connection string via `DATABASE_URL` environment variable. Currently used only for schema definition; in-memory store is active for runtime.
-- **Replit hosting** — The app is designed to run on Replit. CORS and URL configuration depend on `REPLIT_DEV_DOMAIN` and `REPLIT_DOMAINS` env vars. `EXPO_PUBLIC_DOMAIN` must be set for the mobile app to reach the API.
-
-### Key NPM Dependencies
-| Package | Purpose |
-|---|---|
-| `expo` + `expo-router` | Mobile/web app framework and file-based routing |
-| `@tanstack/react-query` | Server state management and data fetching |
-| `drizzle-orm` + `drizzle-kit` | ORM and migration tooling for PostgreSQL |
-| `drizzle-zod` | Auto-generate Zod schemas from Drizzle tables |
-| `express` | Backend HTTP server |
-| `jsonwebtoken` | JWT signing and verification |
-| `bcryptjs` | Password hashing |
-| `zod` | Runtime validation for API inputs |
-| `@react-native-async-storage/async-storage` | Persistent token storage on device |
-| `expo-linear-gradient` | UI gradient effects |
-| `expo-blur` | iOS blur effects in tab bar |
-| `expo-glass-effect` | Native liquid glass UI (iOS 26+) |
-| `react-native-gesture-handler` | Touch gestures |
-| `react-native-reanimated` | Animations |
-| `expo-haptics` | Haptic feedback on iOS |
-| `expo-image-picker` | Document/photo upload (planned) |
-| `expo-location` | Location services for transport tracking (planned) |
-| `pg` | PostgreSQL Node.js driver (used by Drizzle) |
+- **PostgreSQL** — Required. `DATABASE_URL` env var. Full persistence via Drizzle.
+- **Replit hosting** — CORS via `REPLIT_DEV_DOMAIN`/`REPLIT_DOMAINS`. API URL from `EXPO_PUBLIC_DOMAIN`.
 
 ### Environment Variables Required
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_ACCESS_SECRET` | Secret for signing access tokens |
-| `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
+| `SESSION_SECRET` | Session signing secret |
 | `EXPO_PUBLIC_DOMAIN` | API base URL for the mobile app |
-| `REPLIT_DEV_DOMAIN` | Auto-set by Replit for dev environment |
-| `REPLIT_DOMAINS` | Auto-set by Replit for allowed CORS origins |
+| `REPLIT_DEV_DOMAIN` | Auto-set by Replit |
+| `REPLIT_DOMAINS` | Auto-set by Replit for CORS |
+
+### Key NPM Dependencies
+| Package | Purpose |
+|---|---|
+| `expo` + `expo-router` | Mobile/web framework and routing |
+| `@tanstack/react-query` | Server state management |
+| `drizzle-orm` + `drizzle-kit` | ORM + migration tooling |
+| `express` | Backend HTTP server |
+| `jsonwebtoken` + `bcryptjs` | Auth tokens + password hashing |
+| `zod` | API input validation |
+| `expo-linear-gradient` + `expo-blur` | UI effects |
+| `expo-glass-effect` | Native liquid glass tab bar (iOS 26+) |
+| `react-native-keyboard-controller` | Keyboard handling |
+| `@react-native-async-storage/async-storage` | Persistent token storage |

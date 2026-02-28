@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import { eq, and, gte, count } from "drizzle-orm";
 import { authMiddleware, requireRole, clinicScopeMiddleware } from "../auth/middleware";
 import { AppError } from "../auth/errors";
+import { db } from "../db";
+import { patients, appointments, patientDocuments } from "@shared/schema";
 import { patientRepo } from "../repositories/patientRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
 import { hotelRepo } from "../repositories/hotelRepo";
@@ -150,6 +153,31 @@ router.put("/patients/:id/assign-transport", async (req, res, next) => {
       patientId: req.params.id,
       clinicId,
       transportId: body.transportId ?? null,
+    });
+    res.json(plan);
+  } catch (e) { next(e); }
+});
+
+const assignDoctorSchema = z.object({
+  doctorId: z.string().nullable().optional(),
+});
+
+router.put("/patients/:id/assign-doctor", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const body = validateBody(assignDoctorSchema, req.body);
+    const patient = await patientRepo.findById(req.params.id, clinicId);
+    if (!patient) notFound("Patient");
+
+    if (body.doctorId) {
+      const doctor = await doctorRepo.findById(body.doctorId, clinicId);
+      if (!doctor) throw new AppError("NOT_FOUND", "Doctor not found or belongs to another clinic", 404);
+    }
+
+    const plan = await planRepo.upsert({
+      patientId: req.params.id,
+      clinicId,
+      doctorId: body.doctorId ?? null,
     });
     res.json(plan);
   } catch (e) { next(e); }
@@ -473,6 +501,37 @@ router.put("/documents/:id", async (req, res, next) => {
     const doc = await documentRepo.updateDocument(req.params.id, clinicId, body);
     if (!doc) notFound("Document");
     res.json(doc);
+  } catch (e) { next(e); }
+});
+
+router.get("/metrics", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const [[{ totalPatients }], [{ upcomingToday }], [{ pendingDocuments }]] = await Promise.all([
+      db.select({ totalPatients: count() }).from(patients).where(
+        and(eq(patients.clinicId, clinicId), eq(patients.status, "ACTIVE"))
+      ),
+      db.select({ upcomingToday: count() }).from(appointments).where(
+        and(
+          eq(appointments.clinicId, clinicId),
+          eq(appointments.status, "SCHEDULED"),
+          gte(appointments.startAt, todayStart),
+        )
+      ),
+      db.select({ pendingDocuments: count() }).from(patientDocuments).where(
+        and(
+          eq(patientDocuments.clinicId, clinicId),
+          eq(patientDocuments.status, "ASSIGNED")
+        )
+      ),
+    ]);
+
+    res.json({ totalPatients, upcomingToday, pendingDocuments });
   } catch (e) { next(e); }
 });
 

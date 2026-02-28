@@ -30,14 +30,14 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
       documentRepo.listPatientDocuments(patientId, clinicId),
     ]);
 
-    const appointingDoctorIds = [...new Set(
-      appts.filter(a => a.doctorId).map(a => a.doctorId as string)
-    )];
+    const doctorIdSet = new Set<string>();
+    appts.filter(a => a.doctorId).forEach(a => doctorIdSet.add(a.doctorId as string));
+    if (plan?.doctorId) doctorIdSet.add(plan.doctorId);
 
     let uniqueDoctors: any[] = [];
-    if (appointingDoctorIds.length > 0) {
+    if (doctorIdSet.size > 0) {
       const allDoctors = await doctorRepo.list(clinicId);
-      uniqueDoctors = allDoctors.rows.filter(d => appointingDoctorIds.includes(d.id));
+      uniqueDoctors = allDoctors.rows.filter(d => doctorIdSet.has(d.id));
     }
 
     res.json({

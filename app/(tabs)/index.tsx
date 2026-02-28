@@ -13,17 +13,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusBadge } from "@/components/StatusBadge";
 
-interface Stats {
+interface Metrics {
   totalPatients: number;
-  activePatients: number;
-  totalClinics: number;
-  appointmentsToday: number;
-  pendingTransports: number;
-  revenue: { thisMonth: number; lastMonth: number; currency: string };
+  upcomingToday: number;
+  pendingDocuments: number;
+}
+
+interface UpcomingAppointment {
+  id: string;
+  patient: { fullName: string };
+  doctor?: { name: string } | null;
+  type: string;
+  startAt: string;
+  status: string;
 }
 
 interface HealthData {
@@ -34,24 +41,6 @@ interface HealthData {
   environment: string;
 }
 
-interface Appointment {
-  id: string;
-  patientName: string;
-  doctorName: string;
-  type: string;
-  date: string;
-  time: string;
-  status: string;
-  clinicName: string;
-}
-
-function formatCurrency(value: number): string {
-  if (value >= 1000) {
-    return `$${(value / 1000).toFixed(1)}k`;
-  }
-  return `$${value}`;
-}
-
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -60,6 +49,7 @@ function formatDate(iso: string): string {
 }
 
 export default function DashboardScreen() {
+  const { user } = useAuth();
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -69,17 +59,15 @@ export default function DashboardScreen() {
   });
 
   const {
-    data: stats,
-    isLoading: statsLoading,
+    data: metrics,
+    isLoading: metricsLoading,
     refetch,
     isRefetching,
-  } = useQuery<Stats>({ queryKey: ["/api/stats"] });
+  } = useQuery<Metrics>({ queryKey: ["/v1/manager/metrics"] });
 
-  const { data: appointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments"],
+  const { data: appointments } = useQuery<UpcomingAppointment[]>({
+    queryKey: ["/v1/manager/upcoming-appointments"],
   });
-
-  const todayApts = appointments?.slice(0, 3) ?? [];
 
   const topPad =
     Platform.OS === "web" ? 67 : insets.top;
@@ -111,7 +99,7 @@ export default function DashboardScreen() {
               Good morning,
             </Text>
             <Text style={[styles.adminName, { fontFamily: "Inter_700Bold" }]}>
-              Admin
+              {user?.fullName ?? "Admin"}
             </Text>
           </View>
           <View
@@ -145,7 +133,7 @@ export default function DashboardScreen() {
 
         <View style={styles.headerStat}>
           <Text style={[styles.bigValue, { fontFamily: "Inter_700Bold" }]}>
-            {statsLoading ? "—" : stats?.totalPatients ?? "—"}
+            {metricsLoading ? "—" : metrics?.totalPatients ?? "—"}
           </Text>
           <Text style={[styles.bigLabel, { fontFamily: "Inter_400Regular" }]}>
             Total Patients Across All Clinics
@@ -165,39 +153,16 @@ export default function DashboardScreen() {
 
         <View style={styles.metricsRow}>
           <MetricCard
-            label="Active Patients"
-            value={statsLoading ? "—" : stats?.activePatients ?? "—"}
-            icon="pulse-outline"
-            trend="8.2% vs last month"
-            trendPositive
-            accent={colors.success}
-          />
-          <MetricCard
-            label="Clinics"
-            value={statsLoading ? "—" : stats?.totalClinics ?? "—"}
-            icon="business-outline"
-            accent={colors.accent}
-          />
-        </View>
-
-        <View style={styles.metricsRow}>
-          <MetricCard
             label="Today's Appointments"
-            value={statsLoading ? "—" : stats?.appointmentsToday ?? "—"}
+            value={metricsLoading ? "—" : metrics?.upcomingToday ?? "—"}
             icon="calendar-outline"
             accent={colors.warning}
           />
           <MetricCard
-            label="Revenue This Month"
-            value={
-              statsLoading
-                ? "—"
-                : formatCurrency(stats?.revenue.thisMonth ?? 0)
-            }
-            icon="trending-up-outline"
-            trend="9% growth"
-            trendPositive
-            accent={colors.success}
+            label="Pending Documents"
+            value={metricsLoading ? "—" : metrics?.pendingDocuments ?? "—"}
+            icon="document-text-outline"
+            accent={colors.accent}
           />
         </View>
 
@@ -210,7 +175,7 @@ export default function DashboardScreen() {
           Upcoming Appointments
         </Text>
 
-        {todayApts.length === 0 ? (
+        {!appointments || appointments.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -218,7 +183,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
         ) : (
-          todayApts.map((apt) => (
+          appointments.map((apt) => (
             <Pressable
               key={apt.id}
               style={({ pressed }) => [
@@ -232,15 +197,15 @@ export default function DashboardScreen() {
             >
               <View style={[styles.aptTime, { backgroundColor: colors.accent + "15" }]}>
                 <Text style={[styles.aptTimeText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
-                  {apt.time}
+                  {formatDate(apt.startAt)}
                 </Text>
               </View>
               <View style={styles.aptInfo}>
                 <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {apt.patientName}
+                  {apt.patient.fullName}
                 </Text>
                 <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {apt.type} · {apt.doctorName}
+                  {apt.type}{apt.doctor ? ` · ${apt.doctor.name}` : ""}
                 </Text>
               </View>
               <StatusBadge status={apt.status as any} small />

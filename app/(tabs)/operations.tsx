@@ -9,37 +9,23 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
 
-interface Appointment {
+interface UpcomingAppointment {
   id: string;
-  patientName: string;
-  doctorName: string;
+  patient: { fullName: string };
+  doctor?: { name: string } | null;
   type: string;
-  date: string;
-  time: string;
+  startAt: string;
   status: string;
-  clinicName: string;
 }
 
-interface Transport {
-  id: string;
-  patientName: string;
-  driverName: string;
-  driverPhone: string;
-  from: string;
-  to: string;
-  date: string;
-  time: string;
-  status: string;
-  vehicleType: string;
-}
-
-type Tab = "appointments" | "transport";
+type Tab = "appointments" | "resources";
 
 function SectionCard({
   children,
@@ -59,39 +45,39 @@ function AppointmentRow({
   apt,
   colors,
 }: {
-  apt: Appointment;
+  apt: UpcomingAppointment;
   colors: typeof Colors.light;
 }) {
+  const dateObj = new Date(apt.startAt);
+  const timeStr = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const dateStr = dateObj.toLocaleDateString([], { month: "short", day: "numeric" });
+
   return (
     <SectionCard colors={colors}>
       <View style={styles.aptRow}>
         <View style={[styles.aptTimePill, { backgroundColor: colors.accent + "15" }]}>
           <Text style={[styles.aptTime, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
-            {apt.time}
+            {timeStr}
           </Text>
           <Text style={[styles.aptDate, { color: colors.accent + "CC", fontFamily: "Inter_400Regular" }]}>
-            {new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {dateStr}
           </Text>
         </View>
         <View style={styles.aptDetails}>
           <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
-            {apt.patientName}
+            {apt.patient.fullName}
           </Text>
           <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
             {apt.type}
           </Text>
-          <View style={styles.aptDoctor}>
-            <Ionicons name="person-circle-outline" size={13} color={colors.textMuted} />
-            <Text style={[styles.aptDoctorText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {apt.doctorName}
-            </Text>
-          </View>
-          <View style={styles.aptClinic}>
-            <Ionicons name="business-outline" size={13} color={colors.textMuted} />
-            <Text style={[styles.aptClinicText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {apt.clinicName}
-            </Text>
-          </View>
+          {apt.doctor && (
+            <View style={styles.aptDoctor}>
+              <Ionicons name="person-circle-outline" size={13} color={colors.textMuted} />
+              <Text style={[styles.aptDoctorText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {apt.doctor.name}
+              </Text>
+            </View>
+          )}
         </View>
         <StatusBadge status={apt.status as any} small />
       </View>
@@ -99,62 +85,37 @@ function AppointmentRow({
   );
 }
 
-function TransportRow({
-  transport,
+function ResourceCard({
+  title,
+  icon,
+  route,
   colors,
 }: {
-  transport: Transport;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
   colors: typeof Colors.light;
 }) {
   return (
-    <SectionCard colors={colors}>
-      <View style={styles.trnHeader}>
-        <View style={styles.trnPatientWrap}>
-          <Text style={[styles.trnPatient, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
-            {transport.patientName}
-          </Text>
-          <Text style={[styles.trnVehicle, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {transport.vehicleType}
-          </Text>
-        </View>
-        <StatusBadge status={transport.status as any} small />
+    <Pressable
+      onPress={() => router.push(route as any)}
+      style={({ pressed }) => [
+        styles.resourceCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.resourceIcon, { backgroundColor: colors.accent + "10" }]}>
+        <Ionicons name={icon} size={24} color={colors.accent} />
       </View>
-
-      <View style={styles.trnRoute}>
-        <View style={styles.trnPoint}>
-          <View style={[styles.trnDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.trnLocation, { color: colors.text, fontFamily: "Inter_400Regular" }]}>
-            {transport.from}
-          </Text>
-        </View>
-        <View style={[styles.trnLine, { backgroundColor: colors.border }]} />
-        <View style={styles.trnPoint}>
-          <View style={[styles.trnDot, { backgroundColor: colors.error }]} />
-          <Text style={[styles.trnLocation, { color: colors.text, fontFamily: "Inter_400Regular" }]}>
-            {transport.to}
-          </Text>
-        </View>
-      </View>
-
-      <View style={[styles.trnDriver, { backgroundColor: colors.background, borderRadius: 10 }]}>
-        <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-        <Text style={[styles.trnDriverName, { color: colors.text, fontFamily: "Inter_500Medium" }]}>
-          {transport.driverName}
-        </Text>
-        <View style={styles.flex1} />
-        <Ionicons name="call-outline" size={14} color={colors.accent} />
-        <Text style={[styles.trnPhone, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
-          {transport.driverPhone}
-        </Text>
-      </View>
-
-      <View style={styles.trnTime}>
-        <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-        <Text style={[styles.trnTimeText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {new Date(transport.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {transport.time}
-        </Text>
-      </View>
-    </SectionCard>
+      <Text style={[styles.resourceTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+        {title}
+      </Text>
+      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+    </Pressable>
   );
 }
 
@@ -164,19 +125,12 @@ export default function OperationsScreen() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>("appointments");
 
-  const { data: appointments, refetch: refetchApts, isRefetching: aRefetch } = useQuery<Appointment[]>({
-    queryKey: ["/api/appointments"],
-  });
-
-  const { data: transports, refetch: refetchTrn, isRefetching: tRefetch } = useQuery<Transport[]>({
-    queryKey: ["/api/transports"],
+  const { data: appointments, refetch, isRefetching } = useQuery<UpcomingAppointment[]>({
+    queryKey: ["/v1/manager/upcoming-appointments"],
   });
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-
-  const isRefetching = aRefetch || tRefetch;
-  const refetch = () => { refetchApts(); refetchTrn(); };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -195,7 +149,7 @@ export default function OperationsScreen() {
         </Text>
 
         <View style={[styles.tabRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {(["appointments", "transport"] as const).map((t) => (
+          {(["appointments", "resources"] as const).map((t) => (
             <Pressable
               key={t}
               onPress={() => setActiveTab(t)}
@@ -205,7 +159,7 @@ export default function OperationsScreen() {
               ]}
             >
               <Ionicons
-                name={t === "appointments" ? "calendar-outline" : "car-outline"}
+                name={t === "appointments" ? "calendar-outline" : "business-outline"}
                 size={14}
                 color={activeTab === t ? "#fff" : colors.textSecondary}
               />
@@ -218,7 +172,7 @@ export default function OperationsScreen() {
                   },
                 ]}
               >
-                {t === "appointments" ? "Appointments" : "Transport"}
+                {t === "appointments" ? "Appointments" : "Resources"}
               </Text>
             </Pressable>
           ))}
@@ -237,28 +191,42 @@ export default function OperationsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "appointments" &&
-          (appointments ?? []).map((apt) => (
-            <AppointmentRow key={apt.id} apt={apt} colors={colors} />
-          ))}
-        {activeTab === "transport" &&
-          (transports ?? []).map((t) => (
-            <TransportRow key={t.id} transport={t} colors={colors} />
-          ))}
-        {activeTab === "appointments" && (appointments ?? []).length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-              No appointments found
-            </Text>
-          </View>
+        {activeTab === "appointments" && (
+          <>
+            {(appointments ?? []).map((apt) => (
+              <AppointmentRow key={apt.id} apt={apt} colors={colors} />
+            ))}
+            {(appointments ?? []).length === 0 && (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
+                <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  No upcoming appointments
+                </Text>
+              </View>
+            )}
+          </>
         )}
-        {activeTab === "transport" && (transports ?? []).length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="car-outline" size={40} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-              No transports scheduled
-            </Text>
+
+        {activeTab === "resources" && (
+          <View style={styles.resourcesGrid}>
+            <ResourceCard
+              title="Doctors"
+              icon="person-outline"
+              route="/(manager)/doctors"
+              colors={colors}
+            />
+            <ResourceCard
+              title="Hotels"
+              icon="bed-outline"
+              route="/(manager)/hotels"
+              colors={colors}
+            />
+            <ResourceCard
+              title="Transports"
+              icon="car-outline"
+              route="/(manager)/transports"
+              colors={colors}
+            />
           </View>
         )}
       </ScrollView>
@@ -375,4 +343,26 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyText: { fontSize: 15 },
+  resourcesGrid: {
+    gap: 12,
+  },
+  resourceCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 16,
+  },
+  resourceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resourceTitle: {
+    flex: 1,
+    fontSize: 16,
+  },
 });

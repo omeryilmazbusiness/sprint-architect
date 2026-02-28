@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
 
@@ -17,6 +17,9 @@ export default function Index() {
   }
 
   if (isAuthenticated) {
+    if (user?.role === "PATIENT") {
+      return <Redirect href="/(patient)/dashboard" />;
+    }
     return <Redirect href="/(tabs)" />;
   }
 

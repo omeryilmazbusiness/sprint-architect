@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { patientPlans, hotels, transports } from "@shared/schema";
+import { patientPlans } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface UpsertPlanInput {
@@ -7,6 +7,7 @@ export interface UpsertPlanInput {
   clinicId: string;
   hotelId?: string | null;
   transportId?: string | null;
+  doctorId?: string | null;
   hotelStayDays?: number | null;
   roomNo?: string | null;
   checkInDate?: string | null;
@@ -38,7 +39,7 @@ export const planRepo = {
   async findByPatient(patientId: string) {
     return db.query.patientPlans.findFirst({
       where: eq(patientPlans.patientId, patientId),
-      with: { hotel: true, transport: true },
+      with: { hotel: true, transport: true, doctor: true },
     });
   },
 };

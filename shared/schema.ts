@@ -147,6 +147,7 @@ export const patientPlans = pgTable("patient_plans", {
     .references(() => clinics.id),
   hotelId: varchar("hotel_id").references(() => hotels.id),
   transportId: varchar("transport_id").references(() => transports.id),
+  doctorId: varchar("doctor_id").references(() => doctors.id),
   hotelStayDays: integer("hotel_stay_days"),
   roomNo: text("room_no"),
   checkInDate: text("check_in_date"),
@@ -244,6 +245,7 @@ export const patientPlansRelations = relations(patientPlans, ({ one }) => ({
   patient: one(patients, { fields: [patientPlans.patientId], references: [patients.id] }),
   hotel: one(hotels, { fields: [patientPlans.hotelId], references: [hotels.id] }),
   transport: one(transports, { fields: [patientPlans.transportId], references: [transports.id] }),
+  doctor: one(doctors, { fields: [patientPlans.doctorId], references: [doctors.id] }),
 }));
 
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
