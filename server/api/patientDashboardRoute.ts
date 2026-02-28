@@ -103,6 +103,7 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
           : null,
         status: d.status,
         fileUrl: d.fileUrl,
+        rejectionReason: d.status === "REJECTED" ? (d.rejectionReason ?? null) : null,
       })),
     });
   } catch (e) {

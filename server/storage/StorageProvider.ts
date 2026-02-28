@@ -1,3 +1,5 @@
+import type { Readable } from "stream";
+
 export interface SaveFileOptions {
   clinicId: string;
   patientId: string;
@@ -8,5 +10,5 @@ export interface SaveFileOptions {
 
 export interface StorageProvider {
   saveFile(opts: SaveFileOptions): Promise<string>;
-  getFilePath(fileUrl: string): string;
+  getReadStream(storageKey: string): Promise<Readable>;
 }

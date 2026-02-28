@@ -1,30 +1,27 @@
 import { Router } from "express";
 import multer from "multer";
-import path from "path";
 import rateLimit from "express-rate-limit";
 import { authMiddleware, requireRole } from "../auth/middleware";
-import { storageProvider } from "../storage/LocalDiskStorageProvider";
+import { getStorageProvider } from "../storage/getStorageProvider";
 import { documentRepo } from "../repositories/documentRepo";
 import { Errors, AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
-import { verifyAccessToken } from "../auth/jwt";
 
 const router = Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 const uploadLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many uploads, please try again later." },
 });
 
-// POST /patient/documents/:id/upload
 router.post(
   "/patient/documents/:id/upload",
   authMiddleware,
@@ -48,12 +45,12 @@ router.post(
         throw Errors.NOT_FOUND("Document not found");
       }
 
-      // Verify ownership
       if (doc.patientId !== req.actor!.sub) {
         throw Errors.FORBIDDEN("You do not have permission to upload this document");
       }
 
-      const fileUrl = await storageProvider.saveFile({
+      const storageProvider = getStorageProvider();
+      const storageKey = await storageProvider.saveFile({
         clinicId: doc.clinicId,
         patientId: doc.patientId,
         buffer: req.file.buffer,
@@ -62,7 +59,7 @@ router.post(
       });
 
       const updated = await documentRepo.updateDocument(docId, doc.clinicId, {
-        fileUrl,
+        fileUrl: storageKey,
         status: "UPLOADED",
         rejectionReason: null,
       });
@@ -73,7 +70,7 @@ router.post(
         actorRole: req.actor!.role,
         action: "DOCUMENT_UPLOADED",
         resourceType: "patient_document",
-        resourceId: docId as string,
+        resourceId: docId,
       });
 
       res.json(updated);
@@ -83,7 +80,6 @@ router.post(
   }
 );
 
-// GET /documents/:id/download
 router.get(
   "/documents/:id/download",
   (req, res, next) => {
@@ -104,39 +100,29 @@ router.get(
       }
 
       const actor = req.actor!;
-      
-      // Auth check:
-      // ADMIN: always allowed
-      // MANAGER: same clinic
-      // PATIENT: must own it
       let allowed = false;
       if (actor.role === "ADMIN") {
         allowed = true;
       } else if (actor.role === "MANAGER") {
-        if (actor.clinicId === doc.clinicId) {
-          allowed = true;
-        }
+        allowed = actor.clinicId === doc.clinicId;
       } else if (actor.role === "PATIENT") {
-        if (actor.sub === doc.patientId) {
-          allowed = true;
-        }
+        allowed = actor.sub === doc.patientId;
       }
 
       if (!allowed) {
         throw Errors.FORBIDDEN();
       }
 
-      const filePath = storageProvider.getFilePath(doc.fileUrl);
-      if (!path.isAbsolute(filePath)) {
-        // storageProvider.getFilePath returns absolute path, but let's be safe
-      }
+      const safeName = doc.documentType
+        ? `${doc.documentType.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`
+        : "document.pdf";
 
       res.setHeader("Content-Type", "application/pdf");
-      // Use Content-Disposition to suggest a filename
-      const filename = `${doc.documentType.name.replace(/\s+/g, "_")}.pdf`;
-      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-      
-      res.sendFile(filePath);
+      res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
+
+      const storageProvider = getStorageProvider();
+      const stream = await storageProvider.getReadStream(doc.fileUrl);
+      stream.pipe(res);
     } catch (error) {
       next(error);
     }

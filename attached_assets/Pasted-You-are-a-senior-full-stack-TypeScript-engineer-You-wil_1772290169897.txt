@@ -1,0 +1,141 @@
+You are a senior full-stack TypeScript engineer. You will implement **Sprint 6: Production Readiness Hardening** for an existing monorepo consisting of:
+- **Expo React Native (expo-router)** mobile app
+- **Express + TypeScript** backend
+- **PostgreSQL + Drizzle ORM**
+- PDF document upload/download, RBAC (ADMIN / MANAGER / PATIENT), refresh tokens, device binding
+
+Your mandate: **fix 3 critical issues and ship a production-ready solution** with minimal breaking changes, strong typing, and clean architecture. Work in small, reviewable commits and keep behavior backward compatible wherever feasible.
+
+========================================================
+SPRINT 6 — OBJECTIVES (MUST COMPLETE ALL)
+========================================================
+
+(1) BUGFIX — Patient must see rejection reason
+--------------------------------------------------------
+Problem:
+- The database contains `patient_documents.rejection_reason`.
+- Managers can reject documents and provide a reason.
+- However, `GET /v1/patient/dashboard` does not include `rejectionReason` in the documents payload, causing a user-facing defect.
+
+Requirements:
+- Update the patient dashboard API so each document includes:
+  - `rejectionReason: string | null`
+- Ensure correctness:
+  - For `REJECTED` documents: rejectionReason must be a non-empty string (when present in DB).
+  - For `ASSIGNED`, `UPLOADED`, `APPROVED`: rejectionReason must be `null`.
+- If the repository/query layer currently does not select `rejection_reason`, extend it accordingly.
+- Keep TypeScript DTOs/types aligned and compile-safe.
+
+Acceptance Criteria:
+- A rejected document returned by `GET /v1/patient/dashboard` includes `rejectionReason` exactly as stored.
+- Non-rejected documents always return `rejectionReason: null`.
+- No regressions in existing mobile UI (it already expects the field).
+
+--------------------------------------------------------
+
+(2) PRODUCTION — Move PDF storage from local disk to S3 (S3-compatible)
+--------------------------------------------------------
+Problem:
+- PDFs are stored on local disk (`uploads/`), which is not durable on platforms like Replit and does not scale across multiple instances.
+
+Goal:
+- Implement **S3-backed storage** (AWS S3 or S3-compatible such as MinIO).
+- Keep a **LOCAL** provider for development.
+- Switch provider via environment variable without code changes.
+
+Implementation Requirements:
+A) Storage Provider Architecture
+- Maintain/extend `server/storage/StorageProvider.ts` interface so routes remain provider-agnostic.
+- Add a new implementation: `server/storage/S3StorageProvider.ts` using AWS SDK v3 (`@aws-sdk/client-s3`).
+- Add a small factory (e.g., `server/storage/getStorageProvider.ts`) selecting provider via:
+  - `STORAGE_PROVIDER=local|s3` (default: local)
+
+B) Storage Key Strategy (IMPORTANT)
+- Treat DB `patient_documents.file_url` as a **storage key** (provider-independent), not an absolute OS path.
+- Use a deterministic key format:
+  - `{clinicId}/{patientId}/{YYYYMMDD-HHmmss}-{uuid}.pdf`
+- For LOCAL provider:
+  - Resolve storageKey -> absolute path internally.
+- For S3 provider:
+  - storageKey is the S3 object key.
+
+C) Upload Endpoint
+- Update the PDF upload flow to write to the configured provider:
+  - `POST /v1/patient/documents/:id/upload` (multipart/form-data)
+- Preserve existing rules:
+  - PDF only, max 10MB, rate limited 5/min
+- After successful upload:
+  - Update DB: `patient_documents.file_url = storageKey`
+  - Update status to `UPLOADED`
+- Maintain audit logging behavior.
+
+D) Download Endpoint
+- Update:
+  - `GET /v1/documents/:id/download`
+- Preserve authorization model:
+  - PATIENT: must own the document
+  - MANAGER: same clinic
+  - ADMIN: always allowed
+- Preserve `?token=` fallback for browser links.
+- Stream the file efficiently:
+  - For S3: `GetObject` stream -> `res`
+  - For LOCAL: fs stream -> `res`
+- Set correct headers:
+  - `Content-Type: application/pdf`
+  - `Content-Disposition: inline; filename="<safe-filename>.pdf"` (or attachment if existing behavior requires)
+- Do not load entire file into memory during download.
+
+E) S3 Configuration (support S3-compatible endpoints)
+Provide and document these environment variables:
+- `STORAGE_PROVIDER` = `local` | `s3`
+- `S3_BUCKET`
+- `S3_REGION`
+- `S3_ACCESS_KEY_ID`
+- `S3_SECRET_ACCESS_KEY`
+Optional (for MinIO / custom endpoints):
+- `S3_ENDPOINT` (e.g., https://minio.example.com)
+- `S3_FORCE_PATH_STYLE` = `true|false` (true for many MinIO setups)
+
+Acceptance Criteria:
+- With STORAGE_PROVIDER=s3, uploaded PDFs persist across server restarts and are downloadable.
+- With STORAGE_PROVIDER=local, the app behaves as before (dev-friendly).
+- Mobile “View PDF” flow continues to work (download route + token query param unchanged).
+- Code is clean, typed, and provider-agnostic in route layer.
+
+--------------------------------------------------------
+
+(3) CLEANUP — Remove legacy in-memory auth store
+--------------------------------------------------------
+Problem:
+- `server/auth/store.ts` and `seedAuthStore()` are legacy artifacts from Sprint 1.
+- Auth is now DB-based (`authRepo`), but the old store is still seeded on startup, creating confusion and dead code.
+
+Requirements:
+- Remove any startup seeding or references to the in-memory store:
+  - Remove `seedAuthStore()` calls in `server/index.ts` and/or `server/seed.ts`.
+- Delete `server/auth/store.ts` if unused, or leave it only if explicitly referenced (it should not be).
+- Verify auth routes continue to use DB-based auth (`authRepo`) for:
+  - staff login, refresh, logout
+  - patient login and device binding
+
+Acceptance Criteria:
+- No references/imports to the legacy store remain.
+- Server starts cleanly without seeding the in-memory store.
+- Login + refresh token rotation + logout work as before.
+
+========================================================
+TESTING & DELIVERY (REQUIRED)
+========================================================
+After implementing changes, provide:
+1) A concise “What changed” summary listing modified/new files.
+2) Step-by-step “How to test” covering:
+   - Patient dashboard returns rejectionReason
+   - PDF upload + download works for both providers (local and s3)
+   - Auth flow still works (login/refresh/logout)
+3) An updated `.env.example` (or README snippet) containing the new storage environment variables.
+
+Non-negotiables:
+- Keep changes minimal and backwards-compatible.
+- No breaking API changes beyond adding `rejectionReason`.
+- Avoid any large refactors unrelated to these objectives.
+- Ensure TypeScript builds and linting pass.

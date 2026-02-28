@@ -4,7 +4,7 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprint 5 complete):** Production-critical features added — PDF document upload/download, DB-persisted auth tokens/device bindings, invoicing MVP, rate limiting, and audit logging. All screens connected to live APIs.
+**Current state (Sprint 6 complete):** All Sprint 5 features plus: rejection reason fix (patient dashboard now returns it), pluggable S3/local PDF storage, and full removal of the legacy in-memory auth store.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
@@ -55,21 +55,25 @@ Preferred communication style: Simple, everyday language.
   - `server/index.ts` → bootstrap, CORS, static file serving, DB seed
   - `server/routes.ts` → route mounting
   - `server/db.ts` → Drizzle PostgreSQL client singleton
-  - `server/auth/` → auth subsystem (JWT, bcrypt)
+  - `server/auth/` → auth subsystem (JWT, bcrypt, middleware, errors) — legacy `store.ts` removed
   - `server/repositories/` → DB access layer (patientRepo, doctorRepo, hotelRepo, transportRepo, appointmentRepo, documentRepo, planRepo, authRepo, invoiceRepo)
   - `server/api/managerRoutes.ts` → all manager CRUD + assignment endpoints + invoices
   - `server/api/adminRoutes.ts` → admin-only endpoints (invoice generation/management)
-  - `server/api/uploadRoutes.ts` → PDF upload (POST) + download (GET) with RBAC
+  - `server/api/uploadRoutes.ts` → PDF upload (POST) + download (GET) with RBAC; streams files via storage provider
   - `server/api/auditLogger.ts` → fire-and-forget audit logging to DB
-  - `server/api/patientDashboardRoute.ts` → patient self-service dashboard
-  - `server/storage/` → LocalDiskStorageProvider (file storage abstraction)
+  - `server/api/patientDashboardRoute.ts` → patient self-service dashboard (includes rejectionReason)
+  - `server/storage/StorageProvider.ts` → interface (saveFile + getReadStream)
+  - `server/storage/LocalDiskStorageProvider.ts` → dev/local implementation; backward-compat with old URL-style keys
+  - `server/storage/S3StorageProvider.ts` → S3/MinIO implementation using AWS SDK v3
+  - `server/storage/getStorageProvider.ts` → factory; reads STORAGE_PROVIDER env var (local|s3)
   - `server/seed.ts` → seeds demo data + admin/manager users on startup (dev only)
 - **Auth system:**
   - JWT access tokens (15 min TTL) + refresh tokens (30 days)
   - `authMiddleware`, `requireRole()`, `clinicScopeMiddleware` for RBAC + tenancy
   - **Tokens and device bindings are DB-persisted** via `refreshTokens` + `devices` tables. Server restart preserves sessions.
 - **Rate limiting:** Login endpoints (10 req/15min), upload endpoint (5 req/min)
-- **File uploads:** PDF only, 10MB max, stored in `uploads/{clinicId}/{patientId}/`
+- **File uploads:** PDF only, 10MB max. Storage is pluggable: `STORAGE_PROVIDER=local` saves to `uploads/{clinicId}/{patientId}/` on disk; `STORAGE_PROVIDER=s3` saves to S3/MinIO using `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (and optional `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE` for MinIO).
+- **Storage keys in DB:** `patient_documents.file_url` is a provider-agnostic storage key (format: `{clinicId}/{patientId}/{timestamp}-{uuid}.pdf`). Old records with URL-style keys (`/v1/documents/files/...`) are handled with backward-compat in `LocalDiskStorageProvider`.
 
 ### Database (Drizzle ORM + PostgreSQL)
 
@@ -146,6 +150,15 @@ The transport API accepts `phone` (internally `driverPhone`), `vehicleType` + `l
 | `EXPO_PUBLIC_DOMAIN` | API base URL for the mobile app |
 | `REPLIT_DEV_DOMAIN` | Auto-set by Replit |
 | `REPLIT_DOMAINS` | Auto-set by Replit for CORS |
+| `STORAGE_PROVIDER` | `local` (default) or `s3` |
+| `S3_BUCKET` | S3 bucket name (required when `STORAGE_PROVIDER=s3`) |
+| `S3_REGION` | AWS region (required when `STORAGE_PROVIDER=s3`) |
+| `S3_ACCESS_KEY_ID` | AWS access key (required when `STORAGE_PROVIDER=s3`) |
+| `S3_SECRET_ACCESS_KEY` | AWS secret key (required when `STORAGE_PROVIDER=s3`) |
+| `S3_ENDPOINT` | Custom endpoint URL (optional — for MinIO) |
+| `S3_FORCE_PATH_STYLE` | `true` for MinIO path-style access (optional) |
+
+A `.env.example` file at the project root documents all variables.
 
 ### Key NPM Dependencies
 | Package | Purpose |
@@ -159,6 +172,7 @@ The transport API accepts `phone` (internally `driverPhone`), `vehicleType` + `l
 | `multer` | Multipart file upload handling |
 | `express-rate-limit` | API rate limiting |
 | `expo-document-picker` | PDF file selection on mobile |
+| `@aws-sdk/client-s3` | S3/MinIO file upload and streaming download |
 | `expo-linear-gradient` + `expo-blur` | UI effects |
 | `expo-glass-effect` | Native liquid glass tab bar (iOS 26+) |
 | `react-native-keyboard-controller` | Keyboard handling |
