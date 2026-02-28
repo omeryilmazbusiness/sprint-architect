@@ -1,0 +1,160 @@
+You are a senior full-stack architect. Continue the existing monorepo created in Sprint 1.
+
+SPRINT 2 GOAL:
+Implement the security & tenant foundation end-to-end:
+1) Admin/Manager authentication (email+password),
+2) Role-based access control (RBAC),
+3) Mandatory multi-tenant clinic scoping for clinic-bound users (MANAGER),
+4) Patient fast login with patientKey + device binding (single-device rule),
+5) Minimal UI flows in the React web app for Admin + Manager login and a simple protected page,
+6) Seed/demo data to test flows.
+
+IMPORTANT: Keep the SOLID/Clean Architecture boundaries introduced in Sprint 1. Implement use-cases as small single-responsibility services. Use ports/interfaces for infra.
+
+TECH STACK (must follow):
+- API: Fastify + TypeScript + Prisma + Postgres
+- Web: React (Vite) + TypeScript
+- Validation: zod
+- Auth: JWT access + refresh tokens
+- Password hashing: bcrypt
+- No heavy UI frameworks
+
+DOMAIN REQUIREMENTS (must implement in Sprint 2):
+A) Roles
+- ADMIN: can access all clinics, manage clinics/managers (basic endpoints only if needed)
+- MANAGER: belongs to exactly one clinic (clinicId non-null) and MUST be clinic-scoped
+- PATIENT: logs in via patientKey + deviceId (no email/password)
+
+B) Multi-tenant / Clinic scoping (CRITICAL)
+- Every clinic-owned resource will be tied to clinicId.
+- For all MANAGER requests, clinicId MUST be enforced centrally (middleware/guard), not by manual filtering in each handler.
+- The application layer should receive an “Actor/Context” object that includes role, userId, clinicId (if any).
+- Repositories for clinic-owned entities must require clinicId in their query methods to avoid accidental cross-tenant access.
+
+C) Auth flows
+1) Admin/Manager login:
+- Endpoint: POST /v1/auth/login
+  Input: { email, password }
+  Output: { accessToken, refreshToken, user: {id, role, clinicId?} }
+- Endpoint: POST /v1/auth/refresh
+  Input: { refreshToken }
+  Output: new { accessToken, refreshToken }
+- Endpoint: POST /v1/auth/logout
+  Input: { refreshToken } OR use token revocation strategy
+  Output: 204
+
+2) Patient login (fast):
+- Manager creates patient (not in this sprint unless needed; at minimum implement DB model and login).
+- Patient has unique patientKey (random, non-guessable).
+- Endpoint: POST /v1/patient/auth/login
+  Input: { patientKey, deviceId }
+  Rules:
+   - If patient has no active device bound -> bind deviceId and allow login.
+   - If patient has active bound deviceId equal to input -> allow login.
+   - If patient has active bound deviceId different -> deny with clear error code DEVICE_ALREADY_BOUND.
+- Endpoint: POST /v1/patient/:id/reset-device
+  Allowed: ADMIN or MANAGER of same clinic
+  Action: revoke existing device binding so patient can bind a new device.
+- Patient tokens should result in actor role PATIENT, with patientId + clinicId in token context.
+
+D) Token strategy
+- JWT access token short TTL (e.g., 15m)
+- Refresh token long TTL (e.g., 30d)
+- Store refresh tokens in DB with rotation:
+  - refresh_tokens table: id, userId nullable, patientId nullable, tokenHash, expiresAt, revokedAt, createdAt
+- On refresh: rotate refresh token (invalidate old, create new).
+- On logout: revoke refresh token.
+
+E) Database schema changes (Prisma)
+Add tables/models:
+- patients: id, clinicId, fullName, arrivalDate nullable, departureDate nullable, patientKey unique, status, createdAt
+- devices: id, patientId unique (or 1 active binding rule), deviceId, boundAt, revokedAt nullable
+- refresh_tokens: id, userId nullable, patientId nullable, tokenHash, expiresAt, revokedAt, createdAt
+Also ensure clinics/users from Sprint 1 remain.
+
+F) API security middleware
+- auth middleware:
+  - parses bearer token
+  - validates JWT
+  - attaches ActorContext to request
+- RBAC middleware:
+  - requireRole([...])
+- clinicScope middleware:
+  - if role is MANAGER -> clinicId enforced
+  - (for ADMIN -> optional)
+- Provide standard error responses with codes:
+  - AUTH_INVALID_CREDENTIALS
+  - AUTH_UNAUTHORIZED
+  - AUTH_FORBIDDEN
+  - DEVICE_ALREADY_BOUND
+  - PATIENT_KEY_INVALID
+  - VALIDATION_ERROR
+
+G) Minimal API endpoints for testing (not full CRUD yet)
+- GET /v1/me (requires auth) returns actor user info
+- GET /v1/admin/clinics (ADMIN only) returns list (simple)
+- GET /v1/manager/clinic (MANAGER only) returns own clinic details (simple)
+(These are minimal to verify RBAC + tenant scoping.)
+
+H) Web app (React) minimal UI for Sprint 2
+- Create routes:
+  - /login (Admin/Manager login form)
+  - /app (protected)
+  - /app/admin (admin-only sample page)
+  - /app/manager (manager-only sample page)
+- Store tokens securely in browser (for MVP use memory + localStorage; comment security implications)
+- Implement an API client in /packages/shared or /apps/web that:
+  - attaches access token
+  - auto-refresh on 401 using refresh token once (prevent infinite loops)
+- ProtectedRoute component that checks role.
+- On /app page show:
+  - current user (/v1/me)
+  - if ADMIN show clinics list
+  - if MANAGER show own clinic info
+
+I) Seeds / Demo accounts
+- Seed at least:
+  - 1 clinic: “Demo Clinic”
+  - 1 admin user: admin@demo.com password “Admin123!” (hashed)
+  - 1 manager user attached to Demo Clinic: manager@demo.com password “Manager123!”
+  - 1 patient attached to Demo Clinic with a known patientKey for testing (e.g., “PATIENT-TEST-0001” but still unique; mention to change later)
+- Add a script to regenerate seed.
+
+ARCHITECTURE / CODE STYLE REQUIREMENTS:
+- Keep use-cases small:
+  - AuthLoginUser (admin/manager)
+  - AuthRefreshToken
+  - AuthLogout
+  - PatientKeyLogin
+  - ResetPatientDevice
+- Use ports/interfaces:
+  - UserRepository, ClinicRepository, PatientRepository, DeviceRepository, RefreshTokenRepository
+  - Clock interface for timestamps (testability)
+- Avoid direct Prisma calls inside application layer.
+- Add a small unit test set for critical logic (device binding + refresh rotation) if possible; if not, add a manual test checklist.
+
+OUTPUT REQUIREMENTS:
+After implementing Sprint 2, print:
+1) File tree changes
+2) Key files and what they do
+3) Exact commands to run API + Web
+4) Manual verification checklist including:
+   - Admin login works
+   - Manager login works
+   - RBAC blocks unauthorized access
+   - Manager cannot access admin endpoints
+   - Clinic scope works (manager only sees own clinic)
+   - Patient login binds device, second device blocked
+   - Reset device allows new binding
+   - Refresh token rotation works
+5) Any Replit port/proxy steps you configured.
+
+NOW DO THE WORK:
+- Step 1: Update Prisma schema + migrations + seed.
+- Step 2: Implement API auth endpoints + middlewares + minimal test endpoints.
+- Step 3: Implement Web login + protected pages + role-based routing.
+- Step 4: Verify flows and update README with Sprint 2 notes.
+"""
+Continue from the existing codebase; do not re-scaffold Sprint 1.
+"""
+END.

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,17 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  Alert,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 interface Clinic {
   id: string;
@@ -29,6 +34,7 @@ function SettingRow({
   colors,
   accent,
   last,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -36,9 +42,11 @@ function SettingRow({
   colors: typeof Colors.light;
   accent?: string;
   last?: boolean;
+  onPress?: () => void;
 }) {
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }) => [
         styles.settingRow,
         { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 },
@@ -66,6 +74,9 @@ export default function SettingsScreen() {
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
+
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { data: clinics } = useQuery<Clinic[]>({
     queryKey: ["/api/clinics"],
@@ -73,6 +84,31 @@ export default function SettingsScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  function handleLogout() {
+    setShowLogoutModal(true);
+  }
+
+  async function confirmLogout() {
+    setShowLogoutModal(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    await logout();
+    router.replace("/(auth)/login");
+  }
+
+  const initials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : user?.fullName
+    ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "??";
+
+  const displayName = user?.email ?? user?.fullName ?? "User";
+  const roleLabel =
+    user?.role === "ADMIN"
+      ? "System Administrator"
+      : user?.role === "MANAGER"
+      ? "Clinic Manager"
+      : "Patient";
 
   return (
     <ScrollView
@@ -90,68 +126,79 @@ export default function SettingsScreen() {
       <View style={styles.body}>
         <View style={[styles.adminCard, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
           <View style={[styles.adminAvatar, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.adminAvatarText, { fontFamily: "Inter_700Bold" }]}>AD</Text>
+            <Text style={[styles.adminAvatarText, { fontFamily: "Inter_700Bold" }]}>{initials}</Text>
           </View>
-          <View>
+          <View style={styles.flex1}>
             <Text style={[styles.adminName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Admin User
+              {displayName}
             </Text>
             <Text style={[styles.adminRole, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              System Administrator · ADMIN
+              {roleLabel} · {user?.role}
             </Text>
-            <Text style={[styles.adminEmail, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
-              admin@healthtour.io
-            </Text>
+            {user?.clinicId && (
+              <Text style={[styles.adminClinic, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
+                Clinic ID: {user.clinicId}
+              </Text>
+            )}
+          </View>
+          <View style={[styles.roleBadge, { backgroundColor: colors.accent + "20" }]}>
+            <Ionicons
+              name={
+                user?.role === "ADMIN"
+                  ? "shield-checkmark"
+                  : user?.role === "MANAGER"
+                  ? "business"
+                  : "person"
+              }
+              size={16}
+              color={colors.accent}
+            />
           </View>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-          CLINICS
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {(clinics ?? []).map((clinic, idx) => (
-            <Pressable
-              key={clinic.id}
-              style={({ pressed }) => [
-                styles.clinicRow,
-                {
-                  borderBottomColor: colors.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-                idx === (clinics?.length ?? 0) - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <View style={[styles.clinicIcon, { backgroundColor: colors.accent + "15" }]}>
-                <Ionicons name="business-outline" size={18} color={colors.accent} />
-              </View>
-              <View style={styles.clinicInfo}>
-                <Text style={[styles.clinicName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {clinic.name}
-                </Text>
-                <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {clinic.patientCount} patients
-                </Text>
-              </View>
-              <StatusBadge status={clinic.status as any} small />
-              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-            </Pressable>
-          ))}
-          {(clinics ?? []).length === 0 && (
-            <View style={styles.emptyClinics}>
-              <Text style={[styles.emptyClinicsText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No clinics configured
-              </Text>
+        {user?.role === "ADMIN" && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              CLINICS
+            </Text>
+            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {(clinics ?? []).map((clinic, idx) => (
+                <Pressable
+                  key={clinic.id}
+                  style={({ pressed }) => [
+                    styles.clinicRow,
+                    { borderBottomColor: colors.border, opacity: pressed ? 0.8 : 1 },
+                    idx === (clinics?.length ?? 0) - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <View style={[styles.clinicIcon, { backgroundColor: colors.accent + "15" }]}>
+                    <Ionicons name="business-outline" size={18} color={colors.accent} />
+                  </View>
+                  <View style={styles.clinicInfo}>
+                    <Text style={[styles.clinicName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                      {clinic.name}
+                    </Text>
+                    <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {clinic.patientCount} patients
+                    </Text>
+                  </View>
+                  <StatusBadge status={clinic.status as any} small />
+                  <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                </Pressable>
+              ))}
             </View>
-          )}
-        </View>
+          </>
+        )}
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
           SYSTEM
         </Text>
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow icon="people-outline" label="User Management" colors={colors} accent={colors.primary} />
+          {user?.role === "ADMIN" && (
+            <SettingRow icon="people-outline" label="User Management" colors={colors} accent={colors.primary} />
+          )}
           <SettingRow icon="document-text-outline" label="Invoices" value="Monthly" colors={colors} accent={colors.primary} />
-          <SettingRow icon="shield-checkmark-outline" label="Roles & Permissions" colors={colors} accent={colors.primary} last />
+          <SettingRow icon="shield-checkmark-outline" label="Roles & Permissions" value={user?.role} colors={colors} accent={colors.primary} last />
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
@@ -172,6 +219,7 @@ export default function SettingsScreen() {
         </View>
 
         <Pressable
+          onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutBtn,
             { backgroundColor: colors.error + "10", borderColor: colors.error + "30", opacity: pressed ? 0.8 : 1 },
@@ -188,10 +236,58 @@ export default function SettingsScreen() {
             HealthTour Operations Platform
           </Text>
           <Text style={[styles.footerSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Sprint 1 · Foundation Release
+            Sprint 2 · Auth & RBAC Foundation
           </Text>
         </View>
       </View>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+        testID="logout-modal"
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowLogoutModal(false)}
+        >
+          <View
+            style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={[styles.modalIconWrap, { backgroundColor: colors.error + "18" }]}>
+              <Ionicons name="log-out-outline" size={28} color={colors.error} />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+              Sign Out
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Are you sure you want to sign out?
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setShowLogoutModal(false)}
+                style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+                testID="logout-cancel"
+              >
+                <Text style={[styles.modalBtnText, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmLogout}
+                style={[styles.modalBtn, styles.modalBtnDestructive, { backgroundColor: colors.error }]}
+                testID="logout-confirm"
+              >
+                <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+                  Sign Out
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -199,10 +295,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex1: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 12 },
   screenTitle: { fontSize: 28 },
   body: { padding: 20, gap: 10 },
   adminCard: {
@@ -221,13 +314,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  adminAvatarText: {
-    fontSize: 18,
-    color: "#fff",
-  },
+  adminAvatarText: { fontSize: 18, color: "#fff" },
   adminName: { fontSize: 17 },
   adminRole: { fontSize: 12, marginTop: 1 },
-  adminEmail: { fontSize: 13, marginTop: 3 },
+  adminClinic: { fontSize: 12, marginTop: 3 },
+  roleBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sectionLabel: {
     fontSize: 11,
     letterSpacing: 0.8,
@@ -235,11 +332,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     marginLeft: 4,
   },
-  section: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
+  section: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   settingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -275,11 +368,6 @@ const styles = StyleSheet.create({
   clinicInfo: { flex: 1 },
   clinicName: { fontSize: 15 },
   clinicPatients: { fontSize: 12, marginTop: 2 },
-  emptyClinics: {
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyClinicsText: { fontSize: 14 },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -300,4 +388,44 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 12 },
   footerSub: { fontSize: 11 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  modalCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+  },
+  modalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  modalTitle: { fontSize: 18 },
+  modalBody: { fontSize: 14, textAlign: "center" },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    width: "100%",
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  modalBtnDestructive: { borderWidth: 0 },
+  modalBtnText: { fontSize: 15 },
 });
