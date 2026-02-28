@@ -1,10 +1,36 @@
 import { db } from "../db";
-import { users, clinics } from "@shared/schema";
+import { users } from "@shared/schema";
 import { eq, ilike, and, count } from "drizzle-orm";
 import { hashPassword } from "../auth/password";
+import crypto from "crypto";
 
 type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 type UserRole = "ADMIN" | "MANAGER";
+
+export function generateSecurePassword(): string {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const digits = "0123456789";
+  const special = "!@#$%^&*";
+  const all = upper + lower + digits + special;
+
+  const bytes = crypto.randomBytes(20);
+  let password = "";
+  password += upper[bytes[0] % upper.length];
+  password += lower[bytes[1] % lower.length];
+  password += digits[bytes[2] % digits.length];
+  password += special[bytes[3] % special.length];
+  for (let i = 4; i < 16; i++) {
+    password += all[bytes[i] % all.length];
+  }
+
+  const arr = password.split("");
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = crypto.randomBytes(1)[0] % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.join("");
+}
 
 export const userRepo = {
   async list(filters: {
@@ -38,7 +64,7 @@ export const userRepo = {
     ]);
 
     return {
-      rows: rows.map(u => sanitize(u)),
+      rows: rows.map((u) => sanitize(u)),
       total,
       page,
       pageSize,
@@ -64,6 +90,7 @@ export const userRepo = {
     role: UserRole;
     clinicId?: string | null;
     status?: UserStatus;
+    mustChangePassword?: boolean;
   }) {
     const passwordHash = await hashPassword(input.password);
     const [user] = await db.insert(users).values({
@@ -72,6 +99,7 @@ export const userRepo = {
       role: input.role,
       clinicId: input.clinicId ?? null,
       status: input.status ?? "ACTIVE",
+      mustChangePassword: input.mustChangePassword ?? false,
     }).returning();
     return sanitize(user as any);
   },
@@ -95,7 +123,7 @@ export const userRepo = {
     const passwordHash = await hashPassword(newPassword);
     const [updated] = await db
       .update(users)
-      .set({ passwordHash })
+      .set({ passwordHash, mustChangePassword: false })
       .where(eq(users.id, id))
       .returning();
     return !!updated;

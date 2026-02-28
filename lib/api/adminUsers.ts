@@ -6,8 +6,13 @@ export interface AdminUser {
   role: "ADMIN" | "MANAGER";
   clinicId: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  mustChangePassword: boolean;
   createdAt: string;
   clinic?: { id: string; name: string; status: string } | null;
+}
+
+export interface AdminUserCreated extends AdminUser {
+  generatedPassword: string;
 }
 
 export interface UserListResponse {
@@ -19,7 +24,6 @@ export interface UserListResponse {
 
 export interface CreateUserInput {
   email: string;
-  password: string;
   role: "ADMIN" | "MANAGER";
   clinicId?: string | null;
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
@@ -52,7 +56,7 @@ export async function listUsers(params?: {
   return res.json();
 }
 
-export async function createUser(input: CreateUserInput): Promise<AdminUser> {
+export async function createUser(input: CreateUserInput): Promise<AdminUserCreated> {
   const res = await apiRequest("POST", "/v1/admin/users", input);
   return res.json();
 }
@@ -67,7 +71,12 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Ad
   return res.json();
 }
 
-export async function resetUserPassword(id: string, password: string): Promise<{ success: boolean }> {
+export async function resetUserPasswordAuto(id: string): Promise<{ success: boolean; generatedPassword: string }> {
+  const res = await apiRequest("PUT", `/v1/admin/users/${id}/reset-password`, {});
+  return res.json();
+}
+
+export async function resetUserPasswordManual(id: string, password: string): Promise<{ success: boolean }> {
   const res = await apiRequest("PUT", `/v1/admin/users/${id}/password`, { password });
   return res.json();
 }

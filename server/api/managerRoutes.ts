@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { eq, and, gte, count } from "drizzle-orm";
-import { authMiddleware, requireRole, clinicScopeMiddleware } from "../auth/middleware";
+import { authMiddleware, requireRole, clinicScopeMiddleware, requireActiveClinic } from "../auth/middleware";
 import { AppError } from "../auth/errors";
 import { db } from "../db";
 import { patients, appointments, patientDocuments } from "@shared/schema";
@@ -18,7 +18,7 @@ import { auditLog } from "./auditLogger";
 
 const router = Router();
 
-router.use(authMiddleware, requireRole("MANAGER", "ADMIN"), clinicScopeMiddleware);
+router.use(authMiddleware, requireRole("MANAGER", "ADMIN"), requireActiveClinic, clinicScopeMiddleware);
 
 function getClinicId(req: any): string {
   return req.clinicId as string;

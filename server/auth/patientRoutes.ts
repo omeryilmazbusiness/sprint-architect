@@ -7,6 +7,9 @@ import { authMiddleware, requireRole } from "./middleware";
 import { patientRepo } from "../repositories/patientRepo";
 import rateLimit from "express-rate-limit";
 import { auditLog } from "../api/auditLogger";
+import { db } from "../db";
+import { clinics } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const patientLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
@@ -48,6 +51,15 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     const e = Errors.PATIENT_KEY_INVALID();
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
+  }
+
+  if (patient.clinicId) {
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, patient.clinicId) });
+    if (clinic?.status === "SUSPENDED") {
+      const e = Errors.CLINIC_SUSPENDED();
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
   }
 
   const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);

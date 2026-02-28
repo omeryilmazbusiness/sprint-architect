@@ -30,4 +30,6 @@ export const Errors = {
     new AppError("AUTH_TOKEN_INVALID", "Token is invalid or expired", 401),
   NOT_FOUND: (msg = "Not found") =>
     new AppError("NOT_FOUND", msg, 404),
+  CLINIC_SUSPENDED: () =>
+    new AppError("CLINIC_SUSPENDED", "Your clinic account is currently suspended. Contact support.", 403),
 };

@@ -4,7 +4,7 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprint 7 complete):** Full Admin Console — ADMIN role now has a dedicated route group `(admin)` with tabs for Dashboard, Clinics, Users, Invoices, and Settings. Full CRUD for clinics and staff users, metrics endpoint, invoice management. Login routing is now role-deterministic (returns role from API, navigates directly).
+**Current state (Sprints 1-8 complete):** Full multi-tenant Health Tourism SaaS. Admin console with attention-needed metrics (overdue invoices, suspended clinics, clinics without managers), billing automation with clinic suspension/reactivation, auto-generated user passwords with one-time reveal, clinic detail with billing anchor day + invoice timeline, PDF document upload/download with S3/local storage, persistent DB auth tokens, rate limiting, audit logging, role-based dashboards for all three user types.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
@@ -124,9 +124,24 @@ All admin routes: `/v1/admin/*` (require ADMIN)
 | GET | /v1/manager/document-types | List available document types |
 | GET | /v1/manager/invoices | List invoices for manager's clinic |
 | GET | /v1/manager/invoices/:id | Get specific invoice |
+| GET | /v1/admin/metrics | Admin metrics: clinic/user/invoice counts + attentionNeeded section |
+| GET | /v1/admin/clinics | List clinics (paginated, search, status filter) |
+| POST | /v1/admin/clinics | Create clinic (auto-sets billingAnchorDay) |
+| GET | /v1/admin/clinics/:id | Get clinic by ID |
+| GET | /v1/admin/clinics/:id/detail | Get clinic detail: billing info + managers + invoice timeline |
+| PUT | /v1/admin/clinics/:id | Update clinic (name, status, billingUnitPrice, currency, billingAnchorDay) |
+| DELETE | /v1/admin/clinics/:id | Soft-delete clinic (sets INACTIVE) |
+| GET | /v1/admin/users | List users (paginated, search, role, status, clinicId filter) |
+| POST | /v1/admin/users | Create user (auto-generates password, returns generatedPassword once) |
+| GET | /v1/admin/users/:id | Get user by ID |
+| PUT | /v1/admin/users/:id | Update user |
+| PUT | /v1/admin/users/:id/reset-password | Auto-generate new password, return it once |
+| DELETE | /v1/admin/users/:id | Soft-delete user (sets INACTIVE) |
 | POST | /v1/admin/invoices/generate | Generate invoices for all clinics (?period=YYYY-MM) |
-| GET | /v1/admin/invoices | List all invoices (admin) |
-| PUT | /v1/admin/invoices/:id/status | Update invoice status |
+| POST | /v1/admin/billing/run | Manually trigger billing cycle |
+| GET | /v1/admin/invoices | List all invoices (admin, paginated) |
+| GET | /v1/admin/invoices/:id | Get invoice by ID |
+| PUT | /v1/admin/invoices/:id/status | Update invoice status (DRAFT/ISSUED/PAID — PAID auto-reactivates clinic) |
 | POST | /v1/patient/documents/:id/upload | Upload PDF (patient auth, PDF only, 10MB, 5/min) |
 | GET | /v1/documents/:id/download | Download PDF (auth required; ?token= query param supported) |
 | GET | /v1/patient/dashboard | Patient self-service dashboard |

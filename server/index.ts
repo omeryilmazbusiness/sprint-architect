@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { seedDatabase } from "./seed";
+import { startBillingScheduler } from "./billing/scheduler";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -174,6 +175,8 @@ function setupErrorHandler(app: express.Application) {
   const server = await registerRoutes(app);
 
   setupErrorHandler(app);
+
+  startBillingScheduler();
 
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {

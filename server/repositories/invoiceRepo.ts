@@ -1,19 +1,20 @@
 import { db } from "../db";
 import { invoices, clinics, patients } from "@shared/schema";
-import { eq, and, sql, gte, lt } from "drizzle-orm";
+import { eq, and, sql, gte, lt, not, isNotNull } from "drizzle-orm";
+import { reactivateClinicAfterPayment } from "../billing/billingService";
+import { auditLog } from "../api/auditLogger";
 
 export const invoiceRepo = {
   async generateForPeriod(period: string) {
     const allClinics = await db.query.clinics.findMany();
     const generatedInvoices = [];
 
-    // Period is YYYY-MM
     const [year, month] = period.split("-").map(Number);
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
+    const graceDays = parseInt(process.env.BILLING_GRACE_DAYS ?? "7");
 
     for (const clinic of allClinics) {
-      // Count patients created in this period
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(patients)
@@ -28,13 +29,14 @@ export const invoiceRepo = {
       const unitPrice = clinic.billingUnitPrice ?? parseFloat(process.env.DEFAULT_UNIT_PRICE ?? "50");
       const total = count * unitPrice;
 
-      // Check if invoice already exists
       const existing = await db.query.invoices.findFirst({
         where: and(eq(invoices.clinicId, clinic.id), eq(invoices.period, period)),
       });
 
       let invoice;
       if (existing) {
+        const now = new Date();
+        const dueAt = new Date(now.getTime() + graceDays * 24 * 60 * 60 * 1000);
         [invoice] = await db
           .update(invoices)
           .set({
@@ -42,11 +44,14 @@ export const invoiceRepo = {
             unitPrice,
             total,
             currency: clinic.currency,
-            updatedAt: new Date(),
+            issuedAt: now,
+            dueAt,
           } as any)
           .where(eq(invoices.id, existing.id))
           .returning();
       } else {
+        const now = new Date();
+        const dueAt = new Date(now.getTime() + graceDays * 24 * 60 * 60 * 1000);
         [invoice] = await db
           .insert(invoices)
           .values({
@@ -56,7 +61,9 @@ export const invoiceRepo = {
             unitPrice,
             total,
             currency: clinic.currency,
-            status: "DRAFT",
+            status: "ISSUED",
+            issuedAt: now,
+            dueAt,
           })
           .returning();
       }
@@ -66,19 +73,29 @@ export const invoiceRepo = {
     return generatedInvoices;
   },
 
-  async list(filters: { clinicId?: string; period?: string; status?: any }) {
+  async list(filters: { clinicId?: string; period?: string; status?: any; page?: number; pageSize?: number }) {
+    const page = Math.max(1, filters.page ?? 1);
+    const pageSize = Math.min(100, filters.pageSize ?? 20);
+    const offset = (page - 1) * pageSize;
+
     const conditions = [];
     if (filters.clinicId) conditions.push(eq(invoices.clinicId, filters.clinicId));
     if (filters.period) conditions.push(eq(invoices.period, filters.period));
     if (filters.status) conditions.push(eq(invoices.status, filters.status));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    return db.query.invoices.findMany({
-      where: conditions.length > 0 ? and(...conditions) : undefined,
-      with: {
-        clinic: true,
-      },
-      orderBy: (invoices, { desc }) => [desc(invoices.createdAt)],
-    });
+    const [rows, [{ total }]] = await Promise.all([
+      db.query.invoices.findMany({
+        where,
+        with: { clinic: true },
+        orderBy: (inv, { desc }) => [desc(inv.period)],
+        limit: pageSize,
+        offset,
+      }),
+      db.select({ total: sql<number>`count(*)::int` }).from(invoices).where(where),
+    ]);
+
+    return { rows, total, page, pageSize };
   },
 
   async findById(id: string, clinicId?: string) {
@@ -87,18 +104,42 @@ export const invoiceRepo = {
 
     return db.query.invoices.findFirst({
       where: and(...conditions),
-      with: {
-        clinic: true,
-      },
+      with: { clinic: true },
     });
   },
 
   async updateStatus(id: string, status: "DRAFT" | "ISSUED" | "PAID") {
+    const paidAt = status === "PAID" ? new Date() : undefined;
+    const issuedAt = status === "ISSUED" ? new Date() : undefined;
+
+    const setValues: Record<string, any> = { status };
+    if (paidAt) setValues.paidAt = paidAt;
+    if (issuedAt) setValues.issuedAt = issuedAt;
+
     const [updated] = await db
       .update(invoices)
-      .set({ status })
+      .set(setValues)
       .where(eq(invoices.id, id))
       .returning();
+
+    if (updated && status === "PAID") {
+      reactivateClinicAfterPayment(updated.clinicId).catch((e) =>
+        console.error("[billing] reactivate error:", e)
+      );
+    }
+
     return updated;
+  },
+
+  async findOverdue() {
+    const now = new Date();
+    return db.query.invoices.findMany({
+      where: and(
+        not(eq(invoices.status, "PAID")),
+        isNotNull(invoices.dueAt),
+        lt(invoices.dueAt as any, now)
+      ),
+      with: { clinic: true },
+    });
   },
 };

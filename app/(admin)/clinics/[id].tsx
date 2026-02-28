@@ -20,7 +20,23 @@ import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingView } from "@/components/LoadingView";
 import { ErrorView } from "@/components/ErrorView";
-import { getClinic, updateClinic, deactivateClinic, Clinic } from "@/lib/api/adminClinics";
+import { getClinicDetail, updateClinic, deactivateClinic, ClinicDetail, InvoiceSummary } from "@/lib/api/adminClinics";
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function isOverdue(inv: InvoiceSummary): boolean {
+  return inv.status !== "PAID" && !!inv.dueAt && new Date(inv.dueAt) < new Date();
+}
+
+function invoiceStatusColor(inv: InvoiceSummary, colors: typeof Colors.light): string {
+  if (isOverdue(inv)) return colors.error;
+  if (inv.status === "PAID") return colors.success;
+  if (inv.status === "ISSUED") return colors.warning;
+  return colors.textMuted;
+}
 
 export default function ClinicDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,13 +50,14 @@ export default function ClinicDetailScreen() {
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("");
   const [price, setPrice] = useState("");
+  const [anchorDay, setAnchorDay] = useState("");
   const [status, setStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
   const [dirty, setDirty] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useQuery<Clinic>({
-    queryKey: ["/v1/admin/clinics", id],
-    queryFn: () => getClinic(id),
+  const { data, isLoading, isError, refetch } = useQuery<ClinicDetail>({
+    queryKey: ["/v1/admin/clinics", id, "detail"],
+    queryFn: () => getClinicDetail(id),
   });
 
   useEffect(() => {
@@ -48,6 +65,7 @@ export default function ClinicDetailScreen() {
       setName(data.name);
       setCurrency(data.currency);
       setPrice(data.billingUnitPrice != null ? String(data.billingUnitPrice) : "");
+      setAnchorDay(String(data.billingAnchorDay));
       setStatus(data.status);
     }
   }, [data]);
@@ -57,6 +75,7 @@ export default function ClinicDetailScreen() {
       name: name.trim(),
       currency: currency.trim() || "EUR",
       billingUnitPrice: price ? parseFloat(price) : null,
+      billingAnchorDay: anchorDay ? parseInt(anchorDay) : undefined,
       status,
     }),
     onSuccess: (updated) => {
@@ -66,6 +85,7 @@ export default function ClinicDetailScreen() {
       setName(updated.name);
       setCurrency(updated.currency);
       setPrice(updated.billingUnitPrice != null ? String(updated.billingUnitPrice) : "");
+      setAnchorDay(String(updated.billingAnchorDay));
       setStatus(updated.status);
     },
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to save"),
@@ -90,7 +110,7 @@ export default function ClinicDetailScreen() {
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
-    keyboardType?: "default" | "decimal-pad";
+    keyboardType?: "default" | "decimal-pad" | "number-pad";
   }) {
     return (
       <View style={styles.fieldGroup}>
@@ -120,10 +140,34 @@ export default function ClinicDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}>
+
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>BILLING INFO</Text>
+          <View style={styles.billingRow}>
+            <BillingItem icon="calendar-outline" label="Anchor Day" value={`Day ${data.billingAnchorDay}`} colors={colors} />
+            <BillingItem icon="arrow-forward-circle-outline" label="Next Invoice" value={formatDate(data.nextInvoiceDate)} colors={colors} />
+          </View>
+          {data.currentPeriodInvoice && (
+            <View style={[styles.currentInvoiceBadge, {
+              backgroundColor: invoiceStatusColor(data.currentPeriodInvoice, colors) + "18",
+              borderColor: invoiceStatusColor(data.currentPeriodInvoice, colors) + "40",
+            }]}>
+              <Ionicons name="document-text-outline" size={14} color={invoiceStatusColor(data.currentPeriodInvoice, colors)} />
+              <Text style={[styles.currentInvoiceText, { color: invoiceStatusColor(data.currentPeriodInvoice, colors), fontFamily: "Inter_500Medium" }]}>
+                {data.currentPeriodInvoice.period} · {data.currentPeriodInvoice.status}
+                {" · "}
+                {data.currentPeriodInvoice.currency} {data.currentPeriodInvoice.total.toFixed(2)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>SETTINGS</Text>
           <Field label="Clinic Name" value={name} onChange={setName} placeholder="Clinic name" />
           <Field label="Currency (3-letter code)" value={currency} onChange={setCurrency} placeholder="EUR" />
           <Field label="Billing Unit Price (leave empty for default)" value={price} onChange={setPrice} placeholder="e.g. 50" keyboardType="decimal-pad" />
+          <Field label="Billing Anchor Day (1–28)" value={anchorDay} onChange={setAnchorDay} placeholder="e.g. 15" keyboardType="number-pad" />
 
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Status</Text>
@@ -158,14 +202,87 @@ export default function ClinicDetailScreen() {
           )}
         </Pressable>
 
+        <Pressable
+          style={[styles.actionBtn, { borderColor: colors.accent }]}
+          onPress={() => router.push({ pathname: "/(admin)/users", params: { preselectedClinicId: id } })}
+        >
+          <Ionicons name="person-add-outline" size={16} color={colors.accent} />
+          <Text style={[styles.actionBtnText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Create Manager for this Clinic</Text>
+        </Pressable>
+
         {data.status !== "INACTIVE" && (
           <Pressable
-            style={[styles.deactivateBtn, { borderColor: colors.error }]}
+            style={[styles.actionBtn, { borderColor: colors.error }]}
             onPress={() => setShowDeactivate(true)}
           >
             <Ionicons name="ban-outline" size={16} color={colors.error} />
-            <Text style={[styles.deactivateBtnText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>Deactivate Clinic</Text>
+            <Text style={[styles.actionBtnText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>Deactivate Clinic</Text>
           </Pressable>
+        )}
+
+        {data.managers.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>MANAGERS</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, gap: 0 }]}>
+              {data.managers.map((mgr, i) => (
+                <View key={mgr.id}>
+                  {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                  <View style={styles.managerRow}>
+                    <View style={[styles.avatar, { backgroundColor: colors.accent + "20" }]}>
+                      <Text style={[styles.avatarText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+                        {mgr.email.slice(0, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.managerEmail, { color: colors.text, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                      {mgr.email}
+                    </Text>
+                    <View style={[styles.statusDot, { backgroundColor: mgr.status === "ACTIVE" ? colors.success : colors.statusInactive }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {data.invoiceTimeline.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>INVOICE HISTORY</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, gap: 0 }]}>
+              {data.invoiceTimeline.map((inv, i) => {
+                const overdue = isOverdue(inv);
+                const statusColor = invoiceStatusColor(inv, colors);
+                const displayStatus = overdue ? "OVERDUE" : inv.status;
+                return (
+                  <View key={inv.id}>
+                    {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                    <Pressable
+                      style={({ pressed }) => [styles.invoiceRow, { opacity: pressed ? 0.7 : 1 }]}
+                      onPress={() => router.push({ pathname: "/(admin)/invoices/[id]", params: { id: inv.id } })}
+                    >
+                      <View style={styles.invoiceLeft}>
+                        <Text style={[styles.invPeriod, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                          {inv.period}
+                        </Text>
+                        <Text style={[styles.invMeta, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                          {inv.patientCount} patients · {inv.currency} {inv.total.toFixed(2)}
+                        </Text>
+                        {inv.dueAt && (
+                          <Text style={[styles.invMeta, { color: overdue ? colors.error : colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                            Due {formatDate(inv.dueAt)}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={[styles.invBadge, { backgroundColor: statusColor + "20" }]}>
+                        <Text style={[styles.invBadgeText, { color: statusColor, fontFamily: "Inter_600SemiBold" }]}>
+                          {displayStatus}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          </>
         )}
 
         <Text style={[styles.createdText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -203,6 +320,23 @@ export default function ClinicDetailScreen() {
   );
 }
 
+function BillingItem({ icon, label, value, colors }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View style={styles.billingItem}>
+      <Ionicons name={icon} size={16} color={colors.accent} />
+      <View>
+        <Text style={[styles.billingLabel, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>{label}</Text>
+        <Text style={[styles.billingValue, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerBar: {
@@ -215,13 +349,23 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18 },
-  content: { padding: 16, gap: 16 },
-  card: {
-    borderRadius: 14,
+  content: { padding: 16, gap: 14 },
+  card: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 14 },
+  cardLabel: { fontSize: 11, letterSpacing: 0.8, marginBottom: -4 },
+  billingRow: { flexDirection: "row", gap: 20 },
+  billingItem: { flexDirection: "row", gap: 8, alignItems: "center" },
+  billingLabel: { fontSize: 11 },
+  billingValue: { fontSize: 14 },
+  currentInvoiceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     borderWidth: 1,
-    padding: 16,
-    gap: 16,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
+  currentInvoiceText: { fontSize: 13, flex: 1 },
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 12, letterSpacing: 0.5 },
   fieldInput: {
@@ -245,7 +389,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { color: "#fff", fontSize: 16 },
-  deactivateBtn: {
+  actionBtn: {
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
@@ -254,8 +398,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  deactivateBtnText: { fontSize: 15 },
-  createdText: { fontSize: 12, textAlign: "center" },
+  actionBtnText: { fontSize: 15 },
+  sectionLabel: { fontSize: 11, letterSpacing: 0.8, marginTop: 4 },
+  divider: { height: 1 },
+  managerRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12 },
+  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 14 },
+  managerEmail: { flex: 1, fontSize: 14 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  invoiceRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  invoiceLeft: { flex: 1, gap: 2 },
+  invPeriod: { fontSize: 15 },
+  invMeta: { fontSize: 12 },
+  invBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  invBadgeText: { fontSize: 11 },
+  createdText: { fontSize: 12, textAlign: "center", marginTop: 4 },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
   modal: { borderRadius: 16, padding: 24, width: "85%", gap: 12 },
   modalTitle: { fontSize: 18 },

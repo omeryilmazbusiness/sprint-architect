@@ -1,0 +1,285 @@
+You are a principal full-stack TypeScript engineer. You will extend an existing monorepo that contains:
+- Mobile: Expo React Native + expo-router
+- Backend: Express + TypeScript
+- Database: PostgreSQL + Drizzle ORM
+- Existing: JWT access/refresh, roles (ADMIN/MANAGER/PATIENT), clinic scoping, invoices (basic), audit logs, rate limiting, PDF storage providers.
+
+Your mission: build a production-grade **Admin Console** and enforce strict tenant rules so the system behaves like a true multi-tenant SaaS. You must first inspect the current codebase (routes, schema, middleware, repositories, existing invoice logic) and then implement changes with minimal regressions, strong typing, and clean architecture.
+
+========================================================
+NON-NEGOTIABLE BUSINESS RULES
+========================================================
+1) Tenant binding is mandatory:
+   - Every MANAGER belongs to exactly ONE clinic (clinicId required, never null).
+   - Every PATIENT belongs to exactly ONE clinic (already likely true; enforce consistently).
+   - No manager/patient may ever exist without a clinic or switch across clinics without explicit admin action.
+
+2) Clinic suspension is absolute:
+   - If a clinic is SUSPENDED, then ALL its managers and patients MUST be blocked from using the app.
+   - Blocking must apply to: login, refresh, and every protected API call (server-side enforced).
+   - Admin users are not blocked by clinic status.
+
+3) Billing automation:
+   - Each clinic has a billing cadence based on its creation day-of-month.
+     Example: clinic created on the 12th → invoices are generated on the 12th of each following month.
+   - Invoices have full details (period, totals, status, issuedAt, dueAt, paidAt, clinic pricing).
+   - If an invoice is not paid by dueAt, the clinic becomes SUSPENDED immediately.
+
+4) Admin UX must be premium:
+   - Admin dashboard must feel “enterprise SaaS”: clear navigation, strong information hierarchy, quick actions, and clinic-centric views.
+   - After creating a clinic, the UI must immediately guide the admin to “Create Manager” (icon + CTA).
+
+========================================================
+DATA MODEL (DRIZZLE) — REQUIRED UPDATES
+========================================================
+A) Clinics
+- Extend clinic_status enum to include: ACTIVE, INACTIVE, SUSPENDED (if not already).
+- Add billing anchor fields if missing:
+  - billingAnchorDay (int 1..28/31) OR derive from createdAt day-of-month and store it to avoid edge cases.
+- Ensure clinics have:
+  - billing_unit_price (nullable, fallback to DEFAULT_UNIT_PRICE)
+  - currency (default "EUR")
+
+B) Users
+- Enforce: MANAGER must have clinicId NOT NULL.
+- Admin may have clinicId NULL (global admin), unless your current schema requires otherwise (adapt safely).
+- Add optional metadata if helpful:
+  - mustChangePassword (boolean) for first login (recommended).
+  - createdAt already exists.
+
+C) Invoices
+Enhance invoice schema with operational billing fields:
+- issuedAt (timestamp)
+- dueAt (timestamp) — controls suspension logic
+- paidAt (timestamp, nullable)
+- status: DRAFT | ISSUED | PAID | OVERDUE (optional; if you keep only DRAFT/ISSUED/PAID then compute overdue via dueAt)
+- period remains YYYY-MM
+- Ensure uniqueness: (clinicId, period) unique constraint
+
+All schema changes must be implemented in shared/schema.ts and migrated via existing drizzle workflow.
+
+========================================================
+SECURITY & MIDDLEWARE — MUST IMPLEMENT
+========================================================
+Implement a middleware that blocks suspended clinics:
+- `requireActiveClinic()` applied to:
+  - all MANAGER routes
+  - all PATIENT routes
+  - auth refresh endpoints (manager/patient)
+  - patient login endpoint
+  - manager login endpoint
+Rules:
+- If actorRole is ADMIN: bypass.
+- Otherwise load clinic by clinicId and if status === SUSPENDED → return 403 with code CLINIC_SUSPENDED.
+
+Also ensure device binding, token rotation and existing RBAC remain intact.
+
+========================================================
+BILLING AUTOMATION — REQUIRED
+========================================================
+Implement an automated invoice scheduler and suspension enforcer.
+
+A) Invoice Generation Logic
+For each ACTIVE clinic:
+- Determine “current billing period” (YYYY-MM) based on today’s date.
+- If today is on/after the clinic’s billingAnchorDay for the current month AND invoice for that period does not exist:
+  - Create invoice (prefer ISSUED) with:
+    - issuedAt = now
+    - dueAt = issuedAt + GRACE_DAYS (env; default 7)
+    - unitPrice = clinic.billingUnitPrice or DEFAULT_UNIT_PRICE
+    - patientCount = per existing logic (e.g., patients created in that period; keep current business rule unless stated otherwise)
+    - total = patientCount * unitPrice
+- Invoice creation must be idempotent.
+
+B) Overdue Detection & Suspension
+On a frequent schedule (at least daily):
+- Find invoices where status != PAID and dueAt < now.
+- Immediately set their clinic status to SUSPENDED.
+- Optionally mark invoice status to OVERDUE (if implemented).
+- When an invoice becomes PAID, automatically re-activate clinic (ACTIVE) unless clinic is INACTIVE for other reasons.
+
+C) Execution Model
+Because Replit may not guarantee traditional cron:
+- Implement BOTH:
+  1) A lightweight in-process scheduler using node-cron (or setInterval) to run every day/hour, AND
+  2) A “lazy catch-up” trigger: on admin dashboard load AND on login/refresh, call a safe function that checks generation/overdue for the relevant clinics (admin for all clinics; manager/patient for their clinic).
+This guarantees correctness even if the process sleeps.
+
+D) Audit Logging
+Log these actions:
+- invoice.generated
+- invoice.status_changed
+- clinic.suspended_due_to_unpaid_invoice
+- clinic.reactivated_after_payment
+- user.created / password_generated
+
+========================================================
+ADMIN BACKEND API — REQUIRED (ADMIN ONLY)
+========================================================
+All routes must be under /v1/admin and protected with requireRole("ADMIN"), Zod validation, consistent AppError responses.
+
+1) Clinics CRUD
+- GET  /v1/admin/clinics?search=&status=&page=&pageSize=
+- POST /v1/admin/clinics
+- GET  /v1/admin/clinics/:id
+- PUT  /v1/admin/clinics/:id
+- PUT  /v1/admin/clinics/:id/status  { status: ACTIVE|INACTIVE|SUSPENDED }
+- (Optional) DELETE only if safe; prefer status toggles.
+
+Clinic detail payload must include:
+- clinic fields
+- computed billing info:
+  - billingAnchorDay
+  - nextInvoiceDate (computed)
+  - currentPeriodInvoice (if exists)
+- invoice timeline data for UI:
+  - last 12–24 months invoices list with status, issuedAt, dueAt, paidAt, totals
+
+2) Manager/User Management
+- GET  /v1/admin/users?search=&role=&status=&clinicId=&page=&pageSize=
+- POST /v1/admin/users
+  - Admin submits: email, role=MANAGER, clinicId
+  - Server generates a strong password (min 16 chars, mixed sets), hashes it, stores it.
+  - Return the generated password ONCE in the response (never store raw).
+  - Set mustChangePassword=true (recommended) and provide endpoint for manager to change password later (optional but ideal).
+- GET  /v1/admin/users/:id (User Details)
+  - Include clinic summary and security metadata.
+- PUT  /v1/admin/users/:id (edit role/status/clinic)
+- PUT  /v1/admin/users/:id/reset-password (optional but recommended)
+- PUT  /v1/admin/users/:id/status (ACTIVE/INACTIVE)
+
+Strict constraints:
+- MANAGER must always have clinicId (reject otherwise).
+- Only one clinic per manager.
+- Email uniqueness enforced.
+- If clinic is SUSPENDED, manager cannot login (enforced by auth + requireActiveClinic).
+
+3) Invoices Management
+You already have basic invoice APIs; ensure admin-grade endpoints exist and are enhanced:
+- GET  /v1/admin/invoices?period=&clinicId=&status=&page=&pageSize=
+- GET  /v1/admin/invoices/:id (include clinic billing settings + invoice line data)
+- PUT  /v1/admin/invoices/:id/status { status: DRAFT|ISSUED|PAID }
+  - When set to PAID:
+    - set paidAt
+    - unsuspend clinic if it was suspended due to billing
+- POST /v1/admin/invoices/generate?period=YYYY-MM
+  - Must be idempotent per clinic and period.
+
+========================================================
+ADMIN MOBILE UX (EXPO ROUTER) — MUST BE “PREMIUM”
+========================================================
+Admin must have a dedicated route group and layout, separate from manager tabs:
+
+app/(admin)/
+  _layout.tsx
+  dashboard.tsx
+  clinics/
+    index.tsx
+    create.tsx (or modal)
+    [id].tsx
+  users/
+    index.tsx
+    create.tsx
+    [id].tsx
+  invoices/
+    index.tsx
+    [id].tsx
+
+Role-based redirect:
+- ADMIN → /(admin)/dashboard
+- MANAGER → existing /(tabs)
+- PATIENT → existing /(patient)
+
+A) Admin Dashboard UX (professional requirements)
+- Header: “Admin Console”
+- Global KPI cards:
+  - Active Clinics / Suspended Clinics / Total Users / Unpaid Invoices (count)
+- “Quick Actions” section (icon tiles):
+  - Create Clinic (prominent)
+  - Create Manager
+  - Generate Invoices (choose period)
+- “Attention Needed” list:
+  - Overdue invoices
+  - Suspended clinics
+  - Recently created clinics missing managers (no manager users yet)
+- “Clinics Overview” list:
+  - search + filter (status)
+  - each card: clinic name, status badge, billing day, next invoice date, last invoice status
+
+B) Clinic Create Flow (must guide next steps)
+After creating a clinic, immediately show a success screen/section:
+- “Clinic created”
+- Next steps card with icon + CTA: “Create a Manager for this clinic”
+- CTA navigates to Create Manager screen with clinic preselected.
+
+C) Clinic Detail UX (the “calendar-like invoices” requirement)
+Clinic detail must feel like an enterprise tenant page:
+- Top summary card:
+  - status badge (ACTIVE/SUSPENDED/INACTIVE)
+  - billing unit price + currency
+  - billing anchor day
+  - next invoice date (computed)
+  - actions: Edit, Suspend/Activate, Create Manager (icon button)
+- Invoices section with a “timeline/calendar” feel:
+  - A month grid or vertical timeline of last 12–24 periods
+  - Each period shows status badge (PAID/ISSUED/OVERDUE/DRAFT), total, dueAt
+  - Tapping a month opens invoice detail screen
+- Managers section:
+  - list managers of this clinic
+  - add manager CTA (routes to Create Manager)
+- Patients summary:
+  - show count + optional link to a read-only patient list (optional; do not break manager flows)
+
+D) Invoices UX
+- Invoice list: filters (period, clinic, status), pagination, pull-to-refresh
+- Invoice detail:
+  - clinic name, period, patientCount, unitPrice, currency, total
+  - issuedAt, dueAt, paidAt
+  - status change actions (admin only)
+  - warning banner if overdue and clinic is suspended
+
+E) Users UX
+- Create manager:
+  - email input (validate Gmail domain if requested; otherwise standard email validation)
+  - clinic selector (required)
+  - on success: show generated password ONCE with “Copy” action and “I have saved it” confirmation
+- User detail:
+  - role/status/clinic fields
+  - reset password action (optional)
+  - audit trail snippet (optional)
+
+Use consistent UI states: Loading / Error / Empty.
+Use React Query with proper cache keys and invalidations.
+
+========================================================
+ENV VARS / CONFIG
+========================================================
+Add or extend:
+- BILLING_GRACE_DAYS (default 7)
+- DEFAULT_UNIT_PRICE (existing)
+- plus any existing invoice config vars
+
+========================================================
+DELIVERABLES
+========================================================
+1) A brief architecture note explaining:
+   - how billingAnchorDay works
+   - how invoice generation is triggered (scheduler + lazy catch-up)
+   - how suspension is enforced (middleware at auth + protected routes)
+
+2) Implementation with small, reviewable changes:
+   - Drizzle schema updates
+   - Admin APIs (clinics/users/invoices)
+   - Billing job (generation + overdue suspension)
+   - Suspended clinic enforcement middleware
+   - Admin mobile UX (dashboard + clinic detail invoice timeline)
+
+3) Testing checklist:
+   - Create clinic → see nextInvoiceDate and invoice timeline placeholder
+   - Create manager → password generated → manager can login
+   - Generate/auto-generate invoice → dueAt set
+   - Mark invoice unpaid past dueAt → clinic becomes SUSPENDED → manager/patient blocked
+   - Mark invoice PAID → clinic re-activates and access restored (unless INACTIVE)
+   - Ensure existing manager and patient screens still function for ACTIVE clinics
+
+Work strictly within these requirements, avoid unrelated refactors, preserve TypeScript correctness, and keep the app stable.

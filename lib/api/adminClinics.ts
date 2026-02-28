@@ -6,6 +6,7 @@ export interface Clinic {
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice: number | null;
   currency: string;
+  billingAnchorDay: number;
   createdAt: string;
 }
 
@@ -21,6 +22,35 @@ export interface CreateClinicInput {
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice?: number | null;
   currency?: string;
+}
+
+export interface InvoiceSummary {
+  id: string;
+  period: string;
+  status: "DRAFT" | "ISSUED" | "PAID";
+  total: number;
+  currency: string;
+  patientCount: number;
+  unitPrice: number;
+  issuedAt: string | null;
+  dueAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface ClinicManager {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ClinicDetail extends Clinic {
+  nextInvoiceDate: string;
+  currentPeriodInvoice: InvoiceSummary | null;
+  managers: ClinicManager[];
+  invoiceTimeline: InvoiceSummary[];
 }
 
 export async function listClinics(params?: {
@@ -49,9 +79,14 @@ export async function getClinic(id: string): Promise<Clinic> {
   return res.json();
 }
 
+export async function getClinicDetail(id: string): Promise<ClinicDetail> {
+  const res = await apiRequest("GET", `/v1/admin/clinics/${id}/detail`);
+  return res.json();
+}
+
 export async function updateClinic(
   id: string,
-  input: Partial<CreateClinicInput>
+  input: Partial<CreateClinicInput> & { billingAnchorDay?: number }
 ): Promise<Clinic> {
   const res = await apiRequest("PUT", `/v1/admin/clinics/${id}`, input);
   return res.json();

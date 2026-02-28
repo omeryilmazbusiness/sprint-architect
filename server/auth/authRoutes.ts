@@ -10,9 +10,13 @@ import { authRepo } from "../repositories/authRepo";
 import { Errors } from "./errors";
 import { authMiddleware } from "./middleware";
 import rateLimit from "express-rate-limit";
+import { db } from "../db";
+import { clinics } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { runBillingCycle } from "../billing/billingService";
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
@@ -76,7 +80,22 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
     return;
   }
 
+  if (user.role !== "ADMIN" && user.clinicId) {
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, user.clinicId) });
+    if (clinic?.status === "SUSPENDED") {
+      const e = Errors.CLINIC_SUSPENDED();
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
+  }
+
   const { accessToken, refreshToken } = issueTokens(user);
+
+  if (user.role === "ADMIN") {
+    runBillingCycle().catch((e) => console.error("[billing] login trigger error:", e));
+  } else if (user.clinicId) {
+    runBillingCycle([user.clinicId]).catch((e) => console.error("[billing] login trigger error:", e));
+  }
 
   res.json({
     accessToken,
@@ -86,6 +105,7 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
       email: user.email,
       role: user.role,
       clinicId: user.clinicId,
+      mustChangePassword: (user as any).mustChangePassword ?? false,
     },
   });
 });
@@ -120,6 +140,15 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         return;
       }
 
+      if (user.role !== "ADMIN" && user.clinicId) {
+        const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, user.clinicId) });
+        if (clinic?.status === "SUSPENDED") {
+          const e = Errors.CLINIC_SUSPENDED();
+          res.status(e.statusCode).json({ code: e.code, message: e.message });
+          return;
+        }
+      }
+
       const tokens = issueTokens(user);
       res.json(tokens);
     } else {
@@ -128,6 +157,15 @@ router.post("/refresh", async (req: Request, res: Response): Promise<void> => {
         const e = Errors.UNAUTHORIZED();
         res.status(e.statusCode).json({ code: e.code, message: e.message });
         return;
+      }
+
+      if (patient.clinicId) {
+        const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, patient.clinicId) });
+        if (clinic?.status === "SUSPENDED") {
+          const e = Errors.CLINIC_SUSPENDED();
+          res.status(e.statusCode).json({ code: e.code, message: e.message });
+          return;
+        }
       }
 
       const accessToken = signAccessToken({

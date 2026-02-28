@@ -1,6 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, type ActorContext } from "./jwt";
 import { Errors } from "./errors";
+import { db } from "../db";
+import { clinics } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 declare global {
   namespace Express {
@@ -48,6 +51,47 @@ export function requireRole(...roles: ActorContext["role"][]) {
     }
     next();
   };
+}
+
+export async function requireActiveClinic(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (!req.actor) {
+    const e = Errors.UNAUTHORIZED();
+    res.status(e.statusCode).json({ code: e.code, message: e.message });
+    return;
+  }
+
+  if (req.actor.role === "ADMIN") {
+    next();
+    return;
+  }
+
+  const clinicId = req.actor.clinicId;
+  if (!clinicId) {
+    const e = Errors.FORBIDDEN("No clinic associated with this account.");
+    res.status(e.statusCode).json({ code: e.code, message: e.message });
+    return;
+  }
+
+  try {
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
+    if (!clinic) {
+      const e = Errors.FORBIDDEN("Clinic not found.");
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
+    if (clinic.status === "SUSPENDED") {
+      const e = Errors.CLINIC_SUSPENDED();
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
 export function clinicScopeMiddleware(

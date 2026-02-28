@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,16 +13,17 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Clipboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Colors from "@/constants/colors";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingView } from "@/components/LoadingView";
 import { ErrorView } from "@/components/ErrorView";
-import { listUsers, createUser, AdminUser, UserListResponse } from "@/lib/api/adminUsers";
+import { listUsers, createUser, AdminUser, AdminUserCreated, UserListResponse } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
 const ROLE_FILTERS = ["ALL", "ADMIN", "MANAGER"];
@@ -34,17 +35,27 @@ export default function UsersScreen() {
   const qc = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const params = useLocalSearchParams<{ preselectedClinicId?: string }>();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [showCreate, setShowCreate] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
 
   const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
-  const [newClinicId, setNewClinicId] = useState("");
+  const [newClinicId, setNewClinicId] = useState(params.preselectedClinicId ?? "");
+
+  useEffect(() => {
+    if (params.preselectedClinicId) {
+      setNewClinicId(params.preselectedClinicId);
+      setShowCreate(true);
+    }
+  }, [params.preselectedClinicId]);
 
   function handleSearchChange(text: string) {
     setSearch(text);
@@ -68,29 +79,39 @@ export default function UsersScreen() {
 
   const createMutation = useMutation({
     mutationFn: createUser,
-    onSuccess: () => {
+    onSuccess: (result: AdminUserCreated) => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/users"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
       setShowCreate(false);
+      setGeneratedPassword(result.generatedPassword);
+      setConfirmed(false);
+      setShowPassword(true);
       resetForm();
     },
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to create user"),
   });
 
   function resetForm() {
-    setNewEmail(""); setNewPassword(""); setNewRole("MANAGER"); setNewClinicId("");
+    setNewEmail("");
+    setNewRole("MANAGER");
+    setNewClinicId("");
   }
 
   function handleCreate() {
     if (!newEmail.trim()) return Alert.alert("Validation", "Email is required");
-    if (!newPassword.trim() || newPassword.length < 8) return Alert.alert("Validation", "Password must be at least 8 characters");
     if (newRole === "MANAGER" && !newClinicId) return Alert.alert("Validation", "Clinic is required for Manager role");
     createMutation.mutate({
       email: newEmail.trim().toLowerCase(),
-      password: newPassword,
       role: newRole,
       clinicId: newClinicId || null,
     });
+  }
+
+  function copyPassword() {
+    if (Clipboard?.setString) {
+      Clipboard.setString(generatedPassword);
+    }
+    Alert.alert("Copied", "Password copied to clipboard.");
   }
 
   if (isLoading) return <LoadingView message="Loading users..." />;
@@ -151,6 +172,11 @@ export default function UsersScreen() {
                       {item.clinic.name}
                     </Text>
                   )}
+                  {item.mustChangePassword && (
+                    <View style={[styles.pwBadge, { backgroundColor: colors.warning + "20" }]}>
+                      <Text style={[styles.pwBadgeText, { color: colors.warning, fontFamily: "Inter_500Medium" }]}>⚠ temp password</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <View style={[styles.statusDot, { backgroundColor: item.status === "ACTIVE" ? colors.success : colors.statusInactive }]} />
@@ -165,76 +191,120 @@ export default function UsersScreen() {
 
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>New User</Text>
+          <ScrollView contentContainerStyle={styles.overlayScroll} keyboardShouldPersistTaps="handled">
+            <View style={[styles.modal, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>New User</Text>
 
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Email address *"
-              placeholderTextColor={colors.textMuted}
-              value={newEmail}
-              onChangeText={setNewEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Password (min 8 chars) *"
-              placeholderTextColor={colors.textMuted}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-            />
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
+                placeholder="Email address *"
+                placeholderTextColor={colors.textMuted}
+                value={newEmail}
+                onChangeText={setNewEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
 
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Role</Text>
-            <View style={styles.roleRow}>
-              {(["MANAGER", "ADMIN"] as const).map((r) => (
+              <View style={[styles.infoBox, { backgroundColor: colors.accent + "10", borderColor: colors.accent + "30" }]}>
+                <Ionicons name="key-outline" size={14} color={colors.accent} />
+                <Text style={[styles.infoText, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
+                  A secure password will be generated automatically
+                </Text>
+              </View>
+
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Role</Text>
+              <View style={styles.roleRow}>
+                {(["MANAGER", "ADMIN"] as const).map((r) => (
+                  <Pressable
+                    key={r}
+                    style={[styles.roleOption, { borderColor: newRole === r ? colors.accent : colors.border, backgroundColor: newRole === r ? colors.accent + "18" : "transparent" }]}
+                    onPress={() => setNewRole(r)}
+                  >
+                    <Text style={[styles.roleOptionText, { color: newRole === r ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{r}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {newRole === "MANAGER" && (
+                <>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Clinic *</Text>
+                  <ScrollView style={styles.clinicPicker} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                    {(clinicsData?.rows ?? []).map((c) => (
+                      <Pressable
+                        key={c.id}
+                        style={[styles.clinicOption, { borderColor: newClinicId === c.id ? colors.accent : colors.border, backgroundColor: newClinicId === c.id ? colors.accent + "18" : "transparent" }]}
+                        onPress={() => setNewClinicId(c.id)}
+                      >
+                        <Text style={[styles.clinicOptionText, { color: newClinicId === c.id ? colors.accent : colors.text, fontFamily: "Inter_400Regular" }]}>{c.name}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+
+              <View style={styles.modalButtons}>
                 <Pressable
-                  key={r}
-                  style={[styles.roleOption, { borderColor: newRole === r ? colors.accent : colors.border, backgroundColor: newRole === r ? colors.accent + "18" : "transparent" }]}
-                  onPress={() => setNewRole(r)}
+                  style={[styles.modalBtn, { borderColor: colors.border }]}
+                  onPress={() => { setShowCreate(false); resetForm(); }}
                 >
-                  <Text style={[styles.roleOptionText, { color: newRole === r ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{r}</Text>
+                  <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
                 </Pressable>
-              ))}
+                <Pressable
+                  style={[styles.modalBtn, { backgroundColor: colors.accent, borderColor: colors.accent, opacity: createMutation.isPending ? 0.7 : 1 }]}
+                  onPress={handleCreate}
+                  disabled={createMutation.isPending}
+                >
+                  {createMutation.isPending ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create</Text>
+                  )}
+                </Pressable>
+              </View>
             </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
-            {newRole === "MANAGER" && (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Clinic *</Text>
-                <ScrollView style={styles.clinicPicker} showsVerticalScrollIndicator={false}>
-                  {(clinicsData?.rows ?? []).map((c) => (
-                    <Pressable
-                      key={c.id}
-                      style={[styles.clinicOption, { borderColor: newClinicId === c.id ? colors.accent : colors.border, backgroundColor: newClinicId === c.id ? colors.accent + "18" : "transparent" }]}
-                      onPress={() => setNewClinicId(c.id)}
-                    >
-                      <Text style={[styles.clinicOptionText, { color: newClinicId === c.id ? colors.accent : colors.text, fontFamily: "Inter_400Regular" }]}>{c.name}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </>
-            )}
+      <Modal visible={showPassword} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={[styles.passwordModal, { backgroundColor: colors.card }]}>
+            <View style={[styles.pwIconWrap, { backgroundColor: colors.success + "20" }]}>
+              <Ionicons name="shield-checkmark-outline" size={32} color={colors.success} />
+            </View>
+            <Text style={[styles.pwTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>User Created</Text>
+            <Text style={[styles.pwSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Save this password — it will only be shown once.
+            </Text>
 
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalBtn, { borderColor: colors.border }]}
-                onPress={() => { setShowCreate(false); resetForm(); }}
-              >
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, { backgroundColor: colors.accent, borderColor: colors.accent, opacity: createMutation.isPending ? 0.7 : 1 }]}
-                onPress={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create</Text>
-                )}
+            <View style={[styles.pwBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.pwValue, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} selectable>
+                {generatedPassword}
+              </Text>
+              <Pressable style={styles.copyBtn} onPress={copyPassword}>
+                <Ionicons name="copy-outline" size={18} color={colors.accent} />
               </Pressable>
             </View>
+
+            <Pressable
+              style={[styles.confirmRow, { borderColor: colors.border }]}
+              onPress={() => setConfirmed(!confirmed)}
+            >
+              <View style={[styles.checkbox, { borderColor: confirmed ? colors.success : colors.border, backgroundColor: confirmed ? colors.success : "transparent" }]}>
+                {confirmed && <Ionicons name="checkmark" size={12} color="#fff" />}
+              </View>
+              <Text style={[styles.confirmText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                I have saved this password
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.confirmBtn, { backgroundColor: confirmed ? colors.accent : colors.accent + "50" }]}
+              onPress={() => { if (confirmed) setShowPassword(false); }}
+              disabled={!confirmed}
+            >
+              <Text style={[styles.confirmBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -266,17 +336,22 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 16 },
   cardInfo: { flex: 1, gap: 4 },
   cardEmail: { fontSize: 14 },
-  cardMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardMeta: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   roleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
   roleBadgeText: { fontSize: 11, letterSpacing: 0.3 },
   clinicName: { fontSize: 12, flex: 1 },
+  pwBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  pwBadgeText: { fontSize: 10 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   fab: { position: "absolute", bottom: 100, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12, maxHeight: "90%" },
+  overlayScroll: { justifyContent: "flex-end", flexGrow: 1 },
+  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12 },
   modalTitle: { fontSize: 20, marginBottom: 4 },
   fieldLabel: { fontSize: 12, letterSpacing: 0.5 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+  infoBox: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 10, padding: 12 },
+  infoText: { flex: 1, fontSize: 13 },
   roleRow: { flexDirection: "row", gap: 8 },
   roleOption: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center" },
   roleOptionText: { fontSize: 13 },
@@ -286,4 +361,47 @@ const styles = StyleSheet.create({
   modalButtons: { flexDirection: "row", gap: 10, marginTop: 4 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
   modalBtnText: { fontSize: 15 },
+  passwordModal: {
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 24,
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 40,
+  },
+  pwIconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  pwTitle: { fontSize: 22 },
+  pwSub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  pwBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    width: "100%",
+    gap: 12,
+  },
+  pwValue: { flex: 1, fontSize: 16, letterSpacing: 1 },
+  copyBtn: { padding: 4 },
+  confirmRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmText: { flex: 1, fontSize: 14 },
+  confirmBtn: { borderRadius: 12, paddingVertical: 14, alignItems: "center", width: "100%" },
+  confirmBtnText: { color: "#fff", fontSize: 16 },
 });

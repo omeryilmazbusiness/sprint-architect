@@ -3,12 +3,13 @@ import { z } from "zod";
 import { authMiddleware, requireRole } from "../auth/middleware";
 import { invoiceRepo } from "../repositories/invoiceRepo";
 import { clinicRepo } from "../repositories/clinicRepo";
-import { userRepo } from "../repositories/userRepo";
+import { userRepo, generateSecurePassword } from "../repositories/userRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
 import { clinics, users, invoices } from "@shared/schema";
-import { eq, count, and } from "drizzle-orm";
+import { eq, count, and, not } from "drizzle-orm";
+import { runBillingCycle } from "../billing/billingService";
 
 const router = Router();
 router.use(authMiddleware, requireRole("ADMIN"));
@@ -24,27 +25,56 @@ const validatePeriod = (period: string) => {
 
 router.get("/metrics", async (req, res, next) => {
   try {
+    runBillingCycle().catch((e) => console.error("[billing] metrics trigger:", e));
+
     const [
       [{ total: totalClinics }],
       [{ total: activeClinics }],
+      [{ total: suspendedClinics }],
       [{ total: totalUsers }],
       [{ total: activeUsers }],
       [{ total: draftInvoices }],
       [{ total: issuedInvoices }],
       [{ total: paidInvoices }],
+      overdueInvoices,
+      suspendedClinicsList,
+      clinicsWithoutManagers,
     ] = await Promise.all([
       db.select({ total: count() }).from(clinics),
       db.select({ total: count() }).from(clinics).where(eq(clinics.status, "ACTIVE")),
+      db.select({ total: count() }).from(clinics).where(eq(clinics.status, "SUSPENDED")),
       db.select({ total: count() }).from(users),
       db.select({ total: count() }).from(users).where(eq(users.status, "ACTIVE")),
       db.select({ total: count() }).from(invoices).where(eq(invoices.status, "DRAFT")),
       db.select({ total: count() }).from(invoices).where(eq(invoices.status, "ISSUED")),
       db.select({ total: count() }).from(invoices).where(eq(invoices.status, "PAID")),
+      invoiceRepo.findOverdue(),
+      db.query.clinics.findMany({ where: eq(clinics.status, "SUSPENDED"), limit: 10 }),
+      db.query.clinics.findMany({
+        where: eq(clinics.status, "ACTIVE"),
+        columns: { id: true, name: true, createdAt: true },
+      }).then(async (allActive) => {
+        const result = [];
+        for (const c of allActive.slice(0, 50)) {
+          const mgr = await db.query.users.findFirst({
+            where: and(eq(users.clinicId, c.id), eq(users.role, "MANAGER")),
+            columns: { id: true },
+          });
+          if (!mgr) result.push({ id: c.id, name: c.name, createdAt: c.createdAt });
+        }
+        return result;
+      }),
     ]);
+
     res.json({
-      clinics: { total: totalClinics, active: activeClinics, inactive: totalClinics - activeClinics },
+      clinics: { total: totalClinics, active: activeClinics, inactive: totalClinics - activeClinics - suspendedClinics, suspended: suspendedClinics },
       users: { total: totalUsers, active: activeUsers },
       invoices: { draft: draftInvoices, issued: issuedInvoices, paid: paidInvoices },
+      attentionNeeded: {
+        overdueInvoices: overdueInvoices.slice(0, 10),
+        suspendedClinics: suspendedClinicsList,
+        clinicsWithoutManagers,
+      },
     });
   } catch (e) {
     next(e);
@@ -60,7 +90,9 @@ const ClinicCreateSchema = z.object({
   currency: z.string().length(3).optional(),
 });
 
-const ClinicUpdateSchema = ClinicCreateSchema.partial();
+const ClinicUpdateSchema = ClinicCreateSchema.extend({
+  billingAnchorDay: z.number().int().min(1).max(28).optional(),
+}).partial();
 
 router.get("/clinics", async (req, res, next) => {
   try {
@@ -101,6 +133,16 @@ router.get("/clinics/:id", async (req, res, next) => {
     const clinic = await clinicRepo.findById(req.params.id);
     if (!clinic) throw new AppError("NOT_FOUND", "Clinic not found", 404);
     res.json(clinic);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/clinics/:id/detail", async (req, res, next) => {
+  try {
+    const detail = await clinicRepo.getDetail(req.params.id);
+    if (!detail) throw new AppError("NOT_FOUND", "Clinic not found", 404);
+    res.json(detail);
   } catch (e) {
     next(e);
   }
@@ -151,7 +193,6 @@ router.delete("/clinics/:id", async (req, res, next) => {
 
 const UserCreateSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
   role: z.enum(["ADMIN", "MANAGER"]),
   clinicId: z.string().nullable().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
@@ -194,7 +235,15 @@ router.post("/users", async (req, res, next) => {
     }
     const existing = await userRepo.findByEmail(parsed.data.email);
     if (existing) throw new AppError("CONFLICT", "Email already in use", 409);
-    const user = await userRepo.create(parsed.data);
+
+    const generatedPassword = generateSecurePassword();
+
+    const user = await userRepo.create({
+      ...parsed.data,
+      password: generatedPassword,
+      mustChangePassword: true,
+    });
+
     auditLog({
       clinicId: parsed.data.clinicId ?? undefined,
       actorId: req.actor!.sub,
@@ -204,7 +253,8 @@ router.post("/users", async (req, res, next) => {
       resourceId: user.id,
       metadata: { email: user.email, role: user.role },
     });
-    res.status(201).json(user);
+
+    res.status(201).json({ ...user, generatedPassword });
   } catch (e) {
     next(e);
   }
@@ -269,6 +319,25 @@ router.put("/users/:id/password", async (req, res, next) => {
   }
 });
 
+router.put("/users/:id/reset-password", async (req, res, next) => {
+  try {
+    const exists = await userRepo.findById(req.params.id);
+    if (!exists) throw new AppError("NOT_FOUND", "User not found", 404);
+    const generatedPassword = generateSecurePassword();
+    await userRepo.setPassword(req.params.id, generatedPassword);
+    auditLog({
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "USER_PASSWORD_RESET",
+      resourceType: "user",
+      resourceId: req.params.id,
+    });
+    res.json({ success: true, generatedPassword });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete("/users/:id", async (req, res, next) => {
   try {
     const exists = await userRepo.findById(req.params.id);
@@ -307,12 +376,27 @@ router.post("/invoices/generate", async (req, res, next) => {
   }
 });
 
+router.post("/billing/run", async (req, res, next) => {
+  try {
+    await runBillingCycle();
+    res.json({ success: true, message: "Billing cycle completed" });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get("/invoices", async (req, res, next) => {
   try {
-    const { period, clinicId, status } = req.query as Record<string, string>;
+    const { period, clinicId, status, page, pageSize } = req.query as Record<string, string>;
     if (period) validatePeriod(period);
-    const rows = await invoiceRepo.list({ period, clinicId, status });
-    res.json(rows);
+    const result = await invoiceRepo.list({
+      period,
+      clinicId,
+      status,
+      page: page ? parseInt(page) : undefined,
+      pageSize: pageSize ? parseInt(pageSize) : undefined,
+    });
+    res.json(result);
   } catch (e) {
     next(e);
   }

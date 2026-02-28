@@ -19,9 +19,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
 import { getAdminMetrics, generateInvoices, AdminMetrics } from "@/lib/api/adminInvoices";
-import { createClinic } from "@/lib/api/adminClinics";
-import { createUser } from "@/lib/api/adminUsers";
-import { listClinics } from "@/lib/api/adminClinics";
 
 export default function AdminDashboard() {
   const isDark = useColorScheme() === "dark";
@@ -34,7 +31,7 @@ export default function AdminDashboard() {
   const [generatePeriod, setGeneratePeriod] = useState("");
   const [showGenerate, setShowGenerate] = useState(false);
 
-  const { data: metrics, isLoading } = useQuery<AdminMetrics>({
+  const { data: metrics, isLoading, refetch, isRefetching } = useQuery<AdminMetrics>({
     queryKey: ["/v1/admin/metrics"],
     queryFn: getAdminMetrics,
   });
@@ -45,21 +42,16 @@ export default function AdminDashboard() {
       setShowGenerate(false);
       setGeneratePeriod("");
       qc.invalidateQueries({ queryKey: ["/v1/admin/invoices"] });
+      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
       Alert.alert("Done", `Generated ${data.length} invoice(s) for ${generatePeriod}.`);
     },
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to generate"),
   });
 
-  function MetricCard({ label, value, sub, color }: { label: string; value: number; sub?: string; color: string }) {
-    return (
-      <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.metricDot, { backgroundColor: color }]} />
-        <Text style={[styles.metricValue, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{value}</Text>
-        <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{label}</Text>
-        {sub ? <Text style={[styles.metricSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>{sub}</Text> : null}
-      </View>
-    );
-  }
+  const attention = metrics?.attentionNeeded;
+  const hasAttention = (attention?.overdueInvoices?.length ?? 0) > 0
+    || (attention?.suspendedClinics?.length ?? 0) > 0
+    || (attention?.clinicsWithoutManagers?.length ?? 0) > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -80,27 +72,56 @@ export default function AdminDashboard() {
               CLINICS
             </Text>
             <View style={styles.metricsRow}>
-              <MetricCard label="Total" value={metrics.clinics.total} color={colors.accent} />
-              <MetricCard label="Active" value={metrics.clinics.active} color={colors.success} />
-              <MetricCard label="Inactive" value={metrics.clinics.inactive} color={colors.statusInactive} />
+              <MetricCard label="Total" value={metrics.clinics.total} color={colors.accent} colors={colors} />
+              <MetricCard label="Active" value={metrics.clinics.active} color={colors.success} colors={colors} />
+              <MetricCard label="Suspended" value={metrics.clinics.suspended} color={colors.error} colors={colors} />
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              USERS
+              USERS & INVOICES
             </Text>
             <View style={styles.metricsRow}>
-              <MetricCard label="Total" value={metrics.users.total} color={colors.accent} />
-              <MetricCard label="Active" value={metrics.users.active} color={colors.success} />
+              <MetricCard label="Users" value={metrics.users.active} sub="active" color={colors.accent} colors={colors} />
+              <MetricCard label="Issued" value={metrics.invoices.issued} sub="invoices" color={colors.warning} colors={colors} />
+              <MetricCard label="Paid" value={metrics.invoices.paid} sub="invoices" color={colors.success} colors={colors} />
             </View>
 
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              INVOICES
-            </Text>
-            <View style={styles.metricsRow}>
-              <MetricCard label="Draft" value={metrics.invoices.draft} color={colors.warning} />
-              <MetricCard label="Issued" value={metrics.invoices.issued} color={colors.accent} />
-              <MetricCard label="Paid" value={metrics.invoices.paid} color={colors.success} />
-            </View>
+            {hasAttention && (
+              <>
+                <Text style={[styles.sectionTitle, { color: colors.error, fontFamily: "Inter_600SemiBold", marginTop: 8 }]}>
+                  ATTENTION NEEDED
+                </Text>
+                <View style={[styles.attentionCard, { backgroundColor: colors.error + "12", borderColor: colors.error + "40" }]}>
+                  {(attention?.overdueInvoices?.length ?? 0) > 0 && (
+                    <AttentionRow
+                      icon="warning-outline"
+                      label={`${attention!.overdueInvoices.length} overdue invoice(s)`}
+                      color={colors.error}
+                      colors={colors}
+                      onPress={() => router.push("/(admin)/invoices")}
+                    />
+                  )}
+                  {(attention?.suspendedClinics?.length ?? 0) > 0 && (
+                    <AttentionRow
+                      icon="ban-outline"
+                      label={`${attention!.suspendedClinics.length} suspended clinic(s)`}
+                      color={colors.error}
+                      colors={colors}
+                      onPress={() => router.push("/(admin)/clinics")}
+                    />
+                  )}
+                  {(attention?.clinicsWithoutManagers?.length ?? 0) > 0 && (
+                    <AttentionRow
+                      icon="person-outline"
+                      label={`${attention!.clinicsWithoutManagers.length} clinic(s) have no manager`}
+                      color={colors.warning}
+                      colors={colors}
+                      onPress={() => router.push("/(admin)/users")}
+                    />
+                  )}
+                </View>
+              </>
+            )}
           </>
         ) : null}
 
@@ -117,7 +138,7 @@ export default function AdminDashboard() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <QuickAction
             icon="person-add-outline"
-            label="Create User"
+            label="Create Manager"
             colors={colors}
             onPress={() => router.push("/(admin)/users")}
           />
@@ -127,6 +148,21 @@ export default function AdminDashboard() {
             label="Generate Invoices"
             colors={colors}
             onPress={() => setShowGenerate(true)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <QuickAction
+            icon="refresh-outline"
+            label="Run Billing Cycle"
+            colors={colors}
+            onPress={async () => {
+              try {
+                await fetch("/v1/admin/billing/run", { method: "POST" });
+                qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
+                Alert.alert("Done", "Billing cycle completed.");
+              } catch {
+                Alert.alert("Error", "Failed to run billing cycle");
+              }
+            }}
           />
         </View>
       </ScrollView>
@@ -168,6 +204,39 @@ export default function AdminDashboard() {
   );
 }
 
+function MetricCard({ label, value, sub, color, colors }: {
+  label: string;
+  value: number;
+  sub?: string;
+  color: string;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.metricDot, { backgroundColor: color }]} />
+      <Text style={[styles.metricValue, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{value}</Text>
+      <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{label}</Text>
+      {sub ? <Text style={[styles.metricSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+function AttentionRow({ icon, label, color, colors, onPress }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  colors: typeof Colors.light;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={({ pressed }) => [styles.attentionRow, { opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
+      <Ionicons name={icon} size={16} color={color} />
+      <Text style={[styles.attentionText, { color, fontFamily: "Inter_500Medium" }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={14} color={color} />
+    </Pressable>
+  );
+}
+
 function QuickAction({ icon, label, colors, onPress }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -190,10 +259,7 @@ function QuickAction({ icon, label, colors, onPress }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 20 },
   headerTitle: { fontSize: 26, color: "#fff" },
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },
   content: { padding: 16 },
@@ -210,25 +276,23 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 26 },
   metricLabel: { fontSize: 11, marginTop: 2 },
   metricSub: { fontSize: 10, marginTop: 2 },
-  actionsCard: {
+  attentionCard: {
     borderRadius: 14,
     borderWidth: 1,
-    overflow: "hidden",
+    padding: 4,
+    marginBottom: 4,
   },
-  divider: { height: 1 },
-  quickAction: {
+  attentionRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    gap: 14,
+    gap: 10,
+    padding: 12,
   },
-  qaIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  attentionText: { flex: 1, fontSize: 13 },
+  actionsCard: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  divider: { height: 1 },
+  quickAction: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
+  qaIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   qaLabel: { flex: 1, fontSize: 15 },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
   modal: { borderRadius: 16, padding: 24, width: "85%", gap: 16 },

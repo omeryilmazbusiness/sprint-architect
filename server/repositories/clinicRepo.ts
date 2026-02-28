@@ -1,6 +1,7 @@
 import { db } from "../db";
-import { clinics } from "@shared/schema";
-import { eq, ilike, and, count, sql } from "drizzle-orm";
+import { clinics, users, invoices } from "@shared/schema";
+import { eq, ilike, and, count, desc } from "drizzle-orm";
+import { computeNextInvoiceDate } from "../billing/billingService";
 
 export const clinicRepo = {
   async list(filters: {
@@ -35,17 +36,51 @@ export const clinicRepo = {
     return db.query.clinics.findFirst({ where: eq(clinics.id, id) });
   },
 
+  async getDetail(id: string) {
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, id) });
+    if (!clinic) return null;
+
+    const [managers, clinicInvoices] = await Promise.all([
+      db.query.users.findMany({
+        where: and(eq(users.clinicId, id), eq(users.role, "MANAGER")),
+        orderBy: (u, { asc }) => asc(u.email),
+      }),
+      db.query.invoices.findMany({
+        where: eq(invoices.clinicId, id),
+        orderBy: (inv, { desc }) => desc(inv.period),
+        limit: 24,
+      }),
+    ]);
+
+    const nextInvoiceDate = computeNextInvoiceDate(clinic.billingAnchorDay);
+    const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const currentPeriodInvoice = clinicInvoices.find((i) => i.period === currentPeriod) ?? null;
+
+    const sanitizedManagers = managers.map(({ passwordHash, ...m }) => m);
+
+    return {
+      ...clinic,
+      nextInvoiceDate: nextInvoiceDate.toISOString(),
+      currentPeriodInvoice,
+      managers: sanitizedManagers,
+      invoiceTimeline: clinicInvoices,
+    };
+  },
+
   async create(input: {
     name: string;
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
   }) {
+    const now = new Date();
+    const anchorDay = now.getDate();
     const [clinic] = await db.insert(clinics).values({
       name: input.name,
       status: input.status ?? "ACTIVE",
       billingUnitPrice: input.billingUnitPrice ?? null,
       currency: input.currency ?? "EUR",
+      billingAnchorDay: anchorDay,
     }).returning();
     return clinic;
   },
@@ -55,6 +90,7 @@ export const clinicRepo = {
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
+    billingAnchorDay?: number;
   }) {
     const [updated] = await db
       .update(clinics)

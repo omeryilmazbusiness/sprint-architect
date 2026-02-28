@@ -39,6 +39,8 @@ export default function ClinicsScreen() {
   const [newName, setNewName] = useState("");
   const [newCurrency, setNewCurrency] = useState("EUR");
   const [newPrice, setNewPrice] = useState("");
+  const [createdClinic, setCreatedClinic] = useState<Clinic | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   function handleSearchChange(text: string) {
     setSearch(text);
@@ -54,13 +56,15 @@ export default function ClinicsScreen() {
 
   const createMutation = useMutation({
     mutationFn: createClinic,
-    onSuccess: () => {
+    onSuccess: (clinic) => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/clinics"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
       setShowCreate(false);
       setNewName("");
       setNewCurrency("EUR");
       setNewPrice("");
+      setCreatedClinic(clinic);
+      setShowSuccess(true);
     },
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to create clinic"),
   });
@@ -72,6 +76,12 @@ export default function ClinicsScreen() {
       currency: newCurrency.trim() || "EUR",
       billingUnitPrice: newPrice ? parseFloat(newPrice) : null,
     });
+  }
+
+  function statusColor(status: string) {
+    if (status === "SUSPENDED") return colors.error;
+    if (status === "INACTIVE") return colors.statusInactive;
+    return colors.success;
   }
 
   if (isLoading) return <LoadingView message="Loading clinics..." />;
@@ -113,8 +123,13 @@ export default function ClinicsScreen() {
               <View style={styles.metaItem}>
                 <Ionicons name="card-outline" size={13} color={colors.textMuted} />
                 <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {item.currency}
-                  {item.billingUnitPrice != null ? ` · €${item.billingUnitPrice}` : " · default rate"}
+                  {item.currency}{item.billingUnitPrice != null ? ` · ${item.billingUnitPrice}` : " · default rate"}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  Billing day {item.billingAnchorDay}
                 </Text>
               </View>
             </View>
@@ -180,6 +195,57 @@ export default function ClinicsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={[styles.successModal, { backgroundColor: colors.card }]}>
+            <View style={[styles.successIcon, { backgroundColor: colors.success + "20" }]}>
+              <Ionicons name="checkmark-circle" size={40} color={colors.success} />
+            </View>
+            <Text style={[styles.successTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+              Clinic Created
+            </Text>
+            <Text style={[styles.successName, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {createdClinic?.name}
+            </Text>
+            <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Billing anchor day set to day {createdClinic?.billingAnchorDay} of each month.
+            </Text>
+
+            <View style={[styles.nextStepCard, { backgroundColor: colors.accent + "12", borderColor: colors.accent + "40" }]}>
+              <Ionicons name="person-add-outline" size={20} color={colors.accent} />
+              <View style={styles.nextStepText}>
+                <Text style={[styles.nextStepTitle, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Next step</Text>
+                <Text style={[styles.nextStepSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  Create a manager for this clinic
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+            </View>
+
+            <View style={styles.successButtons}>
+              <Pressable
+                style={[styles.successBtn, { borderColor: colors.border }]}
+                onPress={() => setShowSuccess(false)}
+              >
+                <Text style={[styles.successBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Done</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.successBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
+                onPress={() => {
+                  setShowSuccess(false);
+                  router.push({
+                    pathname: "/(admin)/users",
+                    params: { preselectedClinicId: createdClinic?.id ?? "" },
+                  });
+                }}
+              >
+                <Text style={[styles.successBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create Manager</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,7 +274,7 @@ const styles = StyleSheet.create({
   },
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   cardName: { flex: 1, fontSize: 16 },
-  cardMeta: { flexDirection: "row", gap: 12 },
+  cardMeta: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   metaText: { fontSize: 13 },
   fab: {
@@ -234,4 +300,31 @@ const styles = StyleSheet.create({
   modalButtons: { flexDirection: "row", gap: 10, marginTop: 4 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
   modalBtnText: { fontSize: 15 },
+  successModal: {
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 24,
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 40,
+  },
+  successIcon: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  successTitle: { fontSize: 22 },
+  successName: { fontSize: 15, textAlign: "center" },
+  successHint: { fontSize: 13, textAlign: "center", lineHeight: 18 },
+  nextStepCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    width: "100%",
+  },
+  nextStepText: { flex: 1 },
+  nextStepTitle: { fontSize: 14 },
+  nextStepSub: { fontSize: 12, marginTop: 2 },
+  successButtons: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
+  successBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1 },
+  successBtnText: { fontSize: 15 },
 });

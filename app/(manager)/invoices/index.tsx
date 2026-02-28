@@ -122,9 +122,11 @@ export default function InvoicesScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  const { data: invoices, isLoading, refetch, isRefetching } = useQuery<Invoice[]>({
+  const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Invoice[]; total: number } | Invoice[]>({
     queryKey: ["/v1/manager/invoices"],
   });
+
+  const invoices = Array.isArray(data) ? data : (data as any)?.rows ?? [];
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
