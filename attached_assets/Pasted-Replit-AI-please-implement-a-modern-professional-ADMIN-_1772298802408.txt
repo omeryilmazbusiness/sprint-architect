@@ -1,0 +1,116 @@
+Replit AI — please implement a modern, professional ADMIN Dashboard UI in our existing Expo React Native app.
+Do NOT re-scaffold. Use the current codebase structure and existing API client/auth.
+
+CONTEXT (current app):
+- Expo React Native with routes under app/
+- Roles: ADMIN / MANAGER / PATIENT
+- Admin already can login and there are admin endpoints for clinics.
+- We want a professional Admin dashboard + Create Clinic form improvements.
+
+GOALS (Sprint UI improvement):
+1) Build/upgrade an Admin Dashboard screen with a modern, professional design.
+2) Add a Create Clinic form with fields:
+   - clinicName (required)
+   - address (required)
+   - contactPhone (required)
+   - contactEmail (required)
+   - servicesOffered (multi-select) with EXACT options:
+     - Rinoplasti
+     - Göz
+     - Diş
+3) Remove/DO NOT show any “Attention needed” section anywhere on Admin dashboard.
+4) Add a professional Header and Footer on admin screens.
+5) Fix keyboard covering inputs on Create Clinic screen:
+   - When keyboard opens and user focuses "Clinic Name" (and other fields), the input must not be hidden under the keyboard.
+   - Use KeyboardAvoidingView + ScrollView and ensure focused input is visible (on iOS and Android).
+6) Keep UI consistent with existing theme but improve it:
+   - clean spacing, cards, readable typography, subtle shadows
+   - no heavy UI framework unless already in dependencies
+
+WHAT TO BUILD (Screens / Routes):
+A) Admin Dashboard route (create if missing or improve existing):
+- app/(admin)/dashboard.tsx  (or wherever admin screens are located; keep consistent routing)
+Content:
+- Header: App name + “Admin Dashboard” + small user chip (email/role) + logout button
+- Main sections (cards):
+  1) Clinics Overview:
+     - total clinics count
+     - button “Create Clinic”
+  2) Clinics List (simple):
+     - list clinics with name + status
+     - tap clinic -> clinic detail page (optional if exists; if not, just show modal)
+- Footer: company/app branding + version text (simple)
+
+B) Create Clinic screen:
+- app/(admin)/clinics/create.tsx (or route consistent with existing structure)
+Form:
+- Clinic Name (TextInput)
+- Address (TextInput multiline)
+- Contact Phone (TextInput phone keyboard)
+- Contact Email (TextInput email keyboard)
+- Services Offered (multi-select chips or checkbox list):
+  - Rinoplasti, Göz, Diş
+Submit:
+- Calls backend endpoint to create clinic (use existing admin API; if missing, create backend endpoint):
+  - POST /v1/admin/clinics
+  body:
+  {
+    name: string,
+    address: string,
+    contactPhone: string,
+    contactEmail: string,
+    services: string[]  // ["Rinoplasti","Göz","Diş"]
+  }
+Validation:
+- All fields required
+- email format validated
+- phone basic validation (min length)
+Success:
+- show toast/alert success
+- navigate back to admin dashboard and refresh clinics list
+
+KEYBOARD FIX REQUIREMENTS:
+- Wrap form with KeyboardAvoidingView
+- Use ScrollView with keyboardShouldPersistTaps="handled"
+- Ensure inputs are not covered:
+  - Use react-native KeyboardAvoidingView behavior="padding" (iOS) and "height" (Android) or platform-specific
+  - Ensure contentContainerStyle has paddingBottom to allow scrolling above keyboard
+  - Optionally implement “scroll to focused input” using refs if needed
+- Specifically verify: focusing Clinic Name when keyboard opens does not hide the field.
+
+HEADER/FOOTER REQUIREMENTS:
+- Create reusable components:
+  - components/layout/AppHeader.tsx
+  - components/layout/AppFooter.tsx
+- Header must support:
+  - title prop
+  - optional right actions (logout)
+- Footer must be subtle and not consume too much space.
+
+DATA REQUIREMENTS:
+- Update backend schema if needed to store:
+  - address, contactPhone, contactEmail, services
+- If backend currently only stores clinic name/status, extend the clinic table and update create/list endpoints accordingly.
+- Ensure clinic list returns these fields (at least name/status; details optional).
+
+OUTPUT REQUIREMENTS:
+After implementing, print:
+1) Files changed/added
+2) New/updated routes list
+3) Any backend changes + migrations (Drizzle) and exact commands to run
+4) Manual QA checklist:
+   - Admin login -> dashboard loads
+   - Create clinic -> fill all fields -> success -> clinic appears in list
+   - Keyboard does not cover Clinic Name and other fields on both iOS/Android
+   - No “Attention needed” section appears
+5) Screenshots are not required, but describe visually what changed.
+
+IMPLEMENTATION ORDER:
+1) Create header/footer reusable components
+2) Build Admin dashboard UI (modern card layout)
+3) Build Create Clinic form with keyboard-safe layout
+4) Wire API calls + backend endpoint/schema updates if needed
+5) Final polish + QA checklist
+
+Proceed now. Do not add “Attention needed”.
+END.

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,15 +6,12 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Modal,
-  Alert,
   useColorScheme,
   Platform,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
@@ -22,25 +19,18 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingView } from "@/components/LoadingView";
 import { ErrorView } from "@/components/ErrorView";
-import { listClinics, createClinic, Clinic, ClinicListResponse } from "@/lib/api/adminClinics";
+import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
 export default function ClinicsScreen() {
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const qc = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCurrency, setNewCurrency] = useState("EUR");
-  const [newPrice, setNewPrice] = useState("");
-  const [createdClinic, setCreatedClinic] = useState<Clinic | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   function handleSearchChange(text: string) {
     setSearch(text);
@@ -54,45 +44,33 @@ export default function ClinicsScreen() {
     queryFn: () => listClinics({ search: debouncedSearch || undefined }),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createClinic,
-    onSuccess: (clinic) => {
-      qc.invalidateQueries({ queryKey: ["/v1/admin/clinics"] });
-      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-      setShowCreate(false);
-      setNewName("");
-      setNewCurrency("EUR");
-      setNewPrice("");
-      setCreatedClinic(clinic);
-      setShowSuccess(true);
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to create clinic"),
-  });
-
-  function handleCreate() {
-    if (!newName.trim()) return Alert.alert("Validation", "Name is required");
-    createMutation.mutate({
-      name: newName.trim(),
-      currency: newCurrency.trim() || "EUR",
-      billingUnitPrice: newPrice ? parseFloat(newPrice) : null,
-    });
-  }
-
-  function statusColor(status: string) {
-    if (status === "SUSPENDED") return colors.error;
-    if (status === "INACTIVE") return colors.statusInactive;
-    return colors.success;
-  }
-
   if (isLoading) return <LoadingView message="Loading clinics..." />;
   if (isError) return <ErrorView onRetry={refetch} />;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Clinics</Text>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Clinics</Text>
+          <Pressable
+            testID="create-clinic-btn"
+            style={[styles.headerBtn, { backgroundColor: colors.accent }]}
+            onPress={() => router.push("/(admin)/clinics/create")}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={[styles.headerBtnText, { fontFamily: "Inter_600SemiBold" }]}>New</Text>
+          </Pressable>
+        </View>
         <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontFamily: "Inter_400Regular" }]}
+          style={[
+            styles.searchInput,
+            { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontFamily: "Inter_400Regular" },
+          ]}
           placeholder="Search clinics..."
           placeholderTextColor={colors.textMuted}
           value={search}
@@ -105,147 +83,85 @@ export default function ClinicsScreen() {
         data={data?.rows ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
+        }
         scrollEnabled={!!(data?.rows?.length)}
-        ListEmptyComponent={<EmptyState icon="business-outline" title="No clinics yet" subtitle="Tap + to create your first clinic" />}
+        ListEmptyComponent={
+          <EmptyState
+            icon="business-outline"
+            title="No clinics yet"
+            subtitle="Tap New to create your first clinic"
+          />
+        }
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [styles.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              styles.card,
+              { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+            ]}
             onPress={() => router.push({ pathname: "/(admin)/clinics/[id]", params: { id: item.id } })}
           >
             <View style={styles.cardTop}>
-              <Text style={[styles.cardName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.accent + "18" }]}>
+                <Ionicons name="business-outline" size={16} color={colors.accent} />
+              </View>
+              <Text
+                style={[styles.cardName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}
+                numberOfLines={1}
+              >
                 {item.name}
               </Text>
               <StatusBadge status={item.status as any} small />
             </View>
-            <View style={styles.cardMeta}>
+
+            {(item.services?.length > 0 || item.contactEmail || item.contactPhone) && (
+              <View style={styles.cardDetails}>
+                {item.contactEmail ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="mail-outline" size={12} color={colors.textMuted} />
+                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {item.contactEmail}
+                    </Text>
+                  </View>
+                ) : null}
+                {item.contactPhone ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="call-outline" size={12} color={colors.textMuted} />
+                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {item.contactPhone}
+                    </Text>
+                  </View>
+                ) : null}
+                {item.services?.length > 0 ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="medical-outline" size={12} color={colors.textMuted} />
+                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {item.services.join(", ")}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            <View style={styles.cardFooter}>
               <View style={styles.metaItem}>
-                <Ionicons name="card-outline" size={13} color={colors.textMuted} />
+                <Ionicons name="card-outline" size={12} color={colors.textMuted} />
                 <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {item.currency}{item.billingUnitPrice != null ? ` · ${item.billingUnitPrice}` : " · default rate"}
+                  {item.currency}
+                  {item.billingUnitPrice != null ? ` · ${item.billingUnitPrice}` : " · default rate"}
                 </Text>
               </View>
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
                 <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  Billing day {item.billingAnchorDay}
+                  Day {item.billingAnchorDay}
                 </Text>
               </View>
             </View>
           </Pressable>
         )}
       />
-
-      <Pressable
-        testID="create-clinic-fab"
-        style={[styles.fab, { backgroundColor: colors.accent }]}
-        onPress={() => setShowCreate(true)}
-      >
-        <Ionicons name="add" size={28} color="#fff" />
-      </Pressable>
-
-      <Modal visible={showCreate} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>New Clinic</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Clinic name *"
-              placeholderTextColor={colors.textMuted}
-              value={newName}
-              onChangeText={setNewName}
-            />
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Currency (e.g. EUR)"
-              placeholderTextColor={colors.textMuted}
-              value={newCurrency}
-              onChangeText={setNewCurrency}
-              autoCapitalize="characters"
-              maxLength={3}
-            />
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Unit price (optional)"
-              placeholderTextColor={colors.textMuted}
-              value={newPrice}
-              onChangeText={setNewPrice}
-              keyboardType="decimal-pad"
-            />
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalBtn, { borderColor: colors.border }]}
-                onPress={() => { setShowCreate(false); setNewName(""); setNewCurrency("EUR"); setNewPrice(""); }}
-              >
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, { backgroundColor: colors.accent, borderColor: colors.accent, opacity: createMutation.isPending ? 0.7 : 1 }]}
-                onPress={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showSuccess} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={[styles.successModal, { backgroundColor: colors.card }]}>
-            <View style={[styles.successIcon, { backgroundColor: colors.success + "20" }]}>
-              <Ionicons name="checkmark-circle" size={40} color={colors.success} />
-            </View>
-            <Text style={[styles.successTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Clinic Created
-            </Text>
-            <Text style={[styles.successName, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {createdClinic?.name}
-            </Text>
-            <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Billing anchor day set to day {createdClinic?.billingAnchorDay} of each month.
-            </Text>
-
-            <View style={[styles.nextStepCard, { backgroundColor: colors.accent + "12", borderColor: colors.accent + "40" }]}>
-              <Ionicons name="person-add-outline" size={20} color={colors.accent} />
-              <View style={styles.nextStepText}>
-                <Text style={[styles.nextStepTitle, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Next step</Text>
-                <Text style={[styles.nextStepSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  Create a manager for this clinic
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
-            </View>
-
-            <View style={styles.successButtons}>
-              <Pressable
-                style={[styles.successBtn, { borderColor: colors.border }]}
-                onPress={() => setShowSuccess(false)}
-              >
-                <Text style={[styles.successBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Done</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.successBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
-                onPress={() => {
-                  setShowSuccess(false);
-                  router.push({
-                    pathname: "/(admin)/users",
-                    params: { preselectedClinicId: createdClinic?.id ?? "" },
-                  });
-                }}
-              >
-                <Text style={[styles.successBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create Manager</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -257,7 +173,22 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
-  title: { fontSize: 26, marginBottom: 10 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  title: { fontSize: 26 },
+  headerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  headerBtnText: { fontSize: 14, color: "#fff" },
   searchInput: {
     borderRadius: 10,
     borderWidth: 1,
@@ -269,62 +200,25 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 14,
     borderWidth: 1,
-    padding: 16,
+    padding: 14,
     gap: 8,
   },
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  cardName: { flex: 1, fontSize: 16 },
-  cardMeta: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metaText: { fontSize: 13 },
-  fab: {
-    position: "absolute",
-    bottom: 110,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 100,
-  },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 14 },
-  modalTitle: { fontSize: 20, marginBottom: 4 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  modalButtons: { flexDirection: "row", gap: 10, marginTop: 4 },
-  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
-  modalBtnText: { fontSize: 15 },
-  successModal: {
-    borderRadius: 20,
-    padding: 24,
-    marginHorizontal: 24,
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 40,
-  },
-  successIcon: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
-  successTitle: { fontSize: 22 },
-  successName: { fontSize: 15, textAlign: "center" },
-  successHint: { fontSize: 13, textAlign: "center", lineHeight: 18 },
-  nextStepCard: {
+  cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    width: "100%",
+    gap: 10,
   },
-  nextStepText: { flex: 1 },
-  nextStepTitle: { fontSize: 14 },
-  nextStepSub: { fontSize: 12, marginTop: 2 },
-  successButtons: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
-  successBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1 },
-  successBtnText: { fontSize: 15 },
+  cardIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  cardName: { flex: 1, fontSize: 15 },
+  cardDetails: { gap: 4, paddingLeft: 40 },
+  cardFooter: { flexDirection: "row", gap: 14, paddingLeft: 40 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  metaText: { fontSize: 12 },
 });

@@ -61,6 +61,10 @@ export const clinics = pgTable("clinics", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  address: text("address"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  services: text("services").default("[]"),
   status: clinicStatusEnum("status").notNull().default("ACTIVE"),
   billingUnitPrice: doublePrecision("billing_unit_price"),
   currency: text("currency").notNull().default("EUR"),

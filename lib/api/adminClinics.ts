@@ -3,6 +3,10 @@ import { apiRequest } from "@/lib/query-client";
 export interface Clinic {
   id: string;
   name: string;
+  address: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  services: string[];
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice: number | null;
   currency: string;
@@ -19,6 +23,10 @@ export interface ClinicListResponse {
 
 export interface CreateClinicInput {
   name: string;
+  address?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  services?: string[];
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice?: number | null;
   currency?: string;

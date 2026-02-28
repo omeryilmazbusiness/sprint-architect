@@ -85,6 +85,10 @@ router.get("/metrics", async (req, res, next) => {
 
 const ClinicCreateSchema = z.object({
   name: z.string().min(1).max(200),
+  address: z.string().max(500).optional().nullable(),
+  contactPhone: z.string().max(50).optional().nullable(),
+  contactEmail: z.string().email().max(200).optional().nullable(),
+  services: z.array(z.string()).optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
   billingUnitPrice: z.number().nonnegative().nullable().optional(),
   currency: z.string().length(3).optional(),

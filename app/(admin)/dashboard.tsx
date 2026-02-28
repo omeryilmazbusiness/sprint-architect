@@ -1,257 +1,263 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
+  ActivityIndicator,
   useColorScheme,
   Platform,
-  TextInput,
-  Modal,
-  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
-import { getAdminMetrics, generateInvoices, AdminMetrics } from "@/lib/api/adminInvoices";
+import { useAuth } from "@/context/AuthContext";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { AppFooter } from "@/components/layout/AppFooter";
+import { StatusBadge } from "@/components/StatusBadge";
+import { getAdminMetrics, AdminMetrics } from "@/lib/api/adminInvoices";
+import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
 export default function AdminDashboard() {
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
-  const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const { user, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const [generatePeriod, setGeneratePeriod] = useState("");
-  const [showGenerate, setShowGenerate] = useState(false);
-
-  const { data: metrics, isLoading, refetch, isRefetching } = useQuery<AdminMetrics>({
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    refetch: refetchMetrics,
+    isRefetching,
+  } = useQuery<AdminMetrics>({
     queryKey: ["/v1/admin/metrics"],
     queryFn: getAdminMetrics,
   });
 
-  const generateMutation = useMutation({
-    mutationFn: generateInvoices,
-    onSuccess: (data) => {
-      setShowGenerate(false);
-      setGeneratePeriod("");
-      qc.invalidateQueries({ queryKey: ["/v1/admin/invoices"] });
-      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-      Alert.alert("Done", `Generated ${data.length} invoice(s) for ${generatePeriod}.`);
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to generate"),
-  });
+  const { data: clinicsData, isLoading: clinicsLoading, refetch: refetchClinics } =
+    useQuery<ClinicListResponse>({
+      queryKey: ["/v1/admin/clinics", { pageSize: 6 }],
+      queryFn: () => listClinics({ pageSize: 6 }),
+    });
 
-  const attention = metrics?.attentionNeeded;
-  const hasAttention = (attention?.overdueInvoices?.length ?? 0) > 0
-    || (attention?.suspendedClinics?.length ?? 0) > 0
-    || (attention?.clinicsWithoutManagers?.length ?? 0) > 0;
+  const isLoading = metricsLoading || clinicsLoading;
+
+  async function handleRefresh() {
+    await Promise.all([refetchMetrics(), refetchClinics()]);
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={colors.gradient} style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.headerTitle, { fontFamily: "Inter_700Bold" }]}>Admin Console</Text>
-        <Text style={[styles.headerSub, { fontFamily: "Inter_400Regular" }]}>System overview</Text>
-      </LinearGradient>
+      <AppHeader
+        title="Admin Dashboard"
+        subtitle="HealthTour Operations"
+        userEmail={user?.email}
+        userRole={user?.role}
+        onLogout={logout}
+      />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.accent} />
+        }
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} />
-        ) : metrics ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+        ) : (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              CLINICS
-            </Text>
-            <View style={styles.metricsRow}>
-              <MetricCard label="Total" value={metrics.clinics.total} color={colors.accent} colors={colors} />
-              <MetricCard label="Active" value={metrics.clinics.active} color={colors.success} colors={colors} />
-              <MetricCard label="Suspended" value={metrics.clinics.suspended} color={colors.error} colors={colors} />
-            </View>
-
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              USERS & INVOICES
-            </Text>
-            <View style={styles.metricsRow}>
-              <MetricCard label="Users" value={metrics.users.active} sub="active" color={colors.accent} colors={colors} />
-              <MetricCard label="Issued" value={metrics.invoices.issued} sub="invoices" color={colors.warning} colors={colors} />
-              <MetricCard label="Paid" value={metrics.invoices.paid} sub="invoices" color={colors.success} colors={colors} />
-            </View>
-
-            {hasAttention && (
+            {metrics && (
               <>
-                <Text style={[styles.sectionTitle, { color: colors.error, fontFamily: "Inter_600SemiBold", marginTop: 8 }]}>
-                  ATTENTION NEEDED
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                  OVERVIEW
                 </Text>
-                <View style={[styles.attentionCard, { backgroundColor: colors.error + "12", borderColor: colors.error + "40" }]}>
-                  {(attention?.overdueInvoices?.length ?? 0) > 0 && (
-                    <AttentionRow
-                      icon="warning-outline"
-                      label={`${attention!.overdueInvoices.length} overdue invoice(s)`}
-                      color={colors.error}
-                      colors={colors}
-                      onPress={() => router.push("/(admin)/invoices")}
-                    />
-                  )}
-                  {(attention?.suspendedClinics?.length ?? 0) > 0 && (
-                    <AttentionRow
-                      icon="ban-outline"
-                      label={`${attention!.suspendedClinics.length} suspended clinic(s)`}
-                      color={colors.error}
-                      colors={colors}
-                      onPress={() => router.push("/(admin)/clinics")}
-                    />
-                  )}
-                  {(attention?.clinicsWithoutManagers?.length ?? 0) > 0 && (
-                    <AttentionRow
-                      icon="person-outline"
-                      label={`${attention!.clinicsWithoutManagers.length} clinic(s) have no manager`}
-                      color={colors.warning}
-                      colors={colors}
-                      onPress={() => router.push("/(admin)/users")}
-                    />
-                  )}
+                <View style={styles.metricsRow}>
+                  <MetricTile
+                    label="Clinics"
+                    value={metrics.clinics.total}
+                    sub={`${metrics.clinics.active} active`}
+                    icon="business-outline"
+                    color={colors.accent}
+                    colors={colors}
+                  />
+                  <MetricTile
+                    label="Users"
+                    value={metrics.users.active}
+                    sub="active"
+                    icon="people-outline"
+                    color={colors.success}
+                    colors={colors}
+                  />
+                  <MetricTile
+                    label="Invoices"
+                    value={metrics.invoices.issued}
+                    sub="issued"
+                    icon="document-text-outline"
+                    color={colors.warning}
+                    colors={colors}
+                  />
                 </View>
               </>
             )}
-          </>
-        ) : null}
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 8 }]}>
-          QUICK ACTIONS
-        </Text>
-        <View style={[styles.actionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <QuickAction
-            icon="business-outline"
-            label="Create Clinic"
-            colors={colors}
-            onPress={() => router.push("/(admin)/clinics")}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <QuickAction
-            icon="person-add-outline"
-            label="Create Manager"
-            colors={colors}
-            onPress={() => router.push("/(admin)/users")}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <QuickAction
-            icon="receipt-outline"
-            label="Generate Invoices"
-            colors={colors}
-            onPress={() => setShowGenerate(true)}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <QuickAction
-            icon="refresh-outline"
-            label="Run Billing Cycle"
-            colors={colors}
-            onPress={async () => {
-              try {
-                await fetch("/v1/admin/billing/run", { method: "POST" });
-                qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-                Alert.alert("Done", "Billing cycle completed.");
-              } catch {
-                Alert.alert("Error", "Failed to run billing cycle");
-              }
-            }}
-          />
-        </View>
-      </ScrollView>
-
-      <Modal visible={showGenerate} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Generate Invoices
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              CLINICS
             </Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="Period (YYYY-MM)"
-              placeholderTextColor={colors.textMuted}
-              value={generatePeriod}
-              onChangeText={setGeneratePeriod}
-              autoCapitalize="none"
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={[styles.modalBtn, { borderColor: colors.border }]} onPress={() => { setShowGenerate(false); setGeneratePeriod(""); }}>
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: colors.accent, opacity: generateMutation.isPending ? 0.7 : 1 }]}
-                onPress={() => { if (generatePeriod.trim()) generateMutation.mutate(generatePeriod.trim()); }}
-                disabled={generateMutation.isPending}
-              >
-                {generateMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Generate</Text>
-                )}
-              </Pressable>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={[styles.cardTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+                    {metrics?.clinics.total ?? "–"} Total Clinics
+                  </Text>
+                  <Text style={[styles.cardSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {metrics?.clinics.active ?? 0} active · {metrics?.clinics.suspended ?? 0} suspended
+                  </Text>
+                </View>
+                <Pressable
+                  style={[styles.createBtn, { backgroundColor: colors.accent }]}
+                  onPress={() => router.push("/(admin)/clinics/create")}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={[styles.createBtnText, { fontFamily: "Inter_600SemiBold" }]}>Create</Text>
+                </Pressable>
+              </View>
+
+              {(clinicsData?.rows.length ?? 0) > 0 ? (
+                <>
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  {clinicsData!.rows.map((clinic, idx) => (
+                    <React.Fragment key={clinic.id}>
+                      <Pressable
+                        style={({ pressed }) => [styles.clinicRow, { opacity: pressed ? 0.7 : 1 }]}
+                        onPress={() => router.push(`/(admin)/clinics/${clinic.id}`)}
+                      >
+                        <View style={[styles.clinicIcon, { backgroundColor: colors.accent + "18" }]}>
+                          <Ionicons name="business-outline" size={16} color={colors.accent} />
+                        </View>
+                        <Text
+                          style={[styles.clinicName, { color: colors.text, fontFamily: "Inter_500Medium" }]}
+                          numberOfLines={1}
+                        >
+                          {clinic.name}
+                        </Text>
+                        <StatusBadge status={clinic.status} />
+                        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                      </Pressable>
+                      {idx < clinicsData!.rows.length - 1 && (
+                        <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                  {(clinicsData?.total ?? 0) > 6 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                      <Pressable
+                        style={({ pressed }) => [styles.viewAllRow, { opacity: pressed ? 0.7 : 1 }]}
+                        onPress={() => router.push("/(admin)/clinics")}
+                      >
+                        <Text style={[styles.viewAllText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                          View all {clinicsData!.total} clinics
+                        </Text>
+                        <Ionicons name="arrow-forward" size={14} color={colors.accent} />
+                      </Pressable>
+                    </>
+                  )}
+                </>
+              ) : (
+                <View style={styles.emptyHint}>
+                  <Text style={[styles.emptyHintText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    No clinics yet. Create one to get started.
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
-        </View>
-      </Modal>
+
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              MANAGE
+            </Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, padding: 0 }]}>
+              <NavRow
+                icon="people-outline"
+                label="Users"
+                sub="Manage managers and accounts"
+                colors={colors}
+                onPress={() => router.push("/(admin)/users")}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <NavRow
+                icon="document-text-outline"
+                label="Invoices"
+                sub="Billing and invoice history"
+                colors={colors}
+                onPress={() => router.push("/(admin)/invoices")}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <NavRow
+                icon="settings-outline"
+                label="Settings"
+                sub="App and account settings"
+                colors={colors}
+                onPress={() => router.push("/(admin)/settings")}
+              />
+            </View>
+          </>
+        )}
+
+        <AppFooter />
+      </ScrollView>
     </View>
   );
 }
 
-function MetricCard({ label, value, sub, color, colors }: {
+function MetricTile({
+  label, value, sub, icon, color, colors,
+}: {
   label: string;
   value: number;
   sub?: string;
+  icon: keyof typeof Ionicons.glyphMap;
   color: string;
   colors: typeof Colors.light;
 }) {
   return (
-    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={[styles.metricDot, { backgroundColor: color }]} />
+    <View style={[styles.metricTile, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.metricIcon, { backgroundColor: color + "18" }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
       <Text style={[styles.metricValue, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{value}</Text>
       <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{label}</Text>
-      {sub ? <Text style={[styles.metricSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>{sub}</Text> : null}
+      {sub ? (
+        <Text style={[styles.metricSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>{sub}</Text>
+      ) : null}
     </View>
   );
 }
 
-function AttentionRow({ icon, label, color, colors, onPress }: {
+function NavRow({
+  icon, label, sub, colors, onPress,
+}: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  color: string;
-  colors: typeof Colors.light;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [styles.attentionRow, { opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
-      <Ionicons name={icon} size={16} color={color} />
-      <Text style={[styles.attentionText, { color, fontFamily: "Inter_500Medium" }]}>{label}</Text>
-      <Ionicons name="chevron-forward" size={14} color={color} />
-    </Pressable>
-  );
-}
-
-function QuickAction({ icon, label, colors, onPress }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  sub: string;
   colors: typeof Colors.light;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.navRow, { opacity: pressed ? 0.7 : 1 }]}
       onPress={onPress}
     >
-      <View style={[styles.qaIcon, { backgroundColor: colors.accent + "18" }]}>
-        <Ionicons name={icon} size={20} color={colors.accent} />
+      <View style={[styles.navIcon, { backgroundColor: colors.accent + "18" }]}>
+        <Ionicons name={icon} size={18} color={colors.accent} />
       </View>
-      <Text style={[styles.qaLabel, { color: colors.text, fontFamily: "Inter_500Medium" }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.navLabel, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>{label}</Text>
+        <Text style={[styles.navSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>{sub}</Text>
+      </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </Pressable>
   );
@@ -259,47 +265,104 @@ function QuickAction({ icon, label, colors, onPress }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 20 },
-  headerTitle: { fontSize: 26, color: "#fff" },
-  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-  content: { padding: 16 },
-  sectionTitle: { fontSize: 11, letterSpacing: 1, marginBottom: 8, marginTop: 16 },
-  metricsRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
-  metricCard: {
+  content: { paddingHorizontal: 16, paddingTop: 20 },
+  sectionLabel: {
+    fontSize: 11,
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginTop: 8,
+  },
+  metricsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  metricTile: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
     borderWidth: 1,
     alignItems: "flex-start",
+    gap: 4,
   },
-  metricDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 8 },
-  metricValue: { fontSize: 26 },
-  metricLabel: { fontSize: 11, marginTop: 2 },
-  metricSub: { fontSize: 10, marginTop: 2 },
-  attentionCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 4,
+  metricIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 4,
   },
-  attentionRow: {
+  metricValue: { fontSize: 24, lineHeight: 28 },
+  metricLabel: { fontSize: 12 },
+  metricSub: { fontSize: 10 },
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 12,
+    justifyContent: "space-between",
+    padding: 16,
+    gap: 12,
   },
-  attentionText: { flex: 1, fontSize: 13 },
-  actionsCard: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  cardTitle: { fontSize: 17 },
+  cardSub: { fontSize: 12, marginTop: 2 },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  createBtnText: { fontSize: 14, color: "#fff" },
   divider: { height: 1 },
-  quickAction: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
-  qaIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  qaLabel: { flex: 1, fontSize: 15 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
-  modal: { borderRadius: 16, padding: 24, width: "85%", gap: 16 },
-  modalTitle: { fontSize: 18 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  modalButtons: { flexDirection: "row", gap: 10 },
-  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1 },
-  modalBtnPrimary: { borderWidth: 0 },
-  modalBtnText: { fontSize: 15 },
+  clinicRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  clinicIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  clinicName: { flex: 1, fontSize: 14 },
+  rowDivider: { height: StyleSheet.hairlineWidth, marginLeft: 56 },
+  viewAllRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 14,
+    gap: 6,
+  },
+  viewAllText: { fontSize: 14 },
+  emptyHint: { paddingHorizontal: 16, paddingBottom: 16 },
+  emptyHintText: { fontSize: 13 },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 14,
+  },
+  navIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  navLabel: { fontSize: 15 },
+  navSub: { fontSize: 12, marginTop: 1 },
 });

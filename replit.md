@@ -4,7 +4,7 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprints 1-8 complete):** Full multi-tenant Health Tourism SaaS. Admin console with attention-needed metrics (overdue invoices, suspended clinics, clinics without managers), billing automation with clinic suspension/reactivation, auto-generated user passwords with one-time reveal, clinic detail with billing anchor day + invoice timeline, PDF document upload/download with S3/local storage, persistent DB auth tokens, rate limiting, audit logging, role-based dashboards for all three user types.
+**Current state (Sprints 1-8 complete + UI Sprint):** Full multi-tenant Health Tourism SaaS. Redesigned admin dashboard (no Attention Needed, modern card layout, clinic list preview, AppHeader/AppFooter components). Dedicated Create Clinic screen with keyboard-safe layout, multi-select services (Rinoplasti/Göz/Diş), address/phone/email fields. Clinics table extended with address, contactPhone, contactEmail, services fields. Billing automation with clinic suspension/reactivation, auto-generated user passwords with one-time reveal, clinic detail with billing anchor day + invoice timeline, PDF document upload/download with S3/local storage, persistent DB auth tokens, rate limiting, audit logging, role-based dashboards for all three user types.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.

@@ -3,6 +3,12 @@ import { clinics, users, invoices } from "@shared/schema";
 import { eq, ilike, and, count, desc } from "drizzle-orm";
 import { computeNextInvoiceDate } from "../billing/billingService";
 
+function parseClinic<T extends { services?: string | null }>(clinic: T): T & { services: string[] } {
+  let services: string[] = [];
+  try { services = JSON.parse(clinic.services ?? "[]"); } catch { services = []; }
+  return { ...clinic, services };
+}
+
 export const clinicRepo = {
   async list(filters: {
     search?: string;
@@ -29,11 +35,12 @@ export const clinicRepo = {
       db.select({ total: count() }).from(clinics).where(where),
     ]);
 
-    return { rows, total, page, pageSize };
+    return { rows: rows.map(parseClinic), total, page, pageSize };
   },
 
   async findById(id: string) {
-    return db.query.clinics.findFirst({ where: eq(clinics.id, id) });
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, id) });
+    return clinic ? parseClinic(clinic) : null;
   },
 
   async getDetail(id: string) {
@@ -59,7 +66,7 @@ export const clinicRepo = {
     const sanitizedManagers = managers.map(({ passwordHash, ...m }) => m);
 
     return {
-      ...clinic,
+      ...parseClinic(clinic),
       nextInvoiceDate: nextInvoiceDate.toISOString(),
       currentPeriodInvoice,
       managers: sanitizedManagers,
@@ -69,6 +76,10 @@ export const clinicRepo = {
 
   async create(input: {
     name: string;
+    address?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+    services?: string[];
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
@@ -77,27 +88,39 @@ export const clinicRepo = {
     const anchorDay = now.getDate();
     const [clinic] = await db.insert(clinics).values({
       name: input.name,
+      address: input.address ?? null,
+      contactPhone: input.contactPhone ?? null,
+      contactEmail: input.contactEmail ?? null,
+      services: JSON.stringify(input.services ?? []),
       status: input.status ?? "ACTIVE",
       billingUnitPrice: input.billingUnitPrice ?? null,
       currency: input.currency ?? "EUR",
       billingAnchorDay: anchorDay,
     }).returning();
-    return clinic;
+    return parseClinic(clinic);
   },
 
   async update(id: string, input: {
     name?: string;
+    address?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+    services?: string[];
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
     billingAnchorDay?: number;
   }) {
+    const setData: Record<string, any> = { ...input };
+    if (input.services !== undefined) {
+      setData.services = JSON.stringify(input.services);
+    }
     const [updated] = await db
       .update(clinics)
-      .set(input)
+      .set(setData)
       .where(eq(clinics.id, id))
       .returning();
-    return updated;
+    return updated ? parseClinic(updated) : null;
   },
 
   async softDelete(id: string) {
