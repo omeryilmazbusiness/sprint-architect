@@ -13,6 +13,17 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const credentialRequestKindEnum = pgEnum("credential_request_kind", [
+  "MANAGER_PASSWORD",
+  "GUEST_ACCESS_KEY",
+]);
+
+export const credentialRequestStatusEnum = pgEnum("credential_request_status", [
+  "PENDING",
+  "COMPLETED",
+  "REJECTED",
+]);
+
 export const clinicStatusEnum = pgEnum("clinic_status", [
   "ACTIVE",
   "INACTIVE",
@@ -290,6 +301,24 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const credentialRequests = pgTable("credential_requests", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  kind: credentialRequestKindEnum("kind").notNull(),
+  status: credentialRequestStatusEnum("status").notNull().default("PENDING"),
+  clinicId: varchar("clinic_id").references(() => clinics.id),
+  requesterEmail: text("requester_email"),
+  targetUserId: varchar("target_user_id").references(() => users.id),
+  targetPatientId: varchar("target_patient_id").references(() => patients.id),
+  message: text("message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedByAdminId: varchar("resolved_by_admin_id").references(() => users.id),
+  sentToEmail: text("sent_to_email"),
+  oneTimeShownAt: timestamp("one_time_shown_at"),
+});
+
 export const insertClinicSchema = createInsertSchema(clinics).pick({
   name: true,
   status: true,
@@ -318,6 +347,7 @@ export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type Device = typeof devices.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type CredentialRequest = typeof credentialRequests.$inferSelect;
 
 export const patientsRelations = relations(patients, ({ one, many }) => ({
   plan: one(patientPlans, { fields: [patients.id], references: [patientPlans.patientId] }),
@@ -375,4 +405,8 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
 
 export const usersRelations = relations(users, ({ one }) => ({
   clinic: one(clinics, { fields: [users.clinicId], references: [clinics.id] }),
+}));
+
+export const credentialRequestsRelations = relations(credentialRequests, ({ one }) => ({
+  clinic: one(clinics, { fields: [credentialRequests.clinicId], references: [clinics.id] }),
 }));

@@ -7,11 +7,13 @@ import {
   verifyRefreshToken,
 } from "./jwt";
 import { authRepo } from "../repositories/authRepo";
+import { patientRepo } from "../repositories/patientRepo";
+import { credentialRequestRepo } from "../repositories/credentialRequestRepo";
 import { Errors } from "./errors";
 import { authMiddleware } from "./middleware";
 import rateLimit from "express-rate-limit";
 import { db } from "../db";
-import { clinics } from "@shared/schema";
+import { clinics, users, patients } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { runBillingCycle } from "../billing/billingService";
 import { auditLog } from "../api/auditLogger";
@@ -28,6 +30,20 @@ const loginLimiter = rateLimit({
     return `${ip}:${email}`;
   },
   message: { code: "TOO_MANY_ATTEMPTS", message: "Too many login attempts. Please try again in 10 minutes." },
+});
+
+const credentialRequestLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: (req) => {
+    const ip = (req.ip ?? "unknown").replace(/^::ffff:/, "");
+    const id = (req.body?.email ?? req.body?.guestAccessKey ?? "").toLowerCase();
+    return `cred:${ip}:${id}`;
+  },
+  message: { code: "TOO_MANY_ATTEMPTS", message: "Too many requests. Please wait 10 minutes before trying again." },
 });
 
 const router = Router();
@@ -214,6 +230,77 @@ router.post("/logout", authMiddleware, async (req: Request, res: Response): Prom
     }
   }
   res.sendStatus(204);
+});
+
+// ─── Credential Requests (public, rate-limited) ──────────────────────────────
+
+const CredentialRequestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("MANAGER_PASSWORD"),
+    email: z.string().email(),
+  }),
+  z.object({
+    kind: z.literal("GUEST_ACCESS_KEY"),
+    guestAccessKey: z.string().min(1).max(100),
+  }),
+]);
+
+const GENERIC_SUCCESS = {
+  success: true,
+  message: "If the account exists, a new credential will be sent once approved.",
+};
+
+router.post("/credential-requests", credentialRequestLimiter, async (req: Request, res: Response): Promise<void> => {
+  const parsed = CredentialRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(422).json({ code: "VALIDATION_ERROR", message: parsed.error.issues[0].message });
+    return;
+  }
+
+  try {
+    if (parsed.data.kind === "MANAGER_PASSWORD") {
+      const { email } = parsed.data;
+      const user = await authRepo.findUserByEmail(email.toLowerCase());
+      if (user && user.role === "MANAGER" && user.status === "ACTIVE") {
+        await credentialRequestRepo.create({
+          kind: "MANAGER_PASSWORD",
+          clinicId: user.clinicId,
+          requesterEmail: user.email,
+          targetUserId: user.id,
+        });
+        auditLog({
+          actorId: user.id,
+          actorRole: user.role,
+          action: "CREDENTIAL_REQUEST_CREATED",
+          resourceType: "user",
+          resourceId: user.id,
+          metadata: { kind: "MANAGER_PASSWORD" },
+        });
+      }
+    } else {
+      const { guestAccessKey } = parsed.data;
+      const patient = await patientRepo.findByKey(guestAccessKey.toUpperCase());
+      if (patient && patient.status === "ACTIVE") {
+        await credentialRequestRepo.create({
+          kind: "GUEST_ACCESS_KEY",
+          clinicId: patient.clinicId,
+          targetPatientId: patient.id,
+        });
+        auditLog({
+          actorId: patient.id,
+          actorRole: "PATIENT",
+          action: "CREDENTIAL_REQUEST_CREATED",
+          resourceType: "patient",
+          resourceId: patient.id,
+          metadata: { kind: "GUEST_ACCESS_KEY" },
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[credential-requests] error:", err);
+  }
+
+  res.json(GENERIC_SUCCESS);
 });
 
 export default router;

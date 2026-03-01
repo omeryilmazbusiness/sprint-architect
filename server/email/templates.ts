@@ -177,3 +177,124 @@ ${lines.join("\n")}
 
 Generated: ${new Date().toISOString()}`;
 }
+
+export interface ManagerPasswordResetData {
+  managerEmail: string;
+  tempPassword: string;
+  clinicName?: string;
+}
+
+export function managerPasswordResetEmailHtml(d: ManagerPasswordResetData): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>New Temporary Password</title></head>
+<body style="margin:0;padding:0;background:#F4F6F9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr><td style="background:#0A3D62;padding:28px 36px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">HealthTour</h1>
+          <p style="margin:6px 0 0;color:#90CAF9;font-size:13px;">Credential Reset</p>
+        </td></tr>
+        <tr><td style="padding:32px 36px;">
+          <h2 style="margin:0 0 12px;color:#0A3D62;font-size:19px;">Your New Temporary Password</h2>
+          <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6;">
+            Your password reset request has been approved${d.clinicName ? ` for <strong>${d.clinicName}</strong>` : ""}. Use the temporary password below to log in.
+          </p>
+          <div style="background:#F4F6F9;border-radius:10px;padding:20px;text-align:center;margin-bottom:24px;">
+            <p style="margin:0 0 6px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Temporary Password</p>
+            <p style="margin:0;font-family:monospace;font-size:22px;font-weight:700;color:#0A3D62;letter-spacing:2px;">${d.tempPassword}</p>
+          </div>
+          <div style="background:#FFF8E1;border-left:4px solid #F9A825;border-radius:4px;padding:14px 16px;margin-bottom:24px;">
+            <p style="margin:0;color:#795548;font-size:13px;line-height:1.5;">
+              <strong>Security note:</strong> This password is temporary. You will be prompted to change it on your next login. Do not share this password with anyone.
+            </p>
+          </div>
+          <p style="margin:0;color:#555;font-size:14px;">Log in at your clinic's HealthTour portal and change your password immediately.</p>
+        </td></tr>
+        <tr><td style="padding:16px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">HealthTour secure credential system. If you did not request this reset, contact your administrator immediately.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function managerPasswordResetEmailText(d: ManagerPasswordResetData): string {
+  return `HealthTour — New Temporary Password
+
+Hello,
+
+Your password reset request has been approved${d.clinicName ? ` for ${d.clinicName}` : ""}. 
+
+TEMPORARY PASSWORD: ${d.tempPassword}
+
+Use this password to log in, then change it immediately from Settings.
+
+SECURITY: Do not share this password. If you did not request this reset, contact your administrator right away.`;
+}
+
+export interface GuestAccessKeyData {
+  patientName?: string;
+  accessKey: string;
+  clinicName?: string;
+}
+
+export function guestAccessKeyEmailHtml(d: GuestAccessKeyData): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>New Guest Access Key</title></head>
+<body style="margin:0;padding:0;background:#F4F6F9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr><td style="background:#0369A1;padding:28px 36px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">HealthTour</h1>
+          <p style="margin:6px 0 0;color:#BAE6FD;font-size:13px;">Guest Access Key</p>
+        </td></tr>
+        <tr><td style="padding:32px 36px;">
+          <h2 style="margin:0 0 12px;color:#0369A1;font-size:19px;">Your New Guest Access Key</h2>
+          <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6;">
+            ${d.patientName ? `Hello <strong>${d.patientName}</strong>, a` : "A"} new guest access key has been generated${d.clinicName ? ` by <strong>${d.clinicName}</strong>` : ""}. Use the key below to access your patient portal.
+          </p>
+          <div style="background:#F0F9FF;border-radius:10px;padding:20px;text-align:center;margin-bottom:24px;">
+            <p style="margin:0 0 6px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Your Access Key</p>
+            <p style="margin:0;font-family:monospace;font-size:22px;font-weight:700;color:#0369A1;letter-spacing:2px;">${d.accessKey}</p>
+          </div>
+          <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:4px;padding:14px 16px;margin-bottom:24px;">
+            <p style="margin:0;color:#166534;font-size:13px;line-height:1.5;">
+              <strong>How to use:</strong> Open the HealthTour app, select "Guest Login", and enter this key. Your previous key and device binding have been reset.
+            </p>
+          </div>
+          <div style="background:#FFF8E1;border-left:4px solid #F9A825;border-radius:4px;padding:14px 16px;">
+            <p style="margin:0;color:#795548;font-size:13px;">
+              <strong>Security:</strong> Keep this key confidential. Do not share it with anyone other than your clinic.
+            </p>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">HealthTour secure patient portal. Contact your clinic if you did not request this.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function guestAccessKeyEmailText(d: GuestAccessKeyData): string {
+  return `HealthTour — New Guest Access Key
+
+${d.patientName ? `Hello ${d.patientName},` : "Hello,"}
+
+A new guest access key has been generated${d.clinicName ? ` by ${d.clinicName}` : ""}.
+
+YOUR ACCESS KEY: ${d.accessKey}
+
+Open the HealthTour app → Guest Login → enter this key.
+Your previous key and device binding have been reset.
+
+SECURITY: Keep this key confidential.`;
+}

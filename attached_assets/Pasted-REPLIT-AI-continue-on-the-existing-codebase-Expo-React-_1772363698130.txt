@@ -1,0 +1,233 @@
+REPLIT AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Replace classic “forgot password self-reset” with an ADMIN-APPROVED credential regeneration workflow, plus premium Admin notifications UI, and Guest QR scan stays intact.
+
+NEW BUSINESS FLOW (MUST IMPLEMENT):
+1) Management Login (Admin/Manager):
+- If a Manager forgets password, they tap “Forgot password” -> opens a popup “Request New Password”.
+- After submitting, the system creates a “Credential Request” (PENDING).
+- Admin receives an in-app notification in the Admin dashboard header (bell icon + badge).
+- Admin opens Notifications, sees the request, clicks “Generate & Send”.
+- System generates a NEW temporary password, sets it on that manager account (hash in DB), and emails the new password to the manager’s email.
+- Request is marked COMPLETED and logged (audit).
+- (Optional) Admin can see the generated password ONCE in a secure modal with “Copy” button, then it is never retrievable again.
+
+2) Guest Login (PATIENT role in backend; UI name Guest):
+- Guest doesn’t have password. They may “Request New Access Key” from the login screen (popup).
+- The request is created (PENDING), admin gets notification.
+- Admin clicks “Regenerate & Send”, system generates a NEW guest access key (patientKey) + resets device binding, then emails the new key to the clinic contact email OR the clinic manager email (choose whichever exists in data model; prefer clinic.contactEmail).
+- Guest can also login by scanning QR; keep QR scan flow.
+
+3) IMPORTANT SECURITY CONSTRAINT:
+- DO NOT implement “show existing passwords” in Users tab. Passwords must never be visible/stored as plaintext.
+- Instead implement “Reset password / Regenerate key” actions and one-time reveal at generation time.
+
+4) Admin Dashboard:
+- Add a Notification bell in the Header.
+- Notifications show credential requests with type, requester, clinic, timestamp, status, and action buttons.
+
+TECH REQUIREMENTS:
+- zod validation for all new endpoints
+- rate limiting for request endpoints (avoid spam)
+- Email sending uses EmailProvider abstraction with SMTP + DevConsole fallback.
+- audit logs for request created and resolved
+- Clinic suspension rules still apply (suspended clinic manager/guest cannot login/use API), but they can still submit a credential request (optional; if blocked, show a clear message).
+
+========================================================
+A) DATABASE (Drizzle) — ADD TABLES / FIELDS
+========================================================
+1) credential_requests table:
+- id (uuid)
+- kind enum: MANAGER_PASSWORD | GUEST_ACCESS_KEY
+- status enum: PENDING | COMPLETED | REJECTED
+- clinicId nullable
+- requesterEmail nullable (for management flow)
+- targetUserId nullable (manager user id)
+- targetPatientId nullable (guest/patient id)
+- message nullable (optional note)
+- createdAt
+- resolvedAt nullable
+- resolvedByAdminId nullable
+- sentToEmail nullable
+- oneTimeShownAt nullable (track if admin viewed generated secret once)
+
+2) users table:
+- add fullName nullable (optional but helps UX)
+- keep passwordHash (bcrypt)
+- (optional) forcePasswordChange boolean default false (ONLY if you want; user asked they can’t set passwords, so keep false by default)
+
+3) patients table:
+- ensure patientKey exists
+- device bindings table already exists: make sure regenerating key revokes old device binding
+
+========================================================
+B) BACKEND — ENDPOINTS (Express)
+========================================================
+1) Create credential request (public-ish but rate limited)
+POST /v1/auth/credential-requests
+Body (zod union):
+A) Manager password request:
+{ kind:"MANAGER_PASSWORD", email:string }
+- Behavior:
+  - Always return 200 with generic message (do not leak if email exists)
+  - If email exists and role is MANAGER:
+    - create credential_requests row linking targetUserId + clinicId
+    - audit log: CREDENTIAL_REQUEST_CREATED
+B) Guest access key request:
+{ kind:"GUEST_ACCESS_KEY", guestAccessKey:string }
+- Behavior:
+  - If guestAccessKey matches a patient:
+    - create request linking targetPatientId + clinicId
+  - If not, still return 200 generic (no leakage)
+Rate limit:
+- 3 requests / 10 min / IP + identifier
+
+2) Admin notifications list
+GET /v1/admin/notifications/credential-requests?status=PENDING&limit=50
+ADMIN only.
+Returns list sorted newest first.
+
+3) Admin unread count (for badge)
+GET /v1/admin/notifications/unread-count
+ADMIN only.
+Count PENDING requests.
+
+4) Admin resolve request: generate & send
+POST /v1/admin/credential-requests/:id/resolve
+Body:
+{ action: "GENERATE_AND_SEND" }
+ADMIN only.
+Behavior depends on kind:
+A) MANAGER_PASSWORD:
+- generate a strong temp password (min 16 chars)
+- set user.passwordHash = bcrypt(tempPassword)
+- email temp password to user.email
+- mark request COMPLETED, resolvedAt, resolvedByAdminId, sentToEmail
+- audit log: CREDENTIAL_REQUEST_RESOLVED (include kind, userId)
+- Return response includes a one-time plaintext password in response ONLY if you implement “one-time reveal”:
+  { oneTimePassword?: "...." }
+  IMPORTANT: Do not store this plaintext anywhere.
+
+B) GUEST_ACCESS_KEY:
+- generate new patientKey (non-guessable)
+- reset device binding (revoke)
+- email new key to clinic.contactEmail (must exist) OR to the clinic manager email if you store it; choose best available.
+- mark request COMPLETED
+- audit log: GUEST_ACCESS_KEY_REGENERATED
+- Return { oneTimeAccessKey?: "...." } optionally one-time reveal.
+
+5) Optional reject
+POST /v1/admin/credential-requests/:id/reject
+Body:{ reason?:string }
+ADMIN only.
+
+========================================================
+C) EMAIL (Provider) — REQUIRED
+========================================================
+- Ensure EmailProvider abstraction exists:
+  - SmtpEmailProvider (nodemailer) with env vars:
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+  - DevConsoleEmailProvider fallback logs email content if SMTP missing.
+- Email templates (simple but professional):
+  - Manager temp password email
+  - Guest new access key email (include short instructions + security note)
+- NEVER email raw refresh tokens or sensitive internal IDs.
+
+========================================================
+D) MOBILE — UX CHANGES (Premium)
+========================================================
+1) Login screen changes
+- Two tabs: Guest Login (default) and Management Login.
+- Guest Login:
+  - Guest Access Key input
+  - “Scan QR” button (existing) stays
+  - Add link: “Request New Access Key”
+    -> opens modal:
+       - field: Guest Access Key (if they still have it) OR show message “Contact your clinic manager if you don’t have the key.”
+       - submit calls POST /v1/auth/credential-requests {kind:"GUEST_ACCESS_KEY", guestAccessKey}
+       - show generic success message
+- Management Login:
+  - Email + Password
+  - Add link: “Forgot password?”
+    -> opens modal “Request New Password”
+       - email input (prefill if typed)
+       - submit calls POST /v1/auth/credential-requests {kind:"MANAGER_PASSWORD", email}
+       - show generic success message: “If an account exists, admin will send a new password to your email.”
+
+2) Admin Header notifications
+- Add bell icon in Admin header with badge count from /v1/admin/notifications/unread-count
+- Tapping bell navigates to:
+  app/(admin)/notifications.tsx
+  Screen shows list of PENDING credential requests:
+   - type badge: Manager Password / Guest Access Key
+   - requester identifier (email or masked key)
+   - clinic name
+   - createdAt
+   - action buttons:
+     - “Generate & Send”
+     - “Reject”
+- On “Generate & Send”:
+  - call resolve endpoint
+  - show success toast
+  - optionally show one-time credential in a secure modal (copy button)
+  - refresh list and badge count
+
+3) Admin Users tab
+- Remove any “show password” UI request.
+- Instead, add per-row actions:
+  - Manager row: “Reset Password” (creates request OR directly generates? choose consistent flow)
+  - Guest row: “Regenerate Access Key”
+Recommended:
+- Use the same resolve flow but initiated by admin without request (optional).
+If you keep requests-only, then actions create a request and auto-resolve. But simpler:
+- Admin row action directly calls a dedicated endpoint:
+   POST /v1/admin/users/:id/reset-password
+   POST /v1/admin/patients/:id/regenerate-access-key
+However to keep scope small, reuse credential-requests resolve mechanism:
+- Clicking reset/regenerate creates a request (PENDING) and immediately resolves it (still audit logged).
+Show one-time credential modal after completion.
+
+========================================================
+E) SECURITY & LIMITATIONS (IMPORTANT)
+========================================================
+- Do NOT display stored passwords anywhere.
+- Only show newly generated credential once (from server response) and never store it.
+- Add confirmation modal before generating credentials.
+- Rate limit credential requests endpoint.
+- Add audit logs.
+
+========================================================
+F) TESTS
+========================================================
+Add tests:
+1) POST credential request does not leak existence (always 200)
+2) Admin resolve MANAGER_PASSWORD updates passwordHash and marks request completed
+3) Admin resolve GUEST_ACCESS_KEY changes patientKey and revokes device binding
+4) Unread count updates properly
+5) Rate limiting triggers TOO_MANY_ATTEMPTS
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) DB migration steps and commands
+3) New endpoints + sample curl requests
+4) Mobile navigation paths updated
+5) Manual QA checklist:
+   - Manager forgot -> request -> admin sees notification -> generate/send -> manager receives email
+   - Guest request key -> admin resolves -> clinic receives key email -> guest logs in with key or QR
+   - No place shows existing passwords
+6) Notes/TODO (optional): future 2FA, self-reset, security enhancements
+
+IMPLEMENTATION ORDER (DO THIS EXACT ORDER):
+1) DB: credential_requests table + enums + migrations
+2) Backend: request endpoint + admin notifications + resolve endpoint + email templates
+3) Mobile: login modals (request new password / request new access key)
+4) Mobile: admin header bell + notifications screen + resolve action flow
+5) Optional: users tab actions using the same mechanism
+6) Tests + final verification
+
+Proceed now. Keep UI premium white theme and consistent.
+END.

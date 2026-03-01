@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { T, cardShadow } from "@/constants/adminTheme";
 
 interface AdminHeaderProps {
@@ -17,6 +19,31 @@ interface AdminHeaderProps {
   right?: React.ReactNode;
   backButton?: boolean;
   onBack?: () => void;
+  showBell?: boolean;
+}
+
+function NotificationBell() {
+  const { data } = useQuery<{ count: number }>({
+    queryKey: ["/v1/admin/notifications/unread-count"],
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+  const count = data?.count ?? 0;
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.bellBtn, { opacity: pressed ? 0.6 : 1 }]}
+      onPress={() => router.push("/(admin)/notifications")}
+      hitSlop={8}
+    >
+      <Ionicons name="notifications-outline" size={20} color={T.primary} />
+      {count > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{count > 99 ? "99+" : String(count)}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
 }
 
 export function AdminHeader({
@@ -26,6 +53,7 @@ export function AdminHeader({
   right,
   backButton,
   onBack,
+  showBell = false,
 }: AdminHeaderProps) {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -65,27 +93,30 @@ export function AdminHeader({
 
         <View style={styles.actions}>
           {right ?? (
-            userEmail ? (
-              <>
-                <View style={styles.userChip}>
-                  <View style={styles.avatarDot}>
-                    <Text style={styles.avatarText}>{initials}</Text>
+            <>
+              {showBell && <NotificationBell />}
+              {userEmail ? (
+                <>
+                  <View style={styles.userChip}>
+                    <View style={styles.avatarDot}>
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    </View>
+                    <Text style={styles.emailText} numberOfLines={1}>
+                      {userEmail.split("@")[0]}
+                    </Text>
                   </View>
-                  <Text style={styles.emailText} numberOfLines={1}>
-                    {userEmail.split("@")[0]}
-                  </Text>
-                </View>
-                {onLogout && (
-                  <Pressable
-                    style={({ pressed }) => [styles.logoutBtn, { opacity: pressed ? 0.6 : 1 }]}
-                    onPress={onLogout}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="log-out-outline" size={20} color={T.textSec} />
-                  </Pressable>
-                )}
-              </>
-            ) : null
+                  {onLogout && (
+                    <Pressable
+                      style={({ pressed }) => [styles.logoutBtn, { opacity: pressed ? 0.6 : 1 }]}
+                      onPress={onLogout}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="log-out-outline" size={20} color={T.textSec} />
+                    </Pressable>
+                  )}
+                </>
+              ) : null}
+            </>
           )}
         </View>
       </View>
@@ -152,7 +183,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
-    maxWidth: 160,
+    maxWidth: 180,
+  },
+  bellBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: T.r8,
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: T.border,
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: T.surface,
+  },
+  badgeText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    color: "#fff",
+    lineHeight: 13,
   },
   userChip: {
     flexDirection: "row",
@@ -165,7 +227,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingRight: 10,
     paddingVertical: 4,
-    maxWidth: 120,
+    maxWidth: 110,
   },
   avatarDot: {
     width: 24,

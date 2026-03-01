@@ -4,16 +4,26 @@ import { authMiddleware, requireRole } from "../auth/middleware";
 import { invoiceRepo } from "../repositories/invoiceRepo";
 import { clinicRepo } from "../repositories/clinicRepo";
 import { userRepo, generateSecurePassword } from "../repositories/userRepo";
+import { patientRepo } from "../repositories/patientRepo";
+import { credentialRequestRepo } from "../repositories/credentialRequestRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
-import { clinics, users, invoices, auditLogs } from "@shared/schema";
+import { clinics, users, invoices, auditLogs, patients } from "@shared/schema";
 import { eq, count, and, desc, lt } from "drizzle-orm";
 import { markOverdueInvoicesAsUnpaid } from "../billing/billingService";
-import { verifyPassword } from "../auth/password";
+import { verifyPassword, hashPassword } from "../auth/password";
 import { authRepo } from "../repositories/authRepo";
 import { validatePasswordPolicy } from "../auth/passwordPolicy";
 import rateLimit from "express-rate-limit";
+import { generateTempPassword, generateGuestKey } from "../utils/generateTempPassword";
+import { getEmailProvider } from "../email/getEmailProvider";
+import {
+  managerPasswordResetEmailHtml,
+  managerPasswordResetEmailText,
+  guestAccessKeyEmailHtml,
+  guestAccessKeyEmailText,
+} from "../email/templates";
 
 const changePasswordLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -99,6 +109,211 @@ router.get("/audit-logs", async (req, res, next) => {
   }
 });
 
+// ─── Notifications — Credential Requests ────────────────────────────────────
+
+router.get("/notifications/unread-count", async (req, res, next) => {
+  try {
+    const count = await credentialRequestRepo.countPending();
+    res.json({ count });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/notifications/credential-requests", async (req, res, next) => {
+  try {
+    const { status, limit } = req.query as Record<string, string>;
+    const parsedLimit = limit ? Math.min(parseInt(limit), 100) : 50;
+    const rows =
+      status === "ALL"
+        ? await credentialRequestRepo.listAll({ limit: parsedLimit })
+        : await credentialRequestRepo.listPending({ limit: parsedLimit });
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const ResolveSchema = z.object({
+  action: z.literal("GENERATE_AND_SEND"),
+});
+
+router.post("/credential-requests/:id/resolve", async (req, res, next) => {
+  try {
+    const parsed = ResolveSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError("VALIDATION_ERROR", "action must be GENERATE_AND_SEND", 400);
+    }
+
+    const cr = await credentialRequestRepo.findById(req.params.id);
+    if (!cr) throw new AppError("NOT_FOUND", "Credential request not found", 404);
+    if (cr.status !== "PENDING") {
+      throw new AppError("VALIDATION_ERROR", "This request has already been resolved", 400);
+    }
+
+    const email = getEmailProvider();
+    const adminId = req.actor!.sub;
+
+    if (cr.kind === "MANAGER_PASSWORD") {
+      if (!cr.targetUser) throw new AppError("NOT_FOUND", "Target user not found", 404);
+      const tempPassword = generateTempPassword();
+      const passwordHash = await hashPassword(tempPassword);
+
+      await db.update(users)
+        .set({ passwordHash, mustChangePassword: true })
+        .where(eq(users.id, cr.targetUser.id));
+
+      await authRepo.revokeAllRefreshTokensForUser(cr.targetUser.id);
+
+      const sentToEmail = cr.targetUser.email;
+      await email.send({
+        to: sentToEmail,
+        subject: "HealthTour — Your New Temporary Password",
+        html: managerPasswordResetEmailHtml({
+          managerEmail: sentToEmail,
+          tempPassword,
+          clinicName: cr.clinic?.name,
+        }),
+        text: managerPasswordResetEmailText({
+          managerEmail: sentToEmail,
+          tempPassword,
+          clinicName: cr.clinic?.name,
+        }),
+      });
+
+      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail });
+      auditLog({
+        clinicId: cr.clinicId ?? undefined,
+        actorId: adminId,
+        actorRole: "ADMIN",
+        action: "CREDENTIAL_REQUEST_RESOLVED",
+        resourceType: "user",
+        resourceId: cr.targetUser.id,
+        metadata: { kind: "MANAGER_PASSWORD", sentToEmail },
+      });
+
+      res.json({ success: true, oneTimePassword: tempPassword });
+    } else if (cr.kind === "GUEST_ACCESS_KEY") {
+      if (!cr.targetPatient) throw new AppError("NOT_FOUND", "Target patient not found", 404);
+
+      let newKey = generateGuestKey();
+      let attempts = 0;
+      while (attempts < 5) {
+        const existing = await patientRepo.findByKey(newKey);
+        if (!existing) break;
+        newKey = generateGuestKey();
+        attempts++;
+      }
+
+      await db.update(patients)
+        .set({ patientKey: newKey })
+        .where(eq(patients.id, cr.targetPatient.id));
+
+      await authRepo.revokeDevice(cr.targetPatient.id);
+      await authRepo.revokeAllRefreshTokensForPatient(cr.targetPatient.id);
+
+      const sentToEmail = cr.clinic?.contactEmail ?? cr.requesterEmail ?? null;
+      if (sentToEmail) {
+        await email.send({
+          to: sentToEmail,
+          subject: "HealthTour — New Guest Access Key",
+          html: guestAccessKeyEmailHtml({
+            patientName: cr.targetPatient.fullName,
+            accessKey: newKey,
+            clinicName: cr.clinic?.name,
+          }),
+          text: guestAccessKeyEmailText({
+            patientName: cr.targetPatient.fullName,
+            accessKey: newKey,
+            clinicName: cr.clinic?.name,
+          }),
+        });
+      }
+
+      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: sentToEmail ?? undefined });
+      auditLog({
+        clinicId: cr.clinicId ?? undefined,
+        actorId: adminId,
+        actorRole: "ADMIN",
+        action: "GUEST_ACCESS_KEY_REGENERATED",
+        resourceType: "patient",
+        resourceId: cr.targetPatient.id,
+        metadata: { sentToEmail },
+      });
+
+      res.json({ success: true, oneTimeAccessKey: newKey });
+    } else {
+      throw new AppError("VALIDATION_ERROR", "Unknown credential request kind", 400);
+    }
+  } catch (e) {
+    next(e);
+  }
+});
+
+const RejectSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
+router.post("/credential-requests/:id/reject", async (req, res, next) => {
+  try {
+    RejectSchema.parse(req.body);
+    const cr = await credentialRequestRepo.findById(req.params.id);
+    if (!cr) throw new AppError("NOT_FOUND", "Credential request not found", 404);
+    if (cr.status !== "PENDING") {
+      throw new AppError("VALIDATION_ERROR", "This request has already been resolved", 400);
+    }
+    await credentialRequestRepo.reject(cr.id, req.actor!.sub);
+    auditLog({
+      clinicId: cr.clinicId ?? undefined,
+      actorId: req.actor!.sub,
+      actorRole: "ADMIN",
+      action: "CREDENTIAL_REQUEST_REJECTED",
+      resourceType: cr.kind === "MANAGER_PASSWORD" ? "user" : "patient",
+      resourceId: cr.targetUserId ?? cr.targetPatientId ?? undefined,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/patients/:id/regenerate-access-key", async (req, res, next) => {
+  try {
+    const patient = await db.query.patients.findFirst({ where: eq(patients.id, req.params.id) });
+    if (!patient) throw new AppError("NOT_FOUND", "Patient not found", 404);
+
+    let newKey = generateGuestKey();
+    let attempts = 0;
+    while (attempts < 5) {
+      const existing = await patientRepo.findByKey(newKey);
+      if (!existing) break;
+      newKey = generateGuestKey();
+      attempts++;
+    }
+
+    await db.update(patients)
+      .set({ patientKey: newKey })
+      .where(eq(patients.id, patient.id));
+
+    await authRepo.revokeDevice(patient.id);
+    await authRepo.revokeAllRefreshTokensForPatient(patient.id);
+
+    auditLog({
+      clinicId: patient.clinicId ?? undefined,
+      actorId: req.actor!.sub,
+      actorRole: "ADMIN",
+      action: "GUEST_ACCESS_KEY_REGENERATED",
+      resourceType: "patient",
+      resourceId: patient.id,
+      metadata: { initiatedBy: "admin_direct" },
+    });
+
+    res.json({ success: true, oneTimeAccessKey: newKey });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // ─── Metrics ────────────────────────────────────────────────────────────────
 
 const periodRegex = /^\d{4}-\d{2}$/;
@@ -107,8 +322,6 @@ const validatePeriod = (period: string) => {
     throw new AppError("VALIDATION_ERROR", "Period must be in YYYY-MM format", 400);
   }
 };
-
-// ─── Metrics ────────────────────────────────────────────────────────────────
 
 router.get("/metrics", async (req, res, next) => {
   try {
@@ -402,8 +615,10 @@ router.put("/users/:id/reset-password", async (req, res, next) => {
   try {
     const exists = await userRepo.findById(req.params.id);
     if (!exists) throw new AppError("NOT_FOUND", "User not found", 404);
-    const generatedPassword = generateSecurePassword();
-    await userRepo.setPassword(req.params.id, generatedPassword);
+    const generatedPassword = generateTempPassword();
+    const passwordHash = await hashPassword(generatedPassword);
+    await db.update(users).set({ passwordHash, mustChangePassword: true }).where(eq(users.id, req.params.id));
+    await authRepo.revokeAllRefreshTokensForUser(req.params.id);
     auditLog({
       actorId: req.actor!.sub,
       actorRole: req.actor!.role,
@@ -436,7 +651,6 @@ router.delete("/users/:id", async (req, res, next) => {
 });
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
-// Note: invoice generation is automatic via scheduler only. No manual generate endpoint.
 
 router.post("/billing/run", async (req, res, next) => {
   try {

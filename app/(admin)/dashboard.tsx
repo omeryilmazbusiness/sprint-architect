@@ -38,6 +38,7 @@ export default function AdminDashboard() {
         title="Dashboard"
         userEmail={user?.email}
         onLogout={handleLogout}
+        showBell
       />
       <ScrollView
         style={styles.scroll}
