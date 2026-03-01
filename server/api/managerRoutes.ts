@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { eq, and, gte, count, isNotNull, asc } from "drizzle-orm";
+import { eq, and, gte, count, isNotNull, asc, inArray } from "drizzle-orm";
 import { authMiddleware, requireRole, clinicScopeMiddleware, requireActiveClinic } from "../auth/middleware";
 import { AppError } from "../auth/errors";
 import { db } from "../db";
-import { patients, appointments, patientDocuments, patientPlans, clinics } from "@shared/schema";
+import { patients, appointments, patientDocuments, patientPlans, clinics, documentTypes } from "@shared/schema";
 import { patientRepo } from "../repositories/patientRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
 import { hotelRepo } from "../repositories/hotelRepo";
@@ -138,6 +138,27 @@ router.get("/patients/:id/details", async (req, res, next) => {
       orderBy: [asc(appointments.startAt)],
     });
 
+    // Compute requiredDocuments:
+    const REQUIRED_CODES = ["PASSPORT_COPY", "VISA"];
+    const REQUIRED_NAMES: Record<string, string> = {
+      "PASSPORT_COPY": "Passport Photocopy",
+      "VISA": "Visa",
+    };
+
+    const requiredDocuments = REQUIRED_CODES.map(code => {
+      const found = documents.find(d => d.documentType?.code === code);
+      return {
+        code,
+        name: REQUIRED_NAMES[code],
+        status: found ? found.status : null,
+        fileUrl: found ? found.fileUrl : null,
+        documentId: found ? found.id : null,
+      };
+    });
+
+    const now = new Date();
+    const nextAppointment = appts.find(a => new Date(a.startAt) >= now && a.status === "SCHEDULED") || null;
+
     res.json({
       patient: {
         id: patient.id,
@@ -173,7 +194,7 @@ router.get("/patients/:id/details", async (req, res, next) => {
       } : null,
       transport: patient.plan?.transport ? {
         id: patient.plan.transport.id,
-        name: patient.plan.transport.name,
+        name: patient.plan.transport.vehicleInfo || patient.plan.transport.driverName || "Transport assigned",
       } : null,
       documents: documents.map(d => ({
         id: d.id,
@@ -183,9 +204,11 @@ router.get("/patients/:id/details", async (req, res, next) => {
         documentType: d.documentType ? {
           id: d.documentType.id,
           name: d.documentType.name,
+          code: d.documentType.code,
           isRequired: d.documentType.isRequired,
         } : null,
       })),
+      requiredDocuments,
       appointments: appts.map(a => ({
         id: a.id,
         title: a.title,
@@ -197,6 +220,13 @@ router.get("/patients/:id/details", async (req, res, next) => {
         notes: a.notes,
         doctor: a.doctor ? { id: a.doctor.id, fullName: a.doctor.fullName } : null,
       })),
+      nextAppointment: nextAppointment ? {
+        id: nextAppointment.id,
+        title: nextAppointment.title,
+        startAt: nextAppointment.startAt,
+        status: nextAppointment.status,
+        doctor: nextAppointment.doctor ? { fullName: nextAppointment.doctor.fullName } : null,
+      } : null,
       tracking: {
         currentStep: patient.plan?.currentStep || null,
       }
@@ -336,7 +366,7 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
 });
 
 const assignDocumentsSchema = z.object({
-  documentTypeIds: z.array(z.string()).min(1),
+  documentTypeCodes: z.array(z.string()).min(1),
 });
 
 router.post("/patients/:id/assign-documents", async (req, res, next) => {
@@ -345,7 +375,21 @@ router.post("/patients/:id/assign-documents", async (req, res, next) => {
     const body = validateBody(assignDocumentsSchema, req.body);
     const patient = await patientRepo.findById(req.params.id, clinicId);
     if (!patient) notFound("Patient");
-    const docs = await documentRepo.assignDocumentsToPatient(req.params.id, clinicId, body.documentTypeIds);
+
+    // Look up document type IDs by code within this clinic
+    const docTypes = await db.query.documentTypes.findMany({
+      where: and(
+        eq(documentTypes.clinicId, clinicId),
+        inArray(documentTypes.code, body.documentTypeCodes)
+      ),
+    });
+
+    if (docTypes.length === 0) {
+      throw new AppError("VALIDATION_ERROR", "No valid document types found for the provided codes", 400);
+    }
+
+    const docTypeIds = docTypes.map(dt => dt.id);
+    const docs = await documentRepo.assignDocumentsToPatient(req.params.id, clinicId, docTypeIds);
     res.json(docs);
   } catch (e) { next(e); }
 });

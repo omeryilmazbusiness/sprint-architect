@@ -101,12 +101,31 @@ export async function seedDatabase() {
   }).onConflictDoNothing().returning();
 
   await Promise.all([
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Passport / ID", isRequired: true }).onConflictDoNothing(),
+    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Passport Photocopy", code: "PASSPORT_COPY", isRequired: true }).onConflictDoNothing(),
+    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Visa", code: "VISA", isRequired: true }).onConflictDoNothing(),
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Medical History", isRequired: true }).onConflictDoNothing(),
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Travel Insurance", isRequired: true }).onConflictDoNothing(),
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Lab Results (recent)", isRequired: false, description: "Blood tests from last 3 months" }).onConflictDoNothing(),
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Consent Form", isRequired: true }).onConflictDoNothing(),
   ]);
+
+  // Update codes on existing document types for this clinic
+  const existingDocTypes = await db.query.documentTypes.findMany({
+    where: eq(documentTypes.clinicId, CLINIC_ID),
+  });
+
+  for (const dt of existingDocTypes) {
+    if (dt.name === "Passport / ID" && !dt.code) {
+      await db.update(documentTypes).set({ code: "PASSPORT_COPY", name: "Passport Photocopy" }).where(eq(documentTypes.id, dt.id));
+    }
+    if (dt.name === "Passport Photocopy" && !dt.code) {
+      await db.update(documentTypes).set({ code: "PASSPORT_COPY" }).where(eq(documentTypes.id, dt.id));
+    }
+    if (dt.name === "Visa" && !dt.code) {
+      await db.update(documentTypes).set({ code: "VISA" }).where(eq(documentTypes.id, dt.id));
+    }
+  }
+  console.log("[seed] Document type codes updated");
 
   const docTypes = await db.query.documentTypes.findMany({
     where: eq(documentTypes.clinicId, CLINIC_ID),

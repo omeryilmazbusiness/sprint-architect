@@ -217,6 +217,7 @@ export const documentTypes = pgTable("document_types", {
     .notNull()
     .references(() => clinics.id),
   name: text("name").notNull(),
+  code: text("code"),
   description: text("description"),
   isRequired: boolean("is_required").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

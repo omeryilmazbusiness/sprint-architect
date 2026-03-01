@@ -1,0 +1,231 @@
+Replit AI — continue on the existing Expo React Native app + Express/TS backend + Postgres/Drizzle. DO NOT re-scaffold.
+
+OBJECTIVE:
+Modernize Manager UX for Users → Guests flows with premium white theme, remove the separate bottom “Guest” tab, and redesign Users/Guest Detail with best-in-class mobile UX:
+- Users tab becomes the single hub.
+- Guests list has professional filters (icon + dropdown + chips).
+- Guest Detail page has a premium overview, tracking summary, appointment preview, and Quick Actions.
+- All create/assign actions open as bottom sheets (slide-up modals), not separate full pages.
+- Remove Care Team section completely.
+- Assign Documents must support exactly two required docs: Passport Photocopy and Visa.
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin.
+- Strict clinic scoping.
+- Case-insensitive search.
+- No heavy UI libraries unless already installed; if needed use minimal dependencies.
+- Every screen supports loading/empty/error states.
+- Document statuses must reflect backend enum:
+  - UI “Pending” = ASSIGNED
+  - UI “Uploaded” = UPLOADED
+(If backend uses different naming, map appropriately.)
+
+========================================================
+A) NAVIGATION CHANGE — REMOVE “GUEST” BOTTOM TAB
+========================================================
+- Remove the bottom tab item that is currently a “Guest” tab (the rightmost guest tab).
+- Guest role should still route to its own guest dashboard after login, but NOT appear as a bottom tab in manager area.
+- Manager bottom tabs should be:
+  - Dashboard
+  - Users
+  - Services (optional)
+  - Invoices
+  - Settings
+(If you currently use 4 tabs, keep it simple but ensure “Guest” tab is gone.)
+
+========================================================
+B) USERS TAB — MOST MODERN GUESTS LIST UX
+========================================================
+Target route:
+- app/(manager-tabs)/users.tsx (or your existing Users route)
+
+Users page layout:
+1) Top header (premium) with title “Users”
+2) Inside Users page, only “Guests” list is required now (remove internal Doctors tab if present OR keep Doctors under Services tab).
+   - If you must keep 2 tabs, use: Guests | Doctors
+   - But user request focuses on Guests; prioritize Guests UX.
+
+Guests list UX requirements:
+1) Premium Filter Bar (Admin-like):
+- 🔍 Search input (debounce 400ms) search by guest name + guest key case-insensitive
+- ✅ Status dropdown: ALL / ACTIVE / INACTIVE
+- 🧩 Missing dropdown: ALL / Missing Documents / Missing Doctor / Missing Hotel / Missing Transport (only if backend supports; otherwise keep Missing Documents only)
+- 🧹 Clear button visible only when filters active
+- Active filter chips under bar; each chip removable
+
+2) List row design (modern):
+- Card row:
+  - Left: avatar initials circle
+  - Middle: guest full name (bold), subtitle (arrival → departure)
+  - Secondary line: masked key (e.g., GUE•••0001)
+  - Right: Status pill + chevron
+  - Optional tags row: “Docs Missing” if any required docs pending
+- Supports pull-to-refresh and pagination/infinite scroll
+- Empty state: “No guests found” with a “Clear filters” CTA
+
+Data:
+- Use backend endpoint:
+  GET /v1/manager/patients?search=&status=&missing=&page=&pageSize=
+- Ensure search is case-insensitive (ILIKE / lower()).
+
+========================================================
+C) GUEST DETAIL — PREMIUM OVERVIEW + TRACKING + QUICK ACTIONS
+========================================================
+Target route:
+- app/(manager-tabs)/users/guests/[id].tsx (or your current guest detail path)
+
+Guest Detail UI must be scrollable with a modern layout:
+
+1) Hero header section:
+- Guest name + status pill
+- Dates line: arrival → departure
+- A small “Current step” tracking pill (e.g., “Hotel Check-in”)
+- Quick Actions row (3 buttons):
+  - Assign Documents
+  - Create Appointment
+  - Change Doctor
+(Buttons are compact, icon + label.)
+
+2) Overview card (summary):
+- Assigned doctor (name only) + “Change” inline button (no Care Team section)
+- Hotel & transport summary (if exists)
+- Required documents summary:
+  - Passport Photocopy: Pending/Uploaded
+  - Visa: Pending/Uploaded
+- Next appointment preview (next upcoming appointment, time + title + doctor)
+
+3) Tracking card (flow/stepper):
+- Modern stepper showing phases:
+  - Pre-Arrival
+  - Arrival & Transfer
+  - Hotel
+  - Treatment
+  - Follow-up
+  - Departure
+- Highlight current step
+- Under it: timeline-like list of key events (appointment times, docs uploaded, etc.)
+- Allow manager to manually set currentStep via a small dropdown (optional) saved to backend
+
+4) Appointments preview section:
+- Show selected day or next 5 upcoming appointments list
+- “View all” collapsible or expands in place
+- Tapping opens appointment details bottom sheet (optional) or navigates to appointment list inside same page
+
+IMPORTANT: Remove the “Care Team” section completely.
+
+========================================================
+D) BOTTOM SHEETS (SLIDE-UP MODALS) FOR ACTIONS
+========================================================
+All operations must open as bottom sheets (modern UX):
+- Assign Documents (Passport Photocopy + Visa)
+- Create Appointment
+- Change Doctor
+
+Implementation options:
+- If you already use @gorhom/bottom-sheet, use it.
+- If not, implement with React Native Modal + animated slide-up (no heavy dep).
+- Must support:
+  - drag down to close (if library)
+  - tap outside to close
+  - keyboard-safe forms inside
+
+1) Assign Documents bottom sheet
+- Show two checkbox rows:
+  - Passport Photocopy
+  - Visa
+- CTA: “Assign Required Documents”
+- Calls backend:
+  POST /v1/manager/patients/:id/assign-documents
+  body: { documentTypeCodes: ["PASSPORT_COPY","VISA"] } (selected)
+- After success:
+  - refresh guest detail
+  - show toast
+
+2) Create Appointment bottom sheet
+Fields:
+- Title/Type (dropdown or text)
+- Date/time picker (startAt)
+- Optional endAt
+- Doctor selection (dropdown; default current assigned doctor)
+- Location text
+- Notes
+CTA: “Create Appointment”
+Calls:
+  POST /v1/manager/patients/:id/appointments
+
+3) Change Doctor bottom sheet
+- List/picker of doctors (searchable if many)
+- CTA: “Assign Doctor”
+Calls:
+  PUT /v1/manager/patients/:id/assign-doctor
+
+========================================================
+E) BACKEND REQUIREMENTS (VERIFY + ADD IF MISSING)
+========================================================
+1) Ensure document types exist as fixed codes:
+- PASSPORT_COPY (“Passport Photocopy”)
+- VISA (“Visa”)
+Seed them per clinic or globally.
+
+2) Ensure guest detail can be fetched as one payload (preferred):
+GET /v1/manager/patients/:id/details
+Return:
+{
+  patient,
+  plan (doctorId, hotelId, transportId, currentStep),
+  requiredDocuments: [
+    { code:"PASSPORT_COPY", name:"Passport Photocopy", status:"ASSIGNED|UPLOADED|APPROVED|REJECTED", fileUrl? },
+    { code:"VISA", name:"Visa", status:"..." }
+  ],
+  nextAppointments: [...],
+  appointmentsSummary: {...},
+  tracking: { currentStep, computedStep?, events:[...] }
+}
+If endpoint doesn’t exist, implement it to avoid multiple API calls.
+
+3) Ensure assign-documents by codes works:
+POST /v1/manager/patients/:id/assign-documents
+Body: { documentTypeCodes: string[] }
+Idempotent (no duplicates).
+
+4) Ensure status mapping:
+- Assigned = Pending in manager UI.
+- Uploaded = Uploaded.
+
+========================================================
+F) POLISH (PREMIUM WHITE THEME)
+========================================================
+- Use the same theme tokens/components as Admin:
+  Screen, Card, StatusPill, FilterBar, FilterPickerModal, Chips, Buttons, TextField
+- Typography and spacing must feel premium:
+  - generous padding
+  - subtle separators
+  - consistent icons
+
+========================================================
+G) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added (mobile + backend)
+2) Updated tab navigation (confirm guest tab removed)
+3) Endpoints used/added
+4) Manual QA checklist:
+  - Manager dashboard loads
+  - Users list filters work + search case-insensitive
+  - Guest detail shows overview + tracking + next appointment preview
+  - Quick Actions open bottom sheets
+  - Assign Documents assigns passport+visa and statuses update
+  - Create Appointment works and appears in schedule + guest detail
+  - Change Doctor works and reflects in overview
+5) Any TODO for next sprint (patient upload UI, document view, etc.)
+
+IMPLEMENTATION ORDER:
+1) Remove guest bottom tab and confirm routing for manager remains stable
+2) Build/upgrade Users list with premium filter bar + chips
+3) Build Guest detail premium layout (Overview + Tracking + Appointments preview)
+4) Implement bottom sheet components and wire actions (assign docs, create appt, change doctor)
+5) Ensure backend supports doc codes + guest details aggregation
+6) Final polish + run tests
+
+Proceed now. Keep it modern, premium, and consistent.
+END.
