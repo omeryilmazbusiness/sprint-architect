@@ -1,0 +1,267 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a production-grade Manager UX + Services module overhaul with correct business rules:
+1) Remove the rightmost “Guests” bottom tab completely.
+2) Doctor assignment is per APPOINTMENT (required on create/edit), NOT per patient.
+3) Document assignment statuses:
+   - when assigned -> PENDING
+   - when guest uploads -> UPLOADED
+   - each assigned doc must store a short description/instruction
+   - if uploaded, manager can View and Download the PDF
+4) Hotel assignment must be changeable for a guest.
+5) Services module must be fully professional, DB-driven (no mock data):
+   - Doctors: detailed profile (university, specialty, experiences, diploma image/url, languages, etc.)
+   - Transports: list existing + add new (driver name, phone, plate, model, notes)
+   - Document Types: create/edit/delete with title + description
+   - Hotels: create/edit/delete with clinic contracted hotel info; used for patient assignment only
+6) White theme consistent with Admin, premium UX, with bottom sheets for create/assign flows.
+
+NON-NEGOTIABLE:
+- Keep strict clinic scoping.
+- Use zod validation for all inputs.
+- Do NOT show any stored passwords anywhere.
+- No mock/copied data left in Services; everything from DB.
+- Every screen: loading/empty/error states.
+- PDF view/download must be secure (authorized) and reliable inside Expo.
+
+========================================================
+A) NAVIGATION / TABS
+========================================================
+1) Remove footer bottom tab “Guests” (rightmost).
+- Manager tabs should remain: Dashboard, Users, Services, Invoices, Settings (or your current set without Guests).
+- Ensure routing for GUEST role remains separate and unchanged.
+
+========================================================
+B) BUSINESS RULE CHANGES — DOCTOR PER APPOINTMENT
+========================================================
+1) Backend:
+- Ensure appointments table has doctorId (required).
+- Remove/deprecate patient_plan.doctorId usage in Manager UI and API. Do NOT assign doctor to patient anymore.
+- Update endpoints:
+  - POST /v1/manager/patients/:id/appointments must require doctorId
+  - PUT /v1/manager/appointments/:id must allow doctor change (doctorId required)
+- Validate doctor belongs to same clinic.
+
+2) Mobile:
+- Appointment create/edit bottom sheet MUST include Doctor picker and require selection.
+- Everywhere appointment is displayed show doctor name.
+
+If there is an existing “assign-doctor” endpoint, keep it unused or remove it cleanly (make sure nothing breaks).
+
+========================================================
+C) DOCUMENT WORKFLOW — PENDING/UPLOADED + DESCRIPTION + VIEW/DOWNLOAD
+========================================================
+DB changes (Drizzle):
+1) document_types:
+- id, clinicId, title, description, createdAt
+2) patient_documents:
+- id, clinicId, patientId, documentTypeId
+- status enum: PENDING | UPLOADED | APPROVED | REJECTED (if you already have, map accordingly)
+- instructionText (string, nullable)  <-- manager enters this at assign time
+- fileUrl (nullable)
+- uploadedAt (nullable), updatedAt
+3) (Optional) file storage metadata table if you need, but keep MVP simple.
+
+Backend endpoints:
+1) Assign documents with instructions:
+POST /v1/manager/patients/:id/assign-documents
+Body:
+{
+  items: [
+    { documentTypeId: string, instructionText: string }
+  ]
+}
+Behavior:
+- Create or upsert patient_document rows.
+- Set status to PENDING on assign (even if exists and was rejected/pending).
+- Store instructionText.
+- Return updated list.
+
+2) Patient upload (if not implemented yet, implement now):
+POST /v1/patient/documents/:patientDocumentId/upload
+multipart/form-data (field "file")
+Rules:
+- pdf only, max size 10MB
+- Patient can only upload own document
+Behavior:
+- store file via StorageProvider
+- set fileUrl and status=UPLOADED, uploadedAt=now
+
+3) Secure View/Download for manager & patient:
+GET /v1/documents/:patientDocumentId/download
+Allowed:
+- ADMIN
+- MANAGER of same clinic
+- PATIENT owner
+Must stream PDF with correct headers (Content-Type: application/pdf).
+This should work with Authorization header.
+If mobile viewing with headers is hard, also implement:
+GET /v1/documents/:patientDocumentId/signed-url
+Returns a short-lived tokenized URL (5 min) to open in WebView without auth headers.
+(Preferred: signed-url for smooth in-app viewing.)
+
+StorageProvider:
+- Implement local disk storage provider for Replit (uploads directory)
+- Serve static files safely OR use the authenticated download route + signed-url.
+
+Mobile UI:
+Guest Detail -> Documents section:
+- Show list of assigned docs:
+  - Title
+  - instructionText (small)
+  - status pill: Pending / Uploaded
+  - If Uploaded: View button + Download button
+View behavior:
+- Open an in-app viewer screen using WebView OR local file render:
+  - Option A (best): use signed-url and open in WebView
+  - Option B: download with expo-file-system (with auth headers), then open with WebView local uri
+Download behavior:
+- Use expo-file-system to download into cache/documents
+- Use expo-sharing to share/save (this is “download” on mobile)
+- Provide clear error handling if permission denied
+
+========================================================
+D) HOTEL ASSIGNMENT CAN BE CHANGED
+========================================================
+Backend:
+- Ensure PUT /v1/manager/patients/:id/assign-hotel overwrites existing assignment.
+Body should include:
+{ hotelId, stayDays?, roomNo?, checkInDate?, checkOutDate? }
+Validate hotel belongs to clinic.
+
+Mobile:
+Guest Detail -> Overview Quick Actions:
+- “Change Hotel” opens bottom sheet:
+  - hotel dropdown (from Services/Hotels)
+  - optional stayDays, roomNo, check-in/out
+  - submit calls assign-hotel and refreshes detail
+
+========================================================
+E) SERVICES MODULE — PROFESSIONAL, NO MOCK DATA
+========================================================
+1) Services screen (Manager):
+- Show 4 cards: Doctors, Hotels, Transports, Document Types
+- Each opens a dedicated CRUD screen.
+- Remove any mock/copied placeholder arrays; everything fetched from API.
+
+2) Doctors (professional form):
+Fields to store (DB + UI):
+- fullName (required)
+- specialty (required)
+- phone, email
+- university (text)
+- graduationYear (number)
+- experienceYears (number)
+- bio / about (multiline)
+- languages (comma list or multi-select)
+- certifications (multiline)
+- diplomaUrl (image url) OR allow upload image (optional MVP: URL)
+- photoUrl (optional)
+CRUD endpoints:
+- GET/POST/PUT/DELETE /v1/manager/doctors
+All clinic-scoped.
+
+3) Transports:
+Fields:
+- driverName (required)
+- driverPhone (required)
+- vehiclePlate (required)
+- vehicleModel (optional)
+- vehicleBrand (optional)
+- notes (optional)
+CRUD endpoints:
+- /v1/manager/transports
+
+4) Document Types:
+Fields:
+- title (required)
+- description (required)
+CRUD endpoints:
+- /v1/manager/document-types
+Ensure used in Assign Documents flow.
+
+5) Hotels:
+Fields:
+- name (required)
+- address
+- phone
+- email
+- notes
+- latitude/longitude optional
+CRUD endpoints:
+- /v1/manager/hotels
+Purpose: only to store clinic contracted hotels and assign to guests.
+
+========================================================
+F) USERS / GUEST DETAIL UX — MODERN + BOTTOM SHEETS
+========================================================
+1) Users list remains premium with filter bar (admin-like):
+- Search case-insensitive
+- Status filter
+- Missing docs filter (PENDING docs count)
+- Chips + clear
+2) Guest Detail:
+- Overview card showing:
+  - current tracking step (flow)
+  - next 3 appointments (with doctor)
+  - hotel summary + change hotel quick action
+  - documents summary (pending/uploaded)
+- Quick Actions row (buttons):
+  - Assign Documents (bottom sheet)
+  - Create Appointment (bottom sheet) — doctor required
+  - Change Hotel (bottom sheet)
+- Remove Care Team section entirely.
+
+Tracking flow:
+- Implement “stepper” with current step highlight.
+- Either computed or manager-set currentStep saved to DB.
+- Show timeline events:
+  - docs assigned
+  - docs uploaded
+  - appointment created
+  - appointment done/cancelled
+
+========================================================
+G) TESTS + VERIFICATION
+========================================================
+Add automated tests for:
+1) appointment create requires doctorId
+2) assign-documents creates PENDING + instructionText
+3) patient upload changes status to UPLOADED
+4) download endpoint access control (manager same clinic ok, different clinic forbidden)
+5) hotel assignment overwrite works
+
+Manual QA checklist must include:
+- Guests bottom tab removed
+- Create appointment selects doctor and displays doctor in schedule list
+- Assign docs with instruction -> status pending -> guest uploads -> status uploaded -> manager can view/download pdf
+- Change hotel works and reflects in overview
+- Services screens show DB data only, no mocks
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation, print:
+1) Files changed/added
+2) DB migrations commands
+3) Endpoint changes list + sample curl:
+   - create appointment with doctorId
+   - assign docs with instruction
+   - patient upload pdf
+   - signed-url or download
+4) Mobile navigation routes updated
+5) Manual QA checklist
+
+IMPLEMENTATION ORDER (DO THIS EXACT ORDER):
+1) Remove Guests bottom tab (UI)
+2) Backend: enforce doctorId required on appointments + update DTOs
+3) Backend: document types + patient_documents instructionText + assign-documents payload update
+4) Backend: upload + secure view/download (signed-url if needed)
+5) Backend: hotel overwrite confirm
+6) Mobile: Guest detail bottom sheets (assign docs with instruction, create appt doctor required, change hotel)
+7) Mobile: Services CRUD screens (Doctors detailed form, Transports, Document Types, Hotels) and remove mocks
+8) Tests + final verification
+
+Proceed now. Keep UX premium white theme and consistent with Admin.
+END.

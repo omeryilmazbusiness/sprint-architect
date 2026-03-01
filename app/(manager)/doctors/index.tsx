@@ -23,38 +23,104 @@ import { apiRequest } from "@/lib/query-client";
 
 interface Doctor {
   id: string;
-  name: string;
+  fullName: string;
   specialty?: string;
   phone?: string;
   email?: string;
+  photoUrl?: string;
+  university?: string;
+  graduationYear?: number;
+  experienceYears?: number;
+  bio?: string;
+  languages?: string;
+  certifications?: string;
+  diplomaUrl?: string;
 }
 
 export default function DoctorsScreen() {
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", specialty: "", phone: "", email: "" });
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<Doctor | null>(null);
+  const [form, setForm] = useState({
+    fullName: "",
+    specialty: "",
+    phone: "",
+    email: "",
+    university: "",
+    graduationYear: "",
+    experienceYears: "",
+    languages: "",
+    bio: "",
+    certifications: "",
+  });
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<Doctor[]>({
+  const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Doctor[] }>({
     queryKey: ["/v1/manager/doctors"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/v1/manager/doctors");
-      return res.json();
-    },
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (body: typeof form) => {
-      const res = await apiRequest("POST", "/v1/manager/doctors", body);
+  const mutation = useMutation({
+    mutationFn: async (body: any) => {
+      const method = editingItem ? "PUT" : "POST";
+      const path = editingItem ? `/v1/manager/doctors/${editingItem.id}` : "/v1/manager/doctors";
+      const res = await apiRequest(method, path, body);
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"] });
-      setShowCreate(false);
-      setForm({ name: "", specialty: "", phone: "", email: "" });
+      setShowForm(false);
+      setEditingItem(null);
+      resetForm();
     },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to create doctor"),
+    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to save doctor"),
   });
+
+  const resetForm = () => {
+    setForm({
+      fullName: "",
+      specialty: "",
+      phone: "",
+      email: "",
+      university: "",
+      graduationYear: "",
+      experienceYears: "",
+      languages: "",
+      bio: "",
+      certifications: "",
+    });
+  };
+
+  const handleEdit = (doctor: Doctor) => {
+    setEditingItem(doctor);
+    setForm({
+      fullName: doctor.fullName || "",
+      specialty: doctor.specialty || "",
+      phone: doctor.phone || "",
+      email: doctor.email || "",
+      university: doctor.university || "",
+      graduationYear: doctor.graduationYear?.toString() || "",
+      experienceYears: doctor.experienceYears?.toString() || "",
+      languages: doctor.languages || "",
+      bio: doctor.bio || "",
+      certifications: doctor.certifications || "",
+    });
+    setShowForm(true);
+  };
+
+  const handleCreate = () => {
+    setEditingItem(null);
+    resetForm();
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    const payload = {
+      ...form,
+      graduationYear: form.graduationYear ? parseInt(form.graduationYear) : undefined,
+      experienceYears: form.experienceYears ? parseInt(form.experienceYears) : undefined,
+    };
+    mutation.mutate(payload);
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -73,7 +139,7 @@ export default function DoctorsScreen() {
         right={
           <Pressable
             style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => setShowCreate(true)}
+            onPress={handleCreate}
           >
             <Ionicons name="add" size={20} color={T.primary} />
           </Pressable>
@@ -84,11 +150,10 @@ export default function DoctorsScreen() {
         <View style={styles.loader}><ActivityIndicator color={T.accent} size="large" /></View>
       ) : (
         <FlatList
-          data={data ?? []}
+          data={data?.rows ?? []}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
+          contentContainerStyle={{ paddingBottom: bottomPad + 40, paddingHorizontal: T.sp16, paddingTop: T.sp16 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
-          ItemSeparatorComponent={() => <Divider inset={64} />}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="medkit-outline" size={36} color={T.textMuted} />
@@ -96,70 +161,168 @@ export default function DoctorsScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={styles.iconWrap}>
-                <Ionicons name="medkit-outline" size={20} color="#6366F1" />
+            <Pressable onPress={() => handleEdit(item)} style={[styles.card, cardShadow]}>
+              <View style={styles.row}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {item.fullName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)}
+                  </Text>
+                </View>
+                <View style={styles.info}>
+                  <Text style={styles.name}>{item.fullName}</Text>
+                  {item.specialty && <Text style={styles.meta}>{item.specialty}</Text>}
+                  {item.phone && <Text style={styles.meta}>{item.phone}</Text>}
+                </View>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => Alert.alert("Delete Doctor", `Remove ${item.fullName}?`, [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+                  ])}
+                >
+                  <Ionicons name="trash-outline" size={18} color={T.danger} />
+                </Pressable>
               </View>
-              <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                {item.specialty && <Text style={styles.meta}>{item.specialty}</Text>}
-                {item.phone && <Text style={styles.meta}>{item.phone}</Text>}
-              </View>
-              <Pressable
-                hitSlop={8}
-                onPress={() => Alert.alert("Delete Doctor", `Remove ${item.name}?`, [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-                ])}
-              >
-                <Ionicons name="trash-outline" size={18} color={T.danger} />
-              </Pressable>
-            </View>
+            </Pressable>
           )}
         />
       )}
 
-      <Modal visible={showCreate} animationType="slide" presentationStyle="formSheet">
+      <Modal visible={showForm} animationType="slide" presentationStyle="formSheet">
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Doctor</Text>
-            <Pressable onPress={() => setShowCreate(false)} hitSlop={10}>
+            <Text style={styles.modalTitle}>{editingItem ? "Edit Doctor" : "Add Doctor"}</Text>
+            <Pressable onPress={() => setShowForm(false)} hitSlop={10}>
               <Ionicons name="close" size={24} color={T.text} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent}>
-            {[
-              { key: "name", label: "Full Name *", placeholder: "Dr. Jane Smith" },
-              { key: "specialty", label: "Specialty", placeholder: "e.g. Cardiology" },
-              { key: "phone", label: "Phone", placeholder: "+1 555 000 0000" },
-              { key: "email", label: "Email", placeholder: "dr.smith@clinic.com" },
-            ].map(({ key, label, placeholder }) => (
-              <View key={key} style={styles.field}>
-                <Text style={styles.fieldLabel}>{label}</Text>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Full Name *</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="Dr. Jane Smith"
+                placeholderTextColor={T.textMuted}
+                value={form.fullName}
+                onChangeText={(v) => setForm((f) => ({ ...f, fullName: v }))}
+              />
+            </View>
+            <View style={styles.fieldRow}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>Specialty</Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder={placeholder}
+                  placeholder="Cardiology"
                   placeholderTextColor={T.textMuted}
-                  value={form[key as keyof typeof form]}
-                  onChangeText={(v) => setForm((f) => ({ ...f, [key]: v }))}
-                  keyboardType={key === "email" ? "email-address" : "default"}
-                  autoCapitalize={key === "email" ? "none" : "words"}
+                  value={form.specialty}
+                  onChangeText={(v) => setForm((f) => ({ ...f, specialty: v }))}
                 />
               </View>
-            ))}
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>Phone</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="+1..."
+                  placeholderTextColor={T.textMuted}
+                  value={form.phone}
+                  onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="dr.smith@clinic.com"
+                placeholderTextColor={T.textMuted}
+                value={form.email}
+                onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>University</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="Medical School Name"
+                placeholderTextColor={T.textMuted}
+                value={form.university}
+                onChangeText={(v) => setForm((f) => ({ ...f, university: v }))}
+              />
+            </View>
+            <View style={styles.fieldRow}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>Grad. Year</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="2010"
+                  placeholderTextColor={T.textMuted}
+                  value={form.graduationYear}
+                  onChangeText={(v) => setForm((f) => ({ ...f, graduationYear: v }))}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>Exp. Years</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="12"
+                  placeholderTextColor={T.textMuted}
+                  value={form.experienceYears}
+                  onChangeText={(v) => setForm((f) => ({ ...f, experienceYears: v }))}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Languages</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="English, Turkish..."
+                placeholderTextColor={T.textMuted}
+                value={form.languages}
+                onChangeText={(v) => setForm((f) => ({ ...f, languages: v }))}
+              />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Bio</Text>
+              <TextInput
+                style={[styles.fieldInput, styles.textArea]}
+                placeholder="Doctor's background..."
+                placeholderTextColor={T.textMuted}
+                value={form.bio}
+                onChangeText={(v) => setForm((f) => ({ ...f, bio: v }))}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Certifications</Text>
+              <TextInput
+                style={[styles.fieldInput, styles.textArea]}
+                placeholder="List certifications..."
+                placeholderTextColor={T.textMuted}
+                value={form.certifications}
+                onChangeText={(v) => setForm((f) => ({ ...f, certifications: v }))}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
           </ScrollView>
           <View style={styles.modalActions}>
-            <Pressable style={styles.btnSecondary} onPress={() => setShowCreate(false)}>
+            <Pressable style={styles.btnSecondary} onPress={() => setShowForm(false)}>
               <Text style={styles.btnSecondaryText}>Cancel</Text>
             </Pressable>
             <Pressable
-              style={[styles.btnPrimary, { opacity: !form.name.trim() || createMutation.isPending ? 0.6 : 1 }]}
-              onPress={() => createMutation.mutate(form)}
-              disabled={!form.name.trim() || createMutation.isPending}
+              style={[styles.btnPrimary, { opacity: !form.fullName.trim() || mutation.isPending ? 0.6 : 1 }]}
+              onPress={handleSubmit}
+              disabled={!form.fullName.trim() || mutation.isPending}
             >
-              {createMutation.isPending
+              {mutation.isPending
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.btnPrimaryText}>Add Doctor</Text>
+                : <Text style={styles.btnPrimaryText}>{editingItem ? "Save Changes" : "Add Doctor"}</Text>
               }
             </Pressable>
           </View>
@@ -173,25 +336,33 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
   addBtn: { padding: 6 },
+  card: {
+    backgroundColor: T.surface,
+    borderRadius: T.r12,
+    padding: T.sp16,
+    marginBottom: T.sp12,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp12,
-    backgroundColor: T.surface,
     gap: T.sp12,
   },
-  iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: T.r10,
-    backgroundColor: "#6366F118",
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.primary,
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarText: {
+    color: "#fff",
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 16,
+  },
   info: { flex: 1 },
   name: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: T.text },
-  meta: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
+  meta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
   empty: { paddingTop: 80, alignItems: "center", gap: T.sp12, paddingHorizontal: T.sp32 },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
   modal: { flex: 1, backgroundColor: T.bg },
@@ -203,12 +374,14 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
   modalContent: { padding: T.sp20, gap: T.sp16, paddingBottom: 40 },
   field: { gap: T.sp4 },
+  fieldRow: { flexDirection: "row", gap: T.sp12 },
   fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
   fieldInput: {
     backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: T.r10,
     paddingHorizontal: 14, paddingVertical: T.sp12,
     fontFamily: "Inter_400Regular", fontSize: 15, color: T.text,
   },
+  textArea: { height: 80, textAlignVertical: "top" },
   modalActions: {
     flexDirection: "row", padding: T.sp20, gap: T.sp12,
     borderTopWidth: 1, borderTopColor: T.border, backgroundColor: T.surface,

@@ -130,7 +130,15 @@ export const doctors = pgTable("doctors", {
   fullName: text("full_name").notNull(),
   specialty: text("specialty"),
   phone: text("phone"),
+  email: text("email"),
   photoUrl: text("photo_url"),
+  university: text("university"),
+  graduationYear: integer("graduation_year"),
+  experienceYears: integer("experience_years"),
+  bio: text("bio"),
+  languages: text("languages"),
+  certifications: text("certifications"),
+  diplomaUrl: text("diploma_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -162,6 +170,9 @@ export const transports = pgTable("transports", {
   driverName: text("driver_name"),
   driverPhone: text("driver_phone").notNull(),
   vehicleInfo: text("vehicle_info"),
+  vehiclePlate: text("vehicle_plate"),
+  vehicleModel: text("vehicle_model"),
+  vehicleBrand: text("vehicle_brand"),
   meetingPointText: text("meeting_point_text"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
@@ -237,8 +248,10 @@ export const patientDocuments = pgTable("patient_documents", {
     .notNull()
     .references(() => documentTypes.id),
   status: documentStatusEnum("status").notNull().default("ASSIGNED"),
+  instructionText: text("instruction_text"),
   fileUrl: text("file_url"),
   rejectionReason: text("rejection_reason"),
+  uploadedAt: timestamp("uploaded_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

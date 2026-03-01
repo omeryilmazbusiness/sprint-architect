@@ -366,7 +366,10 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
 });
 
 const assignDocumentsSchema = z.object({
-  documentTypeCodes: z.array(z.string()).min(1),
+  items: z.array(z.object({
+    documentTypeId: z.string().min(1),
+    instructionText: z.string().optional(),
+  })).min(1),
 });
 
 router.post("/patients/:id/assign-documents", async (req, res, next) => {
@@ -376,21 +379,46 @@ router.post("/patients/:id/assign-documents", async (req, res, next) => {
     const patient = await patientRepo.findById(req.params.id, clinicId);
     if (!patient) notFound("Patient");
 
-    // Look up document type IDs by code within this clinic
-    const docTypes = await db.query.documentTypes.findMany({
-      where: and(
-        eq(documentTypes.clinicId, clinicId),
-        inArray(documentTypes.code, body.documentTypeCodes)
-      ),
-    });
+    const results = [];
+    for (const item of body.items) {
+      // Validate docType belongs to clinic
+      const docType = await db.query.documentTypes.findFirst({
+        where: and(eq(documentTypes.id, item.documentTypeId), eq(documentTypes.clinicId, clinicId)),
+      });
+      if (!docType) continue;
 
-    if (docTypes.length === 0) {
-      throw new AppError("VALIDATION_ERROR", "No valid document types found for the provided codes", 400);
+      // Check if doc already exists
+      const existing = await db.query.patientDocuments.findFirst({
+        where: and(
+          eq(patientDocuments.patientId, req.params.id),
+          eq(patientDocuments.documentTypeId, item.documentTypeId),
+          eq(patientDocuments.clinicId, clinicId),
+        ),
+      });
+
+      if (existing) {
+        // Update: reset to ASSIGNED with new instructions
+        const [updated] = await db.update(patientDocuments)
+          .set({ status: "ASSIGNED", instructionText: item.instructionText ?? null, updatedAt: new Date() })
+          .where(eq(patientDocuments.id, existing.id))
+          .returning();
+        results.push(updated);
+      } else {
+        // Insert new
+        const [inserted] = await db.insert(patientDocuments)
+          .values({
+            clinicId,
+            patientId: req.params.id,
+            documentTypeId: item.documentTypeId,
+            status: "ASSIGNED",
+            instructionText: item.instructionText ?? null,
+          })
+          .returning();
+        results.push(inserted);
+      }
     }
 
-    const docTypeIds = docTypes.map(dt => dt.id);
-    const docs = await documentRepo.assignDocumentsToPatient(req.params.id, clinicId, docTypeIds);
-    res.json(docs);
+    res.json(results);
   } catch (e) { next(e); }
 });
 
@@ -399,7 +427,7 @@ const createAppointmentSchema = z.object({
   type: z.string().optional(),
   startAt: z.string().datetime(),
   endAt: z.string().datetime().optional(),
-  doctorId: z.string().optional(),
+  doctorId: z.string().min(1, "Doctor is required"),
   locationText: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -412,6 +440,10 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
     const body = validateBody(createAppointmentSchema, req.body);
     const patient = await patientRepo.findById(req.params.id, clinicId);
     if (!patient) notFound("Patient");
+
+    const doctor = await doctorRepo.findById(body.doctorId, clinicId);
+    if (!doctor) throw new AppError("NOT_FOUND", "Doctor not found or belongs to another clinic", 404);
+
     const appt = await appointmentRepo.create({
       clinicId,
       patientId: req.params.id,
@@ -439,7 +471,7 @@ const updateAppointmentSchema = z.object({
   type: z.string().optional(),
   startAt: z.string().datetime().optional(),
   endAt: z.string().datetime().nullable().optional(),
-  doctorId: z.string().nullable().optional(),
+  doctorId: z.string().min(1, "Doctor is required"),
   locationText: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -451,6 +483,12 @@ router.put("/appointments/:appointmentId", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(updateAppointmentSchema, req.body);
+
+    if (body.doctorId) {
+      const doctor = await doctorRepo.findById(body.doctorId, clinicId);
+      if (!doctor) throw new AppError("NOT_FOUND", "Doctor not found or belongs to another clinic", 404);
+    }
+
     const appt = await appointmentRepo.update(req.params.appointmentId, clinicId, {
       ...body,
       startAt: body.startAt ? new Date(body.startAt) : undefined,
@@ -474,7 +512,15 @@ const createDoctorSchema = z.object({
   fullName: z.string().min(1).max(200),
   specialty: z.string().optional(),
   phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
   photoUrl: z.string().url().optional().or(z.literal("")),
+  university: z.string().optional(),
+  graduationYear: z.number().int().min(1950).max(2030).optional(),
+  experienceYears: z.number().int().min(0).max(70).optional(),
+  bio: z.string().optional(),
+  languages: z.string().optional(),
+  certifications: z.string().optional(),
+  diplomaUrl: z.string().optional(),
 });
 
 router.post("/doctors", async (req, res, next) => {
@@ -580,12 +626,12 @@ router.delete("/hotels/:id", async (req, res, next) => {
 });
 
 const createTransportSchema = z.object({
-  driverPhone: z.string().optional(),
-  phone: z.string().optional(),
   driverName: z.string().optional(),
-  vehicleType: z.string().optional(),
-  licensePlate: z.string().optional(),
+  driverPhone: z.string().min(1),
   vehicleInfo: z.string().optional(),
+  vehiclePlate: z.string().optional(),
+  vehicleModel: z.string().optional(),
+  vehicleBrand: z.string().optional(),
   meetingPointText: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -595,10 +641,7 @@ router.post("/transports", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(createTransportSchema, req.body);
-    const { phone, driverPhone, vehicleType, licensePlate, vehicleInfo, ...rest } = body;
-    const resolvedPhone = driverPhone || phone || "";
-    const resolvedVehicleInfo = vehicleInfo || [vehicleType, licensePlate].filter(Boolean).join(" / ") || undefined;
-    const transport = await transportRepo.create({ clinicId, driverPhone: resolvedPhone, vehicleInfo: resolvedVehicleInfo, ...rest });
+    const transport = await transportRepo.create({ clinicId, ...body });
     res.status(201).json(transport);
   } catch (e) { next(e); }
 });
@@ -624,13 +667,7 @@ router.put("/transports/:id", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(createTransportSchema.partial(), req.body);
-    const { phone, driverPhone, vehicleType, licensePlate, vehicleInfo, ...rest } = body;
-    const update: Record<string, unknown> = { ...rest };
-    if (driverPhone || phone) update.driverPhone = driverPhone || phone;
-    if (vehicleInfo || vehicleType || licensePlate) {
-      update.vehicleInfo = vehicleInfo || [vehicleType, licensePlate].filter(Boolean).join(" / ");
-    }
-    const transport = await transportRepo.update(req.params.id, clinicId, update as any);
+    const transport = await transportRepo.update(req.params.id, clinicId, body);
     if (!transport) notFound("Transport");
     res.json(transport);
   } catch (e) { next(e); }
@@ -657,6 +694,29 @@ const createDocTypeSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   isRequired: z.boolean().optional(),
+});
+
+router.put("/document-types/:id", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { id } = req.params;
+    const body = validateBody(z.object({
+      name: z.string().min(1).optional(),
+      description: z.string().optional(),
+      isRequired: z.boolean().optional(),
+    }), req.body);
+
+    const existing = await db.query.documentTypes.findFirst({
+      where: and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)),
+    });
+    if (!existing) notFound("Document type");
+
+    const [updated] = await db.update(documentTypes)
+      .set({ ...body })
+      .where(and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)))
+      .returning();
+    res.json(updated);
+  } catch (e) { next(e); }
 });
 
 router.post("/document-types", async (req, res, next) => {
