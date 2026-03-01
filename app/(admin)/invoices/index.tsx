@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,8 +18,13 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { listAdminInvoices, InvoiceListResponse } from "@/lib/api/adminInvoices";
+import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
+import { FilterButton } from "@/components/filters/FilterButton";
+import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
+import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
 const PERIOD_REGEX = /^\d{4}-\d{2}$/;
 
 function statusAccent(status: string): string {
@@ -34,16 +39,52 @@ export default function AdminInvoicesScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [period, setPeriod] = useState("");
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [clinicFilter, setClinicFilter] = useState("");
+  const [pickerOpen, setPickerOpen] = useState<"clinic" | "status" | null>(null);
 
   const validPeriod = period.length === 7 && PERIOD_REGEX.test(period) ? period : undefined;
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<InvoiceListResponse>({
-    queryKey: ["/v1/admin/invoices", validPeriod, statusFilter],
-    queryFn: () => listAdminInvoices({ period: validPeriod, status: statusFilter !== "ALL" ? statusFilter : undefined }),
+    queryKey: ["/v1/admin/invoices", validPeriod, statusFilter, clinicFilter],
+    queryFn: () => listAdminInvoices({
+      period: validPeriod,
+      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      clinicId: clinicFilter || undefined,
+    }),
+  });
+
+  const { data: clinicsData } = useQuery<ClinicListResponse>({
+    queryKey: ["/v1/admin/clinics", "all"],
+    queryFn: () => listClinics({ pageSize: 200 }),
   });
 
   async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
+
+  const clinics = clinicsData?.rows ?? [];
+  const clinicOptions: PickerOption[] = useMemo(
+    () => clinics.map((c) => ({ value: c.id, label: c.name })),
+    [clinics]
+  );
+  const statusOptions: PickerOption[] = [
+    { value: "PENDING", label: "Pending" },
+    { value: "UNPAID", label: "Unpaid" },
+    { value: "PAID", label: "Paid" },
+  ];
+
+  const selectedClinicName = clinics.find((c) => c.id === clinicFilter)?.name;
+  const hasFilters = !!clinicFilter || statusFilter !== "ALL" || !!validPeriod;
+
+  const activeChips: ActiveChip[] = [];
+  if (validPeriod) activeChips.push({ key: "period", label: `Period: ${validPeriod}`, onRemove: () => setPeriod("") });
+  if (clinicFilter && selectedClinicName) activeChips.push({ key: "clinic", label: selectedClinicName, onRemove: () => setClinicFilter("") });
+  if (statusFilter !== "ALL") activeChips.push({ key: "status", label: statusFilter, onRemove: () => setStatusFilter("ALL") });
+
+  function clearAllFilters() {
+    setPeriod("");
+    setClinicFilter("");
+    setStatusFilter("ALL");
+  }
 
   return (
     <View style={styles.root}>
@@ -58,12 +99,13 @@ export default function AdminInvoicesScreen() {
           <Ionicons name="calendar-outline" size={16} color={T.textMuted} />
           <TextInput
             style={[styles.periodInput, period && !validPeriod ? { color: T.danger } : null]}
-            placeholder="Filter by period (YYYY-MM)"
+            placeholder="Period (YYYY-MM)"
             placeholderTextColor={T.textMuted}
             value={period}
             onChangeText={setPeriod}
             maxLength={7}
             autoCapitalize="none"
+            returnKeyType="done"
           />
           {period.length > 0 && (
             <Pressable onPress={() => setPeriod("")} hitSlop={8}>
@@ -75,24 +117,30 @@ export default function AdminInvoicesScreen() {
           <Text style={styles.periodHint}>Enter a complete period, e.g. 2026-02</Text>
         )}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-          {STATUS_FILTERS.map((s) => {
-            const c = s === "ALL" ? T.primary : statusAccent(s);
-            const active = statusFilter === s;
-            return (
-              <Pressable
-                key={s}
-                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
-                onPress={() => setStatusFilter(s)}
-              >
-                {s !== "ALL" && (
-                  <View style={[styles.dot, { backgroundColor: c }]} />
-                )}
-                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{s}</Text>
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            <FilterButton
+              icon="business-outline"
+              label="Clinic"
+              value={selectedClinicName}
+              onPress={() => setPickerOpen("clinic")}
+            />
+            <FilterButton
+              icon="checkmark-circle-outline"
+              label="Status"
+              value={statusFilter !== "ALL" ? statusFilter : undefined}
+              onPress={() => setPickerOpen("status")}
+            />
+            {hasFilters && (
+              <Pressable style={styles.clearBtn} onPress={clearAllFilters}>
+                <Ionicons name="refresh-outline" size={13} color={T.textSec} />
+                <Text style={styles.clearBtnText}>Reset</Text>
               </Pressable>
-            );
-          })}
-        </ScrollView>
+            )}
+          </ScrollView>
+        </View>
+
+        <ActiveFilterChips chips={activeChips} onClearAll={clearAllFilters} />
       </View>
 
       {isLoading ? (
@@ -113,7 +161,7 @@ export default function AdminInvoicesScreen() {
             <EmptyState
               icon="document-text-outline"
               title="No invoices found"
-              subtitle={validPeriod || statusFilter !== "ALL" ? "Try clearing your filters" : "Generate invoices for a billing period"}
+              subtitle={hasFilters ? "Try clearing your filters" : "Generate invoices for a billing period"}
             />
           }
           renderItem={({ item }) => {
@@ -148,21 +196,39 @@ export default function AdminInvoicesScreen() {
         />
       )}
 
+      <FilterPickerModal
+        visible={pickerOpen === "clinic"}
+        title="Filter by Clinic"
+        options={clinicOptions}
+        selected={clinicFilter}
+        onSelect={setClinicFilter}
+        onClose={() => setPickerOpen(null)}
+        searchable={clinicOptions.length > 6}
+        allLabel="All Clinics"
+      />
+      <FilterPickerModal
+        visible={pickerOpen === "status"}
+        title="Filter by Status"
+        options={statusOptions}
+        selected={statusFilter !== "ALL" ? statusFilter : ""}
+        onSelect={(v) => setStatusFilter((v || "ALL") as StatusFilter)}
+        onClose={() => setPickerOpen(null)}
+        allLabel="All Statuses"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, paddingBottom: 8 },
+  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border },
   periodRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   periodInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
   periodHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.danger, paddingHorizontal: 16, marginTop: 2 },
-  chipsScroll: { paddingHorizontal: 16, paddingVertical: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
-  chipInactive: { backgroundColor: "transparent", borderColor: T.border },
-  chipText: { fontFamily: "Inter_500Medium", fontSize: 12 },
-  dot: { width: 7, height: 7, borderRadius: 3.5 },
+  filterRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  filterScroll: { paddingHorizontal: 14, paddingVertical: 9, gap: 7, flexDirection: "row", alignItems: "center" },
+  clearBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: T.border, backgroundColor: T.surface },
+  clearBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec },
   countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
   list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
   card: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: T.r14, borderWidth: 1, borderColor: T.border, padding: 14, gap: 12 },

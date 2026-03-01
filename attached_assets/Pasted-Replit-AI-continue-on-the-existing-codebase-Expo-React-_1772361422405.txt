@@ -1,0 +1,117 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TS backend + Postgres + Drizzle).
+Do NOT re-scaffold. Implement professional filter UX for Admin Users tab and add clinic filtering for Admin Invoices list.
+
+GOALS:
+1) Admin Users screen filters must become premium/professional:
+   - icon-based filter bar
+   - dropdown pickers (modal/bottom sheet)
+   - active filter chips
+   - debounce search (case-insensitive)
+   - clear/reset filters button
+2) Admin Invoices list must include clinic-based filtering (dropdown), consistent UX with Users tab.
+
+NON-NEGOTIABLE:
+- No heavy UI framework unless already installed.
+- Keep white theme style (clean cards, subtle borders).
+- Must handle loading/empty/error states elegantly.
+- Keep query building safe: do not send empty/undefined params.
+- Search must be case-insensitive (backend should already support it, verify and fix if needed).
+
+========================================================
+A) USERS TAB — PROFESSIONAL FILTER BAR UX
+========================================================
+Target screen:
+- Admin Users screen route in the app (where Admin views unified list of MANAGER + PATIENT)
+
+UI SPEC:
+1) Top Filter Bar (single row, scrollable horizontally if needed):
+- Search input (left) with 🔍 icon; placeholder: "Search name/email"
+- Clinic dropdown button with 🏥 icon
+- Type dropdown button with 👤 icon (ALL / MANAGER / PATIENT)
+- Status dropdown button with ✅ icon (ALL / ACTIVE / INACTIVE)
+- Clear filters icon button 🧹 (only visible when any filter active)
+
+2) Dropdown behavior (mobile-friendly):
+- When tapping Clinic/Type/Status:
+  - open a modal or bottom sheet picker
+  - show a list of options
+  - clinic picker includes local search within clinics list if clinics > 10
+  - selecting an option closes picker and triggers fetch
+
+3) Active Filters Chips (below filter bar):
+- Show chips for selected clinic/type/status (and optionally search if non-empty)
+- Each chip has an X to remove that filter instantly
+
+4) Fetch behavior:
+- Search input uses 400ms debounce before calling API
+- Any filter change triggers list refresh
+- Pagination resets to page 1 when filters change
+
+5) List row design:
+- Primary: displayName
+- Secondary: email (if manager/admin) or masked patientKey (if patient)
+- Right side: Status pill + clinic name (or clinic pill)
+- Tapping row opens detail if exists; if not, keep as read-only
+
+Backend verification:
+- Ensure GET /v1/admin/users supports query params:
+  - clinicId, entityType, status, search, page, pageSize
+- Ensure search is case-insensitive:
+  - patient fullName search (ILIKE)
+  - manager email search (ILIKE)
+Fix backend if needed.
+
+========================================================
+B) INVOICES LIST — CLINIC FILTER (DROPDOWN)
+========================================================
+Target screen:
+- Admin Invoices list screen
+
+UI SPEC:
+- Add Clinic dropdown with 🏥 icon to invoice filters bar (same component style as Users)
+- Existing filters: Period (YYYY-MM dropdown), Status (PENDING/UNPAID/PAID)
+- Add Clear filters button consistent with Users
+
+Behavior:
+- Selecting clinic filters invoices by clinicId
+- Query builder must omit empty params to avoid crashes
+- Show "No invoices found" empty state when filters produce no results
+
+Backend verification:
+- Ensure invoices list endpoint supports clinicId filter:
+  - GET /v1/admin/invoices?period=&status=&clinicId=
+If missing or buggy, implement/fix on backend with zod validation.
+
+========================================================
+C) SHARED UI COMPONENTS (reusable, premium)
+========================================================
+Create reusable components (white theme):
+- components/filters/FilterBar.tsx
+- components/filters/FilterButton.tsx (icon + label + chevron)
+- components/filters/FilterPickerModal.tsx (modal/bottom sheet list with search)
+- components/filters/ActiveFilterChips.tsx
+- hooks/useDebouncedValue.ts
+
+Use these components for both Users and Invoices screens (consistency).
+
+========================================================
+D) OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Files added/changed
+2) Screens updated (Users + Invoices)
+3) Any backend changes (endpoints/query parsing)
+4) Manual QA checklist:
+   - Users: clinic dropdown filter works, type/status filters work, search is case-insensitive, chips remove filters, clear works
+   - Invoices: clinic dropdown filters list, period/status still work, clear works, no crash
+5) Notes about performance (debounce, pagination reset)
+
+IMPLEMENTATION ORDER:
+1) Build reusable filter UI components (FilterBar + Picker + Chips + debounce hook)
+2) Upgrade Users screen to use new filter bar and safe query builder
+3) Upgrade Invoices screen to add clinic dropdown filter and safe query builder
+4) Verify backend supports filters; fix if needed
+5) Final polish: empty/loading/error states + consistent spacing
+
+Proceed now. Keep it clean and premium.
+END.

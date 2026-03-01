@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -26,10 +26,14 @@ import {
   AdminUserCreated, CreateUserInput,
 } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FilterButton } from "@/components/filters/FilterButton";
+import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
+import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 
 type EntityType = "ALL" | "MANAGER" | "PATIENT" | "ADMIN";
-const ENTITY_FILTERS: EntityType[] = ["ALL", "MANAGER", "PATIENT", "ADMIN"];
 const STATUS_FILTERS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function entityAccent(type: string): string {
   if (type === "PATIENT") return T.accent;
@@ -50,11 +54,13 @@ export default function UsersScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 400);
+
   const [entityTypeFilter, setEntityTypeFilter] = useState<EntityType>("ALL");
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [clinicFilter, setClinicFilter] = useState<string>(params.preselectedClinicId ?? "");
+
+  const [pickerOpen, setPickerOpen] = useState<"clinic" | "type" | "status" | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -63,13 +69,6 @@ export default function UsersScreen() {
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
   const [newClinicId, setNewClinicId] = useState(params.preselectedClinicId ?? "");
-
-  function handleSearchChange(text: string) {
-    setSearch(text);
-    if (debounceTimer) clearTimeout(debounceTimer);
-    const t = setTimeout(() => setDebouncedSearch(text), 300);
-    setDebounceTimer(t);
-  }
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<UnifiedListResponse>({
     queryKey: ["/v1/admin/users", debouncedSearch, entityTypeFilter, statusFilter, clinicFilter],
@@ -83,8 +82,8 @@ export default function UsersScreen() {
   });
 
   const { data: clinicsData } = useQuery<ClinicListResponse>({
-    queryKey: ["/v1/admin/clinics", ""],
-    queryFn: () => listClinics({ pageSize: 100 }),
+    queryKey: ["/v1/admin/clinics", "all"],
+    queryFn: () => listClinics({ pageSize: 200 }),
   });
 
   const createMutation = useMutation({
@@ -122,6 +121,39 @@ export default function UsersScreen() {
 
   const clinics = clinicsData?.rows ?? [];
 
+  const clinicOptions: PickerOption[] = useMemo(
+    () => clinics.map((c) => ({ value: c.id, label: c.name })),
+    [clinics]
+  );
+
+  const typeOptions: PickerOption[] = [
+    { value: "MANAGER", label: "Manager" },
+    { value: "PATIENT", label: "Patient" },
+    { value: "ADMIN", label: "Admin" },
+  ];
+
+  const statusOptions: PickerOption[] = [
+    { value: "ACTIVE", label: "Active" },
+    { value: "INACTIVE", label: "Inactive" },
+    { value: "SUSPENDED", label: "Suspended" },
+  ];
+
+  const selectedClinicName = clinics.find((c) => c.id === clinicFilter)?.name;
+  const hasFilters = !!clinicFilter || entityTypeFilter !== "ALL" || statusFilter !== "ALL" || !!search;
+
+  const activeChips: ActiveChip[] = [];
+  if (search) activeChips.push({ key: "search", label: `"${search}"`, onRemove: () => setSearch("") });
+  if (clinicFilter && selectedClinicName) activeChips.push({ key: "clinic", label: selectedClinicName, onRemove: () => setClinicFilter("") });
+  if (entityTypeFilter !== "ALL") activeChips.push({ key: "type", label: entityTypeFilter, onRemove: () => setEntityTypeFilter("ALL") });
+  if (statusFilter !== "ALL") activeChips.push({ key: "status", label: statusFilter, onRemove: () => setStatusFilter("ALL") });
+
+  function clearAllFilters() {
+    setSearch("");
+    setClinicFilter("");
+    setEntityTypeFilter("ALL");
+    setStatusFilter("ALL");
+  }
+
   return (
     <View style={styles.root}>
       <AdminHeader
@@ -144,68 +176,47 @@ export default function UsersScreen() {
             placeholder="Search by name or email…"
             placeholderTextColor={T.textMuted}
             value={search}
-            onChangeText={handleSearchChange}
+            onChangeText={setSearch}
             autoCapitalize="none"
+            returnKeyType="search"
           />
           {search.length > 0 && (
-            <Pressable onPress={() => { setSearch(""); setDebouncedSearch(""); }} hitSlop={8}>
+            <Pressable onPress={() => setSearch("")} hitSlop={8}>
               <Ionicons name="close-circle" size={16} color={T.textMuted} />
             </Pressable>
           )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-          {ENTITY_FILTERS.map((f) => {
-            const c = f === "ALL" ? T.primary : entityAccent(f);
-            const active = entityTypeFilter === f;
-            return (
-              <Pressable
-                key={f}
-                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
-                onPress={() => setEntityTypeFilter(f)}
-              >
-                {f !== "ALL" && <Ionicons name={entityIcon(f) as any} size={11} color={active ? c : T.textMuted} />}
-                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{f}</Text>
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            <FilterButton
+              icon="business-outline"
+              label="Clinic"
+              value={selectedClinicName}
+              onPress={() => setPickerOpen("clinic")}
+            />
+            <FilterButton
+              icon="person-outline"
+              label="Type"
+              value={entityTypeFilter !== "ALL" ? entityTypeFilter : undefined}
+              onPress={() => setPickerOpen("type")}
+            />
+            <FilterButton
+              icon="checkmark-circle-outline"
+              label="Status"
+              value={statusFilter !== "ALL" ? statusFilter : undefined}
+              onPress={() => setPickerOpen("status")}
+            />
+            {hasFilters && (
+              <Pressable style={styles.clearBtn} onPress={clearAllFilters}>
+                <Ionicons name="refresh-outline" size={13} color={T.textSec} />
+                <Text style={styles.clearBtnText}>Reset</Text>
               </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-          {STATUS_FILTERS.map((s) => {
-            const active = statusFilter === s;
-            const c = s === "ACTIVE" ? T.success : s === "INACTIVE" ? T.textSec : s === "SUSPENDED" ? T.danger : T.primary;
-            return (
-              <Pressable
-                key={s}
-                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
-                onPress={() => setStatusFilter(s)}
-              >
-                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{s}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {clinics.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-            <Pressable
-              style={[styles.chip, !clinicFilter ? styles.chipActive : styles.chipInactive]}
-              onPress={() => setClinicFilter("")}
-            >
-              <Text style={[styles.chipText, { color: !clinicFilter ? T.primary : T.textSec }]}>All Clinics</Text>
-            </Pressable>
-            {clinics.map((c) => (
-              <Pressable
-                key={c.id}
-                style={[styles.chip, clinicFilter === c.id ? styles.chipActive : styles.chipInactive]}
-                onPress={() => setClinicFilter(clinicFilter === c.id ? "" : c.id)}
-              >
-                <Text style={[styles.chipText, { color: clinicFilter === c.id ? T.primary : T.textSec }]} numberOfLines={1}>{c.name}</Text>
-              </Pressable>
-            ))}
+            )}
           </ScrollView>
-        )}
+        </View>
+
+        <ActiveFilterChips chips={activeChips} onClearAll={clearAllFilters} />
       </View>
 
       {isLoading ? (
@@ -228,6 +239,35 @@ export default function UsersScreen() {
           renderItem={({ item }) => <EntityCard item={item} />}
         />
       )}
+
+      <FilterPickerModal
+        visible={pickerOpen === "clinic"}
+        title="Filter by Clinic"
+        options={clinicOptions}
+        selected={clinicFilter}
+        onSelect={setClinicFilter}
+        onClose={() => setPickerOpen(null)}
+        searchable={clinicOptions.length > 6}
+        allLabel="All Clinics"
+      />
+      <FilterPickerModal
+        visible={pickerOpen === "type"}
+        title="Filter by Type"
+        options={typeOptions}
+        selected={entityTypeFilter !== "ALL" ? entityTypeFilter : ""}
+        onSelect={(v) => setEntityTypeFilter((v || "ALL") as EntityType)}
+        onClose={() => setPickerOpen(null)}
+        allLabel="All Types"
+      />
+      <FilterPickerModal
+        visible={pickerOpen === "status"}
+        title="Filter by Status"
+        options={statusOptions}
+        selected={statusFilter !== "ALL" ? statusFilter : ""}
+        onSelect={(v) => setStatusFilter((v || "ALL") as StatusFilter)}
+        onClose={() => setPickerOpen(null)}
+        allLabel="All Statuses"
+      />
 
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.sheetOverlay}>
@@ -379,14 +419,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   newBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
   newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
-  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, gap: 2, paddingBottom: 6 },
+  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
-  chipsScroll: { paddingHorizontal: 16, paddingVertical: 3 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 7 },
-  chipActive: { backgroundColor: T.primary + "12", borderColor: T.primary },
-  chipInactive: { backgroundColor: "transparent", borderColor: T.border },
-  chipText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  filterRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  filterScroll: { paddingHorizontal: 14, paddingVertical: 9, gap: 7, flexDirection: "row", alignItems: "center" },
+  clearBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: T.border, backgroundColor: T.surface },
+  clearBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec },
   countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
   list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
   card: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: T.r14, borderWidth: 1, borderColor: T.border, padding: 14, gap: 12 },
