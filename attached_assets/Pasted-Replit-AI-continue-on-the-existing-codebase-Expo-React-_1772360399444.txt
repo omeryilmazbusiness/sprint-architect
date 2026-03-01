@@ -1,0 +1,173 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + Postgres + Drizzle).
+Do NOT re-scaffold. Improve ADMIN authentication and Settings to a professional, enterprise-grade level.
+
+SCOPE:
+1) Implement a secure, professional Change Password flow for ADMIN users.
+2) Upgrade Admin Settings screen UX (white theme, premium) with security/system/admin sections.
+3) Add “Logout all devices” (revoke all refresh tokens) for Admin.
+4) Add rate limiting and brute-force protections on auth endpoints (especially admin login and change password).
+5) Add audit logs for security actions (password changes, session revokes).
+
+NON-NEGOTIABLE:
+- Keep RBAC strict: only ADMIN can use these features.
+- Use zod validation everywhere.
+- Never store plain passwords. Use bcrypt.
+- Refresh tokens must be revoked properly (DB-driven).
+- UI must have loading/error/empty states and confirmation modals.
+- Keep existing login working; extend it cleanly.
+
+========================================================
+A) BACKEND — AUTH HARDENING (ADMIN)
+========================================================
+1) Password policy (server-side enforce)
+Create a reusable validator for new passwords:
+- minLength 12
+- at least 1 uppercase, 1 lowercase, 1 number, 1 special char
+- reject common weak passwords (basic list) and reject same as email
+Return error code: PASSWORD_POLICY_VIOLATION
+
+2) Rate limiting / brute force protection
+Implement rate limits (IP + identifier based):
+- POST /v1/auth/login (admin/manager)
+- POST /v1/admin/auth/change-password
+- POST /v1/auth/refresh
+Rules (reasonable defaults):
+- login: 5 attempts per 10 minutes per IP + per email
+- change-password: 3 attempts per 10 minutes per userId
+Return error code: TOO_MANY_ATTEMPTS
+Log rate-limit events.
+
+3) Change Password endpoint (ADMIN only)
+Endpoint:
+- POST /v1/admin/auth/change-password
+Body:
+{ currentPassword: string, newPassword: string }
+Behavior:
+- verify currentPassword matches stored hash
+- validate newPassword with policy
+- update user.passwordHash with bcrypt(newPassword)
+- revoke ALL refresh tokens for this admin (logout all devices)
+- optionally also revoke current refresh token; user must login again (or issue new tokens)
+- create audit log entry: ADMIN_PASSWORD_CHANGED
+Return: 204 or {ok:true}
+
+Error codes:
+- AUTH_INVALID_CREDENTIALS (currentPassword wrong)
+- PASSWORD_POLICY_VIOLATION
+- AUTH_FORBIDDEN (non-admin)
+
+4) Logout all devices (ADMIN only)
+Endpoint:
+- POST /v1/admin/auth/logout-all
+Behavior:
+- revoke all refresh tokens for this admin userId
+- audit log: ADMIN_LOGOUT_ALL
+Return 204
+
+5) “Last login” tracking (professional)
+- On successful login, update users.lastLoginAt
+- Add users.lastLoginIp (optional)
+- Add audit log: ADMIN_LOGIN_SUCCESS (or USER_LOGIN_SUCCESS)
+
+========================================================
+B) BACKEND — AUDIT LOGS (SECURITY)
+========================================================
+Ensure audit_logs captures:
+- action, actorId, actorRole, metadata, createdAt
+Add entries for:
+- login success/failure (admin)
+- password change
+- logout all
+- invoice status changes (if not already)
+Keep payload minimal and safe (no secrets).
+
+Add endpoint (ADMIN only):
+- GET /v1/admin/audit-logs?limit=20
+Return last 20 entries, newest first.
+
+========================================================
+C) MOBILE — ADMIN SETTINGS PREMIUM UX (WHITE THEME)
+========================================================
+Update Admin Settings screen (use your existing white theme components if available):
+Sections (cards):
+1) Profile
+- Email, Role, Last login (date/time)
+- Environment badge (DEV/PROD) from config
+
+2) Security
+- Change Password (opens a dedicated screen or modal)
+- Logout
+- Logout all devices (with confirmation modal)
+- (Optional placeholder) 2FA “Coming soon” (disabled row)
+
+3) Administration
+- Manage Clinics
+- Manage Users
+- Manage Invoices
+
+4) System
+- System Health card:
+  - calls /health and displays status
+  - optionally DB ping endpoint /v1/admin/system/ping (if needed)
+- Scheduler status (if you have it):
+  - last invoice run time, last report time (if endpoints exist; otherwise show “Coming soon” safely)
+
+5) Audit (small list)
+- Show last 10 audit logs from /v1/admin/audit-logs
+- Each row: action + time + short metadata
+
+UX Requirements:
+- Use a reusable SettingsRow component (icon/title/subtitle/chevron)
+- Show inline validation errors on change password
+- Use secure inputs (password type) and “show/hide” toggle
+- Disable submit while loading
+- After password change success:
+  - show success toast
+  - force logout (because all tokens revoked) and redirect to login
+
+Routes:
+- Add screen: app/(admin)/settings/change-password.tsx (or similar)
+- Ensure only ADMIN can access.
+
+========================================================
+D) WEB/APP AUTH EXPERIENCE IMPROVEMENTS (optional but recommended)
+- On login screen:
+  - show friendly error messages for invalid credentials, too many attempts, clinic suspended
+  - “Remember me” remains as current storage behavior
+- Ensure token refresh failures redirect to login cleanly.
+
+========================================================
+E) TESTS
+Add automated tests for:
+1) password policy validator
+2) change password success revokes refresh tokens
+3) logout-all revokes refresh tokens
+4) rate limiting triggers TOO_MANY_ATTEMPTS
+5) audit logs endpoint returns entries
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+After implementation print:
+1) Files changed/added (server + mobile)
+2) New endpoints + sample curl:
+   - change-password
+   - logout-all
+   - audit-logs
+3) DB schema changes + migration commands (if lastLoginAt added)
+4) Manual QA checklist:
+   - admin login, lastLoginAt updates
+   - change password with weak password -> blocked
+   - change password success -> logged out -> must login again with new password
+   - logout-all -> other sessions invalid
+   - rate limit triggers after repeated attempts
+   - settings screen shows profile/security/system/audit sections cleanly
+5) Any remaining TODO (2FA, reset password) clearly listed
+
+IMPLEMENTATION ORDER:
+1) Backend: password policy + endpoints + audit logs + lastLoginAt
+2) Backend: rate limiting on auth endpoints
+3) Mobile: settings redesign + change password screen + logout all
+4) Tests + final verification
+
+Proceed now. Keep everything clean and professional.
+END.

@@ -84,6 +84,8 @@ export const users = pgTable("users", {
   status: userStatusEnum("status").notNull().default("ACTIVE"),
   statusReason: text("status_reason"),
   mustChangePassword: boolean("must_change_password").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  lastLoginIp: text("last_login_ip"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -2,6 +2,7 @@ import { db } from "../db";
 import { users, refreshTokens, devices, patients } from "@shared/schema";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import crypto from "crypto";
+import { hashPassword } from "../auth/password";
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -88,5 +89,16 @@ export const authRepo = {
     await db.update(devices)
       .set({ revokedAt: new Date() })
       .where(and(eq(devices.patientId, patientId), isNull(devices.revokedAt)));
+  },
+
+  async updateLastLogin(userId: string, ip?: string) {
+    await db.update(users)
+      .set({ lastLoginAt: new Date(), ...(ip ? { lastLoginIp: ip } : {}) })
+      .where(eq(users.id, userId));
+  },
+
+  async updatePassword(userId: string, newPassword: string) {
+    const passwordHash = await hashPassword(newPassword);
+    await db.update(users).set({ passwordHash, mustChangePassword: false }).where(eq(users.id, userId));
   },
 };

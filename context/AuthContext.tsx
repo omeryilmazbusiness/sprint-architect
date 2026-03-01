@@ -18,6 +18,7 @@ export interface AuthUser {
   fullName?: string;
   role: UserRole;
   clinicId: string | null;
+  lastLoginAt?: string | null;
 }
 
 interface AuthTokens {
@@ -124,12 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await apiPost<{
         accessToken: string;
         refreshToken: string;
-        user: { id: string; email: string; role: UserRole; clinicId: string | null };
+        user: { id: string; email: string; role: UserRole; clinicId: string | null; lastLoginAt?: string | null };
       }>("/v1/auth/login", { email, password });
 
       await persistSession(
         { accessToken: data.accessToken, refreshToken: data.refreshToken },
-        { id: data.user.id, email: data.user.email, role: data.user.role, clinicId: data.user.clinicId },
+        { id: data.user.id, email: data.user.email, role: data.user.role, clinicId: data.user.clinicId, lastLoginAt: data.user.lastLoginAt ?? null },
       );
       return data.user.role;
     },

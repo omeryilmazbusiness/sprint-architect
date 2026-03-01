@@ -14,13 +14,20 @@ import { db } from "../db";
 import { clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { runBillingCycle } from "../billing/billingService";
+import { auditLog } from "../api/auditLogger";
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: 10 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many requests, please try again later." },
+  validate: false,
+  keyGenerator: (req) => {
+    const ip = (req.ip ?? "unknown").replace(/^::ffff:/, "");
+    const email = (req.body?.email ?? "").toLowerCase();
+    return `${ip}:${email}`;
+  },
+  message: { code: "TOO_MANY_ATTEMPTS", message: "Too many login attempts. Please try again in 10 minutes." },
 });
 
 const router = Router();
@@ -91,6 +98,10 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
 
   const { accessToken, refreshToken } = issueTokens(user);
 
+  const ip = req.ip ?? req.socket?.remoteAddress;
+  authRepo.updateLastLogin(user.id, ip).catch(() => {});
+  auditLog({ actorId: user.id, actorRole: user.role, action: "USER_LOGIN_SUCCESS", metadata: { email: user.email, ip } });
+
   if (user.role === "ADMIN") {
     runBillingCycle().catch((e) => console.error("[billing] login trigger error:", e));
   } else if (user.clinicId) {
@@ -106,6 +117,7 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
       role: user.role,
       clinicId: user.clinicId,
       mustChangePassword: (user as any).mustChangePassword ?? false,
+      lastLoginAt: (user as any).lastLoginAt?.toISOString() ?? null,
     },
   });
 });

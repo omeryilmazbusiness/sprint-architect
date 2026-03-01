@@ -7,12 +7,99 @@ import { userRepo, generateSecurePassword } from "../repositories/userRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
-import { clinics, users, invoices } from "@shared/schema";
-import { eq, count, and } from "drizzle-orm";
+import { clinics, users, invoices, auditLogs } from "@shared/schema";
+import { eq, count, and, desc, lt } from "drizzle-orm";
 import { markOverdueInvoicesAsUnpaid } from "../billing/billingService";
+import { verifyPassword } from "../auth/password";
+import { authRepo } from "../repositories/authRepo";
+import { validatePasswordPolicy } from "../auth/passwordPolicy";
+import rateLimit from "express-rate-limit";
+
+const changePasswordLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: (req) => req.actor?.sub ?? (req.ip ?? "unknown").replace(/^::ffff:/, ""),
+  message: { code: "TOO_MANY_ATTEMPTS", message: "Too many password change attempts. Please try again in 10 minutes." },
+});
 
 const router = Router();
 router.use(authMiddleware, requireRole("ADMIN"));
+
+// ─── Admin Security Endpoints ────────────────────────────────────────────────
+
+const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(12),
+});
+
+router.post("/auth/change-password", changePasswordLimiter, async (req, res, next) => {
+  try {
+    const parsed = ChangePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError("VALIDATION_ERROR", parsed.error.issues[0].message, 422);
+    }
+    const { currentPassword, newPassword } = parsed.data;
+    const userId = req.actor!.sub;
+
+    const user = await authRepo.findUserById(userId);
+    if (!user) throw new AppError("NOT_FOUND", "User not found", 404);
+
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!valid) {
+      auditLog({ actorId: userId, actorRole: "ADMIN", action: "ADMIN_PASSWORD_CHANGE_FAILED", metadata: { reason: "invalid_current_password" } });
+      throw new AppError("AUTH_INVALID_CREDENTIALS", "Current password is incorrect", 401);
+    }
+
+    validatePasswordPolicy(newPassword, user.email);
+
+    await authRepo.updatePassword(userId, newPassword);
+    await authRepo.revokeAllRefreshTokensForUser(userId);
+    auditLog({ actorId: userId, actorRole: "ADMIN", action: "ADMIN_PASSWORD_CHANGED", metadata: { email: user.email } });
+
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/auth/logout-all", async (req, res, next) => {
+  try {
+    const userId = req.actor!.sub;
+    await authRepo.revokeAllRefreshTokensForUser(userId);
+    auditLog({ actorId: userId, actorRole: "ADMIN", action: "ADMIN_LOGOUT_ALL" });
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/audit-logs", async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) ?? "20"), 100);
+    const rows = await db.query.auditLogs.findMany({
+      orderBy: desc(auditLogs.createdAt),
+      limit,
+    });
+    res.json(rows.map((r) => ({
+      id: r.id,
+      action: r.action,
+      actorId: r.actorId,
+      actorRole: r.actorRole,
+      clinicId: r.clinicId,
+      resourceType: r.resourceType,
+      resourceId: r.resourceId,
+      metadata: r.metadata ? JSON.parse(r.metadata) : null,
+      createdAt: r.createdAt,
+    })));
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Metrics ────────────────────────────────────────────────────────────────
 
 const periodRegex = /^\d{4}-\d{2}$/;
 const validatePeriod = (period: string) => {
