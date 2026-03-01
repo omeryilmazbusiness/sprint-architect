@@ -31,5 +31,7 @@ export const Errors = {
   NOT_FOUND: (msg = "Not found") =>
     new AppError("NOT_FOUND", msg, 404),
   CLINIC_SUSPENDED: () =>
-    new AppError("CLINIC_SUSPENDED", "Your clinic account is currently suspended. Contact support.", 403),
+    new AppError("CLINIC_SUSPENDED_BILLING", "Your clinic account is suspended due to an unpaid invoice. Please contact your administrator.", 403),
+  CLINIC_SUSPENDED_BILLING: () =>
+    new AppError("CLINIC_SUSPENDED_BILLING", "Your clinic account is suspended due to an unpaid invoice. Please contact your administrator.", 403),
 };

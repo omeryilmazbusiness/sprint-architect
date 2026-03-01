@@ -1,11 +1,34 @@
 import { db } from "../db";
-import { clinics, invoices, patients } from "@shared/schema";
-import { eq, and, lt, not, gte, inArray, isNotNull } from "drizzle-orm";
+import { clinics, invoices, patients, users } from "@shared/schema";
+import { eq, and, lt, not, gte, inArray, isNotNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { auditLog } from "../api/auditLogger";
 
-function currentPeriod(): string {
-  const now = new Date();
+const ISTANBUL_TZ = "Europe/Istanbul";
+
+function toIstanbul(date: Date): Date {
+  const formatted = date.toLocaleString("en-US", { timeZone: ISTANBUL_TZ });
+  return new Date(formatted);
+}
+
+export function getLastDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+export function isLastDayOfMonth(): boolean {
+  const now = toIstanbul(new Date());
+  const lastDay = getLastDayOfMonth(now.getFullYear(), now.getMonth() + 1);
+  return now.getDate() === lastDay;
+}
+
+export function computeLastDayDueAt(year: number, month: number): Date {
+  const lastDay = getLastDayOfMonth(year, month);
+  const dueAtLocal = new Date(year, month - 1, lastDay, 23, 59, 59, 0);
+  return dueAtLocal;
+}
+
+export function currentPeriod(): string {
+  const now = toIstanbul(new Date());
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -18,73 +41,122 @@ export function computeNextInvoiceDate(billingAnchorDay: number): Date {
   return anchorThisMonth;
 }
 
-async function generateInvoiceForClinic(
-  clinic: typeof clinics.$inferSelect,
-  period: string
-): Promise<void> {
-  const existing = await db.query.invoices.findFirst({
-    where: and(eq(invoices.clinicId, clinic.id), eq(invoices.period, period)),
+export async function generatePendingInvoicesForPeriod(period: string): Promise<typeof invoices.$inferSelect[]> {
+  const allClinics = await db.query.clinics.findMany({
+    where: not(eq(clinics.status, "INACTIVE")),
   });
-  if (existing) return;
+  const generatedInvoices = [];
 
   const [year, month] = period.split("-").map(Number);
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 1);
+  const dueAt = computeLastDayDueAt(year, month);
 
-  const [{ cnt }] = await db
-    .select({ cnt: sql<number>`count(*)::int` })
-    .from(patients)
-    .where(and(eq(patients.clinicId, clinic.id), gte(patients.createdAt, startDate), lt(patients.createdAt, endDate)));
+  for (const clinic of allClinics) {
+    const existing = await db.query.invoices.findFirst({
+      where: and(eq(invoices.clinicId, clinic.id), eq(invoices.period, period)),
+    });
+    if (existing && existing.status === "PAID") continue;
 
-  const unitPrice = clinic.billingUnitPrice ?? parseFloat(process.env.DEFAULT_UNIT_PRICE ?? "50");
-  const total = cnt * unitPrice;
-  const graceDays = parseInt(process.env.BILLING_GRACE_DAYS ?? "7");
-  const issuedAt = new Date();
-  const dueAt = new Date(issuedAt.getTime() + graceDays * 24 * 60 * 60 * 1000);
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.clinicId, clinic.id),
+          gte(patients.createdAt, startDate),
+          lt(patients.createdAt, endDate)
+        )
+      );
 
-  await db.insert(invoices).values({
-    clinicId: clinic.id,
-    period,
-    patientCount: cnt,
-    unitPrice,
-    total,
-    currency: clinic.currency,
-    status: "ISSUED",
-    issuedAt,
-    dueAt,
-  });
+    const unitPrice = clinic.billingUnitPrice ?? parseFloat(process.env.DEFAULT_UNIT_PRICE ?? "50");
+    const total = count * unitPrice;
+    const now = new Date();
 
-  auditLog({
-    clinicId: clinic.id,
-    actorId: "system",
-    actorRole: "SYSTEM",
-    action: "invoice.generated",
-    metadata: { period, patientCount: cnt, total, unitPrice },
-  });
+    let invoice;
+    if (existing) {
+      [invoice] = await db
+        .update(invoices)
+        .set({
+          patientCount: count,
+          unitPrice,
+          total,
+          currency: clinic.currency,
+          issuedAt: now,
+          dueAt,
+        } as any)
+        .where(eq(invoices.id, existing.id))
+        .returning();
+    } else {
+      [invoice] = await db
+        .insert(invoices)
+        .values({
+          clinicId: clinic.id,
+          period,
+          patientCount: count,
+          unitPrice,
+          total,
+          currency: clinic.currency,
+          status: "PENDING",
+          issuedAt: now,
+          dueAt,
+        })
+        .returning();
+    }
+    generatedInvoices.push(invoice);
+
+    auditLog({
+      clinicId: clinic.id,
+      actorId: "system",
+      actorRole: "SYSTEM",
+      action: "invoice.generated",
+      metadata: { period, patientCount: count, total, unitPrice, dueAt },
+    });
+  }
+
+  return generatedInvoices;
 }
 
-export async function checkAndSuspendOverdue(): Promise<void> {
+export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
   const now = new Date();
 
   const overdueInvoices = await db.query.invoices.findMany({
-    where: and(not(eq(invoices.status, "PAID")), isNotNull(invoices.dueAt), lt(invoices.dueAt as any, now)),
+    where: and(
+      eq(invoices.status, "PENDING"),
+      isNotNull(invoices.dueAt),
+      lt(invoices.dueAt as any, now)
+    ),
   });
 
   if (overdueInvoices.length === 0) return;
 
   const clinicIdsToSuspend = [...new Set(overdueInvoices.map((i) => i.clinicId))];
 
-  for (const clinicId of clinicIdsToSuspend) {
-    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
-    if (!clinic || clinic.status === "SUSPENDED") continue;
+  for (const inv of overdueInvoices) {
+    await db.update(invoices).set({ status: "UNPAID" }).where(eq(invoices.id, inv.id));
+  }
 
-    await db.update(clinics).set({ status: "SUSPENDED" }).where(eq(clinics.id, clinicId));
+  for (const clinicId of clinicIdsToSuspend) {
+    await db
+      .update(clinics)
+      .set({ status: "SUSPENDED", statusReason: "BILLING_UNPAID" } as any)
+      .where(eq(clinics.id, clinicId));
+
+    await db
+      .update(users)
+      .set({ status: "SUSPENDED", statusReason: "BILLING_SUSPENDED" } as any)
+      .where(
+        and(
+          eq(users.clinicId, clinicId),
+          or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
+        )
+      );
 
     auditLog({
       clinicId,
       actorId: "system",
       actorRole: "SYSTEM",
-      action: "clinic.suspended_due_to_unpaid_invoice",
+      action: "clinic.suspended_unpaid_invoice",
       metadata: {
         invoiceIds: overdueInvoices.filter((i) => i.clinicId === clinicId).map((i) => i.id),
       },
@@ -92,52 +164,36 @@ export async function checkAndSuspendOverdue(): Promise<void> {
   }
 }
 
-export async function reactivateClinicAfterPayment(clinicId: string): Promise<void> {
-  const now = new Date();
-  const remainingOverdue = await db.query.invoices.findFirst({
-    where: and(
-      eq(invoices.clinicId, clinicId),
-      not(eq(invoices.status, "PAID")),
-      isNotNull(invoices.dueAt),
-      lt(invoices.dueAt as any, now)
-    ),
-  });
+export async function reactivateClinicAfterPayment(clinicId: string, paidByUserId?: string): Promise<void> {
+  await db
+    .update(clinics)
+    .set({ status: "ACTIVE", statusReason: null } as any)
+    .where(eq(clinics.id, clinicId));
 
-  if (!remainingOverdue) {
-    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
-    if (clinic?.status === "SUSPENDED") {
-      await db.update(clinics).set({ status: "ACTIVE" }).where(eq(clinics.id, clinicId));
-      auditLog({
-        clinicId,
-        actorId: "system",
-        actorRole: "SYSTEM",
-        action: "clinic.reactivated_after_payment",
-      });
-    }
-  }
+  await db
+    .update(users)
+    .set({ status: "ACTIVE", statusReason: null } as any)
+    .where(
+      and(
+        eq(users.clinicId, clinicId),
+        or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
+      )
+    );
+
+  auditLog({
+    clinicId,
+    actorId: paidByUserId ?? "system",
+    actorRole: paidByUserId ? "ADMIN" : "SYSTEM",
+    action: "clinic.reactivated_after_payment",
+  });
+}
+
+export async function checkAndSuspendOverdue(): Promise<void> {
+  await markOverdueInvoicesAsUnpaid();
 }
 
 export async function runBillingCycle(targetClinicIds?: string[]): Promise<void> {
   try {
-    const today = new Date();
-    const todayDay = today.getDate();
-    const period = currentPeriod();
-
-    const conditions: any[] = [eq(clinics.status, "ACTIVE")];
-    if (targetClinicIds && targetClinicIds.length > 0) {
-      conditions.push(inArray(clinics.id, targetClinicIds));
-    }
-
-    const activeClinics = await db.query.clinics.findMany({
-      where: and(...conditions),
-    });
-
-    for (const clinic of activeClinics) {
-      if (todayDay >= clinic.billingAnchorDay) {
-        await generateInvoiceForClinic(clinic, period);
-      }
-    }
-
     await checkAndSuspendOverdue();
   } catch (err) {
     console.error("[billing] runBillingCycle error:", err);

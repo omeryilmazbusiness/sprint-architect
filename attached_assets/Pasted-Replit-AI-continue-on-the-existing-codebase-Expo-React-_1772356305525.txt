@@ -1,0 +1,159 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM).
+Do NOT re-scaffold. Implement Admin UX improvements + Billing enforcement rules.
+
+BUSINESS REQUIREMENTS (MUST IMPLEMENT EXACTLY):
+1) Users tab:
+- Admin “Users” ekranında clinic’e göre filtreleme olacak (dropdown).
+- Ek filtreler: role (ADMIN/MANAGER/PATIENT), status (ACTIVE/INACTIVE), search (email/name).
+- Pagination.
+
+2) Invoice statuses ONLY 3:
+- PENDING
+- UNPAID
+- PAID
+(Replace/normalize any old statuses; migrate safely.)
+
+3) Invoice generation & transitions (Europe/Istanbul timezone):
+- Invoice is created automatically on the LAST day of each month in the MORNING (choose 09:00 local time).
+  - Status starts as PENDING.
+  - It stays PENDING until 23:59 same day (midnight).
+- At 00:00 (next day) any still-PENDING invoice becomes UNPAID automatically.
+- When invoice becomes UNPAID:
+  - clinic becomes SUSPENDED immediately (or "PASSIVE" wording is okay but enforce as SUSPENDED state).
+  - That clinic’s MANAGER and PATIENT users must NOT be able to use the system at all:
+    - cannot login
+    - cannot call any API (even with existing tokens)
+    - show a clear error code CLINIC_SUSPENDED_BILLING
+- When Admin manually sets invoice to PAID in invoice detail:
+  - clinic becomes ACTIVE again
+  - clinic’s MANAGER and PATIENT users are re-enabled (ACTIVE)
+  - system use becomes available immediately
+
+4) Admin can manually set invoice status to PAID from Invoice Detail screen.
+- This must have a confirmation modal explaining the impact.
+
+UX REQUIREMENTS (ADMIN APP):
+A) Admin dashboard must be modern, premium, professional UX:
+- Use a reusable professional Header component
+- No “Attention needed” section anywhere
+- Dashboard sections/cards:
+  - KPI cards: Total Clinics, Active Clinics, Suspended Clinics, Pending Invoices, Unpaid Invoices
+  - Quick actions: Create Clinic, View Clinics, View Invoices
+  - Recent invoices list (last 5)
+  - Recent clinic status changes (Activity card) — neutral style, not “attention needed”
+
+B) Professional Header component:
+- Brand/logo left + screen title
+- Center optional global search (clinics/users/invoices)
+- Right side: user chip (admin email) + logout action
+- Implement as reusable component used across admin screens
+
+C) Clinic Detail page must be modern:
+- Show clinic info, status pill, services chips, contact/address, billing status
+- If clinic suspended, show reason: “Suspended due to UNPAID invoice”
+- Action button: “View Invoices” (filtered by this clinic)
+
+D) Invoice screens:
+- Invoices list filters:
+  - period (YYYY-MM)
+  - status (PENDING/UNPAID/PAID)
+  - clinic (dropdown)
+- Fix invoices filter bug robustly:
+  - do not send empty/undefined query params
+  - validate enums and period format on both client and server (zod)
+- Invoice detail:
+  - show invoice data + status
+  - if status is PENDING or UNPAID: show “Mark as PAID” button (ADMIN only)
+  - on PAID: show who paid + when (store paidAt/paidBy)
+
+BACKEND REQUIREMENTS:
+1) Database changes (Drizzle):
+- Ensure clinics table has:
+  - status: ACTIVE | SUSPENDED (and any others used)
+  - statusReason nullable (e.g., "BILLING_UNPAID")
+- users table:
+  - status: ACTIVE | INACTIVE
+  - statusReason nullable (e.g., "BILLING_SUSPENDED")
+- invoices table:
+  - id, clinicId, period (YYYY-MM), patientCount, unitPrice, currency, total, status(PENDING|UNPAID|PAID),
+    createdAt, dueAt (last day 23:59), paidAt nullable, paidByUserId nullable
+  - unique(clinicId, period)
+- Add necessary indexes.
+
+2) Enforce access blocking:
+- In auth/login endpoints:
+  - if user is MANAGER and clinic is SUSPENDED -> deny login with CLINIC_SUSPENDED_BILLING
+  - if PATIENT’s clinic is SUSPENDED -> deny patientKey login similarly
+- In auth middleware / request guard:
+  - for MANAGER requests, load clinic status and block if SUSPENDED
+  - for PATIENT requests, block if clinic SUSPENDED
+  - ADMIN should still access everything
+
+3) Scheduled jobs (cron-like):
+- Implement server-side scheduler using node-cron (or similar) with timezone Europe/Istanbul.
+- Job A (09:00 on last day of month):
+  - generate invoices for all clinics that should be billed for that month (idempotent)
+  - set status PENDING
+  - set dueAt = last day 23:59 local time
+- Job B (00:00 daily):
+  - find invoices where status=PENDING and dueAt < now -> set status UNPAID
+  - suspend those clinics and disable their users (manager+patients)
+- Provide a manual admin endpoint (optional) to generate invoices for a period for testing:
+  - POST /v1/admin/invoices/generate?period=YYYY-MM
+  - must be idempotent
+
+4) Admin invoice status update:
+- PUT /v1/admin/invoices/:id/status
+  body: { status: "PAID" }
+- When set to PAID:
+  - invoice.paidAt and paidByUserId set
+  - clinic set ACTIVE, statusReason null
+  - all clinic managers and patients set ACTIVE, statusReason null
+- Audit log: record billing status changes.
+
+5) Users list endpoint with filters:
+- GET /v1/admin/users?clinicId=&role=&status=&search=&page=&pageSize=
+- Return paginated results.
+
+TEST REQUIREMENTS:
+- Add automated tests (or extend existing) covering:
+  1) Pending -> Unpaid transition triggers clinic suspension and blocks manager/patient access
+  2) Admin sets invoice to PAID -> clinic + users re-activated and access restored
+  3) Users list filter by clinic works
+  4) Invoices filter doesn’t crash with empty params
+- Add a “scheduler simulation” helper for tests (inject Clock/Date provider).
+
+MOBILE IMPLEMENTATION:
+- Update Admin dashboard UI with modern layout + header/footer (if you already have footer)
+- Users tab: add clinic dropdown filter + role/status filter + search
+- Invoices list: fix filter bug, enforce status options PENDING/UNPAID/PAID
+- Invoice detail: add Mark as PAID flow with confirmation modal and success toast; refresh invoice + related clinic status view.
+
+OUTPUT REQUIREMENTS (MANDATORY):
+After implementing, print:
+1) Files changed/added
+2) DB schema changes + migration instructions and commands
+3) Endpoint list added/changed
+4) Scheduler details:
+   - cron expressions
+   - timezone setting
+   - how to test it manually (dev)
+5) Manual QA checklist:
+   - Create invoice (manual generate)
+   - Observe pending -> unpaid transition (simulate dueAt in test/dev)
+   - Verify suspended clinic manager cannot login
+   - Verify patient cannot login
+   - Mark paid in invoice detail and verify access restored
+   - Users tab clinic filter works
+6) Anything risky or TODO for production.
+
+IMPLEMENTATION ORDER:
+1) Backend DB schema + enums normalization (invoice statuses)
+2) Backend enforcement: block suspended clinic access in login + middleware
+3) Backend invoice status update + clinic/user activation/deactivation rules
+4) Scheduler jobs + manual generate endpoint for testing
+5) Mobile Admin dashboard header/UX + Users clinic filter + Invoice screens + bug fix
+6) Tests + final verification + docs update
+
+Proceed now. No “Attention needed” section.
+END.

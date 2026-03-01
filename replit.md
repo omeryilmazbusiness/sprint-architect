@@ -4,7 +4,7 @@
 
 HealthTour is a multi-tenant Health Tourism Operations SaaS platform built as a React Native (Expo) mobile app with an Express.js backend. The app serves three user roles: **ADMIN** (manages all clinics and users), **MANAGER** (manages patients/operations within a specific clinic), and **PATIENT** (mobile user with a simplified login flow).
 
-**Current state (Sprints 1-8 complete + UI Sprint):** Full multi-tenant Health Tourism SaaS. Redesigned admin dashboard (no Attention Needed, modern card layout, clinic list preview, AppHeader/AppFooter components). Dedicated Create Clinic screen with keyboard-safe layout, multi-select services (Rinoplasti/Göz/Diş), address/phone/email fields. Clinics table extended with address, contactPhone, contactEmail, services fields. Billing automation with clinic suspension/reactivation, auto-generated user passwords with one-time reveal, clinic detail with billing anchor day + invoice timeline, PDF document upload/download with S3/local storage, persistent DB auth tokens, rate limiting, audit logging, role-based dashboards for all three user types.
+**Current state (Sprints 1-9 complete + Billing Sprint):** Full multi-tenant Health Tourism SaaS. Invoice status enum migrated to PENDING/UNPAID/PAID (DRAFT→PENDING, ISSUED→UNPAID). Istanbul-timezone-aware billing scheduler with Job A (09:00 last day of month → generate PENDING invoices with dueAt) and Job B (00:00 daily → mark overdue PENDING→UNPAID, suspend clinic + disable managers/patients via statusReason). Admin "Mark as PAID" flow: restricted to PAID-only, records paidByUserId, reactivates clinic + all users. Admin dashboard shows 6 KPI tiles (3 clinics: Total/Active/Suspended, 3 invoices: Pending/Unpaid/Paid). Invoice detail screen has gradient hero, status-aware alert banners, and confirmation modal with impact list. Users list has status + clinic filter rows. Invoices list has color-coded PENDING/UNPAID/PAID filter chips.
 
 **Core domain concepts:**
 - **Clinic** = tenant. All clinic-bound resources carry a `clinicId`.
@@ -90,7 +90,7 @@ Preferred communication style: Simple, everyday language.
   - `documentTypes`, `patientDocuments` — document tracking workflow (`fileUrl`, `rejectionReason` on patientDocuments)
   - `refreshTokens` — DB-persisted JWT refresh tokens (hashed with SHA-256)
   - `devices` — patient device bindings (single-device enforcement)
-  - `invoices` — billing invoices per clinic per period (DRAFT/ISSUED/PAID)
+  - `invoices` — billing invoices per clinic per period (PENDING/UNPAID/PAID; paidByUserId; dueAt)
   - `auditLogs` — immutable audit trail for key actions
 - **Migration:** `npm run db:push` (drizzle-kit push)
 
@@ -141,7 +141,7 @@ All admin routes: `/v1/admin/*` (require ADMIN)
 | POST | /v1/admin/billing/run | Manually trigger billing cycle |
 | GET | /v1/admin/invoices | List all invoices (admin, paginated) |
 | GET | /v1/admin/invoices/:id | Get invoice by ID |
-| PUT | /v1/admin/invoices/:id/status | Update invoice status (DRAFT/ISSUED/PAID — PAID auto-reactivates clinic) |
+| PUT | /v1/admin/invoices/:id/status | Mark invoice as PAID only (records paidByUserId, auto-reactivates clinic + users) |
 | POST | /v1/patient/documents/:id/upload | Upload PDF (patient auth, PDF only, 10MB, 5/min) |
 | GET | /v1/documents/:id/download | Download PDF (auth required; ?token= query param supported) |
 | GET | /v1/patient/dashboard | Patient self-service dashboard |

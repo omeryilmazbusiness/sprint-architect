@@ -51,8 +51,8 @@ export const documentStatusEnum = pgEnum("document_status", [
 ]);
 
 export const invoiceStatusEnum = pgEnum("invoice_status", [
-  "DRAFT",
-  "ISSUED",
+  "PENDING",
+  "UNPAID",
   "PAID",
 ]);
 
@@ -66,6 +66,7 @@ export const clinics = pgTable("clinics", {
   contactEmail: text("contact_email"),
   services: text("services").default("[]"),
   status: clinicStatusEnum("status").notNull().default("ACTIVE"),
+  statusReason: text("status_reason"),
   billingUnitPrice: doublePrecision("billing_unit_price"),
   currency: text("currency").notNull().default("EUR"),
   billingAnchorDay: integer("billing_anchor_day").notNull().default(1),
@@ -81,6 +82,7 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("MANAGER"),
   clinicId: varchar("clinic_id").references(() => clinics.id),
   status: userStatusEnum("status").notNull().default("ACTIVE"),
+  statusReason: text("status_reason"),
   mustChangePassword: boolean("must_change_password").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -262,10 +264,11 @@ export const invoices = pgTable("invoices", {
   unitPrice: doublePrecision("unit_price").notNull().default(0),
   currency: text("currency").notNull().default("EUR"),
   total: doublePrecision("total").notNull().default(0),
-  status: invoiceStatusEnum("status").notNull().default("DRAFT"),
+  status: invoiceStatusEnum("status").notNull().default("PENDING"),
   issuedAt: timestamp("issued_at"),
   dueAt: timestamp("due_at"),
   paidAt: timestamp("paid_at"),
+  paidByUserId: varchar("paid_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -363,6 +366,7 @@ export const devicesRelations = relations(devices, ({ one }) => ({
 
 export const invoicesRelations = relations(invoices, ({ one }) => ({
   clinic: one(clinics, { fields: [invoices.clinicId], references: [clinics.id] }),
+  paidBy: one(users, { fields: [invoices.paidByUserId], references: [users.id] }),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({

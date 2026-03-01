@@ -8,8 +8,8 @@ import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
 import { clinics, users, invoices } from "@shared/schema";
-import { eq, count, and, not } from "drizzle-orm";
-import { runBillingCycle } from "../billing/billingService";
+import { eq, count, and } from "drizzle-orm";
+import { generatePendingInvoicesForPeriod, markOverdueInvoicesAsUnpaid } from "../billing/billingService";
 
 const router = Router();
 router.use(authMiddleware, requireRole("ADMIN"));
@@ -25,56 +25,41 @@ const validatePeriod = (period: string) => {
 
 router.get("/metrics", async (req, res, next) => {
   try {
-    runBillingCycle().catch((e) => console.error("[billing] metrics trigger:", e));
-
     const [
       [{ total: totalClinics }],
       [{ total: activeClinics }],
       [{ total: suspendedClinics }],
       [{ total: totalUsers }],
       [{ total: activeUsers }],
-      [{ total: draftInvoices }],
-      [{ total: issuedInvoices }],
+      [{ total: pendingInvoices }],
+      [{ total: unpaidInvoices }],
       [{ total: paidInvoices }],
-      overdueInvoices,
-      suspendedClinicsList,
-      clinicsWithoutManagers,
+      recentClinics,
     ] = await Promise.all([
       db.select({ total: count() }).from(clinics),
       db.select({ total: count() }).from(clinics).where(eq(clinics.status, "ACTIVE")),
       db.select({ total: count() }).from(clinics).where(eq(clinics.status, "SUSPENDED")),
       db.select({ total: count() }).from(users),
       db.select({ total: count() }).from(users).where(eq(users.status, "ACTIVE")),
-      db.select({ total: count() }).from(invoices).where(eq(invoices.status, "DRAFT")),
-      db.select({ total: count() }).from(invoices).where(eq(invoices.status, "ISSUED")),
+      db.select({ total: count() }).from(invoices).where(eq(invoices.status, "PENDING")),
+      db.select({ total: count() }).from(invoices).where(eq(invoices.status, "UNPAID")),
       db.select({ total: count() }).from(invoices).where(eq(invoices.status, "PAID")),
-      invoiceRepo.findOverdue(),
-      db.query.clinics.findMany({ where: eq(clinics.status, "SUSPENDED"), limit: 10 }),
-      db.query.clinics.findMany({
-        where: eq(clinics.status, "ACTIVE"),
-        columns: { id: true, name: true, createdAt: true },
-      }).then(async (allActive) => {
-        const result = [];
-        for (const c of allActive.slice(0, 50)) {
-          const mgr = await db.query.users.findFirst({
-            where: and(eq(users.clinicId, c.id), eq(users.role, "MANAGER")),
-            columns: { id: true },
-          });
-          if (!mgr) result.push({ id: c.id, name: c.name, createdAt: c.createdAt });
-        }
-        return result;
-      }),
+      db.query.clinics.findMany({ limit: 6, orderBy: (c, { desc }) => desc(c.createdAt) }),
     ]);
 
+    const recentInvoices = await invoiceRepo.list({ pageSize: 5, page: 1 });
+
     res.json({
-      clinics: { total: totalClinics, active: activeClinics, inactive: totalClinics - activeClinics - suspendedClinics, suspended: suspendedClinics },
-      users: { total: totalUsers, active: activeUsers },
-      invoices: { draft: draftInvoices, issued: issuedInvoices, paid: paidInvoices },
-      attentionNeeded: {
-        overdueInvoices: overdueInvoices.slice(0, 10),
-        suspendedClinics: suspendedClinicsList,
-        clinicsWithoutManagers,
+      clinics: {
+        total: totalClinics,
+        active: activeClinics,
+        inactive: totalClinics - activeClinics - suspendedClinics,
+        suspended: suspendedClinics,
       },
+      users: { total: totalUsers, active: activeUsers },
+      invoices: { pending: pendingInvoices, unpaid: unpaidInvoices, paid: paidInvoices },
+      recentInvoices: recentInvoices.rows,
+      recentClinics,
     });
   } catch (e) {
     next(e);
@@ -241,7 +226,6 @@ router.post("/users", async (req, res, next) => {
     if (existing) throw new AppError("CONFLICT", "Email already in use", 409);
 
     const generatedPassword = generateSecurePassword();
-
     const user = await userRepo.create({
       ...parsed.data,
       password: generatedPassword,
@@ -382,8 +366,8 @@ router.post("/invoices/generate", async (req, res, next) => {
 
 router.post("/billing/run", async (req, res, next) => {
   try {
-    await runBillingCycle();
-    res.json({ success: true, message: "Billing cycle completed" });
+    await markOverdueInvoicesAsUnpaid();
+    res.json({ success: true, message: "Billing overdue check completed" });
   } catch (e) {
     next(e);
   }
@@ -393,6 +377,9 @@ router.get("/invoices", async (req, res, next) => {
   try {
     const { period, clinicId, status, page, pageSize } = req.query as Record<string, string>;
     if (period) validatePeriod(period);
+    if (status && !["PENDING", "UNPAID", "PAID"].includes(status)) {
+      throw new AppError("VALIDATION_ERROR", "Status must be PENDING, UNPAID, or PAID", 400);
+    }
     const result = await invoiceRepo.list({
       period,
       clinicId,
@@ -416,22 +403,30 @@ router.get("/invoices/:id", async (req, res, next) => {
   }
 });
 
+const InvoiceStatusSchema = z.object({
+  status: z.enum(["PAID"]),
+});
+
 router.put("/invoices/:id/status", async (req, res, next) => {
   try {
-    const { status } = req.body as { status: "DRAFT" | "ISSUED" | "PAID" };
-    if (!["DRAFT", "ISSUED", "PAID"].includes(status)) {
-      throw new AppError("VALIDATION_ERROR", "Invalid status", 400);
+    const parsed = InvoiceStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError("VALIDATION_ERROR", "Only PAID status is allowed via this endpoint", 400);
     }
-    const updated = await invoiceRepo.updateStatus(req.params.id, status);
-    if (!updated) throw new AppError("NOT_FOUND", "Invoice not found", 404);
+    const invoice = await invoiceRepo.findById(req.params.id);
+    if (!invoice) throw new AppError("NOT_FOUND", "Invoice not found", 404);
+    if (invoice.status === "PAID") {
+      throw new AppError("VALIDATION_ERROR", "Invoice is already paid", 400);
+    }
+    const updated = await invoiceRepo.updateStatus(req.params.id, "PAID", req.actor!.sub);
     auditLog({
-      clinicId: updated.clinicId,
+      clinicId: updated?.clinicId,
       actorId: req.actor!.sub,
       actorRole: req.actor!.role,
-      action: "INVOICE_STATUS_CHANGED",
+      action: "INVOICE_MARKED_PAID",
       resourceType: "invoice",
-      resourceId: updated.id,
-      metadata: { status },
+      resourceId: updated?.id,
+      metadata: { previousStatus: invoice.status, paidByUserId: req.actor!.sub },
     });
     res.json(updated);
   } catch (e) {

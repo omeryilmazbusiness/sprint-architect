@@ -8,10 +8,11 @@ export interface AdminInvoice {
   unitPrice: number;
   total: number;
   currency: string;
-  status: "DRAFT" | "ISSUED" | "PAID";
+  status: "PENDING" | "UNPAID" | "PAID";
   issuedAt: string | null;
   dueAt: string | null;
   paidAt: string | null;
+  paidByUserId: string | null;
   createdAt: string;
   clinic?: {
     id: string;
@@ -19,18 +20,16 @@ export interface AdminInvoice {
     currency: string;
     billingUnitPrice: number | null;
     status: string;
+    statusReason?: string | null;
   } | null;
 }
 
 export interface AdminMetrics {
   clinics: { total: number; active: number; inactive: number; suspended: number };
   users: { total: number; active: number };
-  invoices: { draft: number; issued: number; paid: number };
-  attentionNeeded: {
-    overdueInvoices: AdminInvoice[];
-    suspendedClinics: { id: string; name: string; status: string }[];
-    clinicsWithoutManagers: { id: string; name: string; createdAt: string }[];
-  };
+  invoices: { pending: number; unpaid: number; paid: number };
+  recentInvoices: AdminInvoice[];
+  recentClinics: { id: string; name: string; status: string; createdAt: string }[];
 }
 
 export interface InvoiceListResponse {
@@ -73,10 +72,14 @@ export async function getAdminInvoice(id: string): Promise<AdminInvoice> {
   return res.json();
 }
 
+export async function markInvoicePaid(id: string): Promise<AdminInvoice> {
+  const res = await apiRequest("PUT", `/v1/admin/invoices/${id}/status`, { status: "PAID" });
+  return res.json();
+}
+
 export async function updateInvoiceStatus(
   id: string,
-  status: "DRAFT" | "ISSUED" | "PAID"
+  status: "PAID"
 ): Promise<AdminInvoice> {
-  const res = await apiRequest("PUT", `/v1/admin/invoices/${id}/status`, { status });
-  return res.json();
+  return markInvoicePaid(id);
 }

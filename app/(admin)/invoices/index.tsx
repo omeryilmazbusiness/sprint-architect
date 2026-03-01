@@ -28,13 +28,19 @@ import {
   InvoiceListResponse,
 } from "@/lib/api/adminInvoices";
 
-const STATUS_FILTERS = ["ALL", "DRAFT", "ISSUED", "PAID"] as const;
+const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
 const PERIOD_REGEX = /^\d{4}-\d{2}$/;
 
 function statusColor(status: string, colors: typeof Colors.light): string {
   if (status === "PAID") return colors.success;
-  if (status === "ISSUED") return colors.accent;
+  if (status === "UNPAID") return colors.error;
   return colors.warning;
+}
+
+function statusIcon(status: string): string {
+  if (status === "PAID") return "checkmark-circle";
+  if (status === "UNPAID") return "alert-circle";
+  return "time";
 }
 
 export default function AdminInvoicesScreen() {
@@ -123,31 +129,38 @@ export default function AdminInvoicesScreen() {
         )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {STATUS_FILTERS.map((s) => (
-            <Pressable
-              key={s}
-              style={[
-                styles.filterChip,
-                {
-                  borderColor: statusFilter === s ? colors.accent : colors.border,
-                  backgroundColor: statusFilter === s ? colors.accent + "18" : "transparent",
-                },
-              ]}
-              onPress={() => setStatusFilter(s)}
-            >
-              <Text
+          {STATUS_FILTERS.map((s) => {
+            const chipColor = s === "ALL" ? colors.accent : statusColor(s, colors);
+            const isActive = statusFilter === s;
+            return (
+              <Pressable
+                key={s}
                 style={[
-                  styles.filterChipText,
+                  styles.filterChip,
                   {
-                    color: statusFilter === s ? colors.accent : colors.textSecondary,
-                    fontFamily: "Inter_500Medium",
+                    borderColor: isActive ? chipColor : colors.border,
+                    backgroundColor: isActive ? chipColor + "18" : "transparent",
                   },
                 ]}
+                onPress={() => setStatusFilter(s)}
               >
-                {s}
-              </Text>
-            </Pressable>
-          ))}
+                {s !== "ALL" && (
+                  <Ionicons name={statusIcon(s) as any} size={12} color={isActive ? chipColor : colors.textSecondary} />
+                )}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color: isActive ? chipColor : colors.textSecondary,
+                      fontFamily: "Inter_500Medium",
+                    },
+                  ]}
+                >
+                  {s}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         {data && (
@@ -328,7 +341,10 @@ const styles = StyleSheet.create({
   periodHint: { fontSize: 11, marginBottom: 6 },
   filterRow: { marginTop: 6, marginBottom: 4 },
   filterChip: {
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
