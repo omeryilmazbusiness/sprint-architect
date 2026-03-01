@@ -22,11 +22,11 @@ The backend is an Express 5 application developed with TypeScript. Its structure
 
 ### Database (Drizzle ORM + PostgreSQL)
 
-The application utilizes PostgreSQL with Drizzle ORM. The schema defines core entities such as `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, and `patientDocuments`. It also includes `refreshTokens` for persistent sessions, `devices` for patient single-device binding, `invoices` for billing, and `auditLogs` for security. The database supports multi-tenancy through `clinicId` on relevant resources.
+The application utilizes PostgreSQL with Drizzle ORM. The schema defines core entities such as `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, and `patientDocuments`. It also includes `refreshTokens` for persistent sessions, `devices` for patient single-device binding, `invoices` for billing, `auditLogs` for security, and `notifications` for in-app manager notifications. The database supports multi-tenancy through `clinicId` on relevant resources.
 
 ### API Routes
 
-The API provides distinct endpoints for different user roles and functionalities. Manager routes (`/v1/manager/*`) handle CRUD operations for patients, doctors, hotels, transports, and patient plans, along with appointment and document management, and clinic-specific invoices. Admin routes (`/v1/admin/*`) provide comprehensive control over clinics, users, and invoices across the entire platform, including user creation, password resets, and invoice status management. Patient-specific routes include document uploads and access to a self-service dashboard. Authentication routes cover staff and patient login, token refresh, and logout.
+The API provides distinct endpoints for different user roles and functionalities. Manager routes (`/v1/manager/*`) handle CRUD operations for patients (with status/missing filters), doctors, hotels, transports, and patient plans, along with appointment and document management, clinic-specific invoices, and in-app notifications (`/v1/manager/notifications/*`). A clinic-wide appointments range endpoint (`GET /v1/manager/appointments?from=&to=`) powers the calendar dashboard. Admin routes (`/v1/admin/*`) provide comprehensive control over clinics, users, and invoices across the entire platform, including user creation, password resets, and invoice status management. Patient-specific routes include document uploads and access to a self-service dashboard. Authentication routes cover staff and patient login, token refresh, and logout.
 
 ## External Dependencies
 
@@ -56,3 +56,4 @@ The API provides distinct endpoints for different user roles and functionalities
 -   `multer`: Middleware for handling multipart form data, primarily file uploads.
 -   `express-rate-limit`: For API rate limiting.
 -   `@aws-sdk/client-s3`: AWS SDK for S3/MinIO integration.
+-   `date-fns`: Date utility library used by the manager calendar dashboard.

@@ -1,0 +1,155 @@
+Replit AI — continue on the existing Expo React Native app + Express/TS backend + Postgres/Drizzle. DO NOT re-scaffold.
+
+OBJECTIVE:
+Upgrade Manager experience to premium UX:
+1) Manager Dashboard “Today’s Schedule” becomes a modern MONTHLY calendar with appointments marked on dates + agenda list for selected day.
+2) Add Notifications bell in Manager Header with unread badge + notifications screen.
+3) Redesign Guests list screen with professional UI + filters + search + chips.
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin.
+- Clinic scoping strict.
+- Use existing API client with refresh logic.
+- Handle loading/empty/error states on every screen.
+- Avoid heavy UI libraries unless already installed; if you add a calendar lib, choose a lightweight, well-supported one.
+
+========================================================
+A) MANAGER DASHBOARD — MONTH CALENDAR + AGENDA
+========================================================
+UI Requirements:
+- Add a “Schedule” card/section on Manager Dashboard:
+  1) Month header:
+     - “March 2026” (localized) + prev/next arrows
+     - “Today” button
+  2) Month grid calendar (7 columns):
+     - Show dots/indicators for dates that have one or more appointments
+     - Today highlighted
+     - Selected date highlighted
+  3) Agenda list below:
+     - Title: “Schedule for {selectedDate}”
+     - List appointments (time + patient name + type + doctor optional + status)
+     - Tap appointment -> navigate to patient detail (or appointment detail if exists)
+- If no appointments on selected day: empty state.
+
+Data fetching strategy (performance):
+- Fetch appointments for visible month range:
+  - from = first day 00:00
+  - to = last day 23:59
+- Cache month data in state to avoid refetch on date selection.
+- On month change, fetch new month.
+- Agenda list filters from the month dataset.
+
+Backend requirements:
+- Provide an endpoint suitable for month query:
+  GET /v1/manager/appointments?from=ISO&to=ISO
+  OR reuse /v1/manager/upcoming-appointments but it must accept a date range.
+Response must include:
+  - appointmentId
+  - startAt
+  - title/type
+  - patientId + patientName
+  - doctorName optional
+  - status
+If endpoint does not exist, implement it (clinic-scoped) with zod validation.
+
+Calendar implementation:
+Option 1 (preferred): implement your own lightweight month grid (no dependency) using date-fns.
+Option 2: use a proven library (e.g., react-native-calendars) ONLY if acceptable in project.
+If you add a library, install and keep usage minimal.
+
+========================================================
+B) MANAGER HEADER — NOTIFICATIONS BELL + BADGE
+========================================================
+- Update Manager Header component:
+  - Right side includes Bell icon + unread badge count.
+- Create a notifications screen:
+  app/(manager-tabs)/notifications.tsx (or consistent)
+- Add header navigation: bell tap opens notifications screen.
+
+Backend:
+- Add manager notifications endpoints (simple for now):
+  GET /v1/manager/notifications/unread-count
+  GET /v1/manager/notifications?status=UNREAD&limit=50
+  PUT /v1/manager/notifications/:id/read
+If you do not have a notifications table, implement minimal:
+- notifications table:
+  id, clinicId, targetRole(MANAGER), targetUserId, title, body, type, status(UNREAD|READ), createdAt
+For MVP, create notifications on:
+- appointment created/updated for patient
+- document status changed (approved/rejected)
+(If event creation is too large, seed a few notifications and build UI; but unread badge must work.)
+
+UI:
+- Notifications list uses ListRow:
+  - title + body preview + time
+  - unread dot indicator
+- Tap -> opens detail modal and marks read.
+
+========================================================
+C) GUESTS LIST — PREMIUM UI + FILTERS
+========================================================
+Target: Manager Guests screen (patient list).
+Redesign with:
+1) Premium filter bar (icon buttons + dropdown pickers):
+- Search (🔍) case-insensitive by patient name and patientKey
+- Status dropdown (✅): ALL / ACTIVE / INACTIVE
+- “Missing” dropdown (⚠️): ALL / Missing Hotel / Missing Transport / Missing Doctor / Missing Documents
+- Clear filters (🧹)
+- Active filter chips below
+
+2) List design:
+- Each guest row is a card:
+  - Left: avatar placeholder (initials)
+  - Middle: name (bold), subtitle (arrival/departure), small key masked (e.g., PATI•••0001)
+  - Right: status pill + chevron
+  - Tags row (chips) for missing assignments (e.g., “No Hotel”, “No Transport”)
+- Pull to refresh
+- Pagination or infinite scroll
+- Empty state: “No guests found”
+
+Backend:
+- Ensure patients list endpoint supports filters:
+  GET /v1/manager/patients?search=&status=&missing=&page=&pageSize=
+- Implement case-insensitive search (ILIKE / lower()).
+- Implement missing filter efficiently:
+  - missingHotel: plan.hotelId is null
+  - missingTransport: plan.transportId is null
+  - missingDoctor: plan.doctorId is null
+  - missingDocuments: assigned docs with status ASSIGNED count > 0
+If endpoint doesn’t support these, add query params and implement.
+
+========================================================
+D) WHITE THEME CONSISTENCY
+========================================================
+- Use the same theme tokens/components as Admin:
+  Screen, Card, StatusPill, ListRow, FilterBar, FilterPickerModal, Chips
+- Keep spacing and typography consistent.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added (mobile + backend)
+2) New endpoints (if added) + sample curl:
+   - month appointments range query
+   - notifications unread-count + list
+   - patients list with filters
+3) Manual QA checklist:
+   - Dashboard calendar shows dots on days with appointments
+   - selecting a date updates agenda list
+   - month navigation loads correct data
+   - bell badge shows unread count and updates after reading
+   - guests search/filter works and is case-insensitive
+   - missing filters work
+4) Notes about performance (month caching, debounce search)
+
+IMPLEMENTATION ORDER:
+1) Backend: appointments range endpoint + patients filters (missing + case-insensitive)
+2) Mobile: Dashboard calendar + agenda UI (most important)
+3) Backend: notifications table/endpoints (or integrate if existing)
+4) Mobile: header bell + notifications screen
+5) Mobile: guests list redesign + filters + chips
+6) Polish + final verification
+
+Proceed now. Keep UX premium and modern.
+END.

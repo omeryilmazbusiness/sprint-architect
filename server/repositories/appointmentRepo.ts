@@ -53,6 +53,28 @@ export const appointmentRepo = {
     });
   },
 
+  async listForClinic(clinicId: string, from?: string, to?: string) {
+    let where = eq(appointments.clinicId, clinicId);
+    if (from) {
+      where = and(where, gte(appointments.startAt, new Date(from))) as any;
+    }
+    if (to) {
+      where = and(where, lte(appointments.startAt, new Date(to))) as any;
+    }
+    return db.query.appointments.findMany({
+      where,
+      with: {
+        doctor: {
+          columns: { id: true, fullName: true }
+        },
+        patient: {
+          columns: { id: true, fullName: true }
+        }
+      },
+      orderBy: (a, { asc }) => asc(a.startAt),
+    });
+  },
+
   async findById(id: string, clinicId: string) {
     return db.query.appointments.findFirst({
       where: and(eq(appointments.id, id), eq(appointments.clinicId, clinicId)),

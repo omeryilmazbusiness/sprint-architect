@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { patients } from "@shared/schema";
-import { eq, and, ilike, or, count } from "drizzle-orm";
+import { patients, patientPlans, patientDocuments } from "@shared/schema";
+import { eq, and, ilike, or, count, isNull, exists, sql } from "drizzle-orm";
 import { generatePatientKey } from "../utils/patientKey";
 
 export interface CreatePatientInput {
@@ -47,17 +47,34 @@ export const patientRepo = {
     return patient;
   },
 
-  async list(clinicId: string, search?: string, page = 1, pageSize = 20) {
+  async list(clinicId: string, search?: string, page = 1, pageSize = 20, status?: string, missing?: string) {
     const offset = (page - 1) * pageSize;
-    const where = search
-      ? and(
-          eq(patients.clinicId, clinicId),
-          or(
-            ilike(patients.fullName, `%${search}%`),
-            ilike(patients.patientKey, `%${search}%`)
-          )
-        )
-      : eq(patients.clinicId, clinicId);
+    let conditions = [eq(patients.clinicId, clinicId)];
+    
+    if (search) {
+      conditions.push(or(
+        ilike(patients.fullName, `%${search}%`),
+        ilike(patients.patientKey, `%${search}%`)
+      )!);
+    }
+    
+    if (status) {
+      conditions.push(eq(patients.status, status as any));
+    }
+
+    if (missing) {
+      if (missing === "missingHotel") {
+        conditions.push(sql`NOT EXISTS (SELECT 1 FROM patient_plans WHERE patient_id = ${patients.id} AND hotel_id IS NOT NULL)`);
+      } else if (missing === "missingTransport") {
+        conditions.push(sql`NOT EXISTS (SELECT 1 FROM patient_plans WHERE patient_id = ${patients.id} AND transport_id IS NOT NULL)`);
+      } else if (missing === "missingDoctor") {
+        conditions.push(sql`NOT EXISTS (SELECT 1 FROM patient_plans WHERE patient_id = ${patients.id} AND doctor_id IS NOT NULL)`);
+      } else if (missing === "missingDocuments") {
+        conditions.push(sql`EXISTS (SELECT 1 FROM patient_documents WHERE patient_id = ${patients.id} AND status = 'ASSIGNED')`);
+      }
+    }
+
+    const where = and(...conditions);
 
     const [rows, total] = await Promise.all([
       db.query.patients.findMany({
@@ -65,6 +82,7 @@ export const patientRepo = {
         limit: pageSize,
         offset,
         orderBy: (p, { desc }) => desc(p.createdAt),
+        with: { plan: true }
       }),
       db.select({ count: count() }).from(patients).where(where),
     ]);

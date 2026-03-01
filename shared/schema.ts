@@ -319,6 +319,23 @@ export const credentialRequests = pgTable("credential_requests", {
   oneTimeShownAt: timestamp("one_time_shown_at"),
 });
 
+export const notificationStatusEnum = pgEnum("notification_status", ["UNREAD", "READ"]);
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  clinicId: varchar("clinic_id").references(() => clinics.id),
+  targetRole: text("target_role").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  type: text("type").notNull().default("INFO"),
+  status: notificationStatusEnum("status").notNull().default("UNREAD"),
+  relatedId: text("related_id"),
+  relatedType: text("related_type"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertClinicSchema = createInsertSchema(clinics).pick({
   name: true,
   status: true,
@@ -348,6 +365,7 @@ export type Device = typeof devices.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CredentialRequest = typeof credentialRequests.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 
 export const patientsRelations = relations(patients, ({ one, many }) => ({
   plan: one(patientPlans, { fields: [patients.id], references: [patientPlans.patientId] }),
@@ -405,6 +423,10 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
 
 export const usersRelations = relations(users, ({ one }) => ({
   clinic: one(clinics, { fields: [users.clinicId], references: [clinics.id] }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  clinic: one(clinics, { fields: [notifications.clinicId], references: [clinics.id] }),
 }));
 
 export const credentialRequestsRelations = relations(credentialRequests, ({ one }) => ({

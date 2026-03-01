@@ -9,6 +9,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 
 interface ManagerHeaderProps {
   title: string;
@@ -17,6 +19,8 @@ interface ManagerHeaderProps {
   right?: React.ReactNode;
   backButton?: boolean;
   onBack?: () => void;
+  onNotifications?: () => void;
+  unreadCount?: number;
 }
 
 export function ManagerHeader({
@@ -26,9 +30,27 @@ export function ManagerHeader({
   right,
   backButton,
   onBack,
+  onNotifications,
+  unreadCount: propUnreadCount,
 }: ManagerHeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/v1/manager/notifications/unread-count"],
+    enabled: propUnreadCount === undefined,
+  });
+
+  const unreadCount = propUnreadCount ?? unreadData?.count ?? 0;
+
+  const handleNotifications = () => {
+    if (onNotifications) {
+      onNotifications();
+    } else {
+      router.push("/(manager)/notifications" as any);
+    }
+  };
 
   return (
     <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
@@ -55,6 +77,21 @@ export function ManagerHeader({
         </View>
 
         <View style={styles.rightArea}>
+          <Pressable
+            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={handleNotifications}
+            hitSlop={8}
+          >
+            <Ionicons name="notifications-outline" size={22} color={T.text} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
           {right}
           {onLogout && (
             <Pressable
@@ -122,9 +159,32 @@ const styles = StyleSheet.create({
   rightArea: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 12,
+  },
+  iconBtn: {
+    padding: 4,
+    position: "relative",
   },
   logoutBtn: {
     padding: 4,
+  },
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: T.danger,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+    borderWidth: 1.5,
+    borderColor: T.surface,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
   },
 });

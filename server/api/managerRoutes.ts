@@ -12,6 +12,7 @@ import { transportRepo } from "../repositories/transportRepo";
 import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { planRepo } from "../repositories/planRepo";
+import { notificationRepo } from "../repositories/notificationRepo";
 
 import { invoiceRepo } from "../repositories/invoiceRepo";
 import { auditLog } from "./auditLogger";
@@ -73,14 +74,25 @@ router.post("/patients", async (req, res, next) => {
 router.get("/patients", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
-    const { search, page, pageSize } = req.query as Record<string, string>;
+    const { search, page, pageSize, status, missing } = req.query as Record<string, string>;
     const result = await patientRepo.list(
       clinicId,
       search,
       page ? Number(page) : 1,
-      pageSize ? Math.min(Number(pageSize), 100) : 20
+      pageSize ? Math.min(Number(pageSize), 100) : 20,
+      status,
+      missing
     );
     res.json(result);
+  } catch (e) { next(e); }
+});
+
+router.get("/appointments", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { from, to } = req.query as Record<string, string>;
+    const appts = await appointmentRepo.listForClinic(clinicId, from, to);
+    res.json(appts);
   } catch (e) { next(e); }
 });
 
@@ -608,6 +620,44 @@ router.get("/invoices/:id", async (req, res, next) => {
     const invoice = await invoiceRepo.findById(req.params.id, clinicId);
     if (!invoice) notFound("Invoice");
     res.json(invoice);
+  } catch (e) { next(e); }
+});
+
+router.get("/notifications/unread-count", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const count = await notificationRepo.getUnreadCount(clinicId);
+    res.json({ count });
+  } catch (e) { next(e); }
+});
+
+router.get("/notifications", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { status, limit } = req.query as Record<string, string>;
+    const list = await notificationRepo.list(
+      clinicId,
+      status as "UNREAD" | "READ",
+      limit ? Number(limit) : undefined
+    );
+    res.json(list);
+  } catch (e) { next(e); }
+});
+
+router.put("/notifications/:id/read", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const notification = await notificationRepo.markRead(req.params.id, clinicId);
+    if (!notification) notFound("Notification");
+    res.json(notification);
+  } catch (e) { next(e); }
+});
+
+router.put("/notifications/read-all", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    await notificationRepo.markAllRead(clinicId);
+    res.json({ success: true });
   } catch (e) { next(e); }
 });
 

@@ -15,7 +15,8 @@ import { router } from "expo-router";
 import { T, cardShadow, softShadow } from "@/constants/adminTheme";
 import { useAuth } from "@/context/AuthContext";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
-import { Card, SectionHeader, StatusPill, Divider } from "@/components/ui";
+import { SectionHeader } from "@/components/ui";
+import { MonthCalendar } from "@/components/manager/MonthCalendar";
 
 interface Metrics {
   totalPatients: number;
@@ -24,23 +25,10 @@ interface Metrics {
   missingAssignments: number;
 }
 
-interface Appointment {
-  id: string;
-  startAt: string;
-  type: string;
-  status: string;
-  patient?: { fullName: string; patientKey: string };
-  doctor?: { name: string } | null;
-}
-
 interface ClinicInfo {
   id: string;
   name: string;
   status: string;
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 function KpiCard({
@@ -71,7 +59,7 @@ function KpiCard({
 }
 
 export default function ManagerDashboard() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: clinic } = useQuery<ClinicInfo>({
@@ -87,16 +75,10 @@ export default function ManagerDashboard() {
     queryKey: ["/v1/manager/metrics"],
   });
 
-  const { data: appointments } = useQuery<Appointment[]>({
-    queryKey: ["/v1/manager/upcoming-appointments"],
-  });
-
   async function handleLogout() {
     await logout();
     router.replace("/(auth)/login");
   }
-
-  const todayAppts = appointments?.slice(0, 5) ?? [];
 
   return (
     <View style={styles.root}>
@@ -149,45 +131,8 @@ export default function ManagerDashboard() {
               />
             </View>
 
-            <SectionHeader label="Today's Schedule" style={styles.sectionGap} />
-            <Card noPad>
-              {todayAppts.length === 0 ? (
-                <View style={styles.emptyAppts}>
-                  <Ionicons name="calendar-outline" size={28} color={T.textMuted} />
-                  <Text style={styles.emptyText}>No appointments scheduled today.</Text>
-                </View>
-              ) : (
-                todayAppts.map((appt, i) => (
-                  <React.Fragment key={appt.id}>
-                    {i > 0 && <Divider inset={64} />}
-                    <Pressable
-                      style={({ pressed }) => [styles.apptRow, { opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => {
-                        if (appt.patient?.patientKey) {
-                          const patientId = appt.patient.patientKey;
-                          router.push({ pathname: "/(manager)/patients/[id]", params: { id: patientId } });
-                        }
-                      }}
-                    >
-                      <View style={styles.timeBox}>
-                        <Text style={styles.timeText}>{formatTime(appt.startAt)}</Text>
-                      </View>
-                      <View style={styles.apptInfo}>
-                        <Text style={styles.apptPatient} numberOfLines={1}>
-                          {appt.patient?.fullName ?? "—"}
-                        </Text>
-                        {appt.doctor && (
-                          <Text style={styles.apptDoctor} numberOfLines={1}>
-                            {appt.doctor.name}
-                          </Text>
-                        )}
-                      </View>
-                      <StatusPill status={appt.status} small />
-                    </Pressable>
-                  </React.Fragment>
-                ))
-              )}
-            </Card>
+            <SectionHeader label="Monthly Calendar" style={styles.sectionGap} />
+            <MonthCalendar />
 
             <SectionHeader label="Quick Actions" style={styles.sectionGap} />
             <View style={styles.quickGrid}>
@@ -246,6 +191,7 @@ function QuickAction({
     </Pressable>
   );
 }
+
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },

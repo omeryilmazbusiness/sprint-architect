@@ -10,6 +10,7 @@ import {
   appointments,
   patientDocuments,
   users,
+  notifications,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "./auth/password";
@@ -239,6 +240,38 @@ export async function seedDatabase() {
       console.log("[seed] Assigned documents to Sarah Mitchell");
     }
   }
+
+  // Seed demo notifications for manager
+  await db.insert(notifications).values([
+    {
+      clinicId: CLINIC_ID,
+      targetRole: "MANAGER",
+      title: "New appointment scheduled",
+      body: "Sarah Mitchell has an appointment with Dr. Aydin Kaya tomorrow at 09:00",
+      type: "APPOINTMENT",
+      status: "UNREAD",
+      relatedType: "appointment",
+    },
+    {
+      clinicId: CLINIC_ID,
+      targetRole: "MANAGER",
+      title: "Document uploaded",
+      body: "Patient Sarah Mitchell uploaded their passport document",
+      type: "DOCUMENT",
+      status: "UNREAD",
+      relatedType: "document",
+    },
+    {
+      clinicId: CLINIC_ID,
+      targetRole: "MANAGER",
+      title: "Patient checked in",
+      body: "New patient registered at Demo Clinic",
+      type: "INFO",
+      status: "READ",
+      relatedType: "patient",
+    },
+  ]).onConflictDoNothing();
+  console.log("[seed] Notifications seeded for manager");
 
   console.log("[seed] Database seed complete.");
 }
