@@ -1,0 +1,127 @@
+Replit AI — continue on the existing Expo React Native app (expo-router) + Express/TS backend + Postgres/Drizzle. DO NOT re-scaffold.
+
+OBJECTIVE:
+1) Remove the rightmost “Guest” bottom tab from the Manager footer navigation.
+2) Manage guests ONLY via the “Users” tab (Guests list and guest detail flow).
+3) Build a premium, modern, highly usable Manager Dashboard with white theme consistency.
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin tokens/components.
+- Keep existing auth + routing. Do not break Guest (PATIENT role) routes.
+- Strict clinic scoping for Manager.
+- All screens must have loading/empty/error states.
+- Avoid heavy UI frameworks unless already installed.
+
+========================================================
+A) NAVIGATION CHANGE — REMOVE RIGHTMOST GUEST TAB
+========================================================
+1) Locate manager bottom tab layout (app/(tabs)/_layout.tsx or app/(manager-tabs)/_layout.tsx).
+2) Remove the tab item that is labeled “Guest” / “Guests” (rightmost tab).
+3) Ensure “Users” tab remains and contains Guests management.
+
+Acceptance:
+- No “Guest” tab is visible in manager footer.
+- Guests list and details are reachable from Users.
+
+========================================================
+B) MANAGER DASHBOARD — PREMIUM UX SPEC
+========================================================
+Target route:
+- app/(manager-tabs)/dashboard.tsx (or your current manager dashboard file)
+
+Header (premium):
+- Left: “Dashboard”
+- Subtitle: Clinic name
+- Right: Notifications bell with badge (if notifications exist) + small logout/menu
+- White theme header with subtle border, consistent spacing
+
+Dashboard layout (scrollable):
+1) KPI Cards row (2x2 grid)
+- Appointments Today
+- Pending Documents (PENDING docs count)
+- Active Guests (ACTIVE patients count)
+- Missing Assignments (hotel/transport/doc missing if supported)
+Each card:
+- big number
+- label
+- small subtitle (“updated just now”)
+- tap navigates to relevant screen (appointments -> schedule, documents -> users filtered)
+
+2) Quick Actions card
+Buttons (icon + label):
+- New Guest
+- Create Appointment
+- Assign Documents
+- View Users
+All should navigate to the most relevant screens (or open bottom sheets if already implemented).
+
+3) Schedule section (most important)
+- Month calendar (grid) with dots on days having appointments
+- Under calendar: Selected Day Agenda list:
+  Each row:
+   - time (HH:mm)
+   - guest name
+   - appointment title/type
+   - doctor name (if appointment doctor exists)
+   - status pill
+  Tap row -> open guest detail, and optionally focus appointments section
+- Month navigation: prev/next + “Today” button
+- Data strategy:
+  - Fetch appointments for month range (from monthStart to monthEnd)
+  - Cache results for fast date selection
+
+4) Today Focus (two mini lists)
+A) “Today’s guests”
+- list guests with appointments today (max 5)
+B) “Documents pending”
+- list guests with pending required docs (max 5)
+Each row navigates to guest detail.
+
+Empty states:
+- If no appointments: show a clean empty card (“No appointments scheduled for this day.”)
+
+========================================================
+C) DATA REQUIREMENTS (BACKEND)
+========================================================
+Use existing endpoints if present:
+- GET /v1/manager/metrics
+- GET /v1/manager/appointments?from=&to=
+- GET /v1/manager/patients (filters)
+If missing, implement minimal clinic-scoped endpoints (zod validated):
+1) GET /v1/manager/metrics:
+{ appointmentsToday, pendingDocuments, activeGuests, missingAssignments }
+2) GET /v1/manager/appointments?from=ISO&to=ISO
+Return: appointmentId, startAt, title, status, patientId, patientName, doctorName
+3) GET /v1/manager/patients?hasAppointmentsOn=YYYY-MM-DD&pendingDocs=true (optional)
+If not implementing special filters, compute mini lists from existing data.
+
+========================================================
+D) WHITE THEME CONSISTENCY
+========================================================
+- Use theme tokens and UI primitives (Card, StatusPill, ListRow, FilterBar if exists).
+- Ensure spacing and typography are premium.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) Updated manager tab navigation (confirm Guest tab removed)
+3) Any backend endpoints added/changed + sample curl
+4) Manual QA checklist:
+- Manager login -> dashboard loads
+- Guest tab not visible
+- KPI cards show real data
+- Calendar shows dots and agenda list updates on day select
+- Quick actions navigate correctly
+- No crashes on null doctor fields
+
+IMPLEMENTATION ORDER:
+1) Remove Guest bottom tab
+2) Implement/verify manager metrics + month appointment range endpoint
+3) Build Dashboard UI: header + KPI cards + quick actions + calendar+agenda + today focus
+4) Final polish: loading/empty/error states and performance caching
+5) Run tests and ensure no regressions
+
+Proceed now. Keep it modern and premium.
+END.
