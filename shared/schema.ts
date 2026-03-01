@@ -46,6 +46,8 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "ACTIVE",
   "INACTIVE",
   "PENDING",
+  "APPROVED",
+  "ENDED",
 ]);
 
 export const appointmentStatusEnum = pgEnum("appointment_status", [
@@ -116,6 +118,15 @@ export const patients = pgTable("patients", {
   arrivalDate: text("arrival_date"),
   departureDate: text("departure_date"),
   status: patientStatusEnum("status").notNull().default("PENDING"),
+  nationalityCode: text("nationality_code"),
+  phoneE164: text("phone_e164"),
+  dateOfBirth: text("date_of_birth"),
+  preferredLanguage: text("preferred_language"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhoneE164: text("emergency_contact_phone_e164"),
+  arrivalAirport: text("arrival_airport"),
+  flightNumber: text("flight_number"),
+  requestedService: text("requested_service"),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

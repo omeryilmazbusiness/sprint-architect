@@ -30,6 +30,7 @@ interface Hotel {
   notes?: string;
   stars?: number;
   website?: string;
+  createdAt?: string;
 }
 
 export default function HotelsScreen() {
@@ -100,9 +101,10 @@ export default function HotelsScreen() {
   };
 
   const handleSubmit = () => {
+    if (!form.name.trim()) return;
     const payload = {
       ...form,
-      stars: form.stars ? parseInt(form.stars) : undefined,
+      stars: form.stars ? parseInt(form.stars) : null,
     };
     mutation.mutate(payload);
   };

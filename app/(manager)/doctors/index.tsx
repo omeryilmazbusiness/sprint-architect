@@ -35,6 +35,7 @@ interface Doctor {
   languages?: string;
   certifications?: string;
   diplomaUrl?: string;
+  createdAt?: string;
 }
 
 export default function DoctorsScreen() {
@@ -114,10 +115,11 @@ export default function DoctorsScreen() {
   };
 
   const handleSubmit = () => {
+    if (!form.fullName.trim()) return;
     const payload = {
       ...form,
-      graduationYear: form.graduationYear ? parseInt(form.graduationYear) : undefined,
-      experienceYears: form.experienceYears ? parseInt(form.experienceYears) : undefined,
+      graduationYear: form.graduationYear ? parseInt(form.graduationYear) : null,
+      experienceYears: form.experienceYears ? parseInt(form.experienceYears) : null,
     };
     mutation.mutate(payload);
   };

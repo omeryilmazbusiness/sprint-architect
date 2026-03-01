@@ -77,6 +77,11 @@ export default function DocumentTypesScreen() {
     setShowForm(true);
   };
 
+  const handleSubmit = () => {
+    if (!form.name.trim()) return;
+    mutation.mutate(form);
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/v1/manager/document-types/${id}`);
@@ -196,7 +201,7 @@ export default function DocumentTypesScreen() {
             </Pressable>
             <Pressable
               style={[styles.btnPrimary, { opacity: !form.name.trim() || mutation.isPending ? 0.6 : 1 }]}
-              onPress={() => mutation.mutate(form)}
+              onPress={handleSubmit}
               disabled={!form.name.trim() || mutation.isPending}
             >
               {mutation.isPending

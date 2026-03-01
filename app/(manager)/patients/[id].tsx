@@ -116,6 +116,35 @@ export default function PatientDetailScreen() {
     queryKey,
   });
 
+  const statusMutation = useMutation({
+    mutationFn: async (status: "PENDING" | "APPROVED" | "ENDED") => {
+      const res = await apiRequest("PUT", `/v1/manager/patients/${id}/status`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["/v1/manager/patients"] });
+      qc.invalidateQueries({ queryKey: ["/v1/manager/metrics"] });
+    },
+    onError: (e: any) => Alert.alert("Error", e.message ?? "Status update failed"),
+  });
+
+  const handleStatusChange = (newStatus: "APPROVED" | "ENDED") => {
+    const labels: Record<string, string> = { APPROVED: "Approve", ENDED: "End" };
+    const messages: Record<string, string> = {
+      APPROVED: "This will mark the guest as Approved and notify the team.",
+      ENDED: "This will mark the guest as Ended. This cannot be undone easily.",
+    };
+    Alert.alert(
+      `${labels[newStatus]} Guest`,
+      messages[newStatus],
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: labels[newStatus], style: newStatus === "ENDED" ? "destructive" : "default", onPress: () => statusMutation.mutate(newStatus) },
+      ]
+    );
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetch();
@@ -230,6 +259,51 @@ export default function PatientDetailScreen() {
         </View>
       </View>
 
+      {patient.status === "PENDING" && (
+        <View style={styles.statusBanner}>
+          <View style={styles.statusBannerInfo}>
+            <Ionicons name="time-outline" size={18} color={T.warning} />
+            <Text style={styles.statusBannerText}>Awaiting approval</Text>
+          </View>
+          <Pressable
+            style={[styles.statusBannerBtn, { backgroundColor: T.success }]}
+            onPress={() => handleStatusChange("APPROVED")}
+            disabled={statusMutation.isPending}
+          >
+            {statusMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.statusBannerBtnText}>Approve Guest</Text>}
+          </Pressable>
+        </View>
+      )}
+
+      {patient.status === "APPROVED" && (
+        <View style={[styles.statusBanner, { backgroundColor: T.successBg }]}>
+          <View style={styles.statusBannerInfo}>
+            <Ionicons name="checkmark-circle-outline" size={18} color={T.success} />
+            <Text style={[styles.statusBannerText, { color: T.successText }]}>Active guest</Text>
+          </View>
+          <Pressable
+            style={[styles.statusBannerBtn, { backgroundColor: T.danger }]}
+            onPress={() => handleStatusChange("ENDED")}
+            disabled={statusMutation.isPending}
+          >
+            {statusMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.statusBannerBtnText}>End Guest</Text>}
+          </Pressable>
+        </View>
+      )}
+
+      {patient.status === "ENDED" && (
+        <View style={[styles.statusBanner, { backgroundColor: T.surfaceSubtle }]}>
+          <View style={styles.statusBannerInfo}>
+            <Ionicons name="flag-outline" size={18} color={T.textMuted} />
+            <Text style={[styles.statusBannerText, { color: T.textMuted }]}>Guest stay has ended</Text>
+          </View>
+        </View>
+      )}
+
       <ScrollView 
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.primary} />}
@@ -267,6 +341,33 @@ export default function PatientDetailScreen() {
           ]).map((doc) => (
             <DocStatusRow key={doc.code} doc={doc} onView={() => doc.documentId && handleViewDoc(doc.documentId)} onDownload={() => doc.documentId && handleDownloadDoc(doc.documentId)} />
           ))}
+
+          <View style={styles.divider} />
+
+          <View style={styles.rowBetween}>
+            <Text style={styles.subHeader}>ASSIGNED DOCUMENTS</Text>
+            <Pressable onPress={() => setAssignDocsVisible(true)}>
+              <Ionicons name="add-circle-outline" size={20} color={T.primary} />
+            </Pressable>
+          </View>
+          {data.documents && data.documents.length > 0 ? (
+            data.documents.map((doc) => (
+              <DocStatusRow 
+                key={doc.id} 
+                doc={{
+                  code: doc.documentType?.code || "",
+                  name: doc.documentType?.name || "Unknown Document",
+                  status: doc.status,
+                  documentId: doc.id
+                }} 
+                instructionText={(doc as any).instructionText}
+                onView={() => handleViewDoc(doc.id)} 
+                onDownload={() => handleDownloadDoc(doc.id)} 
+              />
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No documents assigned</Text>
+          )}
 
           <View style={styles.divider} />
 
@@ -408,7 +509,7 @@ function OverviewRow({ icon, label, value, onPress, showAction }: any) {
   );
 }
 
-function DocStatusRow({ doc, onView, onDownload }: { doc: RequiredDoc; onView?: () => void; onDownload?: () => void }) {
+function DocStatusRow({ doc, instructionText, onView, onDownload }: { doc: RequiredDoc; instructionText?: string; onView?: () => void; onDownload?: () => void }) {
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case "APPROVED": return T.success;
@@ -430,7 +531,12 @@ function DocStatusRow({ doc, onView, onDownload }: { doc: RequiredDoc; onView?: 
     <View style={styles.docContainer}>
       <View style={styles.docRow}>
         <Ionicons name="document-text-outline" size={18} color={T.textMuted} />
-        <Text style={styles.docName}>{doc.name}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.docName}>{doc.name}</Text>
+          {instructionText ? (
+            <Text style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{instructionText}</Text>
+          ) : null}
+        </View>
         <View style={[styles.docStatusBadge, { backgroundColor: color + "10" }]}>
           <Text style={[styles.docStatusText, { color }]}>{getStatusLabel(doc.status)}</Text>
         </View>
@@ -997,6 +1103,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 20,
+  },
+  statusBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: T.sp16,
+    paddingVertical: T.sp12,
+    backgroundColor: T.warningBg,
+    borderBottomWidth: 1,
+    borderBottomColor: T.warningBorder,
+  },
+  statusBannerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.sp8,
+  },
+  statusBannerText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: T.warningText,
+  },
+  statusBannerBtn: {
+    paddingHorizontal: T.sp16,
+    paddingVertical: T.sp8,
+    borderRadius: T.r8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusBannerBtnText: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 13,
+    color: "#fff",
   },
   quickAction: {
     flex: 1,

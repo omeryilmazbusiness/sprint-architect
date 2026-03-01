@@ -46,10 +46,39 @@ const createPatientSchema = z.object({
   arrivalDate: z.string().optional(),
   departureDate: z.string().optional(),
   notes: z.string().optional(),
+  nationalityCode: z.string().max(2).optional(),
+  phoneE164: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  preferredLanguage: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhoneE164: z.string().optional(),
+  arrivalAirport: z.string().optional(),
+  flightNumber: z.string().optional(),
+  requestedService: z.string().optional(),
+}).refine(d => !d.arrivalDate || !d.departureDate || d.departureDate >= d.arrivalDate, {
+  message: "Departure date must be on or after arrival date",
+  path: ["departureDate"],
 });
 
-const updatePatientSchema = createPatientSchema.partial().extend({
-  status: z.enum(["ACTIVE", "INACTIVE", "PENDING"]).optional(),
+const updatePatientSchema = z.object({
+  fullName: z.string().min(1).max(200).optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  nationality: z.string().optional(),
+  passportNo: z.string().optional(),
+  arrivalDate: z.string().optional(),
+  departureDate: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "APPROVED", "ENDED"]).optional(),
+  nationalityCode: z.string().max(2).optional(),
+  phoneE164: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  preferredLanguage: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhoneE164: z.string().optional(),
+  arrivalAirport: z.string().optional(),
+  flightNumber: z.string().optional(),
+  requestedService: z.string().optional(),
 });
 
 router.post("/patients", async (req, res, next) => {
@@ -269,6 +298,38 @@ router.put("/patients/:id", async (req, res, next) => {
     const body = validateBody(updatePatientSchema, req.body);
     const patient = await patientRepo.update(req.params.id, clinicId, body);
     if (!patient) notFound("Patient");
+    res.json(patient);
+  } catch (e) { next(e); }
+});
+
+router.put("/patients/:id/status", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { id } = req.params;
+    const { status } = validateBody(z.object({
+      status: z.enum(["PENDING", "APPROVED", "ENDED"]),
+    }), req.body);
+
+    const existing = await patientRepo.findById(id, clinicId);
+    if (!existing) notFound("Patient");
+
+    const patient = await patientRepo.update(id, clinicId, { status });
+
+    const actionMap: Record<string, string> = {
+      APPROVED: "GUEST_APPROVED",
+      ENDED: "GUEST_ENDED",
+      PENDING: "GUEST_STATUS_CHANGED",
+    };
+    auditLog({
+      clinicId,
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: actionMap[status] ?? "GUEST_STATUS_CHANGED",
+      resourceType: "patient",
+      resourceId: id,
+      metadata: { newStatus: status },
+    });
+
     res.json(patient);
   } catch (e) { next(e); }
 });
@@ -686,7 +747,7 @@ router.get("/document-types", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const types = await documentRepo.listDocumentTypes(clinicId);
-    res.json(types);
+    res.json({ rows: types });
   } catch (e) { next(e); }
 });
 
@@ -712,7 +773,7 @@ router.put("/document-types/:id", async (req, res, next) => {
     if (!existing) notFound("Document type");
 
     const [updated] = await db.update(documentTypes)
-      .set({ ...body })
+      .set({ ...body, updatedAt: new Date() } as any)
       .where(and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)))
       .returning();
     res.json(updated);

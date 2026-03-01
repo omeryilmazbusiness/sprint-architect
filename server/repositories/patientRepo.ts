@@ -13,6 +13,15 @@ export interface CreatePatientInput {
   arrivalDate?: string;
   departureDate?: string;
   notes?: string;
+  nationalityCode?: string;
+  phoneE164?: string;
+  dateOfBirth?: string;
+  preferredLanguage?: string;
+  emergencyContactName?: string;
+  emergencyContactPhoneE164?: string;
+  arrivalAirport?: string;
+  flightNumber?: string;
+  requestedService?: string;
 }
 
 export interface UpdatePatientInput {
@@ -23,8 +32,17 @@ export interface UpdatePatientInput {
   passportNo?: string;
   arrivalDate?: string;
   departureDate?: string;
-  status?: "ACTIVE" | "INACTIVE" | "PENDING";
+  status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
   notes?: string;
+  nationalityCode?: string;
+  phoneE164?: string;
+  dateOfBirth?: string;
+  preferredLanguage?: string;
+  emergencyContactName?: string;
+  emergencyContactPhoneE164?: string;
+  arrivalAirport?: string;
+  flightNumber?: string;
+  requestedService?: string;
 }
 
 export const patientRepo = {

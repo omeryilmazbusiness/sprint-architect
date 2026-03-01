@@ -30,6 +30,7 @@ interface Transport {
   vehicleModel?: string;
   vehicleBrand?: string;
   meetingPointText?: string;
+  createdAt?: string;
 }
 
 export default function TransportsScreen() {
@@ -97,6 +98,11 @@ export default function TransportsScreen() {
     setEditingItem(null);
     resetForm();
     setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.driverPhone.trim()) return;
+    mutation.mutate(form);
   };
 
   const deleteMutation = useMutation({
@@ -260,7 +266,7 @@ export default function TransportsScreen() {
             </Pressable>
             <Pressable
               style={[styles.btnPrimary, { opacity: !form.driverPhone.trim() || mutation.isPending ? 0.6 : 1 }]}
-              onPress={() => mutation.mutate(form)}
+              onPress={handleSubmit}
               disabled={!form.driverPhone.trim() || mutation.isPending}
             >
               {mutation.isPending

@@ -1,0 +1,204 @@
+REPLIT AI — continue in the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a premium “Create Guest” flow using a bottom sheet form with:
+- Flag country picker dropdown
+- Smart phone input (auto country code + formatting + auto-detect country)
+- Modern calendar date pickers for arrival/departure
+- Guest status workflow: PENDING -> APPROVED -> ENDED
+- White theme consistent with Admin (premium)
+
+NON-NEGOTIABLE:
+- Use existing white theme tokens/components.
+- Strict clinic scoping for Manager.
+- zod validation for all inputs.
+- Debounce, loading/error/empty states.
+- Keep existing patientKey/guestAccessKey logic intact.
+
+========================================================
+A) DATA MODEL (DB / Drizzle)
+========================================================
+1) Add/ensure guest status enum:
+- PENDING
+- APPROVED
+- ENDED
+(If an existing patient_status enum exists, extend carefully without breaking. If “ACTIVE/INACTIVE” exists, keep them but ensure new statuses are supported and mapped.)
+
+2) Extend patients table (guest) with professional fields:
+Required:
+- fullName
+- nationalityCode (ISO-2)   e.g., "TR", "DE"
+- phoneE164 (string)        e.g., "+9053..."
+- arrivalDate (date)
+- departureDate (date)
+- status (PENDING/APPROVED/ENDED)
+
+Optional fields:
+- email
+- passportNo
+- dateOfBirth
+- preferredLanguage
+- emergencyContactName
+- emergencyContactPhoneE164
+- arrivalAirport
+- flightNumber
+- notes
+- requestedService
+
+3) Add indexes for manager list performance:
+- index on clinicId
+- index on status
+- index on lower(fullName) if supported (or use ILIKE query)
+
+========================================================
+B) BACKEND (Express) — ENDPOINTS
+========================================================
+1) Create guest (Manager)
+POST /v1/manager/patients
+Body (zod):
+{
+  fullName: string,
+  nationalityCode: string,
+  phoneE164: string,
+  arrivalDate: string (ISO date),
+  departureDate: string (ISO date),
+  email?: string,
+  passportNo?: string,
+  dateOfBirth?: string,
+  preferredLanguage?: string,
+  emergencyContactName?: string,
+  emergencyContactPhoneE164?: string,
+  arrivalAirport?: string,
+  flightNumber?: string,
+  notes?: string,
+  requestedService?: string
+}
+Rules:
+- departureDate must be >= arrivalDate
+- status MUST be set to PENDING automatically on creation (ignore any incoming status)
+Return created guest DTO.
+
+2) Approve guest (Manager)
+PUT /v1/manager/patients/:id/status
+Body:
+{ status: "APPROVED" }
+Rules:
+- Only manager of same clinic can approve.
+- Audit log: GUEST_APPROVED
+
+3) End guest (Manager)
+PUT /v1/manager/patients/:id/status
+Body:
+{ status: "ENDED" }
+Rules:
+- Only manager of same clinic.
+- Audit log: GUEST_ENDED
+
+(If you prefer separate endpoints:)
+POST /v1/manager/patients/:id/approve
+POST /v1/manager/patients/:id/end
+But one status endpoint is fine.
+
+4) List guests with status filter
+GET /v1/manager/patients?search=&status=&page=&pageSize=
+- search case-insensitive on fullName and optionally patientKey
+- status filter supports PENDING/APPROVED/ENDED
+
+========================================================
+C) MOBILE (Expo) — PREMIUM CREATE GUEST BOTTOM SHEET
+========================================================
+Target: Users -> Guests list screen
+- Add a floating action button (FAB) “New Guest”
+- On tap open a bottom sheet (slide-up modal), not a new page.
+
+Bottom sheet UX:
+- Use a 2-step form with a stepper header:
+  Step 1: Identity & Contact
+  Step 2: Travel & Plan
+
+Step 1 fields:
+- Full Name (required)
+- Nationality (flag dropdown)
+- Phone number:
+  - left: flag + country calling code
+  - right: number input formatted live
+  - If user types “+90...” auto-detect country and update picker
+- Email (optional)
+- Passport No (optional)
+- Preferred language (optional dropdown: TR/EN/RU)
+- Emergency contact name/phone (optional)
+
+Step 2 fields:
+- Arrival Date (required) — calendar picker
+- Departure Date (required) — calendar picker
+- Flight number (optional)
+- Arrival airport (optional)
+- Requested service (optional)
+- Notes (optional multiline)
+
+Buttons:
+- Next / Back
+- Primary: “Create Guest”
+- Disable submit while loading
+- On success:
+  - close sheet
+  - show toast “Guest created (Pending approval)”
+  - navigate to Guest detail
+  - guest detail shows status pill PENDING and a prominent “Approve Guest” button
+
+Country picker:
+- Use a flag country picker library (preferred):
+  - react-native-country-picker-modal
+If not acceptable, implement a custom bottom sheet list with flags (static mapping).
+
+Phone formatting:
+- Use libphonenumber-js (or similar) to:
+  - format as user types based on selected country
+  - parse when input starts with + and auto-select country if detected
+Store phoneE164 in backend.
+
+Date picker:
+- Use a modern calendar picker (choose one):
+  - react-native-calendars (month calendar)
+  - OR react-native-modal-datetime-picker (date-only) if already installed
+Validate departure >= arrival and show inline error.
+
+========================================================
+D) GUEST STATUS UX (PENDING -> APPROVED -> ENDED)
+========================================================
+Guest detail page:
+- Show status pill (Pending/Approved/Ended)
+- If Pending: show CTA “Approve Guest”
+- If Approved: show CTA “End Guest”
+- On click: confirm modal then call status endpoint and refresh.
+
+Guests list:
+- Add filter chips for status quickly (All / Pending / Approved / Ended)
+- Status pills in list rows.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Files changed/added (server + mobile)
+2) DB migration commands
+3) Endpoint list + sample curl for create + approve + end
+4) Manual QA checklist:
+- Create guest bottom sheet works
+- Country picker shows flags
+- Phone auto country code + formatting works and detects + code
+- Arrival/departure calendar works and validates
+- Guest created is PENDING
+- Approve changes to APPROVED
+- End changes to ENDED
+- Filters work in guest list
+
+IMPLEMENTATION ORDER:
+1) DB schema + migrations (status + fields)
+2) Backend endpoints + zod validation + audit logs
+3) Mobile bottom sheet create form (country picker + phone formatter + calendar)
+4) Guest detail status actions
+5) Guests list filters & polish
+
+Proceed now. Keep UX premium white theme.
+END.
