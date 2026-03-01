@@ -8,47 +8,33 @@ import {
   TextInput,
   Modal,
   Alert,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   RefreshControl,
   ScrollView,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
-import {
-  listAdminInvoices,
-  generateInvoices,
-  InvoiceListResponse,
-} from "@/lib/api/adminInvoices";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
+import { listAdminInvoices, generateInvoices, InvoiceListResponse } from "@/lib/api/adminInvoices";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
 const PERIOD_REGEX = /^\d{4}-\d{2}$/;
 
-function statusColor(status: string, colors: typeof Colors.light): string {
-  if (status === "PAID") return colors.success;
-  if (status === "UNPAID") return colors.error;
-  return colors.warning;
-}
-
-function statusIcon(status: string): string {
-  if (status === "PAID") return "checkmark-circle";
-  if (status === "UNPAID") return "alert-circle";
-  return "time";
+function statusAccent(status: string): string {
+  if (status === "PAID") return T.success;
+  if (status === "UNPAID") return T.danger;
+  if (status === "PENDING") return T.warning;
+  return T.accent;
 }
 
 export default function AdminInvoicesScreen() {
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [period, setPeriod] = useState("");
@@ -60,11 +46,7 @@ export default function AdminInvoicesScreen() {
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<InvoiceListResponse>({
     queryKey: ["/v1/admin/invoices", validPeriod, statusFilter],
-    queryFn: () =>
-      listAdminInvoices({
-        period: validPeriod,
-        status: statusFilter !== "ALL" ? statusFilter : undefined,
-      }),
+    queryFn: () => listAdminInvoices({ period: validPeriod, status: statusFilter !== "ALL" ? statusFilter : undefined }),
   });
 
   const generateMutation = useMutation({
@@ -79,218 +61,146 @@ export default function AdminInvoicesScreen() {
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to generate"),
   });
 
-  if (isLoading) return <LoadingView message="Loading invoices..." />;
-  if (isError) return <ErrorView onRetry={refetch} />;
-
-  const invoices = data?.rows ?? [];
+  async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-            Invoices
-          </Text>
-          <Pressable
-            style={[styles.generateBtn, { backgroundColor: colors.accent }]}
-            onPress={() => setShowGenerate(true)}
-          >
+    <View style={styles.root}>
+      <AdminHeader
+        title="Invoices"
+        userEmail={user?.email}
+        onLogout={handleLogout}
+        right={
+          <Pressable style={styles.genBtn} onPress={() => setShowGenerate(true)}>
             <Ionicons name="add" size={16} color="#fff" />
-            <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>Generate</Text>
+            <Text style={styles.genBtnText}>Generate</Text>
           </Pressable>
-        </View>
+        }
+      />
 
-        <TextInput
-          style={[
-            styles.periodInput,
-            {
-              backgroundColor: colors.background,
-              borderColor: period && !validPeriod ? colors.error : colors.border,
-              color: colors.text,
-              fontFamily: "Inter_400Regular",
-            },
-          ]}
-          placeholder="Filter by period (YYYY-MM)"
-          placeholderTextColor={colors.textMuted}
-          value={period}
-          onChangeText={setPeriod}
-          maxLength={7}
-          autoCapitalize="none"
-        />
+      <View style={styles.filterArea}>
+        <View style={styles.periodRow}>
+          <Ionicons name="calendar-outline" size={16} color={T.textMuted} />
+          <TextInput
+            style={[styles.periodInput, period && !validPeriod ? { color: T.danger } : null]}
+            placeholder="Filter by period (YYYY-MM)"
+            placeholderTextColor={T.textMuted}
+            value={period}
+            onChangeText={setPeriod}
+            maxLength={7}
+            autoCapitalize="none"
+          />
+          {period.length > 0 && (
+            <Pressable onPress={() => setPeriod("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={T.textMuted} />
+            </Pressable>
+          )}
+        </View>
         {period.length > 0 && !validPeriod && (
-          <Text style={[styles.periodHint, { color: colors.error, fontFamily: "Inter_400Regular" }]}>
-            Enter a complete period, e.g. 2026-02
-          </Text>
+          <Text style={styles.periodHint}>Enter a complete period, e.g. 2026-02</Text>
         )}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
           {STATUS_FILTERS.map((s) => {
-            const chipColor = s === "ALL" ? colors.accent : statusColor(s, colors);
-            const isActive = statusFilter === s;
+            const c = s === "ALL" ? T.primary : statusAccent(s);
+            const active = statusFilter === s;
             return (
               <Pressable
                 key={s}
-                style={[
-                  styles.filterChip,
-                  {
-                    borderColor: isActive ? chipColor : colors.border,
-                    backgroundColor: isActive ? chipColor + "18" : "transparent",
-                  },
-                ]}
+                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
                 onPress={() => setStatusFilter(s)}
               >
                 {s !== "ALL" && (
-                  <Ionicons name={statusIcon(s) as any} size={12} color={isActive ? chipColor : colors.textSecondary} />
+                  <View style={[styles.dot, { backgroundColor: c }]} />
                 )}
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    {
-                      color: isActive ? chipColor : colors.textSecondary,
-                      fontFamily: "Inter_500Medium",
-                    },
-                  ]}
-                >
-                  {s}
-                </Text>
+                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{s}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
-
-        {data && (
-          <Text style={[styles.resultCount, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {data.total} invoice{data.total !== 1 ? "s" : ""}
-          </Text>
-        )}
       </View>
 
-      <FlatList
-        data={invoices}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
-        }
-        scrollEnabled={invoices.length > 0}
-        ListEmptyComponent={
-          <EmptyState
-            icon="document-text-outline"
-            title="No invoices found"
-            subtitle={
-              validPeriod || statusFilter !== "ALL"
-                ? "Try clearing your filters"
-                : "Generate invoices for a billing period"
-            }
-          />
-        }
-        renderItem={({ item }) => {
-          const sc = statusColor(item.status, colors);
-          return (
-            <Pressable
-              style={({ pressed }) => [
-                styles.card,
-                { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
-              ]}
-              onPress={() =>
-                router.push({ pathname: "/(admin)/invoices/[id]", params: { id: item.id } })
-              }
-            >
-              <View style={styles.cardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.clinicName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}
-                    numberOfLines={1}
-                  >
-                    {item.clinic?.name ?? "Unknown Clinic"}
-                  </Text>
-                  <Text
-                    style={[styles.period, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}
-                  >
-                    {item.period}
-                  </Text>
+      {isLoading ? (
+        <LoadingState message="Loading invoices…" />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
+      ) : (
+        <FlatList
+          data={data?.rows ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
+          scrollEnabled={!!(data?.rows?.length)}
+          ListHeaderComponent={data ? (
+            <Text style={styles.countLabel}>{data.total} invoice{data.total !== 1 ? "s" : ""}</Text>
+          ) : null}
+          ListEmptyComponent={
+            <EmptyState
+              icon="document-text-outline"
+              title="No invoices found"
+              subtitle={validPeriod || statusFilter !== "ALL" ? "Try clearing your filters" : "Generate invoices for a billing period"}
+            />
+          }
+          renderItem={({ item }) => {
+            const sc = statusAccent(item.status);
+            return (
+              <Pressable
+                style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => router.push({ pathname: "/(admin)/invoices/[id]", params: { id: item.id } })}
+              >
+                <View style={styles.cardLeft}>
+                  <View style={[styles.invIcon, { backgroundColor: sc + "15" }]}>
+                    <Ionicons name="document-text-outline" size={18} color={sc} />
+                  </View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={styles.clinicName} numberOfLines={1}>{item.clinic?.name ?? "Unknown Clinic"}</Text>
+                    <View style={styles.cardMeta}>
+                      <Text style={styles.period}>{item.period}</Text>
+                      <Text style={styles.metaDot}>·</Text>
+                      <Ionicons name="people-outline" size={12} color={T.textMuted} />
+                      <Text style={styles.patCount}>{item.patientCount}</Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: sc + "20" }]}>
-                  <Text style={[styles.statusText, { color: sc, fontFamily: "Inter_600SemiBold" }]}>
-                    {item.status}
-                  </Text>
+                <View style={styles.cardRight}>
+                  <Text style={[styles.total, { color: T.text }]}>{item.currency} {item.total.toFixed(2)}</Text>
+                  <StatusPill status={item.status} small />
+                  <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
                 </View>
-              </View>
-              <View style={styles.cardBottom}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="people-outline" size={13} color={colors.textMuted} />
-                  <Text
-                    style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}
-                  >
-                    {item.patientCount} patients
-                  </Text>
-                </View>
-                <Text style={[styles.total, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-                  {item.currency} {item.total.toFixed(2)}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        }}
-      />
+              </Pressable>
+            );
+          }}
+        />
+      )}
 
       <Modal visible={showGenerate} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Generate Invoices
-            </Text>
-            <Text style={[styles.modalSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Creates or updates invoices for all active clinics in the given period.
-            </Text>
+          <View style={styles.modal}>
+            <View style={[styles.modalIcon, { backgroundColor: T.primary + "12" }]}>
+              <Ionicons name="document-text-outline" size={28} color={T.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Generate Invoices</Text>
+            <Text style={styles.modalSub}>Creates or updates invoices for all active clinics in the given period.</Text>
             <TextInput
-              style={[
-                styles.input,
-                {
-                  borderColor: colors.border,
-                  color: colors.text,
-                  backgroundColor: colors.background,
-                  fontFamily: "Inter_400Regular",
-                },
-              ]}
+              style={styles.modalInput}
               placeholder="Period (YYYY-MM)"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={T.textMuted}
               value={generatePeriod}
               onChangeText={setGeneratePeriod}
               maxLength={7}
               autoCapitalize="none"
             />
-            <View style={styles.modalButtons}>
+            <View style={styles.modalBtns}>
               <Pressable
-                style={[styles.modalBtn, { borderColor: colors.border }]}
-                onPress={() => {
-                  setShowGenerate(false);
-                  setGeneratePeriod("");
-                }}
+                style={styles.modalCancelBtn}
+                onPress={() => { setShowGenerate(false); setGeneratePeriod(""); }}
               >
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                  Cancel
-                </Text>
+                <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.modalBtn,
-                  {
-                    backgroundColor: colors.accent,
-                    borderColor: colors.accent,
-                    opacity: generateMutation.isPending ? 0.7 : 1,
-                  },
-                ]}
+                style={[styles.modalConfirmBtn, { opacity: generateMutation.isPending ? 0.7 : 1 }]}
                 onPress={() => {
                   const p = generatePeriod.trim();
-                  if (!p || !PERIOD_REGEX.test(p)) {
-                    return Alert.alert("Validation", "Enter a valid period (YYYY-MM), e.g. 2026-02");
-                  }
+                  if (!p || !PERIOD_REGEX.test(p)) return Alert.alert("Validation", "Enter a valid period (YYYY-MM), e.g. 2026-02");
                   generateMutation.mutate(p);
                 }}
                 disabled={generateMutation.isPending}
@@ -298,9 +208,7 @@ export default function AdminInvoicesScreen() {
                 {generateMutation.isPending ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
-                    Generate
-                  </Text>
+                  <Text style={styles.modalConfirmText}>Generate</Text>
                 )}
               </Pressable>
             </View>
@@ -312,89 +220,39 @@ export default function AdminInvoicesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { paddingHorizontal: 16, paddingBottom: 10, borderBottomWidth: 1 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  title: { fontSize: 26 },
-  generateBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  generateBtnText: { color: "#fff", fontSize: 13 },
-  periodInput: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  periodHint: { fontSize: 11, marginBottom: 6 },
-  filterRow: { marginTop: 6, marginBottom: 4 },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  filterChipText: { fontSize: 13 },
-  resultCount: { fontSize: 11, marginTop: 4 },
-  list: { padding: 16, gap: 10 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 10 },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  clinicName: { fontSize: 15 },
-  period: { fontSize: 13, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText: { fontSize: 11 },
-  cardBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metaText: { fontSize: 13 },
-  total: { fontSize: 16 },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modal: { borderRadius: 16, padding: 24, width: "85%", gap: 14 },
-  modalTitle: { fontSize: 18 },
-  modalSub: { fontSize: 13, lineHeight: 18 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  modalButtons: { flexDirection: "row", gap: 10 },
-  modalBtn: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  modalBtnText: { fontSize: 15 },
+  root: { flex: 1, backgroundColor: T.bg },
+  genBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
+  genBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, paddingBottom: 8 },
+  periodRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  periodInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  periodHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.danger, paddingHorizontal: 16, marginTop: 2 },
+  chipsScroll: { paddingHorizontal: 16, paddingVertical: 6 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
+  chipInactive: { backgroundColor: "transparent", borderColor: T.border },
+  chipText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  dot: { width: 7, height: 7, borderRadius: 3.5 },
+  countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
+  list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
+  card: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: T.r14, borderWidth: 1, borderColor: T.border, padding: 14, gap: 12 },
+  cardLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  invIcon: { width: 40, height: 40, borderRadius: T.r10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  clinicName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  cardMeta: { flexDirection: "row", alignItems: "center", gap: 5 },
+  period: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textSec },
+  metaDot: { color: T.textMuted, fontSize: 12 },
+  patCount: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textSec },
+  cardRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  total: { fontFamily: "Inter_700Bold", fontSize: 14 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  modal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "85%", gap: 14, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16 },
+  modalIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  modalSub: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, textAlign: "center", lineHeight: 18 },
+  modalInput: { width: "100%", fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, backgroundColor: T.surfaceSubtle, borderWidth: 1.5, borderColor: T.border, borderRadius: T.r10, paddingHorizontal: 14, paddingVertical: 12 },
+  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
+  modalCancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
+  modalCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
+  modalConfirmBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.primary },
+  modalConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });

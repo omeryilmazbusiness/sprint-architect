@@ -6,26 +6,20 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  useColorScheme,
   Platform,
   RefreshControl,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
-import { StatusBadge } from "@/components/StatusBadge";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
 export default function ClinicsScreen() {
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const { user, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [search, setSearch] = useState("");
@@ -44,120 +38,92 @@ export default function ClinicsScreen() {
     queryFn: () => listClinics({ search: debouncedSearch || undefined }),
   });
 
-  if (isLoading) return <LoadingView message="Loading clinics..." />;
-  if (isError) return <ErrorView onRetry={refetch} />;
+  async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
+
+  if (isLoading) return (
+    <View style={styles.root}>
+      <AdminHeader title="Clinics" userEmail={user?.email} onLogout={handleLogout} right={<NewBtn />} />
+      <LoadingState message="Loading clinics…" />
+    </View>
+  );
+  if (isError) return (
+    <View style={styles.root}>
+      <AdminHeader title="Clinics" userEmail={user?.email} onLogout={handleLogout} right={<NewBtn />} />
+      <ErrorState onRetry={refetch} />
+    </View>
+  );
+
+  function NewBtn() {
+    return (
+      <Pressable testID="create-clinic-btn" style={styles.newBtn} onPress={() => router.push("/(admin)/clinics/create")}>
+        <Ionicons name="add" size={16} color="#fff" />
+        <Text style={styles.newBtnText}>New</Text>
+      </Pressable>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Clinics</Text>
-          <Pressable
-            testID="create-clinic-btn"
-            style={[styles.headerBtn, { backgroundColor: colors.accent }]}
-            onPress={() => router.push("/(admin)/clinics/create")}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={[styles.headerBtnText, { fontFamily: "Inter_600SemiBold" }]}>New</Text>
-          </Pressable>
-        </View>
+    <View style={styles.root}>
+      <AdminHeader title="Clinics" userEmail={user?.email} onLogout={handleLogout} right={<NewBtn />} />
+
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={16} color={T.textMuted} />
         <TextInput
-          style={[
-            styles.searchInput,
-            { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontFamily: "Inter_400Regular" },
-          ]}
-          placeholder="Search clinics..."
-          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+          placeholder="Search clinics…"
+          placeholderTextColor={T.textMuted}
           value={search}
           onChangeText={handleSearchChange}
           returnKeyType="search"
         />
+        {search.length > 0 && (
+          <Pressable onPress={() => { setSearch(""); setDebouncedSearch(""); }} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={T.textMuted} />
+          </Pressable>
+        )}
       </View>
+
+      {data && (
+        <Text style={styles.countLabel}>{data.total} clinic{data.total !== 1 ? "s" : ""}</Text>
+      )}
 
       <FlatList
         data={data?.rows ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
-        }
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
         scrollEnabled={!!(data?.rows?.length)}
         ListEmptyComponent={
           <EmptyState
             icon="business-outline"
-            title="No clinics yet"
-            subtitle="Tap New to create your first clinic"
+            title="No clinics found"
+            subtitle={debouncedSearch ? "Try a different search" : "Create your first clinic"}
           />
         }
         renderItem={({ item }) => (
           <Pressable
-            style={({ pressed }) => [
-              styles.card,
-              { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
-            ]}
+            style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push({ pathname: "/(admin)/clinics/[id]", params: { id: item.id } })}
           >
-            <View style={styles.cardTop}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.accent + "18" }]}>
-                <Ionicons name="business-outline" size={16} color={colors.accent} />
+            <View style={styles.cardLeft}>
+              <View style={styles.clinicIcon}>
+                <Text style={styles.clinicIconText}>{item.name.slice(0, 1).toUpperCase()}</Text>
               </View>
-              <Text
-                style={[styles.cardName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}
-                numberOfLines={1}
-              >
-                {item.name}
-              </Text>
-              <StatusBadge status={item.status as any} small />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.clinicName} numberOfLines={1}>{item.name}</Text>
+                <View style={styles.clinicMeta}>
+                  {item.services && item.services.length > 0 && (
+                    <Text style={styles.services} numberOfLines={1}>
+                      {item.services.slice(0, 2).join(" · ")}
+                      {item.services.length > 2 ? ` +${item.services.length - 2}` : ""}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </View>
-
-            {(item.services?.length > 0 || item.contactEmail || item.contactPhone) && (
-              <View style={styles.cardDetails}>
-                {item.contactEmail ? (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="mail-outline" size={12} color={colors.textMuted} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                      {item.contactEmail}
-                    </Text>
-                  </View>
-                ) : null}
-                {item.contactPhone ? (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="call-outline" size={12} color={colors.textMuted} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                      {item.contactPhone}
-                    </Text>
-                  </View>
-                ) : null}
-                {item.services?.length > 0 ? (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="medical-outline" size={12} color={colors.textMuted} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                      {item.services.join(", ")}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
-
-            <View style={styles.cardFooter}>
-              <View style={styles.metaItem}>
-                <Ionicons name="card-outline" size={12} color={colors.textMuted} />
-                <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {item.currency}
-                  {item.billingUnitPrice != null ? ` · ${item.billingUnitPrice}` : " · default rate"}
-                </Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
-                <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  Day {item.billingAnchorDay}
-                </Text>
-              </View>
+            <View style={styles.cardRight}>
+              <StatusPill status={item.status} small />
+              <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
             </View>
           </Pressable>
         )}
@@ -167,58 +133,37 @@ export default function ClinicsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  headerRow: {
+  root: { flex: 1, backgroundColor: T.bg },
+  newBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
+  newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  title: { fontSize: 26 },
-  headerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  headerBtnText: { fontSize: 14, color: "#fff" },
-  searchInput: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-  },
-  list: { padding: 16, gap: 10 },
-  card: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
     gap: 8,
+    backgroundColor: T.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  cardTop: {
+  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
+  list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
+  card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    backgroundColor: T.surface,
+    borderRadius: T.r14,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: 14,
+    gap: 12,
   },
-  cardIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  cardName: { flex: 1, fontSize: 15 },
-  cardDetails: { gap: 4, paddingLeft: 40 },
-  cardFooter: { flexDirection: "row", gap: 14, paddingLeft: 40 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metaText: { fontSize: 12 },
+  cardLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  cardRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  clinicIcon: { width: 40, height: 40, borderRadius: T.r10, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  clinicIconText: { fontFamily: "Inter_700Bold", fontSize: 16, color: T.primary },
+  clinicName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  clinicMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  services: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textSec },
 });

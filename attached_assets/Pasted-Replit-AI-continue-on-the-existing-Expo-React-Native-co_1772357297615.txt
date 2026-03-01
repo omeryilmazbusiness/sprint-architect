@@ -1,0 +1,155 @@
+Replit AI — continue on the existing Expo React Native codebase. Do NOT re-scaffold.
+We want a premium, professional WHITE (light) theme, starting with ADMIN area first.
+
+GOAL:
+Implement a “White Theme System” and apply it to ALL Admin screens first (Admin dashboard, clinics, clinic detail, users, invoices, settings).
+Admin area must look modern, clean, corporate-grade.
+
+NON-NEGOTIABLE:
+- Theme must be centralized and reusable (not random inline styles).
+- Admin screens must default to White Theme even if the rest of app is not themed yet.
+- No “Attention needed” section anywhere.
+- Keep existing navigation/auth logic intact.
+- All screens must keep loading/empty/error states.
+
+========================================================
+A) THEME DESIGN SPEC (implement exactly)
+========================================================
+Create a theme system with tokens:
+1) Colors (light theme)
+- background: very light gray/off-white (not pure white)
+- surface/card: white
+- border: subtle light gray
+- textPrimary: near-black
+- textSecondary: medium gray
+- textMuted: lighter gray
+- primary: single brand color (keep existing if already present)
+- success/warning/danger: for status pills only (subtle)
+- shadow: very soft, minimal
+
+2) Typography
+- Title: 20–22
+- Section title: 16–18
+- Body: 14–16
+- Caption: 12–13
+Use consistent font weights.
+
+3) Spacing & Radius
+- spacing scale: 4/8/12/16/20/24/32
+- radius: 12–16 for cards/buttons
+- consistent padding margins using tokens
+
+4) Components (reusable UI primitives)
+Create minimal reusable components styled for white theme:
+- Screen (white background + safe area)
+- Card
+- SectionHeader
+- PrimaryButton, SecondaryButton, DestructiveButton
+- TextField (consistent input style)
+- StatusPill (for ACTIVE/SUSPENDED, PENDING/UNPAID/PAID)
+- ListRow (title/subtitle/right accessory)
+- Divider
+- LoadingState, EmptyState, ErrorState
+
+========================================================
+B) ADMIN-ONLY DEFAULT WHITE THEME
+========================================================
+Implement:
+- A ThemeProvider (context) with light theme tokens.
+- Apply ThemeProvider at least to Admin route group, e.g. app/(admin)/_layout.tsx
+- Ensure all Admin screens use tokens/components, not ad-hoc colors.
+
+If there is no (admin) route group:
+- Create it and route Admin users into it after login.
+- Keep Manager/Patient routing untouched.
+
+========================================================
+C) PROFESSIONAL ADMIN HEADER (white theme)
+========================================================
+Build a premium Header component for admin screens:
+- Left: brand mark/text + page title
+- Right: user chip (admin email) + logout icon/button
+- Optional: small search button (not required to fully implement search now)
+
+Header requirements:
+- Sticky at top (within SafeAreaView)
+- Clean bottom border
+- No clutter; consistent across all admin screens
+
+========================================================
+D) APPLY WHITE THEME TO ADMIN SCREENS (upgrade UI)
+========================================================
+Update these Admin screens to use the new theme components:
+1) Admin Dashboard
+- KPI cards row: Total Clinics, Active Clinics, Suspended Clinics, Pending Invoices, Unpaid Invoices
+- Quick actions card: Create Clinic, View Clinics, View Invoices, View Users
+- Recent invoices list (last 5)
+- Activity card (neutral timeline) — NOT “Attention needed”
+- Must feel premium: clean layout, spacing, subtle shadows.
+
+2) Clinics List + Create Clinic + Clinic Detail
+- Clinics list: Card list with status pill; tap -> detail
+- Create clinic form: uses TextField + services multi-select chips (Rinoplasti/Göz/Diş)
+- Keyboard handling: KeyboardAvoidingView + ScrollView; focused inputs never hidden
+- After create success: navigate back to clinics list/dashboard and refresh list
+
+- Clinic detail: premium cards:
+  - Overview (name + status pill + services chips)
+  - Contact & Address
+  - Billing status / last invoice summary
+  - Actions (View invoices filtered)
+
+3) Users tab
+- White theme list with filters:
+  - clinic dropdown filter
+  - role/status filters
+  - search input
+- Use ListRow + StatusPill
+- Empty states should look clean
+
+4) Invoices list + Invoice detail
+- Fix filter/search crash by validating query building and backend parsing
+- Status options only: PENDING/UNPAID/PAID
+- Invoice detail: clean summary cards, and “Mark as PAID” button (admin only)
+
+5) Admin Settings
+- Premium settings layout with sections:
+  - Profile (email/role)
+  - Administration shortcuts (Clinics, Users, Invoices)
+  - System Health (/health)
+  - Security (Logout; change password placeholder)
+  - App info (version, terms placeholders)
+- Use ListRow components.
+
+========================================================
+E) KEEP BUSINESS LOGIC AS IS (do not rewrite)
+========================================================
+Do NOT rewrite backend billing logic here. Only ensure UI matches current API.
+If any endpoints required by admin UI are missing (clinic detail, list users with clinic filter, invoices filters),
+add only minimal endpoints without refactoring unrelated code.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After completing:
+1) List all new theme files/components
+2) List updated admin screens/routes
+3) Explain how admin routing ensures white theme first
+4) Manual QA checklist:
+- admin login -> sees white themed dashboard
+- clinics list/create/detail are white themed and premium
+- keyboard does not cover inputs in create clinic
+- users filters work and UI matches theme
+- invoices filter works without crash and statuses correct
+- settings looks premium and consistent
+
+IMPLEMENTATION ORDER:
+1) Theme tokens + UI primitives
+2) Admin layout ThemeProvider + Header
+3) Convert Admin Dashboard to theme
+4) Convert Clinics screens (list/create/detail) to theme
+5) Convert Users + Invoices + Settings to theme
+6) Final polish (spacing, empty/loading/error)
+
+Proceed now. Start with Admin area only.
+END.

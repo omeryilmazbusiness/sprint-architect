@@ -5,61 +5,43 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  TextInput,
   Alert,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Modal,
   Linking,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import Colors from "@/constants/colors";
-import { StatusBadge } from "@/components/StatusBadge";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
 import {
-  getClinicDetail,
-  updateClinic,
-  deactivateClinic,
-  ClinicDetail,
-  InvoiceSummary,
+  Card, SectionHeader, StatusPill, Divider,
+  TextField, PrimaryButton, DestructiveButton, LoadingState, ErrorState,
+} from "@/components/ui";
+import {
+  getClinicDetail, updateClinic, deactivateClinic,
+  ClinicDetail, InvoiceSummary,
 } from "@/lib/api/adminClinics";
 
 const ALL_SERVICES = ["Rinoplasti", "Göz", "Diş"] as const;
 
 function fmt(iso: string | null | undefined) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function isOverdue(inv: InvoiceSummary) {
-  return inv.status !== "PAID" && !!inv.dueAt && new Date(inv.dueAt) < new Date();
-}
-
-function invStatusColor(inv: InvoiceSummary, colors: typeof Colors.light) {
-  if (isOverdue(inv)) return colors.error;
-  if (inv.status === "PAID") return colors.success;
-  if (inv.status === "ISSUED") return colors.warning;
-  return colors.textMuted;
+function invStatusColor(inv: InvoiceSummary): string {
+  if (inv.status === "PAID") return T.success;
+  if (inv.status === "UNPAID") return T.danger;
+  return T.warning;
 }
 
 export default function ClinicDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [showEdit, setShowEdit] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
@@ -88,15 +70,14 @@ export default function ClinicDetailScreen() {
   }
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      updateClinic(id, {
-        name: editName.trim(),
-        currency: editCurrency.trim() || "EUR",
-        billingUnitPrice: editPrice ? parseFloat(editPrice) : null,
-        billingAnchorDay: editAnchorDay ? parseInt(editAnchorDay) : undefined,
-        status: editStatus,
-        services: editServices,
-      }),
+    mutationFn: () => updateClinic(id, {
+      name: editName.trim(),
+      currency: editCurrency.trim() || "EUR",
+      billingUnitPrice: editPrice ? parseFloat(editPrice) : null,
+      billingAnchorDay: editAnchorDay ? parseInt(editAnchorDay) : undefined,
+      status: editStatus,
+      services: editServices,
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/clinics"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
@@ -116,308 +97,275 @@ export default function ClinicDetailScreen() {
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to deactivate"),
   });
 
-  function toggleEditService(svc: string) {
-    setEditServices((prev) =>
-      prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc]
-    );
-  }
-
-  if (isLoading) return <LoadingView message="Loading clinic..." />;
-  if (isError || !data) return <ErrorView onRetry={refetch} />;
+  if (isLoading) return (
+    <View style={styles.root}>
+      <AdminHeader title="Clinic Detail" backButton onBack={() => router.back()} />
+      <LoadingState message="Loading clinic…" />
+    </View>
+  );
+  if (isError || !data) return (
+    <View style={styles.root}>
+      <AdminHeader title="Clinic Detail" backButton onBack={() => router.back()} />
+      <ErrorState onRetry={refetch} />
+    </View>
+  );
 
   const currentInv = data.currentPeriodInvoice;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={colors.gradient} style={[styles.heroHeader, { paddingTop: topPad + 12 }]}>
-        <View style={styles.heroRow}>
+    <View style={styles.root}>
+      <AdminHeader
+        title={data.name}
+        backButton
+        onBack={() => router.back()}
+        right={
           <Pressable
-            style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.back()}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-          </Pressable>
-          <View style={styles.heroCenter}>
-            <Text style={[styles.heroName, { fontFamily: "Inter_700Bold" }]} numberOfLines={2}>
-              {data.name}
-            </Text>
-            <View style={styles.heroMeta}>
-              <StatusBadge status={data.status} small />
-              <Text style={[styles.heroCreated, { fontFamily: "Inter_400Regular" }]}>
-                Since {fmt(data.createdAt)}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [styles.editIconBtn, { opacity: pressed ? 0.7 : 1 }]}
             onPress={openEdit}
-            hitSlop={10}
+            hitSlop={8}
           >
-            <Ionicons name="create-outline" size={20} color="#fff" />
+            <Ionicons name="create-outline" size={20} color={T.primary} />
           </Pressable>
-        </View>
-      </LinearGradient>
+        }
+      />
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {(data.services?.length > 0) && (
-          <SectionCard colors={colors} label="SERVICES">
-            <View style={styles.chipsRow}>
-              {data.services.map((svc) => (
-                <View key={svc} style={[styles.serviceChip, { backgroundColor: colors.accent + "18", borderColor: colors.accent + "40" }]}>
-                  <Ionicons name="medical-outline" size={12} color={colors.accent} />
-                  <Text style={[styles.serviceChipText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    {svc}
-                  </Text>
-                </View>
-              ))}
+        <Card style={styles.statusCard}>
+          <View style={styles.statusCardRow}>
+            <View style={styles.clinicBadge}>
+              <Text style={styles.clinicBadgeText}>{data.name.slice(0, 2).toUpperCase()}</Text>
             </View>
-          </SectionCard>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={styles.clinicName}>{data.name}</Text>
+              <Text style={styles.clinicSince}>Since {fmt(data.createdAt)}</Text>
+            </View>
+            <StatusPill status={data.status} />
+          </View>
+          {data.status === "SUSPENDED" && (
+            <View style={styles.suspendedBanner}>
+              <Ionicons name="warning-outline" size={14} color={T.danger} />
+              <Text style={styles.suspendedText}>Clinic suspended — billing overdue</Text>
+            </View>
+          )}
+        </Card>
+
+        {(data.services?.length > 0) && (
+          <>
+            <SectionHeader label="Services" style={styles.sectionGap} />
+            <Card>
+              <View style={styles.chipsRow}>
+                {data.services.map((svc) => (
+                  <View key={svc} style={styles.serviceChip}>
+                    <Ionicons name="medical-outline" size={12} color={T.accent} />
+                    <Text style={styles.serviceChipText}>{svc}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
+          </>
         )}
 
         {(data.address || data.contactPhone || data.contactEmail) && (
-          <SectionCard colors={colors} label="CONTACT & ADDRESS">
-            {data.address ? (
-              <InfoRow icon="location-outline" colors={colors}>
-                <Text style={[styles.infoText, { color: colors.text, fontFamily: "Inter_400Regular" }]}>
-                  {data.address}
-                </Text>
-              </InfoRow>
-            ) : null}
-            {data.contactPhone ? (
-              <Pressable onPress={() => Linking.openURL(`tel:${data.contactPhone}`)}>
-                <InfoRow icon="call-outline" colors={colors} tappable>
-                  <Text style={[styles.infoText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                    {data.contactPhone}
-                  </Text>
-                </InfoRow>
-              </Pressable>
-            ) : null}
-            {data.contactEmail ? (
-              <Pressable onPress={() => Linking.openURL(`mailto:${data.contactEmail}`)}>
-                <InfoRow icon="mail-outline" colors={colors} tappable>
-                  <Text style={[styles.infoText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                    {data.contactEmail}
-                  </Text>
-                </InfoRow>
-              </Pressable>
-            ) : null}
-          </SectionCard>
+          <>
+            <SectionHeader label="Contact & Address" style={styles.sectionGap} />
+            <Card noPad>
+              {data.address && (
+                <View style={styles.contactRow}>
+                  <View style={styles.contactIcon}><Ionicons name="location-outline" size={16} color={T.accent} /></View>
+                  <Text style={styles.contactText}>{data.address}</Text>
+                </View>
+              )}
+              {data.address && (data.contactPhone || data.contactEmail) && <Divider inset={52} />}
+              {data.contactPhone && (
+                <Pressable onPress={() => Linking.openURL(`tel:${data.contactPhone}`)}>
+                  <View style={styles.contactRow}>
+                    <View style={styles.contactIcon}><Ionicons name="call-outline" size={16} color={T.accent} /></View>
+                    <Text style={[styles.contactText, { color: T.accent }]}>{data.contactPhone}</Text>
+                    <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
+                  </View>
+                </Pressable>
+              )}
+              {data.contactPhone && data.contactEmail && <Divider inset={52} />}
+              {data.contactEmail && (
+                <Pressable onPress={() => Linking.openURL(`mailto:${data.contactEmail}`)}>
+                  <View style={styles.contactRow}>
+                    <View style={styles.contactIcon}><Ionicons name="mail-outline" size={16} color={T.accent} /></View>
+                    <Text style={[styles.contactText, { color: T.accent }]}>{data.contactEmail}</Text>
+                    <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
+                  </View>
+                </Pressable>
+              )}
+            </Card>
+          </>
         )}
 
-        <SectionCard colors={colors} label="BILLING SUMMARY">
-          <View style={styles.kpiRow}>
-            <KpiTile icon="calendar-outline" label="Billing Day" value={`Day ${data.billingAnchorDay}`} colors={colors} />
-            <KpiTile icon="arrow-forward-circle-outline" label="Next Invoice" value={fmt(data.nextInvoiceDate)} colors={colors} />
-            {currentInv ? (
-              <KpiTile
-                icon="document-text-outline"
-                label="This Period"
-                value={currentInv.status}
-                valueColor={invStatusColor(currentInv, colors)}
-                colors={colors}
-              />
-            ) : (
-              <KpiTile icon="document-outline" label="This Period" value="No invoice" colors={colors} />
-            )}
+        <SectionHeader label="Billing Summary" style={styles.sectionGap} />
+        <Card>
+          <View style={styles.billingGrid}>
+            <BillingTile icon="calendar-outline" label="Billing Day" value={`Day ${data.billingAnchorDay}`} />
+            <BillingTile icon="arrow-forward-circle-outline" label="Next Invoice" value={fmt(data.nextInvoiceDate)} />
+            <BillingTile
+              icon="document-text-outline"
+              label="This Period"
+              value={currentInv?.status ?? "No invoice"}
+              valueColor={currentInv ? invStatusColor(currentInv) : undefined}
+            />
           </View>
           {currentInv && (
-            <View style={[styles.invBanner, { backgroundColor: invStatusColor(currentInv, colors) + "12", borderColor: invStatusColor(currentInv, colors) + "30" }]}>
-              <Ionicons name="receipt-outline" size={14} color={invStatusColor(currentInv, colors)} />
-              <Text style={[styles.invBannerText, { color: invStatusColor(currentInv, colors), fontFamily: "Inter_500Medium" }]}>
-                {currentInv.period} · {currentInv.patientCount} patients · {currentInv.currency}{" "}
-                {currentInv.total.toFixed(2)}
+            <View style={[styles.invBanner, { backgroundColor: invStatusColor(currentInv) + "10", borderColor: invStatusColor(currentInv) + "25" }]}>
+              <Ionicons name="receipt-outline" size={13} color={invStatusColor(currentInv)} />
+              <Text style={[styles.invBannerText, { color: invStatusColor(currentInv) }]}>
+                {currentInv.period} · {currentInv.patientCount} patients · {currentInv.currency} {currentInv.total.toFixed(2)}
               </Text>
             </View>
           )}
-        </SectionCard>
+        </Card>
 
         {data.managers.length > 0 && (
-          <SectionCard colors={colors} label="MANAGERS">
-            {data.managers.map((mgr, i) => (
-              <View key={mgr.id}>
-                {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                <View style={styles.managerRow}>
-                  <View style={[styles.avatar, { backgroundColor: colors.accent + "20" }]}>
-                    <Text style={[styles.avatarText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
-                      {mgr.email.slice(0, 2).toUpperCase()}
-                    </Text>
+          <>
+            <SectionHeader label="Managers" style={styles.sectionGap} />
+            <Card noPad>
+              {data.managers.map((mgr, i) => (
+                <View key={mgr.id}>
+                  {i > 0 && <Divider inset={52} />}
+                  <View style={styles.managerRow}>
+                    <View style={styles.mgrAvatar}>
+                      <Text style={styles.mgrAvatarText}>{mgr.email.slice(0, 2).toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.mgrEmail} numberOfLines={1}>{mgr.email}</Text>
+                    <StatusPill status={mgr.status} small />
                   </View>
-                  <Text style={[styles.managerEmail, { color: colors.text, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {mgr.email}
-                  </Text>
-                  <View style={[styles.statusDot, { backgroundColor: mgr.status === "ACTIVE" ? colors.success : colors.statusInactive }]} />
                 </View>
-              </View>
-            ))}
-          </SectionCard>
+              ))}
+            </Card>
+          </>
         )}
 
         {data.invoiceTimeline.length > 0 && (
-          <SectionCard colors={colors} label="INVOICE HISTORY" noPad>
-            {data.invoiceTimeline.map((inv, i) => {
-              const overdue = isOverdue(inv);
-              const sc = invStatusColor(inv, colors);
-              return (
-                <View key={inv.id}>
-                  {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                  <Pressable
-                    style={({ pressed }) => [styles.invRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() =>
-                      router.push({ pathname: "/(admin)/invoices/[id]", params: { id: inv.id } })
-                    }
-                  >
-                    <View style={styles.invLeft}>
-                      <Text style={[styles.invPeriod, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {inv.period}
-                      </Text>
-                      <Text style={[styles.invMeta, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {inv.patientCount} patients · {inv.currency} {inv.total.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={[styles.invChip, { backgroundColor: sc + "18" }]}>
-                      <Text style={[styles.invChipText, { color: sc, fontFamily: "Inter_600SemiBold" }]}>
-                        {overdue ? "OVERDUE" : inv.status}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-                  </Pressable>
-                </View>
-              );
-            })}
-          </SectionCard>
+          <>
+            <SectionHeader label="Invoice History" style={styles.sectionGap} />
+            <Card noPad>
+              {data.invoiceTimeline.map((inv, i) => {
+                const sc = invStatusColor(inv);
+                return (
+                  <View key={inv.id}>
+                    {i > 0 && <Divider />}
+                    <Pressable
+                      style={({ pressed }) => [styles.invRow, { opacity: pressed ? 0.7 : 1 }]}
+                      onPress={() => router.push({ pathname: "/(admin)/invoices/[id]", params: { id: inv.id } })}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.invPeriod}>{inv.period}</Text>
+                        <Text style={styles.invMeta}>{inv.patientCount} patients · {inv.currency} {inv.total.toFixed(2)}</Text>
+                      </View>
+                      <StatusPill status={inv.status} small />
+                      <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </Card>
+          </>
         )}
 
-        <View style={styles.actionsCol}>
+        <SectionHeader label="Actions" style={styles.sectionGap} />
+        <Card noPad>
           <Pressable
-            style={({ pressed }) => [styles.actionRow, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => router.push({ pathname: "/(admin)/users", params: { preselectedClinicId: id } })}
           >
-            <View style={[styles.actionIcon, { backgroundColor: colors.accent + "18" }]}>
-              <Ionicons name="person-add-outline" size={18} color={colors.accent} />
+            <View style={[styles.actionIcon, { backgroundColor: T.primary + "12" }]}>
+              <Ionicons name="person-add-outline" size={16} color={T.primary} />
             </View>
-            <Text style={[styles.actionText, { color: colors.text, fontFamily: "Inter_500Medium" }]}>
-              Create Manager
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <Text style={styles.actionText}>Create Manager</Text>
+            <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
           </Pressable>
-
+          <Divider inset={52} />
           <Pressable
-            style={({ pressed }) => [styles.actionRow, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push({ pathname: "/(admin)/invoices" })}
+            style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push("/(admin)/invoices")}
           >
-            <View style={[styles.actionIcon, { backgroundColor: colors.warning + "18" }]}>
-              <Ionicons name="document-text-outline" size={18} color={colors.warning} />
+            <View style={[styles.actionIcon, { backgroundColor: T.warning + "12" }]}>
+              <Ionicons name="document-text-outline" size={16} color={T.warning} />
             </View>
-            <Text style={[styles.actionText, { color: colors.text, fontFamily: "Inter_500Medium" }]}>
-              View Invoices
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <Text style={styles.actionText}>View Invoices</Text>
+            <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
           </Pressable>
-
           {data.status !== "INACTIVE" && (
-            <Pressable
-              style={({ pressed }) => [styles.actionRow, { backgroundColor: colors.card, borderColor: colors.error + "40", opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => setShowDeactivate(true)}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: colors.error + "12" }]}>
-                <Ionicons name="ban-outline" size={18} color={colors.error} />
-              </View>
-              <Text style={[styles.actionText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>
-                Deactivate Clinic
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.error} />
-            </Pressable>
+            <>
+              <Divider inset={52} />
+              <Pressable
+                style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => setShowDeactivate(true)}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: T.dangerBg }]}>
+                  <Ionicons name="ban-outline" size={16} color={T.danger} />
+                </View>
+                <Text style={[styles.actionText, { color: T.danger }]}>Deactivate Clinic</Text>
+                <Ionicons name="chevron-forward" size={14} color={T.danger} />
+              </Pressable>
+            </>
           )}
-        </View>
+        </Card>
       </ScrollView>
 
       <Modal visible={showEdit} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.editSheet, { backgroundColor: colors.card }]}>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-                Edit Clinic
-              </Text>
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetTitle}>Edit Clinic</Text>
               <Pressable onPress={() => setShowEdit(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close" size={22} color={T.textSec} />
               </Pressable>
             </View>
-
-            <ScrollView
-              contentContainerStyle={styles.sheetContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <EditField label="Clinic Name" value={editName} onChange={setEditName} colors={colors} />
-              <EditField label="Currency" value={editCurrency} onChange={setEditCurrency} colors={colors} maxLength={3} autoCapitalize="characters" />
-              <EditField label="Unit Price (optional)" value={editPrice} onChange={setEditPrice} keyboardType="decimal-pad" colors={colors} />
-              <EditField label="Billing Anchor Day (1–28)" value={editAnchorDay} onChange={setEditAnchorDay} keyboardType="number-pad" colors={colors} />
-
-              <Text style={[styles.editFieldLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>STATUS</Text>
+            <ScrollView contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
+              <View style={styles.editFields}>
+                <TextField label="Clinic Name" value={editName} onChangeText={setEditName} />
+                <TextField label="Currency (3-letter)" value={editCurrency} onChangeText={setEditCurrency} maxLength={3} autoCapitalize="characters" />
+                <TextField label="Unit Price (optional)" value={editPrice} onChangeText={setEditPrice} keyboardType="decimal-pad" />
+                <TextField label="Billing Anchor Day (1–28)" value={editAnchorDay} onChangeText={setEditAnchorDay} keyboardType="number-pad" />
+              </View>
+              <Text style={styles.editLabel}>STATUS</Text>
               <View style={styles.statusRow}>
                 {(["ACTIVE", "INACTIVE", "SUSPENDED"] as const).map((s) => (
                   <Pressable
                     key={s}
-                    style={[
-                      styles.statusOption,
-                      {
-                        borderColor: editStatus === s ? colors.accent : colors.border,
-                        backgroundColor: editStatus === s ? colors.accent + "18" : "transparent",
-                      },
-                    ]}
+                    style={[styles.statusOption, editStatus === s ? styles.statusOptionActive : styles.statusOptionInactive]}
                     onPress={() => setEditStatus(s)}
                   >
-                    <Text style={[styles.statusOptionText, { color: editStatus === s ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                      {s}
-                    </Text>
+                    <Text style={[styles.statusOptionText, { color: editStatus === s ? T.primary : T.textSec }]}>{s}</Text>
                   </Pressable>
                 ))}
               </View>
-
-              <Text style={[styles.editFieldLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>SERVICES</Text>
+              <Text style={styles.editLabel}>SERVICES</Text>
               <View style={styles.chipsRow}>
                 {ALL_SERVICES.map((svc) => {
                   const active = editServices.includes(svc);
                   return (
                     <Pressable
                       key={svc}
-                      onPress={() => toggleEditService(svc)}
-                      style={[
-                        styles.editChip,
-                        {
-                          backgroundColor: active ? colors.accent : colors.background,
-                          borderColor: active ? colors.accent : colors.border,
-                        },
-                      ]}
+                      onPress={() => setEditServices((prev) => prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc])}
+                      style={[styles.editChip, active ? styles.editChipActive : styles.editChipInactive]}
                     >
                       {active && <Ionicons name="checkmark" size={12} color="#fff" />}
-                      <Text style={[styles.editChipText, { color: active ? "#fff" : colors.textSecondary, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                        {svc}
-                      </Text>
+                      <Text style={[styles.editChipText, { color: active ? "#fff" : T.textSec }]}>{svc}</Text>
                     </Pressable>
                   );
                 })}
               </View>
-
-              <Pressable
-                style={[styles.saveBtn, { backgroundColor: colors.accent, opacity: saveMutation.isPending ? 0.7 : 1 }]}
+              <PrimaryButton
+                label="Save Changes"
+                loading={saveMutation.isPending}
                 onPress={() => {
                   if (!editName.trim()) return Alert.alert("Required", "Name is required");
                   saveMutation.mutate();
                 }}
-                disabled={saveMutation.isPending}
-              >
-                {saveMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Save Changes</Text>
-                )}
-              </Pressable>
+                style={styles.saveBtn}
+              />
             </ScrollView>
           </View>
         </View>
@@ -425,26 +373,23 @@ export default function ClinicDetailScreen() {
 
       <Modal visible={showDeactivate} transparent animationType="fade">
         <View style={styles.confirmOverlay}>
-          <View style={[styles.confirmModal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.confirmTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Deactivate Clinic
-            </Text>
-            <Text style={[styles.confirmSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              This will set the clinic status to INACTIVE. You can reactivate it later.
-            </Text>
-            <View style={styles.confirmButtons}>
-              <Pressable style={[styles.confirmBtn, { borderColor: colors.border }]} onPress={() => setShowDeactivate(false)}>
-                <Text style={[styles.confirmBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+          <View style={styles.confirmModal}>
+            <View style={[styles.confirmIcon, { backgroundColor: T.dangerBg }]}>
+              <Ionicons name="ban-outline" size={28} color={T.danger} />
+            </View>
+            <Text style={styles.confirmTitle}>Deactivate Clinic</Text>
+            <Text style={styles.confirmSub}>This will set the clinic status to INACTIVE. You can reactivate it later by editing.</Text>
+            <View style={styles.confirmBtns}>
+              <Pressable style={[styles.confirmBtn, { borderColor: T.border }]} onPress={() => setShowDeactivate(false)}>
+                <Text style={[styles.confirmBtnText, { color: T.textSec }]}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.confirmBtn, { backgroundColor: colors.error, borderColor: colors.error, opacity: deactivateMutation.isPending ? 0.7 : 1 }]}
+                style={[styles.confirmBtn, { backgroundColor: T.danger, borderColor: T.danger, opacity: deactivateMutation.isPending ? 0.7 : 1 }]}
                 onPress={() => deactivateMutation.mutate()}
                 disabled={deactivateMutation.isPending}
               >
-                {deactivateMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.confirmBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Deactivate</Text>
+                {deactivateMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : (
+                  <Text style={[styles.confirmBtnText, { color: "#fff" }]}>Deactivate</Text>
                 )}
               </Pressable>
             </View>
@@ -455,179 +400,75 @@ export default function ClinicDetailScreen() {
   );
 }
 
-function SectionCard({
-  children,
-  colors,
-  label,
-  noPad,
-}: {
-  children: React.ReactNode;
-  colors: typeof Colors.light;
-  label: string;
-  noPad?: boolean;
-}) {
+function BillingTile({ icon, label, value, valueColor }: { icon: string; label: string; value: string; valueColor?: string }) {
   return (
-    <>
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        {label}
-      </Text>
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
-          noPad && { padding: 0 },
-        ]}
-      >
-        {children}
-      </View>
-    </>
-  );
-}
-
-function InfoRow({
-  icon,
-  children,
-  colors,
-  tappable,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  children: React.ReactNode;
-  colors: typeof Colors.light;
-  tappable?: boolean;
-}) {
-  return (
-    <View style={[styles.infoRow, tappable && { paddingVertical: 8 }]}>
-      <View style={[styles.infoIcon, { backgroundColor: colors.accent + "18" }]}>
-        <Ionicons name={icon} size={15} color={colors.accent} />
-      </View>
-      <View style={{ flex: 1 }}>{children}</View>
-      {tappable && <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />}
-    </View>
-  );
-}
-
-function KpiTile({
-  icon,
-  label,
-  value,
-  valueColor,
-  colors,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  valueColor?: string;
-  colors: typeof Colors.light;
-}) {
-  return (
-    <View style={[styles.kpiTile, { backgroundColor: colors.background, borderColor: colors.border }]}>
-      <Ionicons name={icon} size={16} color={colors.accent} />
-      <Text style={[styles.kpiValue, { color: valueColor ?? colors.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
-        {value}
-      </Text>
-      <Text style={[styles.kpiLabel, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function EditField({
-  label,
-  value,
-  onChange,
-  keyboardType,
-  colors,
-  maxLength,
-  autoCapitalize,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  keyboardType?: "default" | "decimal-pad" | "number-pad";
-  colors: typeof Colors.light;
-  maxLength?: number;
-  autoCapitalize?: "none" | "characters" | "words";
-}) {
-  return (
-    <View style={styles.editFieldGroup}>
-      <Text style={[styles.editFieldLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        {label.toUpperCase()}
-      </Text>
-      <TextInput
-        style={[styles.editInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-        value={value}
-        onChangeText={onChange}
-        keyboardType={keyboardType ?? "default"}
-        maxLength={maxLength}
-        autoCapitalize={autoCapitalize}
-      />
+    <View style={styles.billingTile}>
+      <Ionicons name={icon as any} size={14} color={T.accent} />
+      <Text style={[styles.billingValue, valueColor ? { color: valueColor } : {}]} numberOfLines={1}>{value}</Text>
+      <Text style={styles.billingLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  heroHeader: { paddingHorizontal: 16, paddingBottom: 20 },
-  heroRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  heroCenter: { flex: 1, gap: 8 },
-  heroName: { fontSize: 22, color: "#fff", lineHeight: 28 },
-  heroMeta: { flexDirection: "row", alignItems: "center", gap: 10 },
-  heroCreated: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
-  editBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center", marginTop: 2 },
-  content: { padding: 16, gap: 6 },
-  sectionLabel: { fontSize: 11, letterSpacing: 0.8, marginTop: 14, marginBottom: 6 },
-  card: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
+  root: { flex: 1, backgroundColor: T.bg },
+  editIconBtn: { width: 36, height: 36, borderRadius: T.r8, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: T.border },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 4 },
+  sectionGap: { marginTop: 20 },
+  statusCard: { gap: 0 },
+  statusCardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  clinicBadge: { width: 44, height: 44, borderRadius: T.r12, backgroundColor: T.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  clinicBadgeText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+  clinicName: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  clinicSince: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textSec },
+  suspendedBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: T.dangerBg, borderRadius: T.r8, padding: 10, marginTop: 12 },
+  suspendedText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.danger, flex: 1 },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  serviceChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  serviceChipText: { fontSize: 13 },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 },
-  infoIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  infoText: { fontSize: 14, lineHeight: 20 },
-  kpiRow: { flexDirection: "row", gap: 8 },
-  kpiTile: { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: "center", gap: 4 },
-  kpiValue: { fontSize: 13, textAlign: "center" },
-  kpiLabel: { fontSize: 10, textAlign: "center" },
-  invBanner: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  invBannerText: { fontSize: 13, flex: 1 },
-  divider: { height: StyleSheet.hairlineWidth },
-  managerRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
-  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText: { fontSize: 14 },
-  managerEmail: { flex: 1, fontSize: 14 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  invRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 14 },
-  invLeft: { flex: 1, gap: 2 },
-  invPeriod: { fontSize: 14 },
-  invMeta: { fontSize: 12 },
-  invChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  invChipText: { fontSize: 11 },
-  actionsCol: { gap: 8, marginTop: 14 },
-  actionRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
-  actionIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  actionText: { flex: 1, fontSize: 15 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  editSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", overflow: "hidden" },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#ccc", alignSelf: "center", marginTop: 10 },
-  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
-  sheetTitle: { fontSize: 20 },
-  sheetContent: { paddingHorizontal: 20, paddingBottom: 40, gap: 4 },
-  editFieldGroup: { gap: 5, marginBottom: 12 },
-  editFieldLabel: { fontSize: 11, letterSpacing: 0.5 },
-  editInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  statusRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  statusOption: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  statusOptionText: { fontSize: 12 },
-  editChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1.5 },
-  editChipText: { fontSize: 13 },
-  saveBtn: { borderRadius: 12, paddingVertical: 15, alignItems: "center", marginTop: 16 },
-  saveBtnText: { color: "#fff", fontSize: 16 },
-  confirmOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
-  confirmModal: { borderRadius: 16, padding: 24, width: "85%", gap: 12 },
-  confirmTitle: { fontSize: 18 },
-  confirmSub: { fontSize: 14, lineHeight: 20 },
-  confirmButtons: { flexDirection: "row", gap: 10, marginTop: 4 },
-  confirmBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1 },
-  confirmBtnText: { fontSize: 15 },
+  serviceChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: T.accent + "12", borderWidth: 1, borderColor: T.accent + "30" },
+  serviceChipText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: T.accent },
+  contactRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
+  contactIcon: { width: 32, height: 32, borderRadius: T.r8, backgroundColor: T.accent + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  contactText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.text, flex: 1 },
+  billingGrid: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  billingTile: { flex: 1, backgroundColor: T.surfaceSubtle, borderRadius: T.r10, borderWidth: 1, borderColor: T.border, padding: 10, alignItems: "center", gap: 4 },
+  billingValue: { fontFamily: "Inter_700Bold", fontSize: 13, color: T.text, textAlign: "center" },
+  billingLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, textAlign: "center" },
+  invBanner: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: T.r8, padding: 10 },
+  invBannerText: { fontFamily: "Inter_500Medium", fontSize: 12, flex: 1 },
+  managerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  mgrAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  mgrAvatarText: { fontFamily: "Inter_700Bold", fontSize: 12, color: T.primary },
+  mgrEmail: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.text },
+  invRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
+  invPeriod: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
+  invMeta: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 2 },
+  actionRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
+  actionIcon: { width: 32, height: 32, borderRadius: T.r8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  actionText: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%", paddingBottom: 30 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: T.border },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  sheetContent: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
+  editFields: { gap: 14 },
+  editLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, color: T.textSec, marginTop: 4 },
+  statusRow: { flexDirection: "row", gap: 8 },
+  statusOption: { flex: 1, paddingVertical: 10, borderRadius: T.r10, borderWidth: 1.5, alignItems: "center" },
+  statusOptionActive: { borderColor: T.primary, backgroundColor: T.primary + "10" },
+  statusOptionInactive: { borderColor: T.border, backgroundColor: "transparent" },
+  statusOptionText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  editChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8, borderWidth: 1.5 },
+  editChipActive: { backgroundColor: T.primary, borderColor: T.primary },
+  editChipInactive: { backgroundColor: "transparent", borderColor: T.border },
+  editChipText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  saveBtn: { marginTop: 8, width: "100%" },
+  confirmOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  confirmModal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "85%", alignItems: "center", gap: 12 },
+  confirmIcon: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  confirmTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  confirmSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center", lineHeight: 20 },
+  confirmBtns: { flexDirection: "row", gap: 10, width: "100%" },
+  confirmBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5 },
+  confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
 });

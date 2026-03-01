@@ -5,30 +5,26 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  TextInput,
   Alert,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Modal,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import Colors from "@/constants/colors";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import {
+  Card, SectionHeader, StatusPill, Divider, TextField, LoadingState, ErrorState,
+  SecondaryButton, DestructiveButton,
+} from "@/components/ui";
 import { getUser, updateUser, deactivateUser, resetUserPassword, AdminUser, UpdateUserInput } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
 export default function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [email, setEmail] = useState("");
@@ -92,170 +88,210 @@ export default function UserDetailScreen() {
 
   const resetMutation = useMutation({
     mutationFn: () => resetUserPassword(id, newPassword),
-    onSuccess: () => { setShowReset(false); setNewPassword(""); Alert.alert("Done", "Password has been reset"); },
+    onSuccess: () => {
+      setShowReset(false);
+      setNewPassword("");
+      Alert.alert("Done", "Password has been reset successfully.");
+    },
     onError: (err: any) => Alert.alert("Error", err.message || "Failed to reset password"),
   });
 
-  if (isLoading) return <LoadingView message="Loading user..." />;
-  if (isError || !data) return <ErrorView onRetry={refetch} />;
+  if (isLoading) return (
+    <View style={styles.root}>
+      <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
+      <LoadingState message="Loading user…" />
+    </View>
+  );
+  if (isError || !data) return (
+    <View style={styles.root}>
+      <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
+      <ErrorState onRetry={refetch} />
+    </View>
+  );
 
   const selectedClinic = clinicsData?.rows.find((c) => c.id === clinicId);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.headerBar, { paddingTop: topPad + 8, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={colors.accent} />
-        </Pressable>
-        <View style={styles.headerInfo}>
-          <Text style={[styles.headerTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
-            {data.email}
-          </Text>
-          <View style={[styles.roleBadge, { backgroundColor: (role === "ADMIN" ? colors.warning : colors.accent) + "20" }]}>
-            <Text style={[styles.roleBadgeText, { color: role === "ADMIN" ? colors.warning : colors.accent, fontFamily: "Inter_600SemiBold" }]}>{role}</Text>
-          </View>
-        </View>
-        <View style={[styles.statusDot, { backgroundColor: status === "ACTIVE" ? colors.success : colors.statusInactive }]} />
-      </View>
+    <View style={styles.root}>
+      <AdminHeader
+        title="Edit User"
+        backButton
+        onBack={() => router.back()}
+        right={<StatusPill status={data.status} small />}
+      />
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Email</Text>
-            <TextInput
-              style={[styles.fieldInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 60 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Card style={styles.profileCard}>
+          <View style={styles.avatarWrap}>
+            <Text style={styles.avatarText}>{data.email.slice(0, 2).toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Text style={styles.profileEmail} numberOfLines={1}>{data.email}</Text>
+            <View style={styles.profileMeta}>
+              <StatusPill status={data.role} small />
+              <Text style={styles.profileDate}>Since {new Date(data.createdAt).toLocaleDateString("en-GB")}</Text>
+            </View>
+          </View>
+        </Card>
+
+        <SectionHeader label="Profile" style={styles.sectionGap} />
+        <Card>
+          <View style={styles.fields}>
+            <TextField
+              label="Email Address"
               value={email}
               onChangeText={(v) => { setEmail(v); setDirty(true); }}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-          </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Role</Text>
-            <View style={styles.optionRow}>
-              {(["MANAGER", "ADMIN"] as const).map((r) => (
+            <View>
+              <Text style={styles.fieldLabel}>ROLE</Text>
+              <View style={styles.optionRow}>
+                {(["MANAGER", "ADMIN"] as const).map((r) => (
+                  <Pressable
+                    key={r}
+                    style={[styles.option, role === r ? styles.optionActive : styles.optionInactive]}
+                    onPress={() => { setRole(r); setDirty(true); }}
+                  >
+                    <Text style={[styles.optionText, { color: role === r ? T.primary : T.textSec }]}>{r}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {role === "MANAGER" && (
+              <View>
+                <Text style={styles.fieldLabel}>ASSIGNED CLINIC</Text>
                 <Pressable
-                  key={r}
-                  style={[styles.option, { borderColor: role === r ? colors.accent : colors.border, backgroundColor: role === r ? colors.accent + "18" : "transparent" }]}
-                  onPress={() => { setRole(r); setDirty(true); }}
+                  style={styles.clinicSelector}
+                  onPress={() => setShowClinicPicker(true)}
                 >
-                  <Text style={[styles.optionText, { color: role === r ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{r}</Text>
+                  <Text style={[styles.clinicSelectorText, { color: selectedClinic ? T.text : T.textMuted }]}>
+                    {selectedClinic?.name ?? "Select clinic…"}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={T.textMuted} />
                 </Pressable>
-              ))}
+              </View>
+            )}
+
+            <View>
+              <Text style={styles.fieldLabel}>STATUS</Text>
+              <View style={styles.optionRow}>
+                {(["ACTIVE", "INACTIVE", "SUSPENDED"] as const).map((s) => (
+                  <Pressable
+                    key={s}
+                    style={[styles.option, status === s ? styles.optionActive : styles.optionInactive]}
+                    onPress={() => { setStatus(s); setDirty(true); }}
+                  >
+                    <Text style={[styles.optionText, { color: status === s ? T.primary : T.textSec }]}>{s}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           </View>
-
-          {role === "MANAGER" && (
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Assigned Clinic</Text>
-              <Pressable
-                style={[styles.fieldInput, { borderColor: colors.border, backgroundColor: colors.background, flexDirection: "row", alignItems: "center" }]}
-                onPress={() => setShowClinicPicker(true)}
-              >
-                <Text style={[styles.clinicValue, { color: selectedClinic ? colors.text : colors.textMuted, fontFamily: "Inter_400Regular", flex: 1 }]}>
-                  {selectedClinic?.name ?? "Select clinic..."}
-                </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-              </Pressable>
-            </View>
-          )}
-
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Status</Text>
-            <View style={styles.optionRow}>
-              {(["ACTIVE", "INACTIVE", "SUSPENDED"] as const).map((s) => (
-                <Pressable
-                  key={s}
-                  style={[styles.option, { borderColor: status === s ? colors.accent : colors.border, backgroundColor: status === s ? colors.accent + "18" : "transparent" }]}
-                  onPress={() => { setStatus(s); setDirty(true); }}
-                >
-                  <Text style={[styles.optionText, { color: status === s ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{s}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
+        </Card>
 
         <Pressable
-          style={[styles.saveBtn, { backgroundColor: dirty ? colors.accent : colors.accent + "60", opacity: saveMutation.isPending ? 0.7 : 1 }]}
+          style={[styles.saveBtn, { opacity: (!dirty || saveMutation.isPending) ? 0.5 : 1 }]}
           onPress={() => saveMutation.mutate()}
           disabled={!dirty || saveMutation.isPending}
         >
           {saveMutation.isPending ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={[styles.saveBtnText, { fontFamily: "Inter_600SemiBold" }]}>Save Changes</Text>
+            <Text style={styles.saveBtnText}>Save Changes</Text>
           )}
         </Pressable>
 
-        <Pressable
-          style={[styles.secondaryBtn, { borderColor: colors.accent }]}
-          onPress={() => setShowReset(true)}
-        >
-          <Ionicons name="key-outline" size={16} color={colors.accent} />
-          <Text style={[styles.secondaryBtnText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Reset Password</Text>
-        </Pressable>
-
-        {data.status !== "INACTIVE" && (
+        <SectionHeader label="Account Actions" style={styles.sectionGap} />
+        <Card noPad>
           <Pressable
-            style={[styles.secondaryBtn, { borderColor: colors.error }]}
-            onPress={() => setShowDeactivate(true)}
+            style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setShowReset(true)}
           >
-            <Ionicons name="ban-outline" size={16} color={colors.error} />
-            <Text style={[styles.secondaryBtnText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>Deactivate User</Text>
+            <View style={[styles.actionIcon, { backgroundColor: T.accent + "12" }]}>
+              <Ionicons name="key-outline" size={16} color={T.accent} />
+            </View>
+            <Text style={styles.actionLabel}>Reset Password</Text>
+            <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
           </Pressable>
-        )}
-
-        <Text style={[styles.meta, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Created {new Date(data.createdAt).toLocaleDateString()}
-        </Text>
+          {data.status !== "INACTIVE" && (
+            <>
+              <Divider inset={52} />
+              <Pressable
+                style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => setShowDeactivate(true)}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: T.dangerBg }]}>
+                  <Ionicons name="ban-outline" size={16} color={T.danger} />
+                </View>
+                <Text style={[styles.actionLabel, { color: T.danger }]}>Deactivate User</Text>
+                <Ionicons name="chevron-forward" size={14} color={T.danger} />
+              </Pressable>
+            </>
+          )}
+        </Card>
       </ScrollView>
 
       <Modal visible={showClinicPicker} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card, maxHeight: "60%" }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Select Clinic</Text>
-            <ScrollView>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetTitle}>Select Clinic</Text>
+              <Pressable onPress={() => setShowClinicPicker(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={T.textSec} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.sheetContent}>
               {(clinicsData?.rows ?? []).map((c) => (
                 <Pressable
                   key={c.id}
-                  style={[styles.clinicOption, { borderColor: clinicId === c.id ? colors.accent : colors.border, backgroundColor: clinicId === c.id ? colors.accent + "18" : "transparent" }]}
+                  style={[styles.clinicOption, clinicId === c.id ? styles.clinicOptionActive : styles.clinicOptionInactive]}
                   onPress={() => { setClinicId(c.id); setDirty(true); setShowClinicPicker(false); }}
                 >
-                  <Text style={[styles.clinicOptionText, { color: clinicId === c.id ? colors.accent : colors.text, fontFamily: "Inter_400Regular" }]}>{c.name}</Text>
+                  <Text style={[styles.clinicOptionText, { color: clinicId === c.id ? T.primary : T.text }]}>{c.name}</Text>
+                  {clinicId === c.id && <Ionicons name="checkmark" size={16} color={T.primary} />}
                 </Pressable>
               ))}
             </ScrollView>
-            <Pressable style={[styles.modalBtn, { borderColor: colors.border, marginTop: 12 }]} onPress={() => setShowClinicPicker(false)}>
-              <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-            </Pressable>
           </View>
         </View>
       </Modal>
 
       <Modal visible={showReset} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Reset Password</Text>
-            <TextInput
-              style={[styles.fieldInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-              placeholder="New password (min 8 chars)"
-              placeholderTextColor={colors.textMuted}
+          <View style={styles.modal}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="key-outline" size={24} color={T.accent} />
+            </View>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <TextField
+              label="New Password"
+              placeholder="Min 8 characters"
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
+              style={{ width: "100%" }}
             />
-            <View style={styles.modalButtons}>
-              <Pressable style={[styles.modalBtn, { borderColor: colors.border }]} onPress={() => { setShowReset(false); setNewPassword(""); }}>
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+            <View style={styles.modalBtns}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => { setShowReset(false); setNewPassword(""); }}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, { backgroundColor: colors.accent, borderColor: colors.accent, opacity: resetMutation.isPending ? 0.7 : 1 }]}
-                onPress={() => { if (!newPassword || newPassword.length < 8) return Alert.alert("Validation", "Min 8 characters"); resetMutation.mutate(); }}
+                style={[styles.modalConfirmBtn, { opacity: resetMutation.isPending ? 0.7 : 1 }]}
+                onPress={() => {
+                  if (!newPassword || newPassword.length < 8) return Alert.alert("Validation", "Minimum 8 characters required");
+                  resetMutation.mutate();
+                }}
                 disabled={resetMutation.isPending}
               >
-                {resetMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Reset</Text>}
+                {resetMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalConfirmText}>Reset</Text>}
               </Pressable>
             </View>
           </View>
@@ -264,21 +300,22 @@ export default function UserDetailScreen() {
 
       <Modal visible={showDeactivate} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Deactivate User</Text>
-            <Text style={[styles.modalSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              This user will no longer be able to log in.
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable style={[styles.modalBtn, { borderColor: colors.border }]} onPress={() => setShowDeactivate(false)}>
-                <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+          <View style={styles.modal}>
+            <View style={[styles.modalIconWrap, { backgroundColor: T.dangerBg }]}>
+              <Ionicons name="ban-outline" size={24} color={T.danger} />
+            </View>
+            <Text style={styles.modalTitle}>Deactivate User</Text>
+            <Text style={styles.modalSub}>This user will no longer be able to log in. You can reactivate them later by editing their status.</Text>
+            <View style={styles.modalBtns}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => setShowDeactivate(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, { backgroundColor: colors.error, borderColor: colors.error, opacity: deactivateMutation.isPending ? 0.7 : 1 }]}
+                style={[styles.modalDestroyBtn, { opacity: deactivateMutation.isPending ? 0.7 : 1 }]}
                 onPress={() => deactivateMutation.mutate()}
                 disabled={deactivateMutation.isPending}
               >
-                {deactivateMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Deactivate</Text>}
+                {deactivateMutation.isPending ? <ActivityIndicator color={T.danger} size="small" /> : <Text style={styles.modalDestroyText}>Deactivate</Text>}
               </Pressable>
             </View>
           </View>
@@ -289,35 +326,49 @@ export default function UserDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, gap: 10 },
-  backBtn: { padding: 4 },
-  headerInfo: { flex: 1, gap: 3 },
-  headerTitle: { fontSize: 15 },
-  roleBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-  roleBadgeText: { fontSize: 10, letterSpacing: 0.5 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  content: { padding: 16, gap: 14 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 16 },
-  fieldGroup: { gap: 6 },
-  fieldLabel: { fontSize: 12, letterSpacing: 0.5 },
-  fieldInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  clinicValue: { fontSize: 15 },
+  root: { flex: 1, backgroundColor: T.bg },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 4 },
+  sectionGap: { marginTop: 20 },
+  profileCard: { flexDirection: "row", alignItems: "center", gap: 14 },
+  avatarWrap: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  avatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+  profileEmail: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  profileMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
+  profileDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
+  fields: { gap: 16 },
+  fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, color: T.textSec, marginBottom: 8 },
   optionRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  option: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  optionText: { fontSize: 12 },
-  saveBtn: { borderRadius: 12, paddingVertical: 15, alignItems: "center" },
-  saveBtnText: { color: "#fff", fontSize: 16 },
-  secondaryBtn: { borderRadius: 12, paddingVertical: 14, alignItems: "center", borderWidth: 1, flexDirection: "row", justifyContent: "center", gap: 8 },
-  secondaryBtnText: { fontSize: 15 },
-  meta: { fontSize: 12, textAlign: "center" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12 },
-  modalTitle: { fontSize: 18 },
-  modalSub: { fontSize: 14, lineHeight: 20 },
-  modalButtons: { flexDirection: "row", gap: 10 },
-  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1 },
-  modalBtnText: { fontSize: 15 },
-  clinicOption: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  clinicOptionText: { fontSize: 14 },
+  option: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: T.r10, borderWidth: 1.5 },
+  optionActive: { borderColor: T.primary, backgroundColor: T.primary + "10" },
+  optionInactive: { borderColor: T.border, backgroundColor: "transparent" },
+  optionText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  clinicSelector: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderWidth: 1.5, borderColor: T.border, borderRadius: T.r10, paddingHorizontal: 14, paddingVertical: 12 },
+  clinicSelectorText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15 },
+  saveBtn: { backgroundColor: T.primary, borderRadius: T.r12, paddingVertical: 15, alignItems: "center", marginTop: 16, shadowColor: T.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
+  saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  actionRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
+  actionIcon: { width: 32, height: 32, borderRadius: T.r8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  actionLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "60%", paddingBottom: 24 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: T.border },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  sheetContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  clinicOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 12, borderRadius: T.r10, borderWidth: 1 },
+  clinicOptionActive: { borderColor: T.primary, backgroundColor: T.primary + "08" },
+  clinicOptionInactive: { borderColor: T.border, backgroundColor: "transparent" },
+  clinicOptionText: { fontFamily: "Inter_400Regular", fontSize: 14, flex: 1 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  modal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "87%", alignItems: "center", gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16 },
+  modalIconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: T.accent + "12", alignItems: "center", justifyContent: "center" },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  modalSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center", lineHeight: 20 },
+  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
+  modalCancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
+  modalCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
+  modalConfirmBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.primary },
+  modalConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  modalDestroyBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.dangerBg, borderWidth: 1.5, borderColor: T.dangerBorder },
+  modalDestroyText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.danger },
 });

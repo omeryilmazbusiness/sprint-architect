@@ -6,44 +6,36 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Modal,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import Colors from "@/constants/colors";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import {
+  Card, SectionHeader, StatusPill, Divider, LoadingState, ErrorState,
+} from "@/components/ui";
 import { getAdminInvoice, markInvoicePaid, AdminInvoice } from "@/lib/api/adminInvoices";
 
 function fmt(iso: string | null | undefined) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function statusColor(status: string, colors: typeof Colors.light): string {
-  if (status === "PAID") return colors.success;
-  if (status === "UNPAID") return colors.error;
-  return colors.warning;
+function statusAccent(status: string): string {
+  if (status === "PAID") return T.success;
+  if (status === "UNPAID") return T.danger;
+  return T.warning;
 }
 
 export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [showConfirm, setShowConfirm] = useState(false);
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data, isLoading, isError, refetch } = useQuery<AdminInvoice>({
     queryKey: ["/v1/admin/invoices", id],
@@ -65,155 +57,147 @@ export default function InvoiceDetailScreen() {
     },
   });
 
-  if (isLoading) return <LoadingView message="Loading invoice..." />;
-  if (isError || !data) return <ErrorView onRetry={refetch} />;
+  if (isLoading) return (
+    <View style={styles.root}>
+      <AdminHeader title="Invoice" backButton onBack={() => router.back()} />
+      <LoadingState message="Loading invoice…" />
+    </View>
+  );
+  if (isError || !data) return (
+    <View style={styles.root}>
+      <AdminHeader title="Invoice" backButton onBack={() => router.back()} />
+      <ErrorState onRetry={refetch} />
+    </View>
+  );
 
-  const sc = statusColor(data.status, colors);
+  const sc = statusAccent(data.status);
   const canMarkPaid = data.status !== "PAID";
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={colors.gradient} style={[styles.hero, { paddingTop: topPad + 12 }]}>
-        <View style={styles.heroRow}>
-          <Pressable
-            style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.back()}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-          </Pressable>
-          <View style={styles.heroCenter}>
-            <Text style={[styles.heroTitle, { fontFamily: "Inter_700Bold" }]}>
-              Invoice · {data.period}
-            </Text>
-            <Text style={[styles.heroClinic, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-              {data.clinic?.name ?? "Unknown Clinic"}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.heroBadgeRow}>
-          <View style={[styles.statusBadge, { backgroundColor: sc + "22", borderWidth: 1, borderColor: sc + "50" }]}>
-            <Text style={[styles.statusBadgeText, { color: sc, fontFamily: "Inter_700Bold" }]}>
-              {data.status}
-            </Text>
-          </View>
-          <Text style={[styles.totalHero, { fontFamily: "Inter_700Bold" }]}>
-            {data.currency} {data.total.toFixed(2)}
-          </Text>
-        </View>
-      </LinearGradient>
+    <View style={styles.root}>
+      <AdminHeader
+        title={`Invoice · ${data.period}`}
+        backButton
+        onBack={() => router.back()}
+        right={<StatusPill status={data.status} />}
+      />
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 80 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Card style={[styles.summaryCard, { borderLeftWidth: 4, borderLeftColor: sc }]}>
+          <View style={styles.summaryRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.clinicName}>{data.clinic?.name ?? "Unknown Clinic"}</Text>
+              <Text style={styles.period}>{data.period}</Text>
+            </View>
+            <View style={styles.totalBlock}>
+              <Text style={[styles.totalAmount, { color: sc }]}>{data.currency} {data.total.toFixed(2)}</Text>
+              <Text style={styles.totalLabel}>Total Due</Text>
+            </View>
+          </View>
+        </Card>
+
         {data.status === "UNPAID" && (
-          <View style={[styles.alertBanner, { backgroundColor: colors.error + "10", borderColor: colors.error + "30" }]}>
-            <Ionicons name="warning-outline" size={18} color={colors.error} />
-            <Text style={[styles.alertText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>
-              UNPAID — the clinic is suspended. Managers and patients cannot access the system until this invoice is marked as PAID.
+          <View style={styles.alertBanner}>
+            <View style={[styles.alertIcon, { backgroundColor: T.dangerBg }]}>
+              <Ionicons name="warning-outline" size={18} color={T.danger} />
+            </View>
+            <Text style={[styles.alertText, { color: T.danger }]}>
+              Clinic is suspended. Managers and patients cannot access the system until this invoice is paid.
             </Text>
           </View>
         )}
         {data.status === "PENDING" && data.dueAt && (
-          <View style={[styles.alertBanner, { backgroundColor: colors.warning + "10", borderColor: colors.warning + "30" }]}>
-            <Ionicons name="time-outline" size={18} color={colors.warning} />
-            <Text style={[styles.alertText, { color: colors.warning, fontFamily: "Inter_500Medium" }]}>
-              PENDING — due {fmt(data.dueAt)}. At midnight the clinic will be suspended if not paid.
+          <View style={[styles.alertBanner, styles.alertBannerWarning]}>
+            <View style={[styles.alertIcon, { backgroundColor: T.warningBg }]}>
+              <Ionicons name="time-outline" size={18} color={T.warning} />
+            </View>
+            <Text style={[styles.alertText, { color: T.warning }]}>
+              Due {fmt(data.dueAt)}. Clinic will be suspended if not paid by midnight.
             </Text>
           </View>
         )}
-
-        <SLabel colors={colors} text="BILLING DETAILS" />
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <IRow label="Clinic" value={data.clinic?.name ?? "—"} icon="business-outline" colors={colors} />
-          <Sep colors={colors} />
-          <IRow label="Period" value={data.period} icon="calendar-outline" colors={colors} />
-          <Sep colors={colors} />
-          <IRow label="Patients" value={String(data.patientCount)} icon="people-outline" colors={colors} />
-          <Sep colors={colors} />
-          <IRow label="Unit Price" value={`${data.currency} ${data.unitPrice.toFixed(2)}`} icon="pricetag-outline" colors={colors} />
-          <Sep colors={colors} />
-          <IRow label="Total" value={`${data.currency} ${data.total.toFixed(2)}`} icon="cash-outline" colors={colors} bold />
-        </View>
-
-        <SLabel colors={colors} text="TIMELINE" />
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <IRow label="Created" value={fmt(data.createdAt)} icon="add-circle-outline" colors={colors} />
-          <Sep colors={colors} />
-          <IRow label="Due By" value={fmt(data.dueAt)} icon="alert-outline" colors={colors} />
-          {data.paidAt && (
-            <>
-              <Sep colors={colors} />
-              <IRow label="Paid At" value={fmt(data.paidAt)} icon="checkmark-circle-outline" colors={colors} valueColor={colors.success} />
-            </>
-          )}
-        </View>
-
         {data.status === "PAID" && (
-          <View style={[styles.paidBanner, { backgroundColor: colors.success + "10", borderColor: colors.success + "30" }]}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+          <View style={[styles.alertBanner, styles.alertBannerSuccess]}>
+            <View style={[styles.alertIcon, { backgroundColor: T.successBg }]}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={T.success} />
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.paidTitle, { color: colors.success, fontFamily: "Inter_700Bold" }]}>
-                Invoice Paid
-              </Text>
-              <Text style={[styles.paidSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                Clinic and all users have been reactivated
-              </Text>
+              <Text style={[styles.alertText, { color: T.success }]}>Invoice paid — clinic and all users are active</Text>
             </View>
           </View>
         )}
 
+        <SectionHeader label="Billing Details" style={styles.sectionGap} />
+        <Card noPad>
+          <IRow icon="business-outline" label="Clinic" value={data.clinic?.name ?? "—"} />
+          <Divider />
+          <IRow icon="calendar-outline" label="Period" value={data.period} />
+          <Divider />
+          <IRow icon="people-outline" label="Patients" value={String(data.patientCount)} />
+          <Divider />
+          <IRow icon="pricetag-outline" label="Unit Price" value={`${data.currency} ${data.unitPrice.toFixed(2)}`} />
+          <Divider />
+          <IRow icon="cash-outline" label="Total" value={`${data.currency} ${data.total.toFixed(2)}`} bold />
+        </Card>
+
+        <SectionHeader label="Timeline" style={styles.sectionGap} />
+        <Card noPad>
+          <IRow icon="add-circle-outline" label="Created" value={fmt(data.createdAt)} />
+          <Divider />
+          <IRow icon="alert-outline" label="Due By" value={fmt(data.dueAt)} />
+          {data.paidAt && (
+            <>
+              <Divider />
+              <IRow icon="checkmark-circle-outline" label="Paid At" value={fmt(data.paidAt)} valueColor={T.success} />
+            </>
+          )}
+        </Card>
+
         {canMarkPaid && (
           <Pressable
-            style={({ pressed }) => [styles.payBtn, { backgroundColor: colors.success, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.payBtn, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => setShowConfirm(true)}
           >
             <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-            <Text style={[styles.payBtnText, { fontFamily: "Inter_700Bold" }]}>Mark as PAID</Text>
+            <Text style={styles.payBtnText}>Mark as PAID</Text>
           </Pressable>
         )}
       </ScrollView>
 
       <Modal visible={showConfirm} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={[styles.confirmModal, { backgroundColor: colors.card }]}>
-            <View style={[styles.confirmIconWrap, { backgroundColor: colors.success + "15" }]}>
-              <Ionicons name="checkmark-circle-outline" size={32} color={colors.success} />
+          <View style={styles.confirmModal}>
+            <View style={styles.confirmIconWrap}>
+              <Ionicons name="checkmark-circle-outline" size={32} color={T.success} />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
-              Confirm Payment
-            </Text>
-            <Text style={[styles.confirmSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Marking this invoice as PAID will immediately:
-            </Text>
+            <Text style={styles.confirmTitle}>Confirm Payment</Text>
+            <Text style={styles.confirmSub}>Marking this invoice as PAID will immediately:</Text>
             <View style={styles.impactList}>
-              <Impact icon="business-outline" text="Reactivate the clinic" color={colors.success} colors={colors} />
-              <Impact icon="people-outline" text="Restore all managers' access" color={colors.success} colors={colors} />
-              <Impact icon="person-outline" text="Restore all patients' access" color={colors.success} colors={colors} />
-              <Impact icon="document-text-outline" text={`${data.period} · ${data.currency} ${data.total.toFixed(2)}`} color={colors.accent} colors={colors} />
+              <Impact icon="business-outline" label="Reactivate the clinic" color={T.success} />
+              <Impact icon="people-outline" label="Restore all managers' access" color={T.success} />
+              <Impact icon="person-outline" label="Restore all patients' access" color={T.success} />
+              <Impact icon="document-text-outline" label={`${data.period} · ${data.currency} ${data.total.toFixed(2)}`} color={T.accent} />
             </View>
             <View style={styles.confirmBtns}>
               <Pressable
-                style={[styles.confirmBtn, { borderColor: colors.border }]}
+                style={styles.confirmCancelBtn}
                 onPress={() => setShowConfirm(false)}
                 disabled={paidMutation.isPending}
               >
-                <Text style={[styles.confirmBtnTxt, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                  Cancel
-                </Text>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.confirmBtn, { backgroundColor: colors.success, borderColor: colors.success, opacity: paidMutation.isPending ? 0.7 : 1 }]}
+                style={[styles.confirmOkBtn, { opacity: paidMutation.isPending ? 0.7 : 1 }]}
                 onPress={() => paidMutation.mutate()}
                 disabled={paidMutation.isPending}
               >
                 {paidMutation.isPending ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={[styles.confirmBtnTxt, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
-                    Confirm PAID
-                  </Text>
+                  <Text style={styles.confirmOkText}>Confirm PAID</Text>
                 )}
               </Pressable>
             </View>
@@ -224,86 +208,77 @@ export default function InvoiceDetailScreen() {
   );
 }
 
-function SLabel({ text, colors }: { text: string; colors: typeof Colors.light }) {
-  return (
-    <Text style={[styles.sLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-      {text}
-    </Text>
-  );
-}
-
-function Sep({ colors }: { colors: typeof Colors.light }) {
-  return <View style={[styles.sep, { backgroundColor: colors.border }]} />;
-}
-
-function IRow({
-  icon, label, value, colors, bold, valueColor,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  colors: typeof Colors.light;
-  bold?: boolean;
-  valueColor?: string;
+function IRow({ icon, label, value, bold, valueColor }: {
+  icon: string; label: string; value: string; bold?: boolean; valueColor?: string;
 }) {
   return (
     <View style={styles.iRow}>
-      <Ionicons name={icon as any} size={15} color={colors.accent} />
-      <Text style={[styles.iLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>{label}</Text>
-      <Text style={[styles.iValue, { color: valueColor ?? colors.text, fontFamily: bold ? "Inter_700Bold" : "Inter_500Medium" }]} numberOfLines={1}>
+      <View style={styles.iIcon}>
+        <Ionicons name={icon as any} size={15} color={T.accent} />
+      </View>
+      <Text style={styles.iLabel}>{label}</Text>
+      <Text style={[styles.iValue, bold ? styles.iValueBold : null, valueColor ? { color: valueColor } : null]} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
-function Impact({ icon, text, color, colors }: { icon: string; text: string; color: string; colors: typeof Colors.light }) {
+function Impact({ icon, label, color }: { icon: string; label: string; color: string }) {
   return (
     <View style={styles.impactRow}>
       <View style={[styles.impactIcon, { backgroundColor: color + "15" }]}>
         <Ionicons name={icon as any} size={13} color={color} />
       </View>
-      <Text style={[styles.impactText, { color: colors.text, fontFamily: "Inter_400Regular" }]}>{text}</Text>
+      <Text style={styles.impactText}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  hero: { paddingHorizontal: 16, paddingBottom: 20 },
-  heroRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  heroCenter: { flex: 1, gap: 4 },
-  heroTitle: { fontSize: 20, color: "#fff" },
-  heroClinic: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
-  heroBadgeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 16 },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  statusBadgeText: { fontSize: 13 },
-  totalHero: { fontSize: 26, color: "#fff" },
-  content: { padding: 16, gap: 6 },
-  alertBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 8 },
-  alertText: { flex: 1, fontSize: 13, lineHeight: 18 },
-  sLabel: { fontSize: 11, letterSpacing: 0.8, marginTop: 12, marginBottom: 6 },
-  card: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  root: { flex: 1, backgroundColor: T.bg },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 4 },
+  sectionGap: { marginTop: 20 },
+  summaryCard: { gap: 0 },
+  summaryRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  clinicName: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  period: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, marginTop: 2 },
+  totalBlock: { alignItems: "flex-end" },
+  totalAmount: { fontFamily: "Inter_700Bold", fontSize: 22 },
+  totalLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, marginTop: 2 },
+  alertBanner: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: T.dangerBg, borderWidth: 1, borderColor: T.dangerBorder, borderRadius: T.r12, padding: 14, marginTop: 12 },
+  alertBannerWarning: { backgroundColor: T.warningBg, borderColor: T.warningBorder },
+  alertBannerSuccess: { backgroundColor: T.successBg, borderColor: T.successBorder },
+  alertIcon: { width: 32, height: 32, borderRadius: T.r8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  alertText: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 18 },
   iRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
-  iLabel: { flex: 1, fontSize: 14 },
-  iValue: { fontSize: 14, maxWidth: "55%" },
-  sep: { height: StyleSheet.hairlineWidth, marginLeft: 16 },
-  paidBanner: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderRadius: 14, padding: 16, marginTop: 14 },
-  paidTitle: { fontSize: 15 },
-  paidSub: { fontSize: 12, marginTop: 2 },
-  payBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, paddingVertical: 16, marginTop: 20 },
-  payBtnText: { color: "#fff", fontSize: 16 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
-  confirmModal: { borderRadius: 20, padding: 24, width: "88%", gap: 14, alignItems: "center" },
-  confirmIconWrap: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center" },
-  confirmTitle: { fontSize: 20 },
-  confirmSub: { fontSize: 14, alignSelf: "flex-start" },
+  iIcon: { width: 28, height: 28, borderRadius: T.r6, backgroundColor: T.accent + "10", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  iLabel: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec },
+  iValue: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text, maxWidth: "55%" },
+  iValueBold: { fontFamily: "Inter_700Bold" },
+  payBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 10, backgroundColor: T.success, borderRadius: T.r14,
+    paddingVertical: 16, marginTop: 28,
+    shadowColor: T.success, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
+  },
+  payBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  confirmModal: {
+    backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "88%",
+    gap: 14, alignItems: "center",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16,
+  },
+  confirmIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: T.successBg, alignItems: "center", justifyContent: "center" },
+  confirmTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  confirmSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, alignSelf: "flex-start" },
   impactList: { width: "100%", gap: 10 },
   impactRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  impactIcon: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  impactText: { flex: 1, fontSize: 13 },
+  impactIcon: { width: 26, height: 26, borderRadius: T.r8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  impactText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.text },
   confirmBtns: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
-  confirmBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
-  confirmBtnTxt: { fontSize: 15 },
+  confirmCancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
+  confirmCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
+  confirmOkBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.success },
+  confirmOkText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });

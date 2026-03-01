@@ -8,21 +8,19 @@ import {
   TextInput,
   Modal,
   Alert,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   RefreshControl,
   ScrollView,
   Clipboard,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import Colors from "@/constants/colors";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { Card, SectionHeader, StatusPill, EmptyState, LoadingState, ErrorState, TextField, Divider } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { listUsers, createUser, AdminUser, AdminUserCreated, UserListResponse } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
@@ -30,13 +28,10 @@ const ROLE_FILTERS = ["ALL", "ADMIN", "MANAGER"] as const;
 const STATUS_FILTERS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED"] as const;
 
 export default function UsersScreen() {
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const qc = useQueryClient();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
   const params = useLocalSearchParams<{ preselectedClinicId?: string }>();
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -48,7 +43,6 @@ export default function UsersScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
   const [newClinicId, setNewClinicId] = useState(params.preselectedClinicId ?? "");
@@ -105,12 +99,8 @@ export default function UsersScreen() {
 
   function handleCreate() {
     if (!newEmail.trim()) return Alert.alert("Validation", "Email is required");
-    if (newRole === "MANAGER" && !newClinicId) return Alert.alert("Validation", "Clinic is required for Manager role");
-    createMutation.mutate({
-      email: newEmail.trim().toLowerCase(),
-      role: newRole,
-      clinicId: newClinicId || null,
-    });
+    if (newRole === "MANAGER" && !newClinicId) return Alert.alert("Validation", "Clinic is required for Manager");
+    createMutation.mutate({ email: newEmail.trim().toLowerCase(), role: newRole, clinicId: newClinicId || null });
   }
 
   function copyPassword() {
@@ -118,213 +108,217 @@ export default function UsersScreen() {
     Alert.alert("Copied", "Password copied to clipboard.");
   }
 
-  if (isLoading) return <LoadingView message="Loading users..." />;
-  if (isError) return <ErrorView onRetry={refetch} />;
+  async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
 
   const clinics = clinicsData?.rows ?? [];
-  const selectedClinic = clinics.find((c) => c.id === clinicFilter);
+
+  function statusChipColor(s: string): string {
+    if (s === "ACTIVE") return T.success;
+    if (s === "SUSPENDED") return T.danger;
+    return T.warning;
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Users</Text>
-          <Text style={[styles.count, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {data?.total ?? 0} total
-          </Text>
+    <View style={styles.root}>
+      <AdminHeader
+        title="Users"
+        userEmail={user?.email}
+        onLogout={handleLogout}
+        right={
+          <Pressable style={styles.newBtn} onPress={() => setShowCreate(true)}>
+            <Ionicons name="add" size={16} color="#fff" />
+            <Text style={styles.newBtnText}>New</Text>
+          </Pressable>
+        }
+      />
+
+      <View style={styles.filterArea}>
+        <View style={styles.searchRow}>
+          <Ionicons name="search-outline" size={16} color={T.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by email…"
+            placeholderTextColor={T.textMuted}
+            value={search}
+            onChangeText={handleSearchChange}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => { setSearch(""); setDebouncedSearch(""); }} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={T.textMuted} />
+            </Pressable>
+          )}
         </View>
 
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, fontFamily: "Inter_400Regular" }]}
-          placeholder="Search by email..."
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={handleSearchChange}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          <Pressable
-            style={[styles.filterChip, { borderColor: clinicFilter ? colors.accent : colors.border, backgroundColor: clinicFilter ? colors.accent + "18" : "transparent" }]}
-            onPress={() => {
-              if (clinicFilter) { setClinicFilter(""); return; }
-            }}
-          >
-            <Ionicons name="business-outline" size={13} color={clinicFilter ? colors.accent : colors.textSecondary} />
-            <Text style={[styles.filterChipText, { color: clinicFilter ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
-              {selectedClinic ? selectedClinic.name : "All Clinics"}
-            </Text>
-            {clinicFilter ? <Ionicons name="close" size={13} color={colors.accent} /> : null}
-          </Pressable>
-
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
           {ROLE_FILTERS.map((r) => (
             <Pressable
               key={r}
-              style={[styles.filterChip, { borderColor: roleFilter === r ? colors.accent : colors.border, backgroundColor: roleFilter === r ? colors.accent + "18" : "transparent" }]}
+              style={[styles.chip, roleFilter === r ? styles.chipActive : styles.chipInactive]}
               onPress={() => setRoleFilter(r)}
             >
-              <Text style={[styles.filterChipText, { color: roleFilter === r ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{r}</Text>
+              <Text style={[styles.chipText, { color: roleFilter === r ? T.primary : T.textSec }]}>{r}</Text>
             </Pressable>
           ))}
-
           {STATUS_FILTERS.filter((s) => s !== "ALL").map((s) => {
-            const c = s === "ACTIVE" ? colors.success : s === "SUSPENDED" ? colors.error : colors.textMuted;
+            const c = statusChipColor(s);
+            const active = statusFilter === s;
             return (
               <Pressable
                 key={s}
-                style={[styles.filterChip, { borderColor: statusFilter === s ? c : colors.border, backgroundColor: statusFilter === s ? c + "18" : "transparent" }]}
-                onPress={() => setStatusFilter(statusFilter === s ? "ALL" : s)}
+                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
+                onPress={() => setStatusFilter(active ? "ALL" : s)}
               >
-                <Text style={[styles.filterChipText, { color: statusFilter === s ? c : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{s}</Text>
+                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{s}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
 
         {clinics.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clinicFilterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
             <Pressable
-              style={[styles.clinicChip, { borderColor: !clinicFilter ? colors.accent : colors.border, backgroundColor: !clinicFilter ? colors.accent + "18" : "transparent" }]}
+              style={[styles.chip, !clinicFilter ? styles.chipActive : styles.chipInactive]}
               onPress={() => setClinicFilter("")}
             >
-              <Text style={[styles.clinicChipText, { color: !clinicFilter ? colors.accent : colors.textSecondary, fontFamily: "Inter_400Regular" }]}>All</Text>
+              <Text style={[styles.chipText, { color: !clinicFilter ? T.primary : T.textSec }]}>All Clinics</Text>
             </Pressable>
             {clinics.map((c) => (
               <Pressable
                 key={c.id}
-                style={[styles.clinicChip, { borderColor: clinicFilter === c.id ? colors.accent : colors.border, backgroundColor: clinicFilter === c.id ? colors.accent + "18" : "transparent" }]}
+                style={[styles.chip, clinicFilter === c.id ? styles.chipActive : styles.chipInactive]}
                 onPress={() => setClinicFilter(clinicFilter === c.id ? "" : c.id)}
               >
-                <Text style={[styles.clinicChipText, { color: clinicFilter === c.id ? colors.accent : colors.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                  {c.name}
-                </Text>
+                <Text style={[styles.chipText, { color: clinicFilter === c.id ? T.primary : T.textSec }]} numberOfLines={1}>{c.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
         )}
       </View>
 
-      <FlatList
-        data={data?.rows ?? []}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
-        scrollEnabled={!!(data?.rows?.length)}
-        ListEmptyComponent={<EmptyState icon="people-outline" title="No users found" subtitle="Adjust filters or tap + to create a user" />}
-        renderItem={({ item }) => {
-          const statusDotColor = item.status === "ACTIVE" ? colors.success : item.status === "SUSPENDED" ? colors.error : colors.statusInactive;
-          return (
+      {isLoading ? (
+        <LoadingState message="Loading users…" />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
+      ) : (
+        <FlatList
+          data={data?.rows ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
+          scrollEnabled={!!(data?.rows?.length)}
+          ListHeaderComponent={data ? (
+            <Text style={styles.countLabel}>{data.total} user{data.total !== 1 ? "s" : ""}</Text>
+          ) : null}
+          ListEmptyComponent={
+            <EmptyState icon="people-outline" title="No users found" subtitle="Adjust filters or create a new user" />
+          }
+          renderItem={({ item }) => (
             <Pressable
-              style={({ pressed }) => [styles.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+              style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push({ pathname: "/(admin)/users/[id]", params: { id: item.id } })}
             >
-              <View style={styles.cardRow}>
-                <View style={[styles.avatar, { backgroundColor: colors.accent + "20" }]}>
-                  <Text style={[styles.avatarText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
-                    {item.email.slice(0, 2).toUpperCase()}
-                  </Text>
+              <View style={styles.avatarWrap}>
+                <Text style={styles.avatarText}>{item.email.slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardEmail} numberOfLines={1}>{item.email}</Text>
+                <View style={styles.cardMeta}>
+                  <StatusPill status={item.role} small />
+                  {item.clinic && (
+                    <Text style={styles.clinicLabel} numberOfLines={1}>{item.clinic.name}</Text>
+                  )}
+                  {item.mustChangePassword && (
+                    <View style={styles.tempPwBadge}>
+                      <Text style={styles.tempPwText}>temp pw</Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardEmail, { color: colors.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
-                    {item.email}
-                  </Text>
-                  <View style={styles.cardMeta}>
-                    <RoleBadge role={item.role} colors={colors} />
-                    {item.clinic && (
-                      <Text style={[styles.clinicName, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                        {item.clinic.name}
-                      </Text>
-                    )}
-                    {item.mustChangePassword && (
-                      <View style={[styles.pwBadge, { backgroundColor: colors.warning + "20" }]}>
-                        <Text style={[styles.pwBadgeText, { color: colors.warning, fontFamily: "Inter_500Medium" }]}>temp pw</Text>
-                      </View>
-                    )}
-                    {item.status === "SUSPENDED" && (
-                      <View style={[styles.pwBadge, { backgroundColor: colors.error + "15" }]}>
-                        <Text style={[styles.pwBadgeText, { color: colors.error, fontFamily: "Inter_500Medium" }]}>SUSPENDED</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <View style={[styles.statusDot, { backgroundColor: statusDotColor }]} />
+              </View>
+              <View style={styles.cardRight}>
+                <StatusPill status={item.status} small />
+                <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
               </View>
             </Pressable>
-          );
-        }}
-      />
-
-      <Pressable style={[styles.fab, { backgroundColor: colors.accent }]} onPress={() => setShowCreate(true)}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </Pressable>
+          )}
+        />
+      )}
 
       <Modal visible={showCreate} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <ScrollView contentContainerStyle={styles.overlayScroll} keyboardShouldPersistTaps="handled">
-            <View style={[styles.modal, { backgroundColor: colors.card }]}>
-              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>New User</Text>
-
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background, fontFamily: "Inter_400Regular" }]}
-                placeholder="Email address *"
-                placeholderTextColor={colors.textMuted}
-                value={newEmail}
-                onChangeText={setNewEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-
-              <View style={[styles.infoBox, { backgroundColor: colors.accent + "10", borderColor: colors.accent + "30" }]}>
-                <Ionicons name="key-outline" size={14} color={colors.accent} />
-                <Text style={[styles.infoText, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
-                  A secure password will be generated automatically
-                </Text>
+        <View style={styles.sheetOverlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} keyboardShouldPersistTaps="handled">
+            <View style={styles.sheet}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetHeaderRow}>
+                <Text style={styles.sheetTitle}>New User</Text>
+                <Pressable onPress={() => { setShowCreate(false); resetForm(); }} hitSlop={10}>
+                  <Ionicons name="close" size={22} color={T.textSec} />
+                </Pressable>
               </View>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Role</Text>
-              <View style={styles.roleRow}>
-                {(["MANAGER", "ADMIN"] as const).map((r) => (
-                  <Pressable
-                    key={r}
-                    style={[styles.roleOption, { borderColor: newRole === r ? colors.accent : colors.border, backgroundColor: newRole === r ? colors.accent + "18" : "transparent" }]}
-                    onPress={() => setNewRole(r)}
-                  >
-                    <Text style={[styles.roleOptionText, { color: newRole === r ? colors.accent : colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{r}</Text>
+              <View style={styles.sheetBody}>
+                <TextField
+                  label="Email Address *"
+                  placeholder="user@clinic.com"
+                  value={newEmail}
+                  onChangeText={setNewEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                <View style={styles.infoBadge}>
+                  <Ionicons name="key-outline" size={14} color={T.accent} />
+                  <Text style={styles.infoText}>A secure password will be generated automatically</Text>
+                </View>
+
+                <Text style={styles.fieldLabel}>ROLE</Text>
+                <View style={styles.roleRow}>
+                  {(["MANAGER", "ADMIN"] as const).map((r) => (
+                    <Pressable
+                      key={r}
+                      style={[styles.roleOption, newRole === r ? styles.roleOptionActive : styles.roleOptionInactive]}
+                      onPress={() => setNewRole(r)}
+                    >
+                      <Text style={[styles.roleOptionText, { color: newRole === r ? T.primary : T.textSec }]}>{r}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {newRole === "MANAGER" && (
+                  <>
+                    <Text style={styles.fieldLabel}>CLINIC *</Text>
+                    <ScrollView style={styles.clinicPicker} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                      {clinics.map((c) => (
+                        <Pressable
+                          key={c.id}
+                          style={[styles.clinicOption, newClinicId === c.id ? styles.clinicOptionActive : styles.clinicOptionInactive]}
+                          onPress={() => setNewClinicId(c.id)}
+                        >
+                          <Text style={[styles.clinicOptionText, { color: newClinicId === c.id ? T.primary : T.text }]} numberOfLines={1}>{c.name}</Text>
+                          {newClinicId === c.id && <Ionicons name="checkmark" size={14} color={T.primary} />}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </>
+                )}
+
+                <View style={styles.sheetBtns}>
+                  <Pressable style={styles.cancelBtn} onPress={() => { setShowCreate(false); resetForm(); }}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
                   </Pressable>
-                ))}
-              </View>
-
-              {newRole === "MANAGER" && (
-                <>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Clinic *</Text>
-                  <ScrollView style={styles.clinicPicker} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-                    {clinics.map((c) => (
-                      <Pressable
-                        key={c.id}
-                        style={[styles.clinicOption, { borderColor: newClinicId === c.id ? colors.accent : colors.border, backgroundColor: newClinicId === c.id ? colors.accent + "18" : "transparent" }]}
-                        onPress={() => setNewClinicId(c.id)}
-                      >
-                        <Text style={[styles.clinicOptionText, { color: newClinicId === c.id ? colors.accent : colors.text, fontFamily: "Inter_400Regular" }]}>{c.name}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </>
-              )}
-
-              <View style={styles.modalButtons}>
-                <Pressable style={[styles.modalBtn, { borderColor: colors.border }]} onPress={() => { setShowCreate(false); resetForm(); }}>
-                  <Text style={[styles.modalBtnText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modalBtn, { backgroundColor: colors.accent, borderColor: colors.accent, opacity: createMutation.isPending ? 0.7 : 1 }]}
-                  onPress={handleCreate}
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : (
-                    <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Create</Text>
-                  )}
-                </Pressable>
+                  <Pressable
+                    style={[styles.createBtn, { opacity: createMutation.isPending ? 0.7 : 1 }]}
+                    onPress={handleCreate}
+                    disabled={createMutation.isPending}
+                  >
+                    {createMutation.isPending ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.createBtnText}>Create User</Text>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -332,37 +326,31 @@ export default function UsersScreen() {
       </Modal>
 
       <Modal visible={showPassword} transparent animationType="fade">
-        <View style={[styles.overlay, { justifyContent: "center" }]}>
-          <View style={[styles.passwordModal, { backgroundColor: colors.card }]}>
-            <View style={[styles.pwIconWrap, { backgroundColor: colors.success + "20" }]}>
-              <Ionicons name="shield-checkmark-outline" size={32} color={colors.success} />
+        <View style={styles.overlay}>
+          <View style={styles.pwModal}>
+            <View style={styles.pwIconWrap}>
+              <Ionicons name="shield-checkmark-outline" size={32} color={T.success} />
             </View>
-            <Text style={[styles.pwTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>User Created</Text>
-            <Text style={[styles.pwSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Save this password — it will only be shown once.
-            </Text>
-            <View style={[styles.pwBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.pwValue, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} selectable>
-                {generatedPassword}
-              </Text>
+            <Text style={styles.pwTitle}>User Created</Text>
+            <Text style={styles.pwSub}>Save this password — it will only be shown once.</Text>
+            <View style={styles.pwBox}>
+              <Text style={styles.pwValue} selectable>{generatedPassword}</Text>
               <Pressable style={styles.copyBtn} onPress={copyPassword}>
-                <Ionicons name="copy-outline" size={18} color={colors.accent} />
+                <Ionicons name="copy-outline" size={18} color={T.accent} />
               </Pressable>
             </View>
-            <Pressable style={[styles.confirmRow, { borderColor: colors.border }]} onPress={() => setConfirmed(!confirmed)}>
-              <View style={[styles.checkbox, { borderColor: confirmed ? colors.success : colors.border, backgroundColor: confirmed ? colors.success : "transparent" }]}>
+            <Pressable style={styles.confirmRow} onPress={() => setConfirmed(!confirmed)}>
+              <View style={[styles.checkbox, { borderColor: confirmed ? T.success : T.border, backgroundColor: confirmed ? T.success : "transparent" }]}>
                 {confirmed && <Ionicons name="checkmark" size={12} color="#fff" />}
               </View>
-              <Text style={[styles.confirmText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                I have saved this password
-              </Text>
+              <Text style={styles.confirmText}>I have saved this password</Text>
             </Pressable>
             <Pressable
-              style={[styles.confirmBtn, { backgroundColor: confirmed ? colors.accent : colors.accent + "50" }]}
+              style={[styles.doneBtn, { backgroundColor: confirmed ? T.primary : T.primary + "50" }]}
               onPress={() => { if (confirmed) setShowPassword(false); }}
               disabled={!confirmed}
             >
-              <Text style={[styles.confirmBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
+              <Text style={styles.doneBtnText}>Done</Text>
             </Pressable>
           </View>
         </View>
@@ -371,70 +359,65 @@ export default function UsersScreen() {
   );
 }
 
-function RoleBadge({ role, colors }: { role: string; colors: typeof Colors.light }) {
-  const color = role === "ADMIN" ? colors.warning : colors.accent;
-  return (
-    <View style={[styles.roleBadge, { backgroundColor: color + "20" }]}>
-      <Text style={[styles.roleBadgeText, { color, fontFamily: "Inter_600SemiBold" }]}>{role}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  title: { fontSize: 26 },
-  count: { fontSize: 13 },
-  searchInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 8 },
-  filterRow: { marginBottom: 4 },
-  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
-  filterChipText: { fontSize: 13 },
-  clinicFilterRow: { marginBottom: 4, marginTop: 4 },
-  clinicChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, marginRight: 6, maxWidth: 120 },
-  clinicChipText: { fontSize: 12 },
-  list: { padding: 16, gap: 10 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14 },
-  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  avatar: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 16 },
-  cardInfo: { flex: 1, gap: 4 },
-  cardEmail: { fontSize: 14 },
-  cardMeta: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  roleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-  roleBadgeText: { fontSize: 11, letterSpacing: 0.3 },
-  clinicName: { fontSize: 12, flex: 1 },
-  pwBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  pwBadgeText: { fontSize: 10 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  fab: { position: "absolute", bottom: 100, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  overlayScroll: { justifyContent: "flex-end", flexGrow: 1 },
-  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12 },
-  modalTitle: { fontSize: 20, marginBottom: 4 },
-  fieldLabel: { fontSize: 12, letterSpacing: 0.5 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  infoBox: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 10, padding: 12 },
-  infoText: { flex: 1, fontSize: 13 },
+  root: { flex: 1, backgroundColor: T.bg },
+  newBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
+  newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, gap: 4, paddingBottom: 8 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  chipsScroll: { paddingHorizontal: 16, paddingVertical: 4 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
+  chipActive: { backgroundColor: T.primary + "12", borderColor: T.primary },
+  chipInactive: { backgroundColor: "transparent", borderColor: T.border },
+  chipText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
+  list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
+  card: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: T.r14, borderWidth: 1, borderColor: T.border, padding: 14, gap: 12 },
+  avatarWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  avatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: T.primary },
+  cardInfo: { flex: 1, gap: 5 },
+  cardEmail: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  cardMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  clinicLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textSec, flex: 1 },
+  tempPwBadge: { backgroundColor: T.warningBg, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  tempPwText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.warning },
+  cardRight: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
+  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: T.border },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  sheetBody: { padding: 20, gap: 16, paddingBottom: 40 },
+  fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, color: T.textSec },
+  infoBadge: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: T.accent + "10", borderWidth: 1, borderColor: T.accent + "30", borderRadius: T.r10, padding: 12 },
+  infoText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.accent },
   roleRow: { flexDirection: "row", gap: 8 },
-  roleOption: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center" },
-  roleOptionText: { fontSize: 13 },
-  clinicPicker: { maxHeight: 140, borderWidth: 1, borderRadius: 10, borderColor: "transparent" },
-  clinicOption: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
-  clinicOptionText: { fontSize: 14 },
-  modalButtons: { flexDirection: "row", gap: 10, marginTop: 4 },
-  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
-  modalBtnText: { fontSize: 15 },
-  passwordModal: { borderRadius: 20, padding: 24, marginHorizontal: 24, alignItems: "center", gap: 14 },
-  pwIconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
-  pwTitle: { fontSize: 22 },
-  pwSub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
-  pwBox: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, width: "100%", gap: 12 },
-  pwValue: { flex: 1, fontSize: 16, letterSpacing: 1 },
+  roleOption: { flex: 1, paddingVertical: 10, borderRadius: T.r10, borderWidth: 1.5, alignItems: "center" },
+  roleOptionActive: { borderColor: T.primary, backgroundColor: T.primary + "10" },
+  roleOptionInactive: { borderColor: T.border, backgroundColor: "transparent" },
+  roleOptionText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  clinicPicker: { maxHeight: 140, borderWidth: 1, borderColor: T.border, borderRadius: T.r10 },
+  clinicOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 10, borderRadius: T.r8, marginHorizontal: 4, marginVertical: 2 },
+  clinicOptionActive: { backgroundColor: T.primary + "10" },
+  clinicOptionInactive: { backgroundColor: "transparent" },
+  clinicOptionText: { fontFamily: "Inter_400Regular", fontSize: 14, flex: 1 },
+  sheetBtns: { flexDirection: "row", gap: 10 },
+  cancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
+  cancelBtnText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
+  createBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.primary },
+  createBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  pwModal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, marginHorizontal: 24, alignItems: "center", gap: 14 },
+  pwIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: T.successBg, alignItems: "center", justifyContent: "center" },
+  pwTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: T.text },
+  pwSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center", lineHeight: 20 },
+  pwBox: { flexDirection: "row", alignItems: "center", backgroundColor: T.surfaceSubtle, borderWidth: 1, borderColor: T.border, borderRadius: T.r12, paddingHorizontal: 16, paddingVertical: 12, width: "100%", gap: 12 },
+  pwValue: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 16, letterSpacing: 1, color: T.text },
   copyBtn: { padding: 4 },
-  confirmRow: { flexDirection: "row", alignItems: "center", gap: 12, width: "100%", borderWidth: 1, borderRadius: 12, padding: 14 },
+  confirmRow: { flexDirection: "row", alignItems: "center", gap: 12, width: "100%", borderWidth: 1, borderColor: T.border, borderRadius: T.r12, padding: 14 },
   checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  confirmText: { flex: 1, fontSize: 14 },
-  confirmBtn: { borderRadius: 12, paddingVertical: 14, alignItems: "center", width: "100%" },
-  confirmBtnText: { color: "#fff", fontSize: 16 },
+  confirmText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec },
+  doneBtn: { borderRadius: T.r12, paddingVertical: 14, alignItems: "center", width: "100%" },
+  doneBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
 });
