@@ -1,0 +1,118 @@
+Replit AI — continue on the existing Expo React Native app (expo-router). Do NOT re-scaffold.
+We will redesign the launch + login flow for a premium UX.
+
+GOALS:
+1) Add a premium intro video screen that auto-plays for ~4–5 seconds (VIP car arrival + guest enters hotel).
+   - Show a large caption text at the bottom during the video.
+   - Then automatically navigate to the Login screen.
+   - Professional behavior: show this intro ONLY once per install (store flag in AsyncStorage). Also include a “Skip” button.
+2) Redesign the Login screen with a premium white theme and maximum ease:
+   - Two tabs (segmented):
+     - Default tab: “Guest Login”
+       - Label: “Guest Access Key”
+       - Input: single key field + primary button “Continue”
+     - Second tab: “Management Login”
+       - Email + Password + Login button
+   - “Patient” wording must be replaced by “Guest” in the UI (role can remain PATIENT internally).
+3) Ensure keyboard never covers inputs (especially Guest Access Key):
+   - Use KeyboardAvoidingView + ScrollView with correct props.
+   - Inputs must scroll into view when focused.
+4) Keep the existing auth logic and API endpoints.
+   - Guest login still calls patientKey login endpoint (do not rename backend role, only UI text).
+   - Management login remains admin/manager email+password.
+5) Premium UI requirements:
+   - White theme, subtle borders/shadows, clean typography, spacious layout.
+   - Nice loading states, error states, disable button while submitting.
+   - Friendly error messages for common auth failures:
+     - invalid credentials
+     - invalid key
+     - device already bound
+     - clinic suspended billing
+
+TECH DETAILS / IMPLEMENTATION REQUIREMENTS:
+
+A) INTRO VIDEO SCREEN
+- Create screen: app/(auth)/intro.tsx  (or consistent with your auth routes)
+- Use expo-av (Video) OR expo-video if already used in project.
+  - If expo-av not installed, add it (Expo-managed).
+- Place the video file at: assets/intro.mp4
+  - If the file doesn’t exist, implement a safe fallback:
+    - show a static premium placeholder (image/gradient) for 4 seconds + same caption, then proceed.
+- Auto-play, muted by default, no controls, cover mode, smooth fade.
+- Duration control:
+  - Either rely on a 4–5s mp4
+  - Or use a timer (e.g., 4500ms) to route to login
+- Store a flag: hasSeenIntro=true in AsyncStorage so it runs only once.
+- Add “Skip” button top-right that immediately goes to login and sets hasSeenIntro=true.
+
+B) APP START ROUTING
+- On cold start, if user is NOT authenticated:
+  - If hasSeenIntro is false -> show Intro screen
+  - Else -> show Login
+- If user IS authenticated:
+  - Continue existing role-based routing (Admin/Manager to their area, Guest to guest dashboard)
+Implement this in the root layout/auth gate (where you currently redirect based on token).
+
+C) LOGIN SCREEN REDESIGN
+- Update login route: app/(auth)/login.tsx
+- UI structure:
+  - Top: Brand (logo/text) + short subtitle (“Your journey, organized.” or similar)
+  - Segmented tabs: [ Guest Login ] [ Management Login ]
+  - Guest tab (default selected):
+    - Big label: “Guest Access Key”
+    - Input:
+      - autoCapitalize="none"
+      - autoCorrect={false}
+      - returnKeyType="done"
+    - Primary button: “Continue”
+    - Small help text under: “Your clinic manager shares this key with you.”
+  - Management tab:
+    - Email input (email keyboard)
+    - Password input (secureTextEntry + show/hide toggle)
+    - Primary button: “Login”
+    - Optional “Forgot password” row (if not implemented -> show “Coming soon” disabled)
+- Use KeyboardAvoidingView + ScrollView:
+  - keyboardShouldPersistTaps="handled"
+  - contentContainerStyle with paddingBottom
+  - ensure focused input is visible when keyboard opens
+- Error handling:
+  - Map API error codes to friendly text:
+    - AUTH_INVALID_CREDENTIALS -> “Email or password is incorrect.”
+    - PATIENT_KEY_INVALID -> “Access key is incorrect.”
+    - DEVICE_ALREADY_BOUND -> “This access key is already active on another device.”
+    - CLINIC_SUSPENDED_BILLING -> “Clinic access is suspended due to billing.”
+    - TOO_MANY_ATTEMPTS -> “Too many attempts. Try again later.”
+- Add loading indicator on buttons during request.
+
+D) VISUAL / PREMIUM STYLE (WHITE THEME)
+- Use existing white theme tokens/components if present.
+- Otherwise create minimal styles:
+  - background: off-white
+  - cards: white with subtle border
+  - primary button: brand color
+  - typography: strong title + calm body
+- Add soft fade-in animation to login elements (optional, lightweight).
+
+OUTPUT REQUIREMENTS (MANDATORY):
+After implementing, print:
+1) Files added/changed
+2) Where to place assets/intro.mp4 (and fallback behavior)
+3) The routing logic summary (when intro shows, when skipped)
+4) Manual QA checklist:
+   - Fresh install: intro plays 4–5s -> login
+   - Tap Skip -> login
+   - Restart app: intro does NOT show again
+   - Guest tab is default
+   - Keyboard doesn’t hide Guest Access Key
+   - Guest login works and routes correctly
+   - Management login works
+   - Error messages are friendly and correct
+
+IMPLEMENTATION ORDER:
+1) Intro screen + AsyncStorage flag + fallback
+2) Root auth gate update for intro routing
+3) Login screen redesign with tabs (Guest default) + keyboard fix
+4) Polish (loading/error states + small animations)
+
+Proceed now. Do not change backend APIs; only UI wording and routing.
+END.
