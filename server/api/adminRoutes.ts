@@ -9,7 +9,7 @@ import { auditLog } from "./auditLogger";
 import { db } from "../db";
 import { clinics, users, invoices } from "@shared/schema";
 import { eq, count, and } from "drizzle-orm";
-import { generatePendingInvoicesForPeriod, markOverdueInvoicesAsUnpaid } from "../billing/billingService";
+import { markOverdueInvoicesAsUnpaid } from "../billing/billingService";
 
 const router = Router();
 router.use(authMiddleware, requireRole("ADMIN"));
@@ -200,10 +200,14 @@ const PasswordResetSchema = z.object({
 
 router.get("/users", async (req, res, next) => {
   try {
-    const { search, role, status, clinicId, page, pageSize } = req.query as Record<string, string>;
-    const result = await userRepo.list({
+    const { search, entityType, status, clinicId, page, pageSize } = req.query as Record<string, string>;
+    const validEntityTypes = ["ADMIN", "MANAGER", "PATIENT"];
+    if (entityType && !validEntityTypes.includes(entityType)) {
+      throw new AppError("VALIDATION_ERROR", "entityType must be ADMIN, MANAGER, or PATIENT", 400);
+    }
+    const result = await userRepo.listUnified({
       search,
-      role,
+      entityType: entityType as "ADMIN" | "MANAGER" | "PATIENT" | undefined,
       status,
       clinicId,
       page: page ? parseInt(page) : undefined,
@@ -345,24 +349,7 @@ router.delete("/users/:id", async (req, res, next) => {
 });
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
-
-router.post("/invoices/generate", async (req, res, next) => {
-  try {
-    const { period } = req.query as { period: string };
-    if (!period) throw new AppError("VALIDATION_ERROR", "Period is required", 400);
-    validatePeriod(period);
-    const generated = await invoiceRepo.generateForPeriod(period);
-    auditLog({
-      actorId: req.actor!.sub,
-      actorRole: req.actor!.role,
-      action: "INVOICE_GENERATED",
-      metadata: { period, count: generated.length },
-    });
-    res.json(generated);
-  } catch (e) {
-    next(e);
-  }
-});
+// Note: invoice generation is automatic via scheduler only. No manual generate endpoint.
 
 router.post("/billing/run", async (req, res, next) => {
   try {

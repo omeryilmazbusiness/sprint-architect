@@ -15,11 +15,44 @@ export interface AdminUserCreated extends AdminUser {
   generatedPassword: string;
 }
 
-export interface UserListResponse {
-  rows: AdminUser[];
+export interface UnifiedEntity {
+  id: string;
+  entityType: "ADMIN" | "MANAGER" | "PATIENT";
+  clinicId: string | null;
+  clinicName: string | null;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  patientKey?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface UnifiedListResponse {
+  rows: UnifiedEntity[];
   total: number;
   page: number;
   pageSize: number;
+}
+
+export async function listUnifiedEntities(params?: {
+  search?: string;
+  entityType?: "ADMIN" | "MANAGER" | "PATIENT";
+  status?: string;
+  clinicId?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<UnifiedListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.entityType) qs.set("entityType", params.entityType);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.clinicId) qs.set("clinicId", params.clinicId);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  const route = `/v1/admin/users${qs.toString() ? `?${qs}` : ""}`;
+  const res = await apiRequest("GET", route);
+  return res.json();
 }
 
 export interface CreateUserInput {

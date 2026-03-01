@@ -6,21 +6,18 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Modal,
-  Alert,
   Platform,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
-import { listAdminInvoices, generateInvoices, InvoiceListResponse } from "@/lib/api/adminInvoices";
+import { listAdminInvoices, InvoiceListResponse } from "@/lib/api/adminInvoices";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
 const PERIOD_REGEX = /^\d{4}-\d{2}$/;
@@ -34,31 +31,16 @@ function statusAccent(status: string): string {
 
 export default function AdminInvoicesScreen() {
   const { user, logout } = useAuth();
-  const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [period, setPeriod] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("ALL");
-  const [showGenerate, setShowGenerate] = useState(false);
-  const [generatePeriod, setGeneratePeriod] = useState("");
 
   const validPeriod = period.length === 7 && PERIOD_REGEX.test(period) ? period : undefined;
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<InvoiceListResponse>({
     queryKey: ["/v1/admin/invoices", validPeriod, statusFilter],
     queryFn: () => listAdminInvoices({ period: validPeriod, status: statusFilter !== "ALL" ? statusFilter : undefined }),
-  });
-
-  const generateMutation = useMutation({
-    mutationFn: generateInvoices,
-    onSuccess: (result) => {
-      setShowGenerate(false);
-      setGeneratePeriod("");
-      qc.invalidateQueries({ queryKey: ["/v1/admin/invoices"] });
-      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-      Alert.alert("Done", `Generated/updated ${result.length} invoice(s) for ${generatePeriod}.`);
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to generate"),
   });
 
   async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
@@ -69,12 +51,6 @@ export default function AdminInvoicesScreen() {
         title="Invoices"
         userEmail={user?.email}
         onLogout={handleLogout}
-        right={
-          <Pressable style={styles.genBtn} onPress={() => setShowGenerate(true)}>
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={styles.genBtnText}>Generate</Text>
-          </Pressable>
-        }
       />
 
       <View style={styles.filterArea}>
@@ -172,57 +148,12 @@ export default function AdminInvoicesScreen() {
         />
       )}
 
-      <Modal visible={showGenerate} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            <View style={[styles.modalIcon, { backgroundColor: T.primary + "12" }]}>
-              <Ionicons name="document-text-outline" size={28} color={T.primary} />
-            </View>
-            <Text style={styles.modalTitle}>Generate Invoices</Text>
-            <Text style={styles.modalSub}>Creates or updates invoices for all active clinics in the given period.</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Period (YYYY-MM)"
-              placeholderTextColor={T.textMuted}
-              value={generatePeriod}
-              onChangeText={setGeneratePeriod}
-              maxLength={7}
-              autoCapitalize="none"
-            />
-            <View style={styles.modalBtns}>
-              <Pressable
-                style={styles.modalCancelBtn}
-                onPress={() => { setShowGenerate(false); setGeneratePeriod(""); }}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalConfirmBtn, { opacity: generateMutation.isPending ? 0.7 : 1 }]}
-                onPress={() => {
-                  const p = generatePeriod.trim();
-                  if (!p || !PERIOD_REGEX.test(p)) return Alert.alert("Validation", "Enter a valid period (YYYY-MM), e.g. 2026-02");
-                  generateMutation.mutate(p);
-                }}
-                disabled={generateMutation.isPending}
-              >
-                {generateMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>Generate</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  genBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
-  genBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
   filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, paddingBottom: 8 },
   periodRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   periodInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
@@ -244,15 +175,4 @@ const styles = StyleSheet.create({
   patCount: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textSec },
   cardRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
   total: { fontFamily: "Inter_700Bold", fontSize: 14 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
-  modal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "85%", gap: 14, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16 },
-  modalIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
-  modalSub: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, textAlign: "center", lineHeight: 18 },
-  modalInput: { width: "100%", fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, backgroundColor: T.surfaceSubtle, borderWidth: 1.5, borderColor: T.border, borderRadius: T.r10, paddingHorizontal: 14, paddingVertical: 12 },
-  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
-  modalCancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
-  modalCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
-  modalConfirmBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.primary },
-  modalConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });

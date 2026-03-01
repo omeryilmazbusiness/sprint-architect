@@ -269,6 +269,8 @@ export const invoices = pgTable("invoices", {
   dueAt: timestamp("due_at"),
   paidAt: timestamp("paid_at"),
   paidByUserId: varchar("paid_by_user_id").references(() => users.id),
+  emailedAt: timestamp("emailed_at"),
+  emailedTo: text("emailed_to"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

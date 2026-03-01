@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -19,13 +19,29 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { Card, SectionHeader, StatusPill, EmptyState, LoadingState, ErrorState, TextField, Divider } from "@/components/ui";
+import { StatusPill, EmptyState, LoadingState, ErrorState, TextField, Divider } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
-import { listUsers, createUser, AdminUser, AdminUserCreated, UserListResponse } from "@/lib/api/adminUsers";
+import {
+  listUnifiedEntities, createUser, UnifiedEntity, UnifiedListResponse,
+  AdminUserCreated, CreateUserInput,
+} from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 
-const ROLE_FILTERS = ["ALL", "ADMIN", "MANAGER"] as const;
+type EntityType = "ALL" | "MANAGER" | "PATIENT" | "ADMIN";
+const ENTITY_FILTERS: EntityType[] = ["ALL", "MANAGER", "PATIENT", "ADMIN"];
 const STATUS_FILTERS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED"] as const;
+
+function entityAccent(type: string): string {
+  if (type === "PATIENT") return T.accent;
+  if (type === "ADMIN") return "#7C3AED";
+  return T.primary;
+}
+
+function entityIcon(type: string): string {
+  if (type === "PATIENT") return "person-outline";
+  if (type === "ADMIN") return "shield-outline";
+  return "briefcase-outline";
+}
 
 export default function UsersScreen() {
   const { user, logout } = useAuth();
@@ -36,9 +52,10 @@ export default function UsersScreen() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [roleFilter, setRoleFilter] = useState<(typeof ROLE_FILTERS)[number]>("ALL");
+  const [entityTypeFilter, setEntityTypeFilter] = useState<EntityType>("ALL");
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("ALL");
-  const [clinicFilter, setClinicFilter] = useState<string>("");
+  const [clinicFilter, setClinicFilter] = useState<string>(params.preselectedClinicId ?? "");
+
   const [showCreate, setShowCreate] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
@@ -47,13 +64,6 @@ export default function UsersScreen() {
   const [newRole, setNewRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
   const [newClinicId, setNewClinicId] = useState(params.preselectedClinicId ?? "");
 
-  useEffect(() => {
-    if (params.preselectedClinicId) {
-      setNewClinicId(params.preselectedClinicId);
-      setShowCreate(true);
-    }
-  }, [params.preselectedClinicId]);
-
   function handleSearchChange(text: string) {
     setSearch(text);
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -61,12 +71,12 @@ export default function UsersScreen() {
     setDebounceTimer(t);
   }
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery<UserListResponse>({
-    queryKey: ["/v1/admin/users", debouncedSearch, roleFilter, statusFilter, clinicFilter],
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery<UnifiedListResponse>({
+    queryKey: ["/v1/admin/users", debouncedSearch, entityTypeFilter, statusFilter, clinicFilter],
     queryFn: () =>
-      listUsers({
+      listUnifiedEntities({
         search: debouncedSearch || undefined,
-        role: roleFilter !== "ALL" ? roleFilter : undefined,
+        entityType: entityTypeFilter !== "ALL" ? entityTypeFilter as "ADMIN" | "MANAGER" | "PATIENT" : undefined,
         status: statusFilter !== "ALL" ? statusFilter : undefined,
         clinicId: clinicFilter || undefined,
       }),
@@ -112,22 +122,16 @@ export default function UsersScreen() {
 
   const clinics = clinicsData?.rows ?? [];
 
-  function statusChipColor(s: string): string {
-    if (s === "ACTIVE") return T.success;
-    if (s === "SUSPENDED") return T.danger;
-    return T.warning;
-  }
-
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="Users"
+        title="Users & Patients"
         userEmail={user?.email}
         onLogout={handleLogout}
         right={
           <Pressable style={styles.newBtn} onPress={() => setShowCreate(true)}>
             <Ionicons name="add" size={16} color="#fff" />
-            <Text style={styles.newBtnText}>New</Text>
+            <Text style={styles.newBtnText}>New User</Text>
           </Pressable>
         }
       />
@@ -137,12 +141,11 @@ export default function UsersScreen() {
           <Ionicons name="search-outline" size={16} color={T.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by email…"
+            placeholder="Search by name or email…"
             placeholderTextColor={T.textMuted}
             value={search}
             onChangeText={handleSearchChange}
             autoCapitalize="none"
-            keyboardType="email-address"
           />
           {search.length > 0 && (
             <Pressable onPress={() => { setSearch(""); setDebouncedSearch(""); }} hitSlop={8}>
@@ -152,23 +155,31 @@ export default function UsersScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-          {ROLE_FILTERS.map((r) => (
-            <Pressable
-              key={r}
-              style={[styles.chip, roleFilter === r ? styles.chipActive : styles.chipInactive]}
-              onPress={() => setRoleFilter(r)}
-            >
-              <Text style={[styles.chipText, { color: roleFilter === r ? T.primary : T.textSec }]}>{r}</Text>
-            </Pressable>
-          ))}
-          {STATUS_FILTERS.filter((s) => s !== "ALL").map((s) => {
-            const c = statusChipColor(s);
+          {ENTITY_FILTERS.map((f) => {
+            const c = f === "ALL" ? T.primary : entityAccent(f);
+            const active = entityTypeFilter === f;
+            return (
+              <Pressable
+                key={f}
+                style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
+                onPress={() => setEntityTypeFilter(f)}
+              >
+                {f !== "ALL" && <Ionicons name={entityIcon(f) as any} size={11} color={active ? c : T.textMuted} />}
+                <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{f}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+          {STATUS_FILTERS.map((s) => {
             const active = statusFilter === s;
+            const c = s === "ACTIVE" ? T.success : s === "INACTIVE" ? T.textSec : s === "SUSPENDED" ? T.danger : T.primary;
             return (
               <Pressable
                 key={s}
                 style={[styles.chip, active ? { backgroundColor: c + "15", borderColor: c } : styles.chipInactive]}
-                onPress={() => setStatusFilter(active ? "ALL" : s)}
+                onPress={() => setStatusFilter(s)}
               >
                 <Text style={[styles.chipText, { color: active ? c : T.textSec }]}>{s}</Text>
               </Pressable>
@@ -198,50 +209,23 @@ export default function UsersScreen() {
       </View>
 
       {isLoading ? (
-        <LoadingState message="Loading users…" />
+        <LoadingState message="Loading users & patients…" />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : (
         <FlatList
           data={data?.rows ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.entityType}-${item.id}`}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
           scrollEnabled={!!(data?.rows?.length)}
           ListHeaderComponent={data ? (
-            <Text style={styles.countLabel}>{data.total} user{data.total !== 1 ? "s" : ""}</Text>
+            <Text style={styles.countLabel}>{data.total} record{data.total !== 1 ? "s" : ""}</Text>
           ) : null}
           ListEmptyComponent={
-            <EmptyState icon="people-outline" title="No users found" subtitle="Adjust filters or create a new user" />
+            <EmptyState icon="people-outline" title="No records found" subtitle="Adjust filters or create a new user" />
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push({ pathname: "/(admin)/users/[id]", params: { id: item.id } })}
-            >
-              <View style={styles.avatarWrap}>
-                <Text style={styles.avatarText}>{item.email.slice(0, 2).toUpperCase()}</Text>
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardEmail} numberOfLines={1}>{item.email}</Text>
-                <View style={styles.cardMeta}>
-                  <StatusPill status={item.role} small />
-                  {item.clinic && (
-                    <Text style={styles.clinicLabel} numberOfLines={1}>{item.clinic.name}</Text>
-                  )}
-                  {item.mustChangePassword && (
-                    <View style={styles.tempPwBadge}>
-                      <Text style={styles.tempPwText}>temp pw</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View style={styles.cardRight}>
-                <StatusPill status={item.status} small />
-                <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
-              </View>
-            </Pressable>
-          )}
+          renderItem={({ item }) => <EntityCard item={item} />}
         />
       )}
 
@@ -251,12 +235,11 @@ export default function UsersScreen() {
             <View style={styles.sheet}>
               <View style={styles.sheetHandle} />
               <View style={styles.sheetHeaderRow}>
-                <Text style={styles.sheetTitle}>New User</Text>
+                <Text style={styles.sheetTitle}>New Staff User</Text>
                 <Pressable onPress={() => { setShowCreate(false); resetForm(); }} hitSlop={10}>
                   <Ionicons name="close" size={22} color={T.textSec} />
                 </Pressable>
               </View>
-
               <View style={styles.sheetBody}>
                 <TextField
                   label="Email Address *"
@@ -266,12 +249,10 @@ export default function UsersScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-
                 <View style={styles.infoBadge}>
                   <Ionicons name="key-outline" size={14} color={T.accent} />
                   <Text style={styles.infoText}>A secure password will be generated automatically</Text>
                 </View>
-
                 <Text style={styles.fieldLabel}>ROLE</Text>
                 <View style={styles.roleRow}>
                   {(["MANAGER", "ADMIN"] as const).map((r) => (
@@ -284,7 +265,6 @@ export default function UsersScreen() {
                     </Pressable>
                   ))}
                 </View>
-
                 {newRole === "MANAGER" && (
                   <>
                     <Text style={styles.fieldLabel}>CLINIC *</Text>
@@ -302,7 +282,6 @@ export default function UsersScreen() {
                     </ScrollView>
                   </>
                 )}
-
                 <View style={styles.sheetBtns}>
                   <Pressable style={styles.cancelBtn} onPress={() => { setShowCreate(false); resetForm(); }}>
                     <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -312,11 +291,7 @@ export default function UsersScreen() {
                     onPress={handleCreate}
                     disabled={createMutation.isPending}
                   >
-                    {createMutation.isPending ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.createBtnText}>Create User</Text>
-                    )}
+                    {createMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.createBtnText}>Create</Text>}
                   </Pressable>
                 </View>
               </View>
@@ -359,36 +334,77 @@ export default function UsersScreen() {
   );
 }
 
+function EntityCard({ item }: { item: UnifiedEntity }) {
+  const color = entityAccent(item.entityType);
+  const icon = entityIcon(item.entityType);
+  const subtitle = item.entityType === "PATIENT"
+    ? item.patientKey ? `Key: ${item.patientKey}` : item.email ?? ""
+    : item.email ?? "";
+
+  function handlePress() {
+    if (item.entityType !== "PATIENT") {
+      router.push({ pathname: "/(admin)/users/[id]", params: { id: item.id } });
+    }
+  }
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed && item.entityType !== "PATIENT" ? 0.85 : 1 }]}
+      onPress={handlePress}
+    >
+      <View style={[styles.avatarWrap, { backgroundColor: color + "12" }]}>
+        <Ionicons name={icon as any} size={18} color={color} />
+      </View>
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardName} numberOfLines={1}>{item.displayName}</Text>
+        <View style={styles.cardMeta}>
+          <View style={[styles.typeBadge, { backgroundColor: color + "12" }]}>
+            <Text style={[styles.typeText, { color }]}>{item.entityType}</Text>
+          </View>
+          {item.clinicName && (
+            <Text style={styles.clinicLabel} numberOfLines={1}>{item.clinicName}</Text>
+          )}
+        </View>
+        {subtitle ? <Text style={styles.cardSub} numberOfLines={1}>{subtitle}</Text> : null}
+      </View>
+      <View style={styles.cardRight}>
+        <StatusPill status={item.status} small />
+        {item.entityType !== "PATIENT" && <Ionicons name="chevron-forward" size={13} color={T.textMuted} />}
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   newBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: T.r8 },
   newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
-  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, gap: 4, paddingBottom: 8 },
+  filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border, gap: 2, paddingBottom: 6 },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
-  chipsScroll: { paddingHorizontal: 16, paddingVertical: 4 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
+  chipsScroll: { paddingHorizontal: 16, paddingVertical: 3 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 7 },
   chipActive: { backgroundColor: T.primary + "12", borderColor: T.primary },
   chipInactive: { backgroundColor: "transparent", borderColor: T.border },
   chipText: { fontFamily: "Inter_500Medium", fontSize: 12 },
   countLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, paddingHorizontal: 16, paddingVertical: 8 },
   list: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
   card: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: T.r14, borderWidth: 1, borderColor: T.border, padding: 14, gap: 12 },
-  avatarWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: T.primary },
-  cardInfo: { flex: 1, gap: 5 },
-  cardEmail: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  avatarWrap: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  cardInfo: { flex: 1, gap: 4 },
+  cardName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
   cardMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  typeBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  typeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.3 },
   clinicLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textSec, flex: 1 },
-  tempPwBadge: { backgroundColor: T.warningBg, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  tempPwText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.warning },
+  cardSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
   cardRight: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
   sheet: { backgroundColor: T.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10 },
   sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: T.border },
   sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
-  sheetBody: { padding: 20, gap: 16, paddingBottom: 40 },
+  sheetBody: { padding: 20, gap: 14, paddingBottom: 40 },
   fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, color: T.textSec },
   infoBadge: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: T.accent + "10", borderWidth: 1, borderColor: T.accent + "30", borderRadius: T.r10, padding: 12 },
   infoText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.accent },

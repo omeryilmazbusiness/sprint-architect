@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { users } from "@shared/schema";
-import { eq, ilike, and, count } from "drizzle-orm";
+import { users, patients, clinics } from "@shared/schema";
+import { eq, ilike, and, count, sql } from "drizzle-orm";
 import { hashPassword } from "../auth/password";
 import crypto from "crypto";
 
@@ -32,7 +32,105 @@ export function generateSecurePassword(): string {
   return arr.join("");
 }
 
+export interface UnifiedEntity {
+  id: string;
+  entityType: "ADMIN" | "MANAGER" | "PATIENT";
+  clinicId: string | null;
+  clinicName: string | null;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  patientKey?: string;
+  status: string;
+  createdAt: string;
+}
+
 export const userRepo = {
+  async listUnified(filters: {
+    search?: string;
+    entityType?: "ADMIN" | "MANAGER" | "PATIENT";
+    status?: string;
+    clinicId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ rows: UnifiedEntity[]; total: number; page: number; pageSize: number }> {
+    const page = Math.max(1, filters.page ?? 1);
+    const pageSize = Math.min(100, filters.pageSize ?? 30);
+
+    const showManagers = !filters.entityType || filters.entityType === "ADMIN" || filters.entityType === "MANAGER";
+    const showPatients = !filters.entityType || filters.entityType === "PATIENT";
+
+    // Fetch clinic lookup for patients
+    const allClinics = await db.query.clinics.findMany();
+    const clinicMap = new Map(allClinics.map((c) => [c.id, c.name]));
+
+    const results: UnifiedEntity[] = [];
+
+    if (showManagers) {
+      const conditions = [];
+      if (filters.search) conditions.push(ilike(users.email, `%${filters.search}%`));
+      if (filters.entityType && (filters.entityType === "ADMIN" || filters.entityType === "MANAGER")) {
+        conditions.push(eq(users.role, filters.entityType));
+      }
+      if (filters.status) conditions.push(eq(users.status, filters.status as UserStatus));
+      if (filters.clinicId) conditions.push(eq(users.clinicId, filters.clinicId));
+
+      const userRows = await db.query.users.findMany({
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        with: { clinic: true },
+        orderBy: (u, { asc }) => asc(u.email),
+      });
+
+      for (const u of userRows) {
+        results.push({
+          id: u.id,
+          entityType: u.role as "ADMIN" | "MANAGER",
+          clinicId: u.clinicId ?? null,
+          clinicName: (u as any).clinic?.name ?? null,
+          displayName: u.email,
+          email: u.email,
+          phone: null,
+          status: u.status,
+          createdAt: u.createdAt.toISOString(),
+        });
+      }
+    }
+
+    if (showPatients) {
+      const patientConditions = [];
+      if (filters.search) patientConditions.push(ilike(patients.fullName, `%${filters.search}%`));
+      if (filters.status) patientConditions.push(eq(patients.status, filters.status as any));
+      if (filters.clinicId) patientConditions.push(eq(patients.clinicId, filters.clinicId));
+
+      const patientRows = await db.query.patients.findMany({
+        where: patientConditions.length > 0 ? and(...patientConditions) : undefined,
+        orderBy: (p, { asc }) => asc(p.fullName),
+      });
+
+      for (const p of patientRows) {
+        results.push({
+          id: p.id,
+          entityType: "PATIENT",
+          clinicId: p.clinicId,
+          clinicName: clinicMap.get(p.clinicId) ?? null,
+          displayName: p.fullName,
+          email: p.email ?? null,
+          phone: p.phone ?? null,
+          patientKey: p.patientKey,
+          status: p.status,
+          createdAt: p.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // Sort combined results by createdAt desc
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = results.length;
+    const offset = (page - 1) * pageSize;
+    return { rows: results.slice(offset, offset + pageSize), total, page, pageSize };
+  },
+
   async list(filters: {
     search?: string;
     role?: string;

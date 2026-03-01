@@ -3,6 +3,8 @@ import { clinics, invoices, patients, users } from "@shared/schema";
 import { eq, and, lt, not, gte, inArray, isNotNull, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { auditLog } from "../api/auditLogger";
+import { getEmailProvider } from "../email/getEmailProvider";
+import { invoiceEmailHtml, invoiceEmailText, monthlyReportHtml, monthlyReportText } from "../email/templates";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -32,6 +34,17 @@ export function currentPeriod(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function previousPeriod(): string {
+  const now = toIstanbul(new Date());
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function isFirstDayOfMonth(): boolean {
+  const now = toIstanbul(new Date());
+  return now.getDate() === 1;
+}
+
 export function computeNextInvoiceDate(billingAnchorDay: number): Date {
   const today = new Date();
   const anchorThisMonth = new Date(today.getFullYear(), today.getMonth(), billingAnchorDay);
@@ -45,7 +58,8 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
   const allClinics = await db.query.clinics.findMany({
     where: not(eq(clinics.status, "INACTIVE")),
   });
-  const generatedInvoices = [];
+  const generatedInvoices: (typeof invoices.$inferSelect)[] = [];
+  const emailProvider = getEmailProvider();
 
   const [year, month] = period.split("-").map(Number);
   const startDate = new Date(year, month - 1, 1);
@@ -112,9 +126,71 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
       action: "invoice.generated",
       metadata: { period, patientCount: count, total, unitPrice, dueAt },
     });
+
+    // Send invoice email to clinic (idempotent: only if not already emailed)
+    const alreadyEmailed = existing?.emailedAt != null;
+    if (clinic.contactEmail && !alreadyEmailed) {
+      try {
+        await emailProvider.send({
+          to: clinic.contactEmail,
+          subject: `Your Monthly Invoice – ${period} – ${clinic.name}`,
+          html: invoiceEmailHtml({ clinicName: clinic.name, period, patientCount: count, unitPrice, total, currency: clinic.currency, dueAt }),
+          text: invoiceEmailText({ clinicName: clinic.name, period, patientCount: count, unitPrice, total, currency: clinic.currency, dueAt }),
+        });
+        await db
+          .update(invoices)
+          .set({ emailedAt: new Date(), emailedTo: clinic.contactEmail } as any)
+          .where(eq(invoices.id, invoice.id));
+        console.log(`[billing] Invoice email sent → ${clinic.contactEmail} (${clinic.name})`);
+      } catch (err) {
+        console.error(`[billing] Failed to email invoice to ${clinic.contactEmail}:`, err);
+      }
+    }
   }
 
   return generatedInvoices;
+}
+
+export async function sendMonthlyReport(): Promise<void> {
+  const period = previousPeriod();
+  const emailProvider = getEmailProvider();
+  const reportEmail = process.env.MONTHLY_REPORT_EMAIL ?? "ryilmazomer@gmail.com";
+
+  const [periodInvoices, suspendedResult] = await Promise.all([
+    db.query.invoices.findMany({ where: eq(invoices.period, period), with: { clinic: true } }),
+    db.select({ count: sql<number>`count(*)::int` }).from(clinics).where(eq(clinics.status, "SUSPENDED")),
+  ]);
+
+  const paid = periodInvoices.filter((i) => i.status === "PAID").length;
+  const unpaid = periodInvoices.filter((i) => i.status === "UNPAID").length;
+  const pending = periodInvoices.filter((i) => i.status === "PENDING").length;
+  const suspendedClinics = suspendedResult[0]?.count ?? 0;
+
+  const rows = periodInvoices.map((inv) => ({
+    clinicName: (inv as any).clinic?.name ?? inv.clinicId,
+    invoiceStatus: inv.status,
+    clinicStatus: (inv as any).clinic?.status ?? "UNKNOWN",
+    total: inv.total,
+    currency: inv.currency,
+  }));
+
+  const data = { period, totalInvoices: periodInvoices.length, paid, unpaid, pending, suspendedClinics, rows };
+
+  await emailProvider.send({
+    to: reportEmail,
+    subject: `HealthTour Monthly Status Report – ${period}`,
+    html: monthlyReportHtml(data),
+    text: monthlyReportText(data),
+  });
+
+  auditLog({
+    actorId: "system",
+    actorRole: "SYSTEM",
+    action: "MONTHLY_REPORT_SENT",
+    metadata: { period, totalInvoices: periodInvoices.length, paid, unpaid, pending, suspendedClinics },
+  });
+
+  console.log(`[billing] Monthly report for ${period} sent to ${reportEmail}`);
 }
 
 export async function markOverdueInvoicesAsUnpaid(): Promise<void> {

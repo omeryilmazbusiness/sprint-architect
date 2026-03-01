@@ -1,0 +1,245 @@
+REPLIT AI — continue on the existing codebase (Expo React Native mobile + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+SCOPE (implement exactly these changes):
+1) Remove “Generate Invoice” completely (UI + admin endpoint). Invoices must be created ONLY automatically by scheduler.
+2) Admin Users screen: include PATIENT records in the “Users” list and allow filtering:
+   - clinic filter as a dropdown (clinics list)
+   - type filter: MANAGER / PATIENT (and optionally ADMIN if you want)
+   - status filter (ACTIVE/INACTIVE)
+   - search by NAME case-insensitively (must not be sensitive to upper/lowercase)
+3) Automatic emails:
+   - When monthly invoices are created, email each invoice to that clinic’s contact email automatically.
+   - Every month at 00:00 (Europe/Istanbul), send a “monthly final status report” email to: ryilmazomer@gmail.com
+     The report must include counts and summary of Paid/Unpaid/Pending invoices for the previous month and clinic suspension stats.
+4) Keep existing billing enforcement rules:
+   - Invoice statuses are ONLY: PENDING, UNPAID, PAID
+   - Invoice is created on the LAST day of month at 09:00 (Europe/Istanbul) as PENDING
+   - It stays PENDING until 23:59
+   - At 00:00 (next day), any still-PENDING invoice becomes UNPAID
+   - On UNPAID: clinic becomes SUSPENDED, and that clinic’s MANAGER + PATIENT cannot login or use API at all (block with CLINIC_SUSPENDED_BILLING)
+   - When Admin sets invoice to PAID: clinic becomes ACTIVE again and all manager/patient users re-activated immediately
+
+NON-NEGOTIABLE ENGINEERING RULES:
+- Keep RBAC strict: ADMIN-only actions must remain ADMIN-only
+- Keep clinic scoping strict
+- Use zod validation for all new/changed inputs
+- Standard error response format + codes
+- Do not store secrets in code. Email credentials must come from env (Replit Secrets).
+- Implement an EmailProvider abstraction (SOLID) with a dev fallback that logs emails if SMTP not configured.
+- Timezone MUST be Europe/Istanbul for scheduler.
+
+========================================
+A) REMOVE “GENERATE INVOICE”
+========================================
+- Remove any “Generate” button or menu item from Invoices UI.
+- Remove or disable manual endpoint:
+  - If there is POST /v1/admin/invoices/generate (or similar), remove it or restrict it so it is not used and not exposed.
+- Ensure invoices still appear because of scheduled creation (cron job).
+- Update documentation/README to state invoices are auto-generated; no manual generate.
+
+Acceptance:
+- There is no “Generate” UI.
+- There is no manual generate route used by the app.
+- Invoices are created by scheduler only.
+
+========================================
+B) USERS LIST: INCLUDE PATIENTS + FILTERS
+========================================
+Goal:
+Admin should view MANAGER users and PATIENT records in one screen, filterable by clinic and searchable by name (case-insensitive).
+
+Backend:
+1) Add/modify ADMIN endpoint:
+- GET /v1/admin/users
+Query params:
+  - clinicId (optional)
+  - entityType: "MANAGER" | "PATIENT" | "ADMIN" (optional; default show MANAGER+PATIENT)
+  - status: "ACTIVE" | "INACTIVE" (optional)
+  - search: string (optional) -> must be case-insensitive
+  - page, pageSize
+
+Response should be a unified list with a discriminator:
+[
+  {
+    id,
+    entityType: "MANAGER" | "PATIENT" | "ADMIN",
+    clinicId,
+    clinicName,
+    displayName,    // for PATIENT => patient.fullName; for MANAGER => (if no name exists) use email as displayName
+    email,          // only for user accounts
+    phone,          // optional if available
+    status,
+    createdAt
+  }
+]
++ pagination metadata: totalCount, page, pageSize
+
+Implementation details:
+- For PATIENT search, use patient.fullName.
+- For MANAGER search, use user.email (and user.fullName if exists).
+- Search must be case-insensitive:
+  - Use SQL ILIKE in Postgres or lower() comparisons in Drizzle.
+  - Ensure “Ahmet” matches “ahmet”, “AHMET”, etc.
+
+Frontend (Admin Users tab):
+- Clinic filter must be a dropdown populated from clinics endpoint:
+  - GET /v1/admin/clinics (or existing)
+- Add type filter chips/segmented control: MANAGER / PATIENT / ALL
+- Add status filter
+- Add search input: placeholder “Search by name”
+- Results list:
+  - show displayName + subtitle (email or patientKey masked) + status pill + clinic name
+- Loading/empty/error states required
+
+Acceptance:
+- Admin can filter by clinic via dropdown
+- Admin can toggle MANAGER/PATIENT
+- Searching “sarah” finds “Sarah Mitchell” (case-insensitive)
+- No crashes if filters are empty
+
+========================================
+C) EMAILS (INVOICE DELIVERY + MONTHLY REPORT)
+========================================
+1) Implement EmailProvider (SOLID)
+Create:
+- interface EmailProvider { send({to, subject, html, text?, attachments?}): Promise<void> }
+Implementations:
+- SmtpEmailProvider using nodemailer (preferred)
+- DevConsoleEmailProvider that logs emails to server console when SMTP not configured
+
+Env vars (Replit Secrets):
+- SMTP_HOST
+- SMTP_PORT
+- SMTP_USER
+- SMTP_PASS
+- SMTP_FROM   (e.g., "billing@yourdomain.com")
+If any missing => fallback to DevConsoleEmailProvider.
+
+2) Invoice email to clinic (automatic)
+When monthly invoices are created (scheduler job at last day 09:00):
+- For each clinic invoice created/updated:
+  - Send an email to clinic.contactEmail
+  - Subject example: "Your Monthly Invoice – {period} – {ClinicName}"
+  - Body includes:
+    - Period
+    - Patient count
+    - Unit price
+    - Total
+    - Status (PENDING)
+    - Due time (23:59 local)
+  - Optional: if you have invoice PDF already, attach it. If not, do NOT block; send summary only.
+- Ensure idempotency:
+  - Do not send duplicate email if the invoice already existed and was emailed.
+  - Add columns to invoices:
+    - emailedAt nullable
+    - emailedTo nullable
+  - Only email when invoice.emailedAt is null OR if explicitly re-email is triggered (but we are removing manual generate, so keep it one-time).
+
+3) Monthly “final status report” email (automatic)
+Requirement:
+- “Her ay gece 12’de” = at 00:00 local time when the month rolls over.
+Implement a scheduler job:
+- Every day at 00:00 Europe/Istanbul:
+  - If today is the 1st day of month, compile report for the previous month (period = YYYY-MM of previous month)
+  - Send to: ryilmazomer@gmail.com
+
+Report contents (HTML email):
+- Period
+- Totals:
+  - Total invoices
+  - Paid count
+  - Unpaid count
+  - Pending count (should normally be 0 after transitions; but include anyway)
+- Suspended clinics count
+- A short table listing clinics with:
+  - clinicName
+  - invoice status
+  - clinic status (ACTIVE/SUSPENDED)
+  - total amount
+
+Add audit log entry: MONTHLY_REPORT_SENT with metadata (period, totals).
+
+Acceptance:
+- If SMTP is configured, emails are sent.
+- If SMTP not configured, emails are logged without crashing.
+- Report triggers on month rollover (00:00 on day 1) for previous period.
+
+========================================
+D) SCHEDULER JOBS (KEEP AUTO BILLING ONLY)
+========================================
+Confirm/implement scheduler (node-cron or similar) with timezone Europe/Istanbul:
+
+Job 1 — Create monthly invoices:
+- Cron: 09:00 on the LAST day of month
+- For each clinic:
+  - calculate patientCount (define clearly: e.g., patients created in that period OR arrivalDate in period — use existing rule)
+  - create invoice if not exists: status=PENDING, dueAt=last day 23:59
+  - email clinic (see section C.2)
+
+Job 2 — Pending -> Unpaid transition + suspend:
+- Cron: every day at 00:00
+- Find invoices status=PENDING where dueAt < now => set status=UNPAID
+- For affected clinics:
+  - set clinic.status=SUSPENDED, statusReason="BILLING_UNPAID"
+  - disable managers/patients:
+    - user.status=INACTIVE statusReason="BILLING_SUSPENDED"
+    - patient.status=INACTIVE statusReason="BILLING_SUSPENDED" (if patient has status)
+- Enforce at login + middleware that suspended clinic cannot access.
+
+Job 3 — Monthly report:
+- Same 00:00 job:
+  - if day=1 => send report for previous month to ryilmazomer@gmail.com
+
+========================================
+E) ADMIN INVOICE DETAIL: MARK AS PAID (UNCHANGED BUT VERIFY)
+========================================
+- Invoice detail screen: Admin can set status to PAID manually
+- On PAID:
+  - set invoice.paidAt, paidByAdminId
+  - set clinic ACTIVE, clear reason
+  - set managers/patients ACTIVE, clear reason
+- Ensure UI updates and clinic becomes usable immediately.
+
+========================================
+F) TESTS & BUG FIXES
+========================================
+Add automated tests:
+1) Case-insensitive search:
+- searching “sarah” finds “Sarah Mitchell”
+2) Users clinic filter:
+- returns only entities from selected clinic
+3) Email provider fallback:
+- when SMTP env missing, it uses DevConsoleEmailProvider without throwing
+4) Scheduler logic (unit tests with injected Clock):
+- last day invoice creation -> PENDING
+- 00:00 transition -> UNPAID + clinic suspended
+- month rollover -> report sent (mock EmailProvider)
+
+Also ensure invoices list filter/search bug remains fixed (if it previously existed).
+
+========================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================
+After implementation, print:
+1) Files changed/added
+2) DB schema changes (Drizzle) and exact migration commands
+3) All affected endpoints (new/updated) + sample curl examples:
+   - GET /v1/admin/users?clinicId=...&entityType=PATIENT&search=sarah
+4) Scheduler cron expressions + timezone
+5) Email configuration env vars needed
+6) Manual QA checklist:
+   - Admin Users: clinic dropdown filter + patient list + case-insensitive search
+   - Invoice auto creation: simulate job run and confirm clinic email sent (or logged)
+   - Month rollover report: simulate day=1 00:00 and confirm report sent/logged
+   - Suspension blocks manager/patient login and API usage
+   - Mark invoice PAID re-activates clinic/users immediately
+
+IMPLEMENTATION ORDER:
+1) Remove Generate UI + manual endpoint exposure
+2) Admin users unified endpoint + UI filters/search
+3) EmailProvider + invoice email sending + monthly report email
+4) Scheduler job integration (timezone correct) + idempotency
+5) Tests + docs update
+
+Proceed now. No manual invoice generation anywhere in UI.
+END.
