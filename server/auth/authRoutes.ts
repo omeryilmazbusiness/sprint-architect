@@ -83,6 +83,12 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     const e = Errors.VALIDATION_ERROR(parsed.error.issues[0].message);
+    auditLog({
+      actorId: "unknown",
+      actorRole: "GUEST",
+      action: "USER_LOGIN_FAILED",
+      metadata: { reason: "validation_error", details: parsed.error.issues[0].message }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
@@ -92,6 +98,12 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
 
   if (!user || user.status !== "ACTIVE") {
     const e = Errors.INVALID_CREDENTIALS();
+    auditLog({
+      actorId: "unknown",
+      actorRole: "GUEST",
+      action: "USER_LOGIN_FAILED",
+      metadata: { email, reason: !user ? "user_not_found" : "user_inactive" }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
@@ -99,6 +111,12 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     const e = Errors.INVALID_CREDENTIALS();
+    auditLog({
+      actorId: user.id,
+      actorRole: user.role,
+      action: "USER_LOGIN_FAILED",
+      metadata: { email: user.email, reason: "invalid_password" }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }

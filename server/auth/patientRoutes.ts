@@ -32,6 +32,12 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
   const parsed = patientLoginSchema.safeParse(req.body);
   if (!parsed.success) {
     const e = Errors.VALIDATION_ERROR(parsed.error.issues[0].message);
+    auditLog({
+      actorId: "unknown",
+      actorRole: "GUEST",
+      action: "PATIENT_LOGIN_FAILED",
+      metadata: { reason: "validation_error", details: parsed.error.issues[0].message }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
@@ -43,12 +49,24 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     patient = await patientRepo.findByKey(patientKey);
   } catch (err) {
     const e = Errors.PATIENT_KEY_INVALID();
+    auditLog({
+      actorId: "unknown",
+      actorRole: "GUEST",
+      action: "PATIENT_LOGIN_FAILED",
+      metadata: { patientKey, reason: "key_invalid" }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
 
   if (!patient || patient.status !== "ACTIVE") {
     const e = Errors.PATIENT_KEY_INVALID();
+    auditLog({
+      actorId: patient?.id ?? "unknown",
+      actorRole: "PATIENT",
+      action: "PATIENT_LOGIN_FAILED",
+      metadata: { patientKey, reason: !patient ? "patient_not_found" : "patient_inactive" }
+    });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }

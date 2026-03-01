@@ -678,6 +678,26 @@ router.delete("/users/:id", async (req, res, next) => {
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
 
+router.post("/invoices/generate", async (req, res, next) => {
+  try {
+    const period = req.query.period as string;
+    if (!period) throw new AppError("VALIDATION_ERROR", "period query param is required", 400);
+    validatePeriod(period);
+    const generated = await invoiceRepo.generateForPeriod(period);
+    
+    auditLog({
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "INVOICE_GENERATED",
+      metadata: { period, count: generated.length },
+    });
+
+    res.json(generated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post("/billing/run", async (req, res, next) => {
   try {
     await markOverdueInvoicesAsUnpaid();

@@ -503,35 +503,18 @@ function DocumentsTab({ patientId, colors }: { patientId: string; colors: any })
   });
 
   const handleReject = (docId: string) => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        "Reject Document",
-        "Please enter the reason for rejection:",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Reject", 
-            style: "destructive", 
-            onPress: (reason) => updateStatusMutation.mutate({ docId, status: "REJECTED", rejectionReason: reason }) 
-          }
-        ]
-      );
-    } else {
-      // For Android/Web, use simple alert or we'd need a custom modal. 
-      // Using prompt-like approach with Alert for now as per instructions.
-      Alert.alert(
-        "Reject Document",
-        "Confirm rejection of this document?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Reject", 
-            style: "destructive", 
-            onPress: () => updateStatusMutation.mutate({ docId, status: "REJECTED", rejectionReason: "Document requirements not met." }) 
-          }
-        ]
-      );
-    }
+    Alert.prompt(
+      "Reject Document",
+      "Please enter the reason for rejection:",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Reject", 
+          style: "destructive", 
+          onPress: (reason) => updateStatusMutation.mutate({ docId, status: "REJECTED", rejectionReason: reason || "Document requirements not met." }) 
+        }
+      ]
+    );
   };
 
   const handleViewPdf = (docId: string) => {

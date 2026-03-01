@@ -11,7 +11,7 @@ function hashToken(token: string): string {
 export const authRepo = {
   async findUserByEmail(email: string) {
     return await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: eq(users.email, email.toLowerCase()),
     });
   },
 

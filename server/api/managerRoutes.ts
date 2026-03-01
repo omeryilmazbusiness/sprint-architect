@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { eq, and, gte, count } from "drizzle-orm";
+import { eq, and, gte, count, isNotNull } from "drizzle-orm";
 import { authMiddleware, requireRole, clinicScopeMiddleware, requireActiveClinic } from "../auth/middleware";
 import { AppError } from "../auth/errors";
 import { db } from "../db";
-import { patients, appointments, patientDocuments } from "@shared/schema";
+import { patients, appointments, patientDocuments, patientPlans, clinics } from "@shared/schema";
 import { patientRepo } from "../repositories/patientRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
 import { hotelRepo } from "../repositories/hotelRepo";
@@ -534,13 +534,20 @@ router.put("/documents/:id", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.get("/clinic-info", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
+    if (!clinic) throw new AppError("NOT_FOUND", "Clinic not found", 404);
+    res.json({ id: clinic.id, name: clinic.name, status: clinic.status });
+  } catch (e) { next(e); }
+});
+
 router.get("/metrics", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
 
     const [[{ totalPatients }], [{ upcomingToday }], [{ pendingDocuments }]] = await Promise.all([
       db.select({ totalPatients: count() }).from(patients).where(
@@ -561,7 +568,20 @@ router.get("/metrics", async (req, res, next) => {
       ),
     ]);
 
-    res.json({ totalPatients, upcomingToday, pendingDocuments });
+    const [{ completePlans }] = await db
+      .select({ completePlans: count() })
+      .from(patientPlans)
+      .where(
+        and(
+          eq(patientPlans.clinicId, clinicId),
+          isNotNull(patientPlans.hotelId),
+          isNotNull(patientPlans.transportId),
+          isNotNull(patientPlans.doctorId),
+        )
+      );
+    const missingAssignments = Math.max(0, totalPatients - completePlans);
+
+    res.json({ totalPatients, upcomingToday, pendingDocuments, missingAssignments });
   } catch (e) { next(e); }
 });
 
@@ -577,8 +597,8 @@ router.get("/invoices", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const { period, status } = req.query as Record<string, string>;
-    const invoices = await invoiceRepo.list({ clinicId, period, status });
-    res.json(invoices);
+    const result = await invoiceRepo.list({ clinicId, period, status });
+    res.json(result);
   } catch (e) { next(e); }
 });
 

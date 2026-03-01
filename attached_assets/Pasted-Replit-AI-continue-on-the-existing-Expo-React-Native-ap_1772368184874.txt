@@ -1,0 +1,173 @@
+Replit AI — continue on the existing Expo React Native app (expo-router) + Express/TS backend + Postgres/Drizzle. DO NOT re-scaffold.
+
+OBJECTIVE:
+Create a premium Manager experience:
+1) A professional bottom tab bar for MANAGER role (footer tabs).
+2) A modern Manager Dashboard screen with real data and actionable cards.
+3) Apply the same White Theme system used for Admin screens to Manager screens as well (consistent design language).
+
+NON-NEGOTIABLE:
+- Manager must only see their clinic data (clinic scoping).
+- Use existing API client with auth refresh logic.
+- All screens: loading/empty/error states.
+- Premium white theme, consistent tokens/components.
+- Do not add heavy UI frameworks unless already present.
+
+========================================================
+A) MANAGER UX DESIGN (IMPLEMENT)
+========================================================
+Manager bottom tabs (footer):
+- Dashboard
+- Guests
+- Services
+- Invoices
+- Settings
+
+Tab behaviors:
+1) Dashboard:
+- shows KPIs + today’s schedule + quick actions
+2) Guests:
+- patient list + search + create + navigate to guest detail
+3) Services:
+- a hub screen linking to:
+  - Doctors
+  - Hotels
+  - Transports
+  - Document Types
+(Use cards/grid with icons)
+4) Invoices:
+- list manager clinic invoices (filter by period/status)
+- status pills: PENDING/UNPAID/PAID
+- if clinic suspended show a banner “Clinic suspended due to unpaid invoice”
+5) Settings:
+- profile + clinic info + logout
+- “Support” / “Privacy” placeholders
+
+========================================================
+B) ROUTING / NAVIGATION
+========================================================
+Create a dedicated manager tab group:
+- app/(manager-tabs)/_layout.tsx  (or consistent with your current grouping)
+Tabs:
+- app/(manager-tabs)/dashboard.tsx
+- app/(manager-tabs)/guests.tsx
+- app/(manager-tabs)/services.tsx
+- app/(manager-tabs)/invoices.tsx
+- app/(manager-tabs)/settings.tsx
+
+Ensure role routing:
+- After login, MANAGER goes to /(manager-tabs)/dashboard
+- ADMIN keeps its existing routes
+- GUEST keeps its own guest dashboard routes
+
+========================================================
+C) WHITE THEME APPLY TO MANAGER
+========================================================
+- Wrap manager tabs in the same ThemeProvider as Admin (light theme).
+- Use the same reusable components:
+  - AppHeader
+  - Card
+  - StatusPill
+  - ListRow
+  - Primary/Secondary buttons
+- Ensure typography and spacing are consistent.
+
+Add a professional header on each tab:
+- Title + clinic name (subtitle)
+- Right: small profile/logout icon or overflow menu (keep minimal)
+
+========================================================
+D) MANAGER DASHBOARD — REAL DATA
+========================================================
+Backend:
+If these endpoints exist, use them:
+- GET /v1/manager/metrics  -> { totalActivePatients, appointmentsToday, pendingDocuments, missingAssignments }
+- GET /v1/manager/upcoming-appointments (for today)
+If missing, implement minimal endpoints (clinic-scoped) without breaking existing:
+- /v1/manager/metrics:
+  - totalActivePatients
+  - appointmentsToday
+  - pendingDocuments (documents status ASSIGNED or REJECTED if you count those)
+  - missingAssignments (patients with null hotelId or transportId or doctorId)
+- /v1/manager/upcoming-appointments?from=&to=
+Return simplified appointment list.
+
+UI layout (Dashboard):
+1) KPI cards row (scrollable):
+- Active Guests
+- Appointments Today
+- Pending Documents
+- Missing Assignments
+2) “Today” section:
+- list next 5 appointments (time + patient + doctor optional)
+- tap -> opens patient detail
+3) Quick actions:
+- New Guest
+- View Guests
+- View Services
+- View Documents (optional)
+4) Empty states:
+- If no appointments today: show “No appointments scheduled today.”
+
+========================================================
+E) SERVICES TAB (MANAGER)
+========================================================
+Create a premium hub:
+- 2-column grid cards:
+  - Doctors
+  - Hotels
+  - Transports
+  - Document Types
+Tapping navigates to the existing CRUD screens (you may already have /(manager)/doctors etc).
+If current CRUD screens are under app/(manager)/..., reuse them or move under manager-tabs stack logically.
+Do not break routes; if needed, create wrapper routes that navigate to existing ones.
+
+========================================================
+F) INVOICES TAB (MANAGER)
+========================================================
+- Fetch manager invoices from existing endpoint (manager scoped).
+- Filters:
+  - Period dropdown (YYYY-MM)
+  - Status dropdown
+- List rows with:
+  - period
+  - total amount
+  - status pill
+- Invoice detail (optional): show breakdown
+- If invoice UNPAID => clinic suspended: show a locked state and block actions (still should show invoices).
+
+========================================================
+G) SETTINGS TAB (MANAGER)
+========================================================
+- Profile (email, role)
+- Clinic info card (clinic name, status)
+- Logout
+- If clinic suspended: show explanation banner.
+
+========================================================
+H) OUTPUT REQUIREMENTS
+========================================================
+After implementation, print:
+1) Files added/changed
+2) Routes created
+3) Any backend endpoints added/modified
+4) Manual QA checklist:
+- manager login -> lands on manager dashboard
+- tabs navigate correctly
+- dashboard shows real metrics and appointments list
+- guests list works from Guests tab
+- services hub routes to CRUD screens
+- invoices list loads + filters work
+- theme is white and consistent with admin
+
+IMPLEMENTATION ORDER:
+1) Manager tab group + routing
+2) Apply theme provider + header
+3) Dashboard screen with metrics + upcoming appointments
+4) Services hub + linking to CRUD screens
+5) Invoices tab (list + filters)
+6) Settings tab
+7) Polish (empty/loading/error)
+
+Proceed now. Keep it clean, premium, and consistent.
+END.

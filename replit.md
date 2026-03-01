@@ -14,7 +14,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend (React Native / Expo)
 
-The frontend is built with Expo using `expo-router` for file-based navigation. It features a role-based navigation structure, directing users to `(auth)`, `(tabs)` for managers, `(admin)` for administrators, and `(patient)` for patients. API interactions are managed through a dedicated client layer, and server state is handled with React Query, while authentication state uses React Context. Tokens are securely stored in `AsyncStorage`. The UI incorporates Inter fonts, a light/dark theme based on `useColorScheme()`, and a suite of reusable components like `StatusBadge`, `MetricCard`, and `LoadingView`.
+The frontend is built with Expo using `expo-router` for file-based navigation. It features a role-based navigation structure, directing users to `(auth)` for login/intro, `(manager-tabs)` for managers (5-tab layout: Dashboard, Guests, Services, Invoices, Settings), `(admin)` for administrators, `(tabs)` for legacy/shared views, and `(patient)` for patients. Login screen navigates to the correct tab group based on returned role. API interactions are managed through a dedicated client layer, and server state is handled with React Query, while authentication state uses React Context. Tokens are securely stored in `AsyncStorage`. The UI incorporates Inter fonts, a light/dark theme based on `useColorScheme()`, and a suite of reusable components like `StatusBadge`, `MetricCard`, and `LoadingView`.
 
 ### Backend (Express.js)
 

@@ -38,11 +38,15 @@ export class LocalDiskStorageProvider implements StorageProvider {
   }
 
   async getReadStream(storageKey: string): Promise<Readable> {
-    const absolutePath = this.resolveKey(storageKey);
+    const absolutePath = this.getFilePath(storageKey);
     if (!fs.existsSync(absolutePath)) {
       throw new Error("File not found: " + storageKey);
     }
     return fs.createReadStream(absolutePath);
+  }
+
+  getFilePath(storageKey: string): string {
+    return this.resolveKey(storageKey);
   }
 
   private resolveKey(storageKey: string): string {

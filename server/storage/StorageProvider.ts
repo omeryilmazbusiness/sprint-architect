@@ -11,4 +11,5 @@ export interface SaveFileOptions {
 export interface StorageProvider {
   saveFile(opts: SaveFileOptions): Promise<string>;
   getReadStream(storageKey: string): Promise<Readable>;
+  getFilePath(storageKey: string): string;
 }
