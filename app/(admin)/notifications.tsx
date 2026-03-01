@@ -130,70 +130,56 @@ export default function NotificationsScreen() {
 
   const [showAll, setShowAll] = useState(false);
   const [generatedCred, setGeneratedCred] = useState<{ kind: RequestKind; value: string } | null>(null);
+  const [confirmingItemId, setConfirmingItemId] = useState<string | null>(null);
+  const [rejectingItemId, setRejectingItemId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<CredentialRequest[]>({
     queryKey: ["/v1/admin/notifications/credential-requests", showAll],
-    queryFn: () =>
-      apiRequest("GET", `/v1/admin/notifications/credential-requests?status=${showAll ? "ALL" : "PENDING"}&limit=50`),
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/v1/admin/notifications/credential-requests?status=${showAll ? "ALL" : "PENDING"}&limit=50`,
+      );
+      return res.json() as Promise<CredentialRequest[]>;
+    },
   });
 
   const resolveMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest("POST", `/v1/admin/credential-requests/${id}/resolve`, {
+    mutationFn: async (item: CredentialRequest) => {
+      const res = await apiRequest("POST", `/v1/admin/credential-requests/${item.id}/resolve`, {
         action: "GENERATE_AND_SEND",
-      }),
-    onSuccess: (res: any, id: string) => {
+      });
+      const payload = await res.json() as { success: boolean; oneTimePassword?: string; oneTimeAccessKey?: string };
+      return { payload, item };
+    },
+    onSuccess: ({ payload, item }) => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/notifications/credential-requests"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/notifications/unread-count"] });
-      const item = data?.find((r) => r.id === id);
-      if (item) {
-        const cred = res.oneTimePassword ?? res.oneTimeAccessKey;
-        if (cred) setGeneratedCred({ kind: item.kind, value: cred });
-      }
+      setConfirmingItemId(null);
+      const cred = payload.oneTimePassword ?? payload.oneTimeAccessKey;
+      if (cred) setGeneratedCred({ kind: item.kind, value: cred });
     },
-    onError: (err: any) => Alert.alert("Error", err.message || "Could not resolve request."),
+    onError: (err: any) => {
+      setConfirmingItemId(null);
+      Alert.alert("Error", err.message || "Could not resolve request.");
+    },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest("POST", `/v1/admin/credential-requests/${id}/reject`, {}),
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/v1/admin/credential-requests/${id}/reject`, {});
+      return res.json();
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/v1/admin/notifications/credential-requests"] });
       qc.invalidateQueries({ queryKey: ["/v1/admin/notifications/unread-count"] });
+      setRejectingItemId(null);
     },
-    onError: (err: any) => Alert.alert("Error", err.message || "Could not reject request."),
+    onError: (err: any) => {
+      setRejectingItemId(null);
+      Alert.alert("Error", err.message || "Could not reject request.");
+    },
   });
-
-  function confirmResolve(item: CredentialRequest) {
-    const label = kindLabel(item.kind);
-    const target =
-      item.kind === "MANAGER_PASSWORD"
-        ? item.targetUser?.email ?? "this user"
-        : item.targetPatient?.fullName ?? "this patient";
-    Alert.alert(
-      `Generate & Send ${label}`,
-      `Generate a new ${label.toLowerCase()} for ${target}?\n\nThis will immediately send an email and invalidate their current credential.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Generate & Send",
-          style: "destructive",
-          onPress: () => resolveMutation.mutate(item.id),
-        },
-      ]
-    );
-  }
-
-  function confirmReject(item: CredentialRequest) {
-    Alert.alert(
-      "Reject Request",
-      "Are you sure you want to reject this credential request?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Reject", style: "destructive", onPress: () => rejectMutation.mutate(item.id) },
-      ]
-    );
-  }
 
   async function handleLogout() {
     await logout();
@@ -204,8 +190,12 @@ export default function NotificationsScreen() {
 
   function renderItem({ item }: { item: CredentialRequest }) {
     const isPending = item.status === "PENDING";
-    const isMutating =
-      resolveMutation.isPending || rejectMutation.isPending;
+    const isConfirmingResolve = confirmingItemId === item.id;
+    const isConfirmingReject = rejectingItemId === item.id;
+    const isThisMutating =
+      (resolveMutation.isPending && confirmingItemId === item.id) ||
+      (rejectMutation.isPending && rejectingItemId === item.id);
+    const anyMutating = resolveMutation.isPending || rejectMutation.isPending;
 
     return (
       <View style={[styles.card, cardShadow]}>
@@ -250,30 +240,89 @@ export default function NotificationsScreen() {
           )}
         </View>
 
-        {isPending && (
+        {isPending && !isConfirmingResolve && !isConfirmingReject && (
           <View style={styles.cardActions}>
             <Pressable
-              style={[styles.actionBtn, styles.actionBtnReject, { opacity: isMutating ? 0.5 : 1 }]}
-              onPress={() => confirmReject(item)}
-              disabled={isMutating}
+              style={[styles.actionBtn, styles.actionBtnReject, { opacity: anyMutating ? 0.5 : 1 }]}
+              onPress={() => setRejectingItemId(item.id)}
+              disabled={anyMutating}
+              testID={`reject-btn-${item.id}`}
             >
               <Ionicons name="close-outline" size={15} color="#DC2626" />
               <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Reject</Text>
             </Pressable>
             <Pressable
-              style={[styles.actionBtn, styles.actionBtnGenerate, { opacity: isMutating ? 0.5 : 1 }]}
-              onPress={() => confirmResolve(item)}
-              disabled={isMutating}
+              style={[styles.actionBtn, styles.actionBtnGenerate, { opacity: anyMutating ? 0.5 : 1 }]}
+              onPress={() => setConfirmingItemId(item.id)}
+              disabled={anyMutating}
+              testID={`generate-btn-${item.id}`}
             >
-              {resolveMutation.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="flash-outline" size={15} color="#fff" />
-                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>Generate & Send</Text>
-                </>
-              )}
+              <Ionicons name="flash-outline" size={15} color="#fff" />
+              <Text style={[styles.actionBtnText, { color: "#fff" }]}>Generate & Send</Text>
             </Pressable>
+          </View>
+        )}
+
+        {isPending && isConfirmingResolve && (
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmWarning}>
+              This will generate a new {kindLabel(item.kind).toLowerCase()} and send it by email. The current credential will be invalidated.
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={[styles.actionBtn, styles.actionBtnReject, { flex: 1 }]}
+                onPress={() => setConfirmingItemId(null)}
+                disabled={isThisMutating}
+                testID={`cancel-resolve-${item.id}`}
+              >
+                <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionBtn, styles.actionBtnGenerate, { flex: 1, opacity: isThisMutating ? 0.6 : 1 }]}
+                onPress={() => resolveMutation.mutate(item)}
+                disabled={isThisMutating}
+                testID={`confirm-generate-${item.id}`}
+              >
+                {isThisMutating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="flash-outline" size={15} color="#fff" />
+                    <Text style={[styles.actionBtnText, { color: "#fff" }]}>Confirm</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {isPending && isConfirmingReject && (
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmWarning}>
+              Reject this credential request? The person will need to submit a new one.
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={[styles.actionBtn, styles.actionBtnReject, { flex: 1 }]}
+                onPress={() => setRejectingItemId(null)}
+                disabled={isThisMutating}
+                testID={`cancel-reject-${item.id}`}
+              >
+                <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionBtn, { flex: 1, backgroundColor: "#DC2626", opacity: isThisMutating ? 0.6 : 1 }]}
+                onPress={() => rejectMutation.mutate(item.id)}
+                disabled={isThisMutating}
+                testID={`confirm-reject-${item.id}`}
+              >
+                {isThisMutating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>Reject</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
         )}
       </View>
@@ -447,6 +496,24 @@ const styles = StyleSheet.create({
     backgroundColor: T.primary,
   },
   actionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  confirmBox: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.border,
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  confirmWarning: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#92400E",
+    lineHeight: 16,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
 });
 
 const credStyles = StyleSheet.create({

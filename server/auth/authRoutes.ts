@@ -261,13 +261,20 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
     if (parsed.data.kind === "MANAGER_PASSWORD") {
       const { email } = parsed.data;
       const user = await authRepo.findUserByEmail(email.toLowerCase());
-      if (user && user.role === "MANAGER" && user.status === "ACTIVE") {
-        await credentialRequestRepo.create({
+      if (!user) {
+        console.log(`[credential-request] MANAGER_PASSWORD: no user found for email=${email} (silent)`);
+      } else if (user.role !== "MANAGER") {
+        console.log(`[credential-request] MANAGER_PASSWORD: user role=${user.role} is not MANAGER (silent)`);
+      } else if (user.status !== "ACTIVE") {
+        console.log(`[credential-request] MANAGER_PASSWORD: user status=${user.status} not ACTIVE (silent)`);
+      } else {
+        const row = await credentialRequestRepo.create({
           kind: "MANAGER_PASSWORD",
           clinicId: user.clinicId,
           requesterEmail: user.email,
           targetUserId: user.id,
         });
+        console.log(`[credential-request] created MANAGER_PASSWORD id=${row.id} targetUserId=${user.id} clinicId=${user.clinicId}`);
         auditLog({
           actorId: user.id,
           actorRole: user.role,
@@ -280,12 +287,17 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
     } else {
       const { guestAccessKey } = parsed.data;
       const patient = await patientRepo.findByKey(guestAccessKey.toUpperCase());
-      if (patient && patient.status === "ACTIVE") {
-        await credentialRequestRepo.create({
+      if (!patient) {
+        console.log(`[credential-request] GUEST_ACCESS_KEY: no patient found for key=${guestAccessKey.toUpperCase()} (silent)`);
+      } else if (patient.status !== "ACTIVE") {
+        console.log(`[credential-request] GUEST_ACCESS_KEY: patient status=${patient.status} not ACTIVE (silent)`);
+      } else {
+        const row = await credentialRequestRepo.create({
           kind: "GUEST_ACCESS_KEY",
           clinicId: patient.clinicId,
           targetPatientId: patient.id,
         });
+        console.log(`[credential-request] created GUEST_ACCESS_KEY id=${row.id} targetPatientId=${patient.id} clinicId=${patient.clinicId}`);
         auditLog({
           actorId: patient.id,
           actorRole: "PATIENT",
@@ -297,7 +309,7 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
       }
     }
   } catch (err) {
-    console.error("[credential-requests] error:", err);
+    console.error("[credential-request] unexpected error:", err);
   }
 
   res.json(GENERIC_SUCCESS);

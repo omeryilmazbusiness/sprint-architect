@@ -151,11 +151,17 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
       throw new AppError("VALIDATION_ERROR", "This request has already been resolved", 400);
     }
 
-    const email = getEmailProvider();
+    const emailProvider = getEmailProvider();
     const adminId = req.actor!.sub;
 
+    console.log(`[credential-resolve] id=${cr.id} kind=${cr.kind} adminId=${adminId}`);
+
     if (cr.kind === "MANAGER_PASSWORD") {
-      if (!cr.targetUser) throw new AppError("NOT_FOUND", "Target user not found", 404);
+      if (!cr.targetUser) {
+        console.warn(`[credential-resolve] MANAGER_PASSWORD id=${cr.id}: targetUser not found (user deleted?)`);
+        throw new AppError("NOT_FOUND", "Target manager account no longer exists", 404);
+      }
+
       const tempPassword = generateTempPassword();
       const passwordHash = await hashPassword(tempPassword);
 
@@ -166,22 +172,29 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
       await authRepo.revokeAllRefreshTokensForUser(cr.targetUser.id);
 
       const sentToEmail = cr.targetUser.email;
-      await email.send({
-        to: sentToEmail,
-        subject: "HealthTour — Your New Temporary Password",
-        html: managerPasswordResetEmailHtml({
-          managerEmail: sentToEmail,
-          tempPassword,
-          clinicName: cr.clinic?.name,
-        }),
-        text: managerPasswordResetEmailText({
-          managerEmail: sentToEmail,
-          tempPassword,
-          clinicName: cr.clinic?.name,
-        }),
-      });
+      let emailSent = false;
+      try {
+        await emailProvider.send({
+          to: sentToEmail,
+          subject: "HealthTour — Your New Temporary Password",
+          html: managerPasswordResetEmailHtml({
+            managerEmail: sentToEmail,
+            tempPassword,
+            clinicName: cr.clinic?.name,
+          }),
+          text: managerPasswordResetEmailText({
+            managerEmail: sentToEmail,
+            tempPassword,
+            clinicName: cr.clinic?.name,
+          }),
+        });
+        emailSent = true;
+        console.log(`[credential-resolve] email sent to ${sentToEmail} for request ${cr.id}`);
+      } catch (emailErr: any) {
+        console.error(`[credential-resolve] email FAILED for request ${cr.id} to ${sentToEmail}:`, emailErr?.message ?? emailErr);
+      }
 
-      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail });
+      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: emailSent ? sentToEmail : undefined });
       auditLog({
         clinicId: cr.clinicId ?? undefined,
         actorId: adminId,
@@ -189,12 +202,16 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
         action: "CREDENTIAL_REQUEST_RESOLVED",
         resourceType: "user",
         resourceId: cr.targetUser.id,
-        metadata: { kind: "MANAGER_PASSWORD", sentToEmail },
+        metadata: { kind: "MANAGER_PASSWORD", sentToEmail, emailSent },
       });
 
-      res.json({ success: true, oneTimePassword: tempPassword });
+      res.json({ success: true, oneTimePassword: tempPassword, emailSent });
+
     } else if (cr.kind === "GUEST_ACCESS_KEY") {
-      if (!cr.targetPatient) throw new AppError("NOT_FOUND", "Target patient not found", 404);
+      if (!cr.targetPatient) {
+        console.warn(`[credential-resolve] GUEST_ACCESS_KEY id=${cr.id}: targetPatient not found (patient deleted?)`);
+        throw new AppError("NOT_FOUND", "Target patient account no longer exists", 404);
+      }
 
       let newKey = generateGuestKey();
       let attempts = 0;
@@ -213,24 +230,33 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
       await authRepo.revokeAllRefreshTokensForPatient(cr.targetPatient.id);
 
       const sentToEmail = cr.clinic?.contactEmail ?? cr.requesterEmail ?? null;
+      let emailSent = false;
       if (sentToEmail) {
-        await email.send({
-          to: sentToEmail,
-          subject: "HealthTour — New Guest Access Key",
-          html: guestAccessKeyEmailHtml({
-            patientName: cr.targetPatient.fullName,
-            accessKey: newKey,
-            clinicName: cr.clinic?.name,
-          }),
-          text: guestAccessKeyEmailText({
-            patientName: cr.targetPatient.fullName,
-            accessKey: newKey,
-            clinicName: cr.clinic?.name,
-          }),
-        });
+        try {
+          await emailProvider.send({
+            to: sentToEmail,
+            subject: "HealthTour — New Guest Access Key",
+            html: guestAccessKeyEmailHtml({
+              patientName: cr.targetPatient.fullName,
+              accessKey: newKey,
+              clinicName: cr.clinic?.name,
+            }),
+            text: guestAccessKeyEmailText({
+              patientName: cr.targetPatient.fullName,
+              accessKey: newKey,
+              clinicName: cr.clinic?.name,
+            }),
+          });
+          emailSent = true;
+          console.log(`[credential-resolve] email sent to ${sentToEmail} for request ${cr.id}`);
+        } catch (emailErr: any) {
+          console.error(`[credential-resolve] email FAILED for request ${cr.id} to ${sentToEmail}:`, emailErr?.message ?? emailErr);
+        }
+      } else {
+        console.warn(`[credential-resolve] GUEST_ACCESS_KEY id=${cr.id}: no email address available, skipping email`);
       }
 
-      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: sentToEmail ?? undefined });
+      await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: emailSent ? (sentToEmail ?? undefined) : undefined });
       auditLog({
         clinicId: cr.clinicId ?? undefined,
         actorId: adminId,
@@ -238,10 +264,10 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
         action: "GUEST_ACCESS_KEY_REGENERATED",
         resourceType: "patient",
         resourceId: cr.targetPatient.id,
-        metadata: { sentToEmail },
+        metadata: { sentToEmail, emailSent },
       });
 
-      res.json({ success: true, oneTimeAccessKey: newKey });
+      res.json({ success: true, oneTimeAccessKey: newKey, emailSent });
     } else {
       throw new AppError("VALIDATION_ERROR", "Unknown credential request kind", 400);
     }

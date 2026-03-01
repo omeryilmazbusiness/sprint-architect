@@ -1,0 +1,154 @@
+Replit AI — continue in the existing codebase (Expo React Native + Express/TypeScript backend + Postgres + Drizzle). DO NOT re-scaffold.
+
+PROBLEM STATEMENT:
+Admin notifications show nothing (empty) even though managers/guests are submitting “forgot/request new password” requests.
+We must diagnose the root cause and fix it end-to-end.
+Also: when Admin taps a request and generates a new password, the new password MUST be emailed to that person’s email reliably.
+
+GOALS:
+1) Find why notifications are not appearing (DB writes? query? RBAC? clinic scoping? wrong endpoint? UI not fetching? badge count not refreshing?).
+2) Fix it so:
+   - Submitting “Request New Password” creates a credential request row in DB.
+   - Admin Notifications screen lists pending requests.
+   - Clicking a request -> “Generate & Send” generates a secure password, updates manager passwordHash, marks request completed, and sends email to the manager’s email.
+3) Add solid logging + error handling so this doesn’t silently fail.
+4) Add automated test coverage for the full flow.
+
+NON-NEGOTIABLE:
+- Do not show any stored passwords in UI.
+- Only generate new password upon admin action.
+- Email credentials must come from env; if SMTP missing, DevConsoleEmailProvider should log the email (but the request must still mark completed only if send succeeded, or clearly mark SEND_FAILED).
+- All endpoints must validate with zod and return standard error codes.
+- Rate limiting remains.
+
+========================================================
+A) DIAGNOSIS (do this first)
+========================================================
+1) Reproduce the bug:
+- Run backend and DB.
+- From the app (or curl), submit a request:
+  POST /v1/auth/credential-requests
+  body: { kind:"MANAGER_PASSWORD", email:"manager@demo.com" }
+- Verify in DB whether a credential request row is inserted.
+  - If not inserted:
+    - Identify whether user lookup fails, zod rejects, route not mounted, or transaction not committed.
+  - If inserted but notifications empty:
+    - Verify admin list endpoint query:
+      GET /v1/admin/notifications/credential-requests?status=PENDING
+    - Check RBAC middleware (ADMIN allowed?) and route prefixes.
+  - If endpoint returns items but UI shows empty:
+    - Check mobile fetch call, URL, auth token attached, parsing, and list rendering.
+
+2) Add TEMP debug logs (then keep minimal permanent logs):
+- On request creation: log request id, kind, targetUserId, clinicId
+- On admin list: log filter params and returned count
+- On admin resolve: log request id, email to send, send status
+
+========================================================
+B) BACKEND FIXES (ensure end-to-end works)
+========================================================
+1) Credential request creation must always insert when user exists:
+- Ensure lookup uses correct table/field and role=MANAGER.
+- Ensure “clinic suspended” does NOT block creating a request (optional); if currently blocked, allow request creation even if suspended.
+- Store:
+  - targetUserId
+  - requesterEmail (the email submitted)
+  - clinicId (from user.clinicId)
+  - status=PENDING
+  - createdAt
+
+2) Admin notifications list endpoint must return pending requests:
+- GET /v1/admin/notifications/credential-requests
+  - ADMIN only
+  - Return PENDING by default
+  - Include fields needed by UI:
+    { id, kind, status, createdAt, clinicId, clinicName, requesterEmail, targetUserEmail }
+
+3) Admin resolve endpoint must:
+- POST /v1/admin/credential-requests/:id/resolve
+  body: { action:"GENERATE_AND_SEND" }
+Behavior for MANAGER_PASSWORD:
+- Find request by id and status=PENDING.
+- Load target user (manager) and confirm exists.
+- Generate secure password (min 16 chars, include mixed classes).
+- Update user.passwordHash = bcrypt(password).
+- Revoke all refresh tokens for that user (logout all devices).
+- Send email to user.email using EmailProvider:
+  Subject: "Your new password"
+  Body: include temporary password + instruction to login and change later (if you support change password).
+- Only on successful email send:
+  - mark request COMPLETED
+  - set resolvedAt, resolvedByAdminId, sentToEmail=user.email
+  - audit log: CREDENTIAL_REQUEST_RESOLVED
+- If email fails:
+  - mark request status stays PENDING OR set status=FAILED (if you have it). If you don’t have FAILED, keep PENDING but return error clearly.
+  - return error code EMAIL_SEND_FAILED
+
+IMPORTANT:
+- Never store the plaintext password in DB.
+- Optionally return oneTimePassword in response for admin to copy ONCE, but do not store it.
+
+4) Email Provider reliability:
+- Verify SMTP env vars are read correctly.
+- If missing SMTP, DevConsoleEmailProvider should console.log:
+  - to, subject, and password in body (dev only).
+- Ensure resolve endpoint still behaves consistently:
+  - If using DevConsole provider, treat as “sent” and mark COMPLETED (dev environment).
+
+5) Unread count:
+- GET /v1/admin/notifications/unread-count should count PENDING requests accurately.
+- After resolve, count decreases.
+
+========================================================
+C) MOBILE FIXES (Admin Notifications screen)
+========================================================
+1) Ensure the Admin Notifications screen:
+- Calls the correct endpoint base URL
+- Uses admin token and refresh logic
+- Shows loading state
+- Renders list items
+- Has pull-to-refresh
+2) Each notification row:
+- Shows: kind (Manager Password / Guest Key), requester email, clinic name, created time
+- On tap -> detail modal or inline actions:
+  - “Generate & Send”
+3) After “Generate & Send”:
+- show success toast
+- refresh list + badge count
+- if backend returned oneTimePassword, show a secure “Copy” modal
+
+========================================================
+D) TESTS (mandatory)
+========================================================
+Add automated tests:
+1) Request creation inserts DB row when manager exists.
+2) Admin list returns it as pending.
+3) Resolve:
+- updates password hash
+- revokes refresh tokens
+- sends email via a mocked EmailProvider
+- marks request completed
+4) Unread count decreases after resolve.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After fixing, print:
+1) Root cause summary (why notifications were empty)
+2) Files changed
+3) Sample curl commands to verify:
+- create request
+- list pending
+- resolve
+4) How to verify in the app (step-by-step)
+5) Email env vars required + dev fallback behavior
+
+IMPLEMENTATION ORDER:
+1) Reproduce + identify root cause with DB check + logs
+2) Fix backend insert/query/resolve logic
+3) Fix mobile notifications fetch/render + refresh + actions
+4) Add tests + run full test suite
+5) Remove noisy debug logs (keep minimal useful logs)
+
+Proceed now. Do not guess — reproduce and fix systematically.
+END.
