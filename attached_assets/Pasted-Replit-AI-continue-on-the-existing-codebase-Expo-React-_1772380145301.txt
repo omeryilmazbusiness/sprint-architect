@@ -1,0 +1,279 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a premium Manager UX upgrade:
+1) Manager Dashboard schedule: month calendar + under it a detailed appointment list (patient, time, doctor, appointment title).
+2) Rename “Guests” tab to “Users”. Inside Users page, create 2 sub-tabs: “Guests” and “Doctors”.
+3) Build professional filter UX like Admin (icon filter bar + dropdown pickers + chips + debounce search).
+4) Create a premium Guest Detail page:
+   - Show all guest info
+   - Show assigned doctor, allow doctor change
+   - Show required documents (passport copy, visa, lab tests etc.) with statuses (Pending/Uploaded)
+   - Allow creating new appointment
+   - Include modern patient tracking flow (arrival -> stay -> appointments -> return) with current step highlight
+5) Ensure clinic scoping and white theme consistency.
+
+NON-NEGOTIABLE:
+- White theme must match Admin theme tokens/components.
+- Strict clinic scoping: Manager can only access own clinic’s data.
+- Search must be case-insensitive.
+- No heavy UI frameworks unless already installed; prefer reusable in-house components.
+- Every screen: loading / empty / error states.
+- Document statuses: show at least “Pending” and “Uploaded” in UI.
+  If backend enum is ASSIGNED/UPLOADED/APPROVED/REJECTED:
+    - Map “Pending” UI = ASSIGNED
+    - Map “Uploaded” UI = UPLOADED
+- Guest must upload documents assigned by manager (enforced by UX: show “Required” + missing warning; actual enforcement can be on patient side, but manager must see missing).
+
+========================================================
+A) UX DESIGN SPEC (IMPLEMENT)
+========================================================
+1) Manager Dashboard — Schedule section
+- Show monthly calendar grid (with dots on days having appointments).
+- BELOW calendar: “Selected Day Agenda” list.
+Each row must show:
+  - Time (HH:mm)
+  - Patient name
+  - Appointment title/type
+  - Doctor name (if assigned)
+  - Status pill (SCHEDULED/DONE/CANCELLED)
+Tap row -> open Guest Detail and auto-scroll to appointments tab.
+
+2) Users screen (new structure)
+- Bottom tab item name: “Users” (instead of Guests).
+- Inside Users page: top segmented tabs:
+  - Guests
+  - Doctors
+- Both tabs share the same FilterBar pattern (like Admin):
+  - 🔍 search input (debounced 400ms)
+  - ✅ status dropdown (Guests: ACTIVE/INACTIVE/ALL; Doctors: ALL/ACTIVE optional)
+  - 🧩 optional “Missing” dropdown for Guests:
+      ALL / Missing Doctor / Missing Hotel / Missing Transport / Missing Documents
+  - 🧹 clear filters button
+  - active filter chips displayed below
+
+3) Guests list (under Users > Guests)
+- Premium card rows:
+  - avatar initials
+  - name (bold)
+  - subtitle: arrival/departure dates
+  - tags/chips for missing items (No Doctor / Docs Missing etc.)
+  - right status pill + chevron
+- On tap -> Guest Detail page.
+
+4) Doctors list (under Users > Doctors)
+- Premium list + CRUD entry points (if CRUD exists already, navigate there).
+- Filters + search (case-insensitive by name/specialty).
+
+5) Guest Detail page — premium & modern
+Route:
+- app/(manager-tabs)/users/guests/[id].tsx (or consistent route grouping)
+
+Layout (scrollable with sticky header):
+Header:
+- Guest name + status pill
+- small line: arrival → departure
+- quick actions: Change Doctor, New Appointment
+
+Sections (Cards):
+A) Overview
+- Guest key masked + copy button (if allowed)
+- arrival/departure, notes if exists
+- assigned hotel/transport summary (if exists)
+
+B) Care Team
+- Assigned Doctor card (name, specialty, phone)
+- “Change Doctor” button -> picker modal -> calls backend assign-doctor
+
+C) Required Documents (Checklist)
+- Predefined document types must exist:
+  - Passport Copy
+  - Visa
+  - Lab Tests (Tahlil)
+  - (optional) Medical Reports
+- Display checklist rows:
+  - document type name
+  - status pill: Pending/Uploaded/(Approved/Rejected if supported)
+  - if Uploaded: “View” button (if fileUrl exists)
+- Manager actions:
+  - Assign required docs (multi-select) if not assigned
+  - Change status (approve/reject) only if supported; otherwise view only.
+
+D) Appointments
+- List upcoming + past grouped by date
+- Button “Create Appointment”
+  - Fields: title/type, startAt, endAt optional, doctor optional (default assigned doctor), locationText, notes
+  - Creates via backend endpoint
+- Ability to edit/cancel (if endpoints exist; otherwise at least delete/cancel)
+
+E) Patient Tracking Flow (Modern stepper + timeline)
+- Show a horizontal stepper with steps (example):
+  1) Pre-Arrival
+  2) Arrival & Transfer
+  3) Hotel Check-in
+  4) Treatment / Appointments
+  5) Follow-up / Control
+  6) Departure
+- Under the stepper: timeline list (“Activity”) with time-stamped events.
+- Current step must be highlighted.
+- Steps should be derived (MVP) from data:
+  - Pre-Arrival if now < arrivalDate
+  - Arrival & Transfer if arrivalDate <= now and transport assigned but no hotel check-in
+  - Hotel Check-in if hotel assigned and now >= checkInDate
+  - Treatment/Appointments if there are scheduled appointments within stay
+  - Follow-up if appointment status DONE exists and before departure
+  - Departure if now > departureDate
+If dates missing, fall back to “Manual step selection” by manager:
+  - Manager can set currentStep via dropdown, saved to DB.
+This gives a reliable UX without guessing.
+
+========================================================
+B) BACKEND REQUIREMENTS (Express + Drizzle)
+========================================================
+1) Endpoints needed (verify existing, add if missing)
+A) Manager — month appointments range
+GET /v1/manager/appointments?from=ISO&to=ISO
+Return:
+[
+  { id, startAt, title, status, patientId, patientName, doctorName? }
+]
+Clinic scoped.
+
+B) Manager — guests list with filters
+GET /v1/manager/patients?search=&status=&missing=&page=&pageSize=
+- search case-insensitive on fullName and patientKey
+- missing filter:
+  - missingDoctor: patient_plan.doctorId is null
+  - missingDocuments: exists patient_documents where status=ASSIGNED (Pending)
+  - missingHotel/transport if your schema includes those
+Return pagination metadata.
+
+C) Manager — guest detail aggregate endpoint (IMPORTANT)
+GET /v1/manager/patients/:id/details
+Return a single payload:
+{
+  patient: {...},
+  plan: { doctorId?, hotelId?, transportId?, checkIn/out?, roomNo? },
+  doctor: {...} | null,
+  documents: [ { id, typeName, status, fileUrl? } ],
+  appointments: [ ... ],
+  tracking: { currentStep, stepsComputed?, events: [...] }
+}
+This prevents multiple API calls and makes UI fast.
+
+D) Manager — assign doctor
+PUT /v1/manager/patients/:id/assign-doctor
+body: { doctorId: string | null }
+Validate doctor belongs to same clinic.
+
+E) Manager — assign required documents (document types fixed)
+POST /v1/manager/patients/:id/assign-documents
+body: { documentTypeCodes: string[] }
+Use codes like:
+- PASSPORT_COPY
+- VISA
+- LAB_TESTS
+Idempotent: don’t duplicate.
+
+F) Manager — create appointment (already exists maybe)
+POST /v1/manager/patients/:id/appointments
+body: { title, type?, startAt, endAt?, doctorId?, locationText?, notes? }
+
+G) Tracking persistence (if not exists)
+Add minimal DB to support tracking:
+Option 1 (simple):
+- patient_plans add:
+  - currentStep enum/string nullable
+Option 2 (better):
+- patient_tracking table:
+  - id, clinicId, patientId, currentStep, updatedAt
+- patient_tracking_events table:
+  - id, clinicId, patientId, step, title, timestamp, notes
+
+Implement minimum:
+- Store currentStep in patient_plans OR patient_tracking table
+Endpoint:
+PUT /v1/manager/patients/:id/tracking
+body: { currentStep: string }
+Return updated tracking.
+
+2) Document types fixed seed
+Ensure document_types contains:
+- PASSPORT_COPY -> “Passport Copy”
+- VISA -> “Visa”
+- LAB_TESTS -> “Lab Tests (Tahlil)”
+If per-clinic, seed per clinic at creation or on startup.
+
+3) Case-insensitive search
+Use ILIKE (Postgres) or lower() comparisons in Drizzle for:
+- patient.fullName
+- patient.patientKey
+- doctor.fullName
+- user.email (if needed)
+
+========================================================
+C) MOBILE IMPLEMENTATION (Expo Router)
+========================================================
+1) Rename bottom tab label “Guests” -> “Users”
+- Keep route stable if needed, but label should show Users.
+
+2) Users screen with nested tabs:
+Route:
+- app/(manager-tabs)/users.tsx
+Inside:
+- segmented tabs: Guests / Doctors
+- Each tab renders its list component and shares FilterBar component
+
+3) Guests list:
+- app/(manager-tabs)/users/guests/index.tsx (or embedded)
+- uses premium filters + chips
+- tap row -> push to guest detail route
+
+4) Guest detail:
+- app/(manager-tabs)/users/guests/[id].tsx
+Tabs inside detail (optional but recommended):
+- Overview
+- Tracking
+- Documents
+- Appointments
+- Care Team
+Use a sticky tab header or segmented control within the detail.
+
+5) Calendar schedule improvements:
+- In manager dashboard schedule:
+  - month calendar + agenda list as specified
+- Agenda list row includes patient + doctor + title
+
+6) White theme:
+- Use existing theme tokens/components.
+- Use same FilterBar used in Admin (icon buttons + picker modal + chips).
+
+========================================================
+D) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added (mobile + server)
+2) New/updated endpoints + sample curl:
+   - month appointments range
+   - patient details aggregate
+   - assign-doctor
+   - assign-documents by codes
+   - update tracking step
+3) Manual QA checklist:
+   - Dashboard: month calendar shows dots; selecting day shows list with patient/time/doctor/title
+   - Users: Guests/Doctors tabs work; filters work; case-insensitive search works
+   - Guest detail: shows assigned doctor + change doctor works
+   - Documents: required docs show statuses pending/uploaded; assigning docs works; missing docs visible
+   - Appointments: create appointment works; appears in calendar + guest detail
+   - Tracking: stepper shows current step; changing step persists
+
+IMPLEMENTATION ORDER (DO THIS ORDER):
+1) Backend: add patient details aggregate endpoint + search/missing filters + month range appointments endpoint
+2) Backend: tracking persistence (currentStep) + endpoints
+3) Mobile: Manager dashboard calendar + agenda list with full details
+4) Mobile: Users screen (Guests/Doctors) + premium filters
+5) Mobile: Guest detail premium page (overview, care team, documents, appointments, tracking)
+6) Seed/fix document types codes + final polish
+
+Proceed now. Keep UX premium, modern, white-theme consistent.
+END.

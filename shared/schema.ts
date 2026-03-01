@@ -182,6 +182,7 @@ export const patientPlans = pgTable("patient_plans", {
   roomNo: text("room_no"),
   checkInDate: text("check_in_date"),
   checkOutDate: text("check_out_date"),
+  currentStep: text("current_step"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

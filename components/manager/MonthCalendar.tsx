@@ -36,7 +36,7 @@ interface Appointment {
   endAt: string;
   status: string;
   patient?: { id: string; fullName: string };
-  doctor?: { name: string } | null;
+  doctor?: { id: string; fullName: string } | null;
 }
 
 export function MonthCalendar() {

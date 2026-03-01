@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { eq, and, gte, count, isNotNull } from "drizzle-orm";
+import { eq, and, gte, count, isNotNull, asc } from "drizzle-orm";
 import { authMiddleware, requireRole, clinicScopeMiddleware, requireActiveClinic } from "../auth/middleware";
 import { AppError } from "../auth/errors";
 import { db } from "../db";
@@ -104,6 +104,133 @@ router.get("/patients/:id", async (req, res, next) => {
     const plan = await planRepo.findByPatient(req.params.id);
     res.json({ ...patient, plan: plan || null });
   } catch (e) { next(e); }
+});
+
+router.get("/patients/:id/details", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { id } = req.params;
+
+    const patient = await db.query.patients.findFirst({
+      where: and(eq(patients.id, id), eq(patients.clinicId, clinicId)),
+      with: {
+        plan: {
+          with: {
+            doctor: true,
+            hotel: true,
+            transport: true,
+          }
+        }
+      }
+    });
+
+    if (!patient) throw new AppError("NOT_FOUND", "Patient not found", 404);
+
+    const documents = await db.query.patientDocuments.findMany({
+      where: and(eq(patientDocuments.patientId, id), eq(patientDocuments.clinicId, clinicId)),
+      with: { documentType: true },
+      orderBy: [asc(patientDocuments.createdAt)],
+    });
+
+    const appts = await db.query.appointments.findMany({
+      where: and(eq(appointments.patientId, id), eq(appointments.clinicId, clinicId)),
+      with: { doctor: true },
+      orderBy: [asc(appointments.startAt)],
+    });
+
+    res.json({
+      patient: {
+        id: patient.id,
+        fullName: patient.fullName,
+        patientKey: patient.patientKey,
+        phone: patient.phone,
+        email: patient.email,
+        nationality: patient.nationality,
+        arrivalDate: patient.arrivalDate,
+        departureDate: patient.departureDate,
+        status: patient.status,
+        notes: patient.notes,
+      },
+      plan: patient.plan ? {
+        doctorId: patient.plan.doctorId,
+        hotelId: patient.plan.hotelId,
+        transportId: patient.plan.transportId,
+        checkInDate: patient.plan.checkInDate,
+        checkOutDate: patient.plan.checkOutDate,
+        roomNo: patient.plan.roomNo,
+        hotelStayDays: patient.plan.hotelStayDays,
+        currentStep: patient.plan.currentStep,
+      } : null,
+      doctor: patient.plan?.doctor ? {
+        id: patient.plan.doctor.id,
+        fullName: patient.plan.doctor.fullName,
+        specialty: patient.plan.doctor.specialty,
+        phone: patient.plan.doctor.phone,
+      } : null,
+      hotel: patient.plan?.hotel ? {
+        id: patient.plan.hotel.id,
+        name: patient.plan.hotel.name,
+      } : null,
+      transport: patient.plan?.transport ? {
+        id: patient.plan.transport.id,
+        name: patient.plan.transport.name,
+      } : null,
+      documents: documents.map(d => ({
+        id: d.id,
+        status: d.status,
+        fileUrl: d.fileUrl,
+        rejectionReason: d.rejectionReason,
+        documentType: d.documentType ? {
+          id: d.documentType.id,
+          name: d.documentType.name,
+          isRequired: d.documentType.isRequired,
+        } : null,
+      })),
+      appointments: appts.map(a => ({
+        id: a.id,
+        title: a.title,
+        type: a.type,
+        startAt: a.startAt,
+        endAt: a.endAt,
+        status: a.status,
+        locationText: a.locationText,
+        notes: a.notes,
+        doctor: a.doctor ? { id: a.doctor.id, fullName: a.doctor.fullName } : null,
+      })),
+      tracking: {
+        currentStep: patient.plan?.currentStep || null,
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/patients/:id/tracking", async (req, res, next) => {
+  try {
+    const clinicId = getClinicId(req);
+    const { id } = req.params;
+    const { currentStep } = req.body as { currentStep: string };
+
+    const validSteps = ["PRE_ARRIVAL", "ARRIVAL_TRANSFER", "HOTEL_CHECKIN", "TREATMENT", "FOLLOWUP", "DEPARTURE"];
+    if (currentStep && !validSteps.includes(currentStep)) {
+      throw new AppError("VALIDATION_ERROR", "Invalid tracking step", 400);
+    }
+
+    const patient = await db.query.patients.findFirst({
+      where: and(eq(patients.id, id), eq(patients.clinicId, clinicId)),
+    });
+    if (!patient) throw new AppError("NOT_FOUND", "Patient not found", 404);
+
+    await db
+      .update(patientPlans)
+      .set({ currentStep, updatedAt: new Date() })
+      .where(and(eq(patientPlans.patientId, id), eq(patientPlans.clinicId, clinicId)));
+
+    res.json({ currentStep });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.put("/patients/:id", async (req, res, next) => {
