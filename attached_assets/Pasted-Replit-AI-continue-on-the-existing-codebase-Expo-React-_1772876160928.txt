@@ -1,0 +1,171 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript + Postgres/Drizzle). DO NOT re-scaffold.
+
+PROBLEM:
+On mobile, when I login using QR (Expo) and then try to enter Admin area, the app crashes. The crash mentions code around something like "setStatus check" (likely calling setStatus / setState incorrectly or undefined).
+I want you to:
+1) Diagnose the root cause with real reproduction and stack traces,
+2) Fix Admin login + auth routing end-to-end,
+3) Make auth production-ready and robust (no silent failures, no invalid state calls),
+4) Ensure QR flow cannot break Admin auth flow (and role routing is correct).
+
+IMPORTANT CONTEXT:
+- App has roles: ADMIN / MANAGER / PATIENT (UI: Guest).
+- QR login is meant for Guest Access Key (PATIENT) only.
+- Admin should login via email/password (Management login).
+- Role-based routing exists (admin goes to admin group, manager to manager-tabs, guest to guest dashboard).
+- There is some state like authStatus / status with setters (e.g., setStatus) and "check" logic causing crash.
+
+NON-NEGOTIABLE REQUIREMENTS:
+- You MUST reproduce the crash and identify the exact file/line from stack trace.
+- Fix must be production-grade:
+  - No "setState on unmounted component" warnings
+  - No undefined setter usage (setStatus is always defined)
+  - Robust auth gate: handles loading, refresh, logout, invalid tokens, clinic suspended
+  - QR login must never route into Admin UI unless role is ADMIN
+- Do not weaken security. Do not expose passwords in UI.
+
+========================================================
+A) STEP 1 — REPRODUCE & LOCATE THE CRASH (MANDATORY)
+========================================================
+1) Run the app and reproduce exactly:
+- Open app fresh (clear storage / remove app state)
+- Use QR scanner to login (guest flow)
+- Attempt to navigate to admin area (whatever triggers crash)
+2) Capture:
+- Full red screen error message
+- Full stack trace (including file path + line number)
+3) Print the exact location of "setStatus check" code and surrounding context.
+4) Identify which of these categories it is:
+- (i) setStatus is undefined / not a function (bad hook/provider usage)
+- (ii) calling setStatus after component unmounted (async flow)
+- (iii) role routing incorrectly pushes guest into admin stack
+- (iv) auth store is inconsistent (status/state not initialized)
+- (v) expo-router layout misconfigured causing provider re-mount loops
+
+DO NOT proceed to changes until the root cause is pinned down with file/line evidence.
+
+========================================================
+B) STEP 2 — AUTH SYSTEM AUDIT (ADMIN + ALL ROLES)
+========================================================
+Audit and report current auth implementation:
+1) Where tokens are stored (SecureStore/AsyncStorage) and how bootstrapping works on app start.
+2) How status is tracked (e.g., "authStatus": loading/authenticated/unauthenticated).
+3) How role routing works:
+- Where does it check role and redirect?
+- Which layouts are used: /(auth), /(admin), /(manager-tabs), /(patient) etc.
+4) How QR login integrates:
+- Does QR login share same auth function as management login?
+- Does it overwrite shared state unexpectedly?
+
+List all discovered risks:
+- Missing null checks
+- Race conditions (multiple login calls)
+- State updates after navigation/unmount
+- Incorrect dependency arrays causing repeated effects
+- Mixed contexts (admin and guest in same provider but partial state)
+
+========================================================
+C) STEP 3 — FIXES (PROD-READY IMPLEMENTATION)
+========================================================
+Implement fixes in a minimal but correct way. Apply these rules:
+
+1) Make AuthProvider stable and safe:
+- Ensure auth state shape is always initialized:
+  {
+    status: "BOOTING" | "SIGNED_OUT" | "SIGNED_IN",
+    user: { role, email?, clinicId? } | null,
+    accessToken: string | null,
+    refreshToken: string | null
+  }
+- Ensure all setter functions exist (setStatus must never be undefined).
+- Expose actions:
+  - signInManagement(email,password)
+  - signInGuestByKey(key, deviceId)
+  - signInGuestByQr(qrContent)
+  - refresh()
+  - signOut()
+- Use a "mounted" ref to prevent setState on unmounted components.
+
+2) Fix QR flow boundaries:
+- QR scan must ONLY populate Guest Access Key and call Guest login endpoint.
+- QR flow must never call management login endpoint or set role as ADMIN/MANAGER.
+- After successful guest login, route only to guest dashboard group.
+- Add hard route guards:
+  - If role != ADMIN, redirect away from /(admin) immediately.
+  - If role == ADMIN, block guest dashboard routes.
+- If someone tries to open admin screen while logged as guest, show a friendly message or redirect to correct dashboard.
+
+3) Fix expo-router layouts:
+- Ensure there is exactly one AuthProvider at the root.
+- Avoid nested providers that reset auth state.
+- Ensure initial boot flow:
+  - status=BOOTING -> load tokens -> refresh if needed -> set SIGNED_IN or SIGNED_OUT
+- Prevent infinite redirect loops by:
+  - waiting until status != BOOTING before redirecting.
+
+4) Backend auth hardening checks (only if needed):
+- Confirm refresh token rotation works and errors are handled.
+- Confirm suspended clinic blocks manager/guest login AND API calls; admin unaffected.
+- Ensure error codes are mapped to friendly messages.
+
+5) Eliminate "setStatus check" anti-pattern:
+- If there is code like:
+  - if (setStatus) setStatus(...)
+  - or setStatus?.(...)
+  Replace it with a guaranteed stable setter from provider.
+- If the crash is "cannot update state while rendering", move updates into useEffect.
+
+========================================================
+D) STEP 4 — ADD DEFENSIVE UI/UX + LOGGING
+========================================================
+1) Add an AuthDebug logger in dev mode:
+- Logs transitions: BOOTING -> SIGNED_IN etc.
+- Logs role and route decisions (only in dev).
+2) Add friendly error surfaces:
+- If token invalid -> sign out and show “Session expired”
+- If clinic suspended -> show “Clinic access suspended due to billing”
+3) Ensure login screens never crash:
+- Disable buttons while loading
+- Prevent double login calls
+
+========================================================
+E) STEP 5 — TESTS (MANDATORY)
+========================================================
+Add/extend automated tests:
+1) Guest QR login:
+- scanning valid QR -> sets key -> logs in -> routes to guest dashboard
+2) Guest cannot access admin:
+- when role=PATIENT and attempt admin route -> redirect (no crash)
+3) Admin login works:
+- email/password -> role=ADMIN -> routes to admin dashboard
+4) AuthProvider stability:
+- No undefined setters
+- No state updates after unmount (simulate async)
+
+If full UI E2E tests are hard, at least add unit tests for auth store actions + route guard logic.
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+When finished, output:
+1) Root cause summary (exact file/line that caused crash) + why it happened
+2) Files changed + key diffs
+3) Updated routing diagram (roles -> route groups)
+4) Manual QA checklist:
+- fresh install -> guest QR login -> guest dashboard OK
+- attempt admin access while guest -> safe redirect, no crash
+- management login as admin -> admin dashboard OK
+- logout -> returns to login
+- restart app -> bootstraps tokens without loops
+5) Tests added + how to run them
+
+IMPLEMENTATION ORDER:
+1) Reproduce crash + capture stack trace + pinpoint file/line
+2) Fix AuthProvider/store stability (setStatus issue)
+3) Fix role routing guards in expo-router layouts
+4) Verify QR flow only affects guest path
+5) Add tests and run full suite
+6) Clean up debug logs (keep minimal dev-only)
+
+Proceed now. Do not guess — prove with stack trace and then fix.
+END.

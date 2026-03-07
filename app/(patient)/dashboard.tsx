@@ -183,7 +183,7 @@ export default function PatientDashboard() {
   if (isLoading) return <LoadingView />;
   if (isError || !data) return <ErrorView onRetry={refetch} />;
 
-  const { patient, appointments, documents, plan } = data;
+  const { patient, appointments, documents, plan = {} } = data;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>

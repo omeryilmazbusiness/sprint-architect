@@ -28,9 +28,12 @@ function useHealthCheck() {
   const check = () => {
     setStatus("checking");
     const url = new URL("/api/health", getApiUrl()).toString();
-    fetch(url, { signal: AbortSignal.timeout(5000) })
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    fetch(url, { signal: controller.signal })
       .then((res) => setStatus(res.ok ? "ok" : "error"))
-      .catch(() => setStatus("error"));
+      .catch(() => setStatus("error"))
+      .finally(() => clearTimeout(timer));
   };
   useEffect(check, []);
   return { status, recheck: check };

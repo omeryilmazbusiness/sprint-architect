@@ -1,11 +1,12 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AdminThemeProvider } from "@/context/AdminThemeContext";
 import { T } from "@/constants/adminTheme";
+import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
   return (
@@ -115,6 +116,11 @@ function ClassicTabLayout() {
 }
 
 export default function ManagerTabLayout() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return null;
+  if (!user || user.role !== "MANAGER") return <Redirect href="/(auth)/login" />;
+
   const Layout = isLiquidGlassAvailable() ? NativeTabLayout : ClassicTabLayout;
   return (
     <AdminThemeProvider>
