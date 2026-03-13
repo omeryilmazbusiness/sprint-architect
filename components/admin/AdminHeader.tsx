@@ -16,6 +16,7 @@ interface AdminHeaderProps {
   title: string;
   userEmail?: string;
   onLogout?: () => void;
+  left?: React.ReactNode;
   right?: React.ReactNode;
   backButton?: boolean;
   onBack?: () => void;
@@ -50,6 +51,7 @@ export function AdminHeader({
   title,
   userEmail,
   onLogout,
+  left,
   right,
   backButton,
   onBack,
@@ -59,31 +61,33 @@ export function AdminHeader({
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : "AD";
 
+  const renderLeft = () => {
+    if (left) return left;
+    if (backButton) {
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={onBack}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={22} color={T.primary} />
+        </Pressable>
+      );
+    }
+    return (
+      <View style={styles.brandMark}>
+        <Text style={styles.brandMarkText}>H</Text>
+      </View>
+    );
+  };
+
   return (
-    <View
-      style={[
-        styles.header,
-        { paddingTop: topPad + 10 },
-        cardShadow,
-      ]}
-    >
+    <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
       <View style={styles.row}>
-        {backButton ? (
-          <Pressable
-            style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={onBack}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={22} color={T.primary} />
-          </Pressable>
-        ) : (
-          <View style={styles.brandMark}>
-            <Text style={styles.brandMarkText}>H</Text>
-          </View>
-        )}
+        {renderLeft()}
 
         <View style={styles.titleBlock}>
-          {!backButton && (
+          {!backButton && !left && (
             <Text style={styles.brandText}>HealthTour</Text>
           )}
           <Text style={styles.pageTitle} numberOfLines={1}>
@@ -183,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
-    maxWidth: 180,
+    maxWidth: 200,
   },
   bellBtn: {
     width: 36,

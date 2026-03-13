@@ -1,0 +1,109 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + Postgres/Drizzle). DO NOT re-scaffold.
+
+GOAL:
+Improve Admin → Users selection UX:
+When selection mode is active (at least 1 item selected):
+- The header must switch to selection actions:
+  1) Left: X (Cancel) button to exit selection mode and clear selections
+  2) Right: Trash (Delete) icon button to delete selected (opens confirmation modal)
+In normal mode:
+- Header shows title “Users”
+- Right: “Select” button to enter selection mode
+
+Must be SOLID-friendly and production-ready.
+
+NON-NEGOTIABLE:
+- White theme premium look
+- RBAC ADMIN only
+- Deletion is soft deactivate via bulk endpoint
+- Confirmation modal required
+- Delete icon disabled when selectedCount=0
+- Cancel always clears selection and returns to normal
+- No flicker or setState loops; no remount issues
+
+========================================================
+A) FRONTEND IMPLEMENTATION (Expo RN)
+========================================================
+1) Refactor selection state into a single hook (if not already):
+- hooks/useSelectionMode.ts
+Expose:
+- isSelecting
+- selectedCount
+- selectedTargets
+- enterSelectionMode()
+- exitSelectionMode()  // clears
+- toggleItem(target)
+- clear()
+- (optional) selectAll()
+
+2) Header behavior (must be dynamic):
+On Users screen, integrate with expo-router navigation options:
+- If isSelecting OR selectedCount>0:
+  - headerLeft: X icon button labeled “Cancel” (optional) -> exitSelectionMode()
+  - headerTitle: “Selected: N”
+  - headerRight: Trash icon button -> opens confirm modal
+    - disabled if selectedCount==0
+- Else:
+  - headerLeft: normal back (if any)
+  - headerTitle: “Users”
+  - headerRight: “Select” text button -> enterSelectionMode()
+
+Implementation details:
+- Use useLayoutEffect to update header options based on selection state.
+- Ensure handlers are stable (useCallback) and do not recreate options excessively.
+
+3) Delete flow:
+- Trash icon -> open ConfirmModal:
+  Title: “Deactivate users?”
+  Body: “Selected users will be deactivated and lose access immediately.”
+  Secondary: “Primary clinic managers and your own admin account cannot be deactivated.”
+  Buttons: Cancel / Deactivate
+- On confirm:
+  - call services/api/adminUsers.bulkDeactivateUsers(selectedTargets)
+  - show toast summary (deactivated vs blocked)
+  - refetch list
+  - exitSelectionMode()
+
+4) Row interaction:
+- Normal mode:
+  - row tap opens detail (optional)
+  - long press enters selection + selects row
+- Selection mode:
+  - row tap toggles selection only
+
+5) Premium styling:
+- Header icons should match white theme (subtle, not harsh)
+- Selected state row highlight (light background)
+- Checkbox and row hit areas accessible
+
+========================================================
+B) BACKEND (VERIFY ONLY)
+========================================================
+Ensure existing endpoint is used:
+POST /v1/admin/users/bulk-deactivate
+Return deactivated + blocked.
+No backend change required unless endpoint missing/incorrect; if missing, implement SOLID module.
+
+========================================================
+C) OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Files changed/added
+2) How header behaves (normal vs selection)
+3) Manual QA checklist:
+- Tap Select -> header changes to X + trash + “Selected: 0”
+- Select a row -> title shows “Selected: 1”, trash enabled
+- Tap X -> exits selection and clears
+- Tap trash -> confirm -> deactivates -> list refreshes -> exits selection
+- Blocked cases show toast summary
+4) Confirm no flicker / no crashes
+
+IMPLEMENTATION ORDER:
+1) Ensure selection hook exists and is clean
+2) Implement header dynamic actions with useLayoutEffect
+3) Wire confirm modal + bulk deactivate call
+4) Polish selected row styles
+5) Verify flow
+
+Proceed now. Make it production-grade and premium.
+END.

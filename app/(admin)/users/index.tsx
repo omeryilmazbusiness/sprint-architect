@@ -23,7 +23,6 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAdminUsersQuery, useInvalidateAdminUsers } from "@/hooks/useAdminUsersQuery";
 import { useSelection } from "@/hooks/useSelection";
 import { UserListRowCard } from "@/components/users/UserListRowCard";
-import { SelectionToolbar } from "@/components/users/SelectionToolbar";
 import { BulkDeleteModal } from "@/components/users/BulkDeleteModal";
 import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
@@ -78,7 +77,6 @@ export default function UsersScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [lastResult, setLastResult] = useState<{ deactivated: number; blocked: number } | null>(null);
 
   const selection = useSelection();
 
@@ -130,28 +128,27 @@ export default function UsersScreen() {
     setSearch(""); setClinicFilter(""); setEntityTypeFilter("ALL"); setStatusFilter("ALL");
   }
 
-  function handleRowPress(item: UnifiedEntity, compositeId: string) {
+  const handleRowPress = useCallback((item: UnifiedEntity, compositeId: string) => {
     if (selection.selectionMode) {
       selection.toggle(compositeId);
     } else if (item.entityType !== "PATIENT") {
       router.push({ pathname: "/(admin)/users/[id]", params: { id: item.id } });
     }
-  }
+  }, [selection]);
 
-  function handleLongPress(compositeId: string) {
+  const handleLongPress = useCallback((compositeId: string) => {
     if (!selection.selectionMode) {
       selection.enterSelection(compositeId);
     }
-  }
+  }, [selection]);
 
-  function handleSelectAll() {
-    const all = selection.count === rows.length;
-    if (all) {
+  const handleSelectAll = useCallback(() => {
+    if (selection.count === rows.length && rows.length > 0) {
       selection.clearAll();
     } else {
       selection.selectAll(allIds);
     }
-  }
+  }, [selection, rows.length, allIds]);
 
   async function handleBulkDeactivate() {
     const targets: BulkDeactivateTarget[] = [];
@@ -162,14 +159,14 @@ export default function UsersScreen() {
     setIsBulkDeleting(true);
     try {
       const result = await bulkDeactivate(targets);
-      setLastResult({ deactivated: result.deactivated, blocked: result.blocked.length });
       setShowDeleteModal(false);
       selection.exitSelection();
       await invalidateUsers();
       if (result.blocked.length > 0) {
         Alert.alert(
-          "Partial Deactivation",
-          `Deactivated ${result.deactivated} users. ${result.blocked.length} blocked (primary manager or self).`,
+          "Partial Result",
+          `Deactivated ${result.deactivated} user${result.deactivated !== 1 ? "s" : ""}. ` +
+          `${result.blocked.length} blocked (primary manager or self).`,
         );
       }
     } catch (e: any) {
@@ -179,13 +176,56 @@ export default function UsersScreen() {
     }
   }
 
-  const headerRight = selection.selectionMode ? null : (
-    <View style={styles.headerActions}>
+  const headerLeft = selection.selectionMode ? (
+    <Pressable
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+      onPress={selection.exitSelection}
+      hitSlop={10}
+    >
+      <Ionicons name="close" size={20} color={T.primary} />
+    </Pressable>
+  ) : undefined;
+
+  const headerRight = selection.selectionMode ? (
+    <View style={styles.headerSelectionActions}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.iconBtn,
+          styles.selectAllBtn,
+          { opacity: pressed ? 0.65 : 1 },
+        ]}
+        onPress={handleSelectAll}
+        hitSlop={8}
+      >
+        <Text style={styles.selectAllText}>
+          {selection.count > 0 && selection.count === rows.length ? "None" : "All"}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.trashBtn,
+          selection.count === 0 && styles.trashBtnDisabled,
+          { opacity: pressed && selection.count > 0 ? 0.7 : 1 },
+        ]}
+        onPress={selection.count > 0 ? () => setShowDeleteModal(true) : undefined}
+        disabled={selection.count === 0}
+        hitSlop={8}
+      >
+        <Ionicons
+          name="trash-outline"
+          size={18}
+          color={selection.count > 0 ? "#fff" : T.textMuted}
+        />
+      </Pressable>
+    </View>
+  ) : (
+    <View style={styles.headerNormalActions}>
       <Pressable
         style={({ pressed }) => [styles.selectBtn, { opacity: pressed ? 0.7 : 1 }]}
         onPress={() => selection.enterSelection()}
       >
-        <Ionicons name="checkmark-circle-outline" size={16} color={T.textSec} />
+        <Ionicons name="checkmark-circle-outline" size={15} color={T.textSec} />
         <Text style={styles.selectBtnText}>Select</Text>
       </Pressable>
       <Pressable style={styles.newBtn} onPress={() => setShowCreate(true)}>
@@ -203,8 +243,9 @@ export default function UsersScreen() {
     <View style={styles.root}>
       <AdminHeader
         title={headerTitle}
-        userEmail={user?.email}
-        onLogout={handleLogout}
+        userEmail={selection.selectionMode ? undefined : user?.email}
+        onLogout={selection.selectionMode ? undefined : handleLogout}
+        left={headerLeft}
         right={headerRight}
       />
 
@@ -254,10 +295,7 @@ export default function UsersScreen() {
         <FlatList
           data={rows}
           keyExtractor={(item) => `${item.entityType}-${item.id}`}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: selection.selectionMode ? bottomPad + 100 : bottomPad + 80 },
-          ]}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 80 }]}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />
           }
@@ -298,21 +336,10 @@ export default function UsersScreen() {
         />
       )}
 
-      {selection.selectionMode && (
-        <SelectionToolbar
-          count={selection.count}
-          total={rows.length}
-          onDeleteSelected={() => setShowDeleteModal(true)}
-          onSelectAll={handleSelectAll}
-          onCancel={selection.exitSelection}
-        />
-      )}
-
       <BulkDeleteModal
         visible={showDeleteModal}
         count={selection.count}
         isLoading={isBulkDeleting}
-        blockedCount={lastResult?.blocked}
         onConfirm={handleBulkDeactivate}
         onCancel={() => setShowDeleteModal(false)}
       />
@@ -358,7 +385,44 @@ export default function UsersScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
 
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerNormalActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerSelectionActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: T.r8,
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: T.border,
+    flexShrink: 0,
+  },
+
+  selectAllBtn: {
+    width: "auto",
+    paddingHorizontal: 12,
+  },
+  selectAllText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: T.accent,
+  },
+
+  trashBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: T.r8,
+    backgroundColor: T.danger,
+    flexShrink: 0,
+  },
+  trashBtnDisabled: {
+    backgroundColor: T.border,
+  },
+
   selectBtn: {
     flexDirection: "row",
     alignItems: "center",
