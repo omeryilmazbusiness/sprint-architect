@@ -77,12 +77,15 @@ export const clinics = pgTable("clinics", {
   address: text("address"),
   contactPhone: text("contact_phone"),
   contactEmail: text("contact_email"),
+  websiteUrl: text("website_url"),
+  billingEmail: text("billing_email"),
   services: text("services").default("[]"),
   status: clinicStatusEnum("status").notNull().default("ACTIVE"),
   statusReason: text("status_reason"),
   billingUnitPrice: doublePrecision("billing_unit_price"),
   currency: text("currency").notNull().default("EUR"),
   billingAnchorDay: integer("billing_anchor_day").notNull().default(1),
+  notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

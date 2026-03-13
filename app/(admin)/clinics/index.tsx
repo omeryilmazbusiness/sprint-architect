@@ -22,6 +22,7 @@ import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 import { normalizeClinicFilters, ClinicStatus } from "@/utils/navigationFilters";
+import { serviceLabel } from "@/constants/services";
 
 const STATUS_OPTIONS: PickerOption[] = [
   { value: "ACTIVE", label: "Active" },
@@ -160,7 +161,7 @@ export default function ClinicsScreen() {
                     <View style={styles.clinicMeta}>
                       {item.services && item.services.length > 0 && (
                         <Text style={styles.services} numberOfLines={1}>
-                          {item.services.slice(0, 2).join(" · ")}
+                          {item.services.slice(0, 2).map(serviceLabel).join(" · ")}
                           {item.services.length > 2 ? ` +${item.services.length - 2}` : ""}
                         </Text>
                       )}

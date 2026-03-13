@@ -24,8 +24,7 @@ import {
   getClinicDetail, updateClinic, deactivateClinic,
   ClinicDetail, InvoiceSummary,
 } from "@/lib/api/adminClinics";
-
-const ALL_SERVICES = ["Rinoplasti", "Göz", "Diş"] as const;
+import { SERVICES, serviceLabel } from "@/constants/services";
 
 function fmt(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -160,7 +159,7 @@ export default function ClinicDetailScreen() {
                 {data.services.map((svc) => (
                   <View key={svc} style={styles.serviceChip}>
                     <Ionicons name="medical-outline" size={12} color={T.accent} />
-                    <Text style={styles.serviceChipText}>{svc}</Text>
+                    <Text style={styles.serviceChipText}>{serviceLabel(svc)}</Text>
                   </View>
                 ))}
               </View>
@@ -168,7 +167,7 @@ export default function ClinicDetailScreen() {
           </>
         )}
 
-        {(data.address || data.contactPhone || data.contactEmail) && (
+        {(data.address || data.contactPhone || data.contactEmail || data.websiteUrl || data.billingEmail) && (
           <>
             <SectionHeader label="Contact & Address" style={styles.sectionGap} />
             <Card noPad>
@@ -178,7 +177,7 @@ export default function ClinicDetailScreen() {
                   <Text style={styles.contactText}>{data.address}</Text>
                 </View>
               )}
-              {data.address && (data.contactPhone || data.contactEmail) && <Divider inset={52} />}
+              {data.address && (data.contactPhone || data.contactEmail || data.websiteUrl || data.billingEmail) && <Divider inset={52} />}
               {data.contactPhone && (
                 <Pressable onPress={() => Linking.openURL(`tel:${data.contactPhone}`)}>
                   <View style={styles.contactRow}>
@@ -198,6 +197,38 @@ export default function ClinicDetailScreen() {
                   </View>
                 </Pressable>
               )}
+              {data.contactEmail && data.websiteUrl && <Divider inset={52} />}
+              {data.websiteUrl && (
+                <Pressable onPress={() => Linking.openURL(data.websiteUrl!)}>
+                  <View style={styles.contactRow}>
+                    <View style={styles.contactIcon}><Ionicons name="globe-outline" size={16} color={T.accent} /></View>
+                    <Text style={[styles.contactText, { color: T.accent }]} numberOfLines={1}>{data.websiteUrl}</Text>
+                    <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
+                  </View>
+                </Pressable>
+              )}
+              {(data.address || data.contactPhone || data.contactEmail || data.websiteUrl) && data.billingEmail && <Divider inset={52} />}
+              {data.billingEmail && (
+                <Pressable onPress={() => Linking.openURL(`mailto:${data.billingEmail}`)}>
+                  <View style={styles.contactRow}>
+                    <View style={styles.contactIcon}><Ionicons name="receipt-outline" size={16} color={T.accent} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.contactMeta}>Billing Email</Text>
+                      <Text style={[styles.contactText, { color: T.accent }]}>{data.billingEmail}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={13} color={T.textMuted} />
+                  </View>
+                </Pressable>
+              )}
+            </Card>
+          </>
+        )}
+
+        {data.notes && (
+          <>
+            <SectionHeader label="Notes" style={styles.sectionGap} />
+            <Card>
+              <Text style={styles.notesText}>{data.notes}</Text>
             </Card>
           </>
         )}
@@ -343,16 +374,16 @@ export default function ClinicDetailScreen() {
               </View>
               <Text style={styles.editLabel}>SERVICES</Text>
               <View style={styles.chipsRow}>
-                {ALL_SERVICES.map((svc) => {
-                  const active = editServices.includes(svc);
+                {SERVICES.map((svc) => {
+                  const active = editServices.includes(svc.code);
                   return (
                     <Pressable
-                      key={svc}
-                      onPress={() => setEditServices((prev) => prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc])}
+                      key={svc.code}
+                      onPress={() => setEditServices((prev) => prev.includes(svc.code) ? prev.filter((s) => s !== svc.code) : [...prev, svc.code])}
                       style={[styles.editChip, active ? styles.editChipActive : styles.editChipInactive]}
                     >
                       {active && <Ionicons name="checkmark" size={12} color="#fff" />}
-                      <Text style={[styles.editChipText, { color: active ? "#fff" : T.textSec }]}>{svc}</Text>
+                      <Text style={[styles.editChipText, { color: active ? "#fff" : T.textSec }]}>{svc.label}</Text>
                     </Pressable>
                   );
                 })}
@@ -429,6 +460,8 @@ const styles = StyleSheet.create({
   contactRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
   contactIcon: { width: 32, height: 32, borderRadius: T.r8, backgroundColor: T.accent + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   contactText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.text, flex: 1 },
+  contactMeta: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, marginBottom: 2 },
+  notesText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20 },
   billingGrid: { flexDirection: "row", gap: 8, marginBottom: 12 },
   billingTile: { flex: 1, backgroundColor: T.surfaceSubtle, borderRadius: T.r10, borderWidth: 1, borderColor: T.border, padding: 10, alignItems: "center", gap: 4 },
   billingValue: { fontFamily: "Inter_700Bold", fontSize: 13, color: T.text, textAlign: "center" },

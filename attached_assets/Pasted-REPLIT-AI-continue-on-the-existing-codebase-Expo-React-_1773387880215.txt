@@ -1,0 +1,174 @@
+REPLIT AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+“Create Clinic” does not work. We need a full end-to-end diagnosis and a production-ready fix across backend + frontend.
+Additionally, the “New Clinic” form must be comprehensive and premium (modern white theme), with correct validation, keyboard handling, and post-create navigation.
+
+NON-NEGOTIABLE:
+- You MUST reproduce the issue and show the exact error (console logs, network response, server logs, DB errors).
+- Fix must be production-ready: validated inputs, proper error codes, reliable DB writes, and no silent failures.
+- After success, the app must navigate away from the form to Clinics list (or Clinic detail) and refresh list.
+- White theme premium design; professional form UX (KeyboardAvoidingView, scroll).
+- RBAC: Only ADMIN can create clinics.
+- No “Attention needed” section anywhere.
+
+========================================================
+A) STEP 1 — REPRODUCE & ROOT CAUSE (MANDATORY)
+========================================================
+1) Reproduce Create Clinic from the app:
+- Login as admin
+- Open Create Clinic screen
+- Fill required fields and submit
+2) Capture evidence:
+- Mobile console logs (red screen if any)
+- Network request payload, URL, headers, status code
+- Backend logs (route hit or not, validation error, DB error)
+- DB check: did a clinic row get inserted?
+
+3) Identify EXACT root cause category:
+- UI bug (button not calling API, wrong route, state not passed)
+- API bug (endpoint missing, wrong path, wrong method)
+- Auth bug (admin token missing/expired, RBAC failing)
+- Validation bug (zod rejects payload, mismatched field names)
+- DB bug (migration missing, Drizzle schema mismatch, constraint failure)
+- CORS/proxy/baseURL misconfig (wrong host/port)
+
+DO NOT start large refactors until the exact cause is identified with file/line and logs.
+
+========================================================
+B) STEP 2 — BACKEND HARDENING (Create Clinic must be solid)
+========================================================
+1) Ensure correct endpoint exists and is mounted:
+- POST /v1/admin/clinics
+ADMIN only.
+Zod body validation.
+Return created clinic object.
+
+2) Clinic fields must be professional and match UI:
+Required:
+- name (string, 2–80)
+- address (string, 5–200)
+- contactEmail (valid email)
+- contactPhoneE164 (string, E.164 recommended, e.g. +9053…)
+- services (array of enum strings) EXACT options:
+  - RINOPLASTY
+  - EYE
+  - DENTAL
+Optional:
+- websiteUrl
+- billingEmail (if different)
+- billingUnitPrice (number)
+- currency (default EUR)
+- timezone (default Europe/Istanbul)
+- notes
+
+3) DB (Drizzle) schema must support above:
+- clinics table add columns as needed:
+  - name, address, contactEmail, contactPhoneE164, services (json or text[]), websiteUrl, billingEmail, billingUnitPrice, currency, timezone, status
+- Ensure migrations are applied and consistent.
+
+4) Add GET endpoints needed for UI:
+- GET /v1/admin/clinics (list)
+  - supports filters: status, search (case-insensitive)
+- GET /v1/admin/clinics/:id (detail)
+
+5) Error handling:
+- Return standardized error format with codes:
+  - VALIDATION_ERROR
+  - AUTH_FORBIDDEN
+  - DB_CONSTRAINT_ERROR
+  - INTERNAL_ERROR
+- Log requestId + error details on server.
+
+6) Security:
+- Confirm only ADMIN can create clinic (RBAC middleware).
+- If clinic name should be unique, enforce unique index and friendly error.
+
+========================================================
+C) STEP 3 — FRONTEND FIX (Create Clinic premium UX + working)
+========================================================
+1) Fix API wiring:
+- Ensure correct baseURL, correct endpoint, correct method.
+- Ensure Authorization header is attached.
+- Ensure request body fields match backend names exactly.
+
+2) Premium “New Clinic” screen UX (white theme):
+- Use professional header (“New Clinic”).
+- Form in a Card layout.
+- Use KeyboardAvoidingView + ScrollView:
+  - keyboardShouldPersistTaps="handled"
+  - enough paddingBottom so inputs never hide under keyboard
+  - ensure focus never hides fields
+
+3) Form sections (premium):
+A) Clinic Info
+- Clinic Name (required)
+- Address (required, multiline)
+- Services Offered (required, multi-select chips):
+  - Rinoplasti, Göz, Diş (UI labels)
+  - map to enums: RINOPLASTY, EYE, DENTAL (API)
+B) Contact
+- Contact Email (required)
+- Contact Phone (required, with country picker optional; or E.164 formatting if available)
+- Website (optional)
+C) Billing (optional but pro)
+- Billing Email (optional; default to contactEmail if empty)
+- Unit Price (optional number)
+- Currency dropdown (default EUR)
+D) Notes (optional)
+
+4) Validation (client-side + server-side):
+- Inline errors on submit
+- Email format check
+- At least 1 service selected
+- Phone length check (basic) or E.164 validation if lib present
+
+5) Submit behavior:
+- Disable submit while loading
+- On success:
+  - show toast “Clinic created”
+  - navigate to Clinics list (or new clinic detail)
+  - refresh clinics list automatically
+- On failure:
+  - show friendly error message based on error code
+
+6) Clinics list refresh:
+- Implement query invalidation/refetch or local optimistic update.
+
+========================================================
+D) STEP 4 — QA, REPORT, TASKS (MANDATORY)
+========================================================
+1) Add minimal automated tests:
+- backend: POST /v1/admin/clinics success
+- backend: rejects missing fields (VALIDATION_ERROR)
+- backend: RBAC blocks non-admin
+2) Add manual test checklist.
+
+3) Provide a brief “Task report” output:
+- Root cause found
+- Fix applied
+- Remaining risks/TODOs
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After you finish, print:
+1) Root cause summary (exactly why Create Clinic failed)
+2) Files changed/added
+3) DB migration commands to run
+4) Endpoint list (create/list/detail)
+5) Sample curl:
+- create clinic
+- list clinics
+6) Manual QA checklist:
+- admin login -> create clinic -> redirected -> clinic visible -> clinic detail loads
+
+IMPLEMENTATION ORDER:
+1) Reproduce and identify root cause with logs (mandatory)
+2) Fix backend endpoint + DB schema + validations
+3) Fix frontend API call + premium form + navigation/refresh
+4) Tests + final verification
+5) Report
+
+Proceed now. Do not guess — reproduce, fix, verify.
+END.

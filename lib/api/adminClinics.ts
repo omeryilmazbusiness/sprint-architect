@@ -6,11 +6,14 @@ export interface Clinic {
   address: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
+  websiteUrl: string | null;
+  billingEmail: string | null;
   services: string[];
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice: number | null;
   currency: string;
   billingAnchorDay: number;
+  notes: string | null;
   createdAt: string;
 }
 
@@ -26,10 +29,13 @@ export interface CreateClinicInput {
   address?: string;
   contactPhone?: string;
   contactEmail?: string;
+  websiteUrl?: string;
+  billingEmail?: string;
   services?: string[];
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   billingUnitPrice?: number | null;
   currency?: string;
+  notes?: string;
 }
 
 export interface InvoiceSummary {

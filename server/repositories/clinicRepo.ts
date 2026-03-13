@@ -79,10 +79,13 @@ export const clinicRepo = {
     address?: string | null;
     contactPhone?: string | null;
     contactEmail?: string | null;
+    websiteUrl?: string | null;
+    billingEmail?: string | null;
     services?: string[];
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
+    notes?: string | null;
   }) {
     const now = new Date();
     const anchorDay = now.getDate();
@@ -91,11 +94,14 @@ export const clinicRepo = {
       address: input.address ?? null,
       contactPhone: input.contactPhone ?? null,
       contactEmail: input.contactEmail ?? null,
+      websiteUrl: input.websiteUrl ?? null,
+      billingEmail: input.billingEmail ?? null,
       services: JSON.stringify(input.services ?? []),
       status: input.status ?? "ACTIVE",
       billingUnitPrice: input.billingUnitPrice ?? null,
       currency: input.currency ?? "EUR",
       billingAnchorDay: anchorDay,
+      notes: input.notes ?? null,
     }).returning();
     return parseClinic(clinic);
   },
@@ -105,11 +111,14 @@ export const clinicRepo = {
     address?: string | null;
     contactPhone?: string | null;
     contactEmail?: string | null;
+    websiteUrl?: string | null;
+    billingEmail?: string | null;
     services?: string[];
     status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     billingUnitPrice?: number | null;
     currency?: string;
     billingAnchorDay?: number;
+    notes?: string | null;
   }) {
     const setData: Record<string, any> = { ...input };
     if (input.services !== undefined) {
