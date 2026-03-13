@@ -24,7 +24,7 @@ The backend is an Express 5 application developed with TypeScript. Its structure
 
 The application utilizes PostgreSQL with Drizzle ORM. The schema defines core entities such as `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, and `patientDocuments`. It also includes `refreshTokens` for persistent sessions, `devices` for patient single-device binding, `invoices` for billing, `auditLogs` for security, and `notifications` for in-app manager notifications. The database supports multi-tenancy through `clinicId` on relevant resources.
 
-The `clinics` table has the following extended fields: `websiteUrl` (optional URL), `billingEmail` (optional billing-specific email, distinct from contactEmail), `notes` (optional internal notes text). Services are stored as JSON-encoded arrays of enum codes: `RINOPLASTY`, `EYE`, `DENTAL` — always send and store enum codes, not display labels.
+The `clinics` table has the following extended fields: `websiteUrl` (optional URL), `billingEmail` (optional billing-specific email, distinct from contactEmail), `notes` (optional internal notes text), `deletedAt` (soft-delete timestamp, NULL = active, non-NULL = deleted). Services are stored as JSON-encoded arrays of enum codes: `RINOPLASTY`, `EYE`, `DENTAL` — always send and store enum codes, not display labels. Soft-deleted clinics (`deletedAt IS NOT NULL`) are automatically excluded from all list and detail queries; the `softDelete()` method also sets `status = "INACTIVE"` and deactivates all associated MANAGER users.
 
 ### API Routes
 

@@ -87,6 +87,7 @@ export const clinics = pgTable("clinics", {
   billingAnchorDay: integer("billing_anchor_day").notNull().default(1),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const users = pgTable("users", {

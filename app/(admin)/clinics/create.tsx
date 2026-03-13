@@ -20,6 +20,7 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { Card, SectionHeader, PrimaryButton } from "@/components/ui";
 import { createClinic } from "@/lib/api/adminClinics";
 import { SERVICES } from "@/constants/services";
+import { PhonePickerInput, PhonePickerValue } from "@/components/forms/PhonePickerInput";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ export default function CreateClinicScreen() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
+  const [phone, setPhone] = useState<PhonePickerValue>({ raw: "", e164: null, countryCode: "TR" });
   const [contactEmail, setContactEmail] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -172,7 +173,6 @@ export default function CreateClinicScreen() {
   const [submitted, setSubmitted] = useState(false);
 
   const addressRef = useRef<TextInput>(null);
-  const phoneRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const websiteRef = useRef<TextInput>(null);
   const billingEmailRef = useRef<TextInput>(null);
@@ -238,10 +238,11 @@ export default function CreateClinicScreen() {
     if (!runValidation()) return;
 
     const price = billingUnitPrice ? parseFloat(billingUnitPrice) : undefined;
+    const phoneStored = phone.e164 ?? (phone.raw.trim() ? phone.raw.trim() : undefined);
     mutation.mutate({
       name: name.trim(),
       address: address.trim() || undefined,
-      contactPhone: contactPhone.trim() || undefined,
+      contactPhone: phoneStored || undefined,
       contactEmail: contactEmail.trim() || undefined,
       websiteUrl: websiteUrl.trim() || undefined,
       billingEmail: billingEmail.trim() || undefined,
@@ -293,7 +294,6 @@ export default function CreateClinicScreen() {
   );
 
   const focusAddress = useCallback(() => addressRef.current?.focus(), []);
-  const focusPhone = useCallback(() => phoneRef.current?.focus(), []);
   const focusEmail = useCallback(() => emailRef.current?.focus(), []);
   const focusWebsite = useCallback(() => websiteRef.current?.focus(), []);
   const focusBillingEmail = useCallback(() => billingEmailRef.current?.focus(), []);
@@ -341,7 +341,7 @@ export default function CreateClinicScreen() {
                 placeholder="Street, district, city, country"
                 placeholderTextColor={T.textMuted}
                 returnKeyType="next"
-                onSubmitEditing={focusPhone}
+                onSubmitEditing={focusEmail}
                 multiline
                 autoCapitalize="words"
               />
@@ -352,16 +352,10 @@ export default function CreateClinicScreen() {
           <SectionHeader label="Contact" style={styles.sectionGap} />
           <Card style={styles.card}>
             <Field label="Phone">
-              <InputBox
-                ref={phoneRef}
+              <PhonePickerInput
                 testID="clinic-phone-input"
-                value={contactPhone}
-                onChangeText={setContactPhone}
-                placeholder="+90 5XX XXX XXXX"
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                returnKeyType="next"
-                onSubmitEditing={focusEmail}
+                value={phone}
+                onChange={setPhone}
               />
             </Field>
 
@@ -440,7 +434,7 @@ export default function CreateClinicScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
-                onSubmitEditing={focusBillingEmail}
+                onSubmitEditing={focusPrice}
                 hasError={!!errors.billingEmail}
               />
               <FieldError error={errors.billingEmail} />

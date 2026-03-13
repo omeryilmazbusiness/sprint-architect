@@ -1,13 +1,49 @@
 import { db } from "../db";
 import { clinics, users, invoices } from "@shared/schema";
-import { eq, ilike, and, count, desc } from "drizzle-orm";
+import { eq, ilike, and, count, desc, isNull, inArray } from "drizzle-orm";
 import { computeNextInvoiceDate } from "../billing/billingService";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface PrimaryManager {
+  id: string;
+  email: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseClinic<T extends { services?: string | null }>(clinic: T): T & { services: string[] } {
   let services: string[] = [];
   try { services = JSON.parse(clinic.services ?? "[]"); } catch { services = []; }
   return { ...clinic, services };
 }
+
+/** Fetch the primary (earliest-created) MANAGER per clinic for a given list of clinic IDs. */
+async function fetchPrimaryManagers(clinicIds: string[]): Promise<Map<string, PrimaryManager>> {
+  if (clinicIds.length === 0) return new Map();
+
+  const allManagers = await db.query.users.findMany({
+    where: and(
+      inArray(users.clinicId, clinicIds),
+      eq(users.role, "MANAGER"),
+    ),
+    orderBy: (u, { asc }) => asc(u.createdAt),
+    columns: { id: true, email: true, clinicId: true, createdAt: true },
+  });
+
+  const map = new Map<string, PrimaryManager>();
+  for (const mgr of allManagers) {
+    if (mgr.clinicId && !map.has(mgr.clinicId)) {
+      map.set(mgr.clinicId, {
+        id: mgr.id,
+        email: mgr.email,
+      });
+    }
+  }
+  return map;
+}
+
+// ─── Repository ───────────────────────────────────────────────────────────────
 
 export const clinicRepo = {
   async list(filters: {
@@ -20,10 +56,10 @@ export const clinicRepo = {
     const pageSize = Math.min(100, filters.pageSize ?? 20);
     const offset = (page - 1) * pageSize;
 
-    const conditions = [];
-    if (filters.search) conditions.push(ilike(clinics.name, `%${filters.search}%`));
-    if (filters.status) conditions.push(eq(clinics.status, filters.status as "ACTIVE" | "INACTIVE" | "SUSPENDED"));
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const conditions: ReturnType<typeof eq>[] = [isNull(clinics.deletedAt) as any];
+    if (filters.search) conditions.push(ilike(clinics.name, `%${filters.search}%`) as any);
+    if (filters.status) conditions.push(eq(clinics.status, filters.status as "ACTIVE" | "INACTIVE" | "SUSPENDED") as any);
+    const where = and(...conditions);
 
     const [rows, [{ total }]] = await Promise.all([
       db.query.clinics.findMany({
@@ -35,16 +71,32 @@ export const clinicRepo = {
       db.select({ total: count() }).from(clinics).where(where),
     ]);
 
-    return { rows: rows.map(parseClinic), total, page, pageSize };
+    const parsed = rows.map(parseClinic);
+    const clinicIds = parsed.map((c) => c.id);
+    const primaryManagers = await fetchPrimaryManagers(clinicIds);
+
+    return {
+      rows: parsed.map((c) => ({
+        ...c,
+        primaryManager: primaryManagers.get(c.id) ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   },
 
   async findById(id: string) {
-    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, id) });
+    const clinic = await db.query.clinics.findFirst({
+      where: and(eq(clinics.id, id), isNull(clinics.deletedAt)),
+    });
     return clinic ? parseClinic(clinic) : null;
   },
 
   async getDetail(id: string) {
-    const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, id) });
+    const clinic = await db.query.clinics.findFirst({
+      where: and(eq(clinics.id, id), isNull(clinics.deletedAt)),
+    });
     if (!clinic) return null;
 
     const [managers, clinicInvoices] = await Promise.all([
@@ -127,17 +179,27 @@ export const clinicRepo = {
     const [updated] = await db
       .update(clinics)
       .set(setData)
-      .where(eq(clinics.id, id))
+      .where(and(eq(clinics.id, id), isNull(clinics.deletedAt)))
       .returning();
     return updated ? parseClinic(updated) : null;
   },
 
+  /** Soft-delete: marks deletedAt, sets status to INACTIVE, deactivates manager users. */
   async softDelete(id: string) {
+    const now = new Date();
     const [updated] = await db
       .update(clinics)
-      .set({ status: "INACTIVE" })
+      .set({ deletedAt: now, status: "INACTIVE" })
       .where(eq(clinics.id, id))
       .returning();
+
+    if (updated) {
+      await db
+        .update(users)
+        .set({ status: "INACTIVE", statusReason: "Clinic deleted" })
+        .where(and(eq(users.clinicId, id), eq(users.role, "MANAGER")));
+    }
+
     return updated;
   },
 };

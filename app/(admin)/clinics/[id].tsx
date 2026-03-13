@@ -317,7 +317,7 @@ export default function ClinicDetailScreen() {
           <Divider inset={52} />
           <Pressable
             style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push("/(admin)/invoices")}
+            onPress={() => router.push({ pathname: "/(admin)/invoices", params: { clinicId: id } })}
           >
             <View style={[styles.actionIcon, { backgroundColor: T.warning + "12" }]}>
               <Ionicons name="document-text-outline" size={16} color={T.warning} />
@@ -325,21 +325,17 @@ export default function ClinicDetailScreen() {
             <Text style={styles.actionText}>View Invoices</Text>
             <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
           </Pressable>
-          {data.status !== "INACTIVE" && (
-            <>
-              <Divider inset={52} />
-              <Pressable
-                style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => setShowDeactivate(true)}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: T.dangerBg }]}>
-                  <Ionicons name="ban-outline" size={16} color={T.danger} />
-                </View>
-                <Text style={[styles.actionText, { color: T.danger }]}>Deactivate Clinic</Text>
-                <Ionicons name="chevron-forward" size={14} color={T.danger} />
-              </Pressable>
-            </>
-          )}
+          <Divider inset={52} />
+          <Pressable
+            style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setShowDeactivate(true)}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: T.dangerBg }]}>
+              <Ionicons name="trash-outline" size={16} color={T.danger} />
+            </View>
+            <Text style={[styles.actionText, { color: T.danger }]}>Delete Clinic</Text>
+            <Ionicons name="chevron-forward" size={14} color={T.danger} />
+          </Pressable>
         </Card>
       </ScrollView>
 
@@ -406,10 +402,12 @@ export default function ClinicDetailScreen() {
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmModal}>
             <View style={[styles.confirmIcon, { backgroundColor: T.dangerBg }]}>
-              <Ionicons name="ban-outline" size={28} color={T.danger} />
+              <Ionicons name="trash-outline" size={28} color={T.danger} />
             </View>
-            <Text style={styles.confirmTitle}>Deactivate Clinic</Text>
-            <Text style={styles.confirmSub}>This will set the clinic status to INACTIVE. You can reactivate it later by editing.</Text>
+            <Text style={styles.confirmTitle}>Delete Clinic</Text>
+            <Text style={styles.confirmSub}>
+              This will permanently deactivate "{data?.name}" and suspend all associated manager accounts. This action cannot be easily undone.
+            </Text>
             <View style={styles.confirmBtns}>
               <Pressable style={[styles.confirmBtn, { borderColor: T.border }]} onPress={() => setShowDeactivate(false)}>
                 <Text style={[styles.confirmBtnText, { color: T.textSec }]}>Cancel</Text>
@@ -420,7 +418,7 @@ export default function ClinicDetailScreen() {
                 disabled={deactivateMutation.isPending}
               >
                 {deactivateMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : (
-                  <Text style={[styles.confirmBtnText, { color: "#fff" }]}>Deactivate</Text>
+                  <Text style={[styles.confirmBtnText, { color: "#fff" }]}>Delete</Text>
                 )}
               </Pressable>
             </View>

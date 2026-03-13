@@ -1,0 +1,158 @@
+Replit AI — continue on the existing codebase (Expo RN + Express/TS + Postgres/Drizzle). DO NOT re-scaffold.
+
+HIGHEST PRIORITY:
+All changes MUST be done in a SOLID, modular, extendable architecture.
+No “big service files”, no DB calls in controllers, no duplicated clinic scoping logic.
+If current code is not structured, refactor ONLY what’s needed to reach clean module boundaries for the touched features.
+
+SCOPE (same features requested):
+1) Clinic delete feature (soft delete recommended)
+2) Clinic detail -> invoices button navigates to invoices screen filtered by clinicId
+3) Clinics list cards show clinic manager name + phone
+4) Create clinic phone input: flag picker + country code + search + formatting
+5) Modern premium UI (white theme)
+
+NON-NEGOTIABLE ARCHITECTURE RULES (SOLID):
+A) Backend must follow layered module structure:
+- routes/controllers: only parse request + call use-case + return response
+- use-cases (application): business rules only; no Drizzle here
+- repositories (infrastructure): only DB logic (Drizzle queries)
+- domain: entities/enums + domain validations/errors
+- shared: error format, auth guards, validation helpers
+
+B) Each use-case must be single responsibility (SRP):
+- CreateClinic
+- DeleteClinic
+- ListClinicsWithPrimaryManager
+- GetClinicDetail
+- ListInvoices (with clinicId filter)
+- UpdateInvoiceStatus (if used)
+
+C) Dependency inversion:
+- Use-case depends on repository interfaces, not Drizzle directly.
+
+D) Open/Closed:
+- Phone formatting and country selection must be via a PhoneFormatter service interface so it can be swapped later.
+
+E) Shared policies:
+- clinic scoping and RBAC must be middleware/guard, not repeated.
+
+========================================================
+1) BACKEND — MODULAR PLAN (IMPLEMENT)
+========================================================
+Create/ensure module folders (example):
+server/
+  modules/
+    clinic/
+      clinic.routes.ts
+      clinic.controller.ts
+      clinic.usecases.ts (or /usecases folder)
+      clinic.repo.ts (interface)
+      clinic.repo.drizzle.ts (implementation)
+      clinic.mapper.ts
+      clinic.schemas.ts (zod)
+    invoice/
+      invoice.routes.ts
+      invoice.controller.ts
+      invoice.usecases.ts
+      invoice.repo.ts
+      invoice.repo.drizzle.ts
+      invoice.schemas.ts
+    adminUsers/ (only if needed)
+  shared/
+    auth/
+    errors/
+    validation/
+    pagination/
+    logger/
+
+Implement features within these modules only.
+
+A) Clinic delete (soft delete)
+- DB: clinics.deletedAt nullable OR status=DELETED
+- Use-case: DeleteClinic (sets deletedAt and disables clinic users if required)
+- Controller: DELETE /v1/admin/clinics/:id
+
+B) Clinics list includes primary manager
+- Use-case: ListClinicsWithPrimaryManager
+- Repo method performs join/select earliest manager per clinic
+- Endpoint: GET /v1/admin/clinics
+
+C) Clinic detail
+- Use-case: GetClinicDetail
+- Endpoint: GET /v1/admin/clinics/:id
+
+D) Invoices list filter by clinicId
+- Use-case: ListInvoices (supports clinicId/period/status)
+- Endpoint: GET /v1/admin/invoices
+
+All endpoints zod validated and return standard error format.
+
+========================================================
+2) MOBILE — MODULAR UI PLAN (IMPLEMENT)
+========================================================
+Create/ensure UI module structure:
+app/
+  (admin)/
+    clinics/
+      index.tsx
+      create.tsx
+      [id].tsx
+    invoices/
+      index.tsx
+      [id].tsx
+  components/
+    layout/
+    cards/
+    filters/
+    forms/
+  services/
+    api/
+    navigation/
+    formatters/
+
+Rules:
+- Screens should be thin: UI + hooks, no request-building logic.
+- API calls through a typed client in services/api.
+- Query building in a helper (omit empty params).
+- Phone formatting in services/formatters/PhoneFormatter.ts.
+
+A) Clinics list premium cards
+- show clinic info + status pill + services chips
+- include “Primary manager name + phone”
+- tap-to-call phone
+
+B) Clinic detail
+- “View invoices” navigates with params:
+  router.push({ pathname:"/(admin)/invoices", params:{ clinicId } })
+- Add Delete clinic with confirmation modal
+- After delete, navigate back + refresh
+
+C) Invoices screen reads route params and applies filter state
+- show chip “Clinic: X”
+- ensure only that clinic invoices shown
+
+D) Create clinic phone input
+- Use Country picker (flag + search) + formatting (libphonenumber)
+- Store E.164 phone
+- Keep input stable (no remount) to avoid focus bug
+- keyboard safe UI
+
+========================================================
+3) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Updated backend module tree + explanation of each layer
+2) Updated mobile module tree + where filter/nav/formatter logic lives
+3) Endpoints + sample curl
+4) Manual QA checklist
+5) Note any refactor you did to enforce SOLID
+
+IMPLEMENTATION ORDER:
+1) Backend modules + use-cases + repos + endpoints
+2) Mobile: clinics list/detail + invoice filtered navigation
+3) Mobile: create clinic phone picker + formatting
+4) Tests + polish
+
+Proceed now. If existing code is messy, refactor only the touched parts into this modular structure.
+END.

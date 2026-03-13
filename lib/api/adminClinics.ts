@@ -1,5 +1,10 @@
 import { apiRequest } from "@/lib/query-client";
 
+export interface PrimaryManager {
+  id: string;
+  email: string;
+}
+
 export interface Clinic {
   id: string;
   name: string;
@@ -15,6 +20,7 @@ export interface Clinic {
   billingAnchorDay: number;
   notes: string | null;
   createdAt: string;
+  primaryManager: PrimaryManager | null;
 }
 
 export interface ClinicListResponse {
