@@ -1,0 +1,213 @@
+REPLIT AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+HIGHEST PRIORITY REQUIREMENT:
+All work MUST be SOLID-compliant, modular, and production-ready. Premium white theme tone is required.
+
+OBJECTIVE:
+Redesign Admin Dashboard to a premium, modern, user-friendly control center:
+1) Top 1/3: Banner carousel (slider) with 3 slides (Billing, Clinics, Month Snapshot).
+2) Comprehensive Overview section (KPI grid, quick actions, recent invoices, activity feed).
+3) ALL CTAs are functional and navigate with FILTERS (route params) to target screens (invoices/clinics/users).
+4) Backend provides a single aggregated dashboard endpoint (preferred) with SOLID layering.
+
+NON-NEGOTIABLE:
+- White theme (off-white background, white cards, subtle borders/shadows, strong typography).
+- No “Attention needed” section.
+- Strict RBAC: ADMIN only.
+- Strict filter param handling: never send empty/undefined query params.
+- Loading/empty/error states must look premium (skeletons, clean copy).
+- No “god components” in UI; reusable components and hooks required.
+
+========================================================
+A) SOLID BACKEND DESIGN (MUST IMPLEMENT)
+========================================================
+Create a dedicated module for Admin Dashboard aggregation.
+
+Folder structure (example — adapt to existing structure):
+server/modules/adminDashboard/
+  adminDashboard.routes.ts
+  adminDashboard.controller.ts
+  usecases/
+    GetAdminDashboardOverview.ts
+  repos/
+    AdminDashboardReadRepo.ts (interface)
+    AdminDashboardReadRepo.drizzle.ts (implementation)
+  dtos/
+    AdminDashboardDto.ts
+  schemas/
+    adminDashboard.schemas.ts (zod)
+server/shared/
+  authGuards/
+  errors/
+  logger/
+  clock/
+
+SOLID rules:
+- Controller only: validate + call usecase + respond
+- Usecase only: orchestrates reads, no Drizzle queries
+- Repo only: Drizzle queries, aggregation, joins
+- DTOs: explicit output shape, stable for UI
+- No circular imports, no duplicated clinic scoping logic
+
+Backend endpoint:
+- GET /v1/admin/dashboard
+ADMIN only.
+
+Return DTO (example):
+{
+  currentPeriod: "YYYY-MM",
+  clinics: { active: number, suspended: number, total: number },
+  invoices: {
+    pending: number,
+    unpaid: number,
+    paid: number,
+    totalBilledThisMonth: number
+  },
+  recentInvoices: [
+    { id, clinicId, clinicName, period, total, status, createdAt }
+  ],
+  activity: [
+    { id, type, message, createdAt }
+  ]
+}
+
+Data rules:
+- currentPeriod derived in Europe/Istanbul timezone.
+- recentInvoices: last 5 invoices
+- activity: last 5 audit log entries or derived billing events (neutral messaging)
+
+If audit logs exist, use them; otherwise implement minimal activity source from invoices + clinic status transitions.
+
+========================================================
+B) PREMIUM ADMIN DASHBOARD UI (MUST IMPLEMENT)
+========================================================
+Target screen:
+- app/(admin)/dashboard.tsx (or existing admin dashboard path)
+Must use white theme tokens/components.
+
+1) Premium Header
+- Left: Brand + “Admin Dashboard”
+- Right: Notifications bell (optional) + user chip + logout
+- Clean bottom border, safe area, consistent height.
+
+2) Banner Carousel (Top ~1/3)
+Implementation:
+- Use horizontal FlatList with pagingEnabled (lightweight).
+- Dots indicator.
+- Skeleton placeholder while loading.
+
+Slides (3):
+Slide 1: Billing Health
+- Show PENDING/UNPAID/PAID counts
+- CTA:
+  - If unpaid > 0: “View Unpaid Invoices” -> invoices screen with status=UNPAID
+  - Else: “View Invoices” -> invoices list
+
+Slide 2: Clinics Status
+- Show ACTIVE/SUSPENDED counts
+- CTA:
+  - If suspended > 0: “View Suspended Clinics” -> clinics list filtered status=SUSPENDED
+  - Else: “View Clinics” -> clinics list
+
+Slide 3: This Month Snapshot
+- Show total billed this month + paid count
+- CTA: “View This Month” -> invoices list with period=currentPeriod
+
+Premium visuals:
+- Off-white background, white banner cards with subtle gradient accents
+- Large headline + short subtitle
+- Mini KPI chips
+- Single strong CTA button
+
+3) Overview Section (below banner)
+A) KPI Grid (2x2 cards)
+- Active Clinics (tap -> clinics)
+- Suspended Clinics (tap -> clinics status=SUSPENDED)
+- Pending Invoices (tap -> invoices status=PENDING)
+- Unpaid Invoices (tap -> invoices status=UNPAID)
+Each card: number + label + small caption; clean.
+
+B) Quick Actions
+- Create Clinic -> create clinic screen
+- Users -> users screen
+- Invoices -> invoices screen
+
+C) Recent Invoices (list)
+- Show last 5 invoices (clinic name, period, total, status pill)
+- Tap -> invoice detail
+
+D) Activity Feed (neutral)
+- Show last 5 events with time (e.g. “Invoice 2026-03 marked PAID”)
+- Tap -> open audit log screen (if exists) or keep as read-only list
+
+========================================================
+C) FILTERED NAVIGATION (MUST WORK END-TO-END)
+========================================================
+Implement a standardized filter navigation system:
+
+1) Navigation helper:
+- services/navigation/filteredNavigation.ts
+Functions:
+- goToInvoices({ status?, clinicId?, period? })
+- goToClinics({ status? })
+These functions build route params and omit empties.
+
+2) Target screens must read route params and apply filters automatically:
+- Admin invoices list screen reads: status, clinicId, period
+- Admin clinics list screen reads: status
+On mount:
+- normalize params -> set filter state -> fetch -> show active chips
+
+3) Robustness:
+- If invalid enum: ignore param safely
+- Do not crash when params missing
+
+========================================================
+D) UI MODULARITY (SOLID-FRIENDLY FRONTEND)
+========================================================
+No “giant dashboard component”.
+Create reusable components:
+- components/dashboard/BannerCarousel.tsx
+- components/dashboard/KpiGrid.tsx
+- components/dashboard/RecentInvoicesList.tsx
+- components/dashboard/ActivityFeed.tsx
+- hooks/useAdminDashboard.ts (fetch + caching + error handling)
+Use existing UI primitives (Card, StatusPill, Button, Skeleton).
+
+========================================================
+E) PROD-READY QUALITY
+========================================================
+- Add requestId logging on backend.
+- Add zod validation for endpoint query/body (even if no query).
+- Add caching on client (simple: keep last response in state; refetch on pull-to-refresh).
+- Add graceful error UI with “Retry” button.
+
+========================================================
+F) OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion print:
+1) Backend module tree + explanation of SOLID boundaries
+2) Endpoint implemented + sample curl:
+   GET /v1/admin/dashboard
+3) Frontend file list changed/added
+4) Filter navigation examples:
+   - invoices status=UNPAID
+   - clinics status=SUSPENDED
+5) Manual QA checklist:
+   - Dashboard loads with skeleton then data
+   - Banner swipes and CTAs route correctly with filters applied
+   - KPI cards route correctly
+   - Recent invoices opens detail
+   - Activity feed shows and does not use “attention needed”
+6) Any TODOs and risks
+
+IMPLEMENTATION ORDER:
+1) Backend: implement GET /v1/admin/dashboard using SOLID module layering
+2) Frontend: implement hooks + modular dashboard components
+3) Implement banner carousel + overview sections
+4) Implement standardized filtered navigation helper
+5) Ensure invoices/clinics screens consume route params and apply filters
+6) Final polish + tests (if available) + verify
+
+Proceed now. Premium tone, SOLID boundaries, production-grade behavior.
+END.
