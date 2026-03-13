@@ -1,0 +1,180 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a premium, modern Admin → User Detail screen with a working “Delete/Deactivate User” action.
+Must be SOLID-compliant and production-ready.
+
+DEFINITION:
+- “Delete user” = safe deactivation (status=INACTIVE), not hard delete.
+- Applies to MANAGER and PATIENT entities shown in Admin Users.
+- ADMIN accounts can be deactivated only if not the currently logged-in admin (preferably block deactivating any admin in UI unless you explicitly want it).
+
+NON-NEGOTIABLE:
+- White theme premium design.
+- RBAC: ADMIN only.
+- Must block:
+  - deactivating currently logged-in admin (BLOCKED_SELF)
+  - deactivating clinic primary manager without reassignment (PRIMARY_MANAGER_DELETE_BLOCKED)
+- Must show confirmation modal.
+- Must show result toast and navigate back + refresh list.
+- Must not expose passwords or sensitive tokens.
+- SOLID layering: controller -> usecase -> repo (DB only in repo).
+
+========================================================
+A) BACKEND (SOLID MODULE)
+========================================================
+1) Ensure a single-user deactivate endpoint exists (ADMIN only).
+Preferred:
+POST /v1/admin/users/:id/deactivate
+Body (zod):
+{ entityType: "ADMIN"|"MANAGER"|"PATIENT" }
+Behavior:
+- Use-case validates:
+  - cannot deactivate self
+  - if MANAGER is primary manager -> block
+- Repo performs update:
+  - users.status=INACTIVE OR patients.status=INACTIVE
+  - statusReason="ADMIN_DEACTIVATED"
+- Audit log: ADMIN_USER_DEACTIVATED (include actor admin id, target id/type)
+Return:
+{ ok:true }
+
+Alternative:
+Reuse existing bulk endpoint by calling it with 1 target from frontend.
+If you already have bulk-deactivate:
+- Keep backend as-is and implement user detail delete by calling bulk with one target.
+But still enforce the same business rules.
+
+2) User detail read endpoint (ADMIN only)
+GET /v1/admin/users/:id?entityType=...
+Return:
+{
+  id,
+  entityType,
+  displayName,
+  email?,
+  phoneE164?,
+  role,
+  status,
+  statusReason?,
+  clinic: { id, name, status } | null,
+  createdAt,
+  lastLoginAt? (if stored),
+  recentActivity? (optional from audit logs)
+}
+
+SOLID structure (if implementing new endpoints):
+server/modules/adminUsers/
+  adminUsers.routes.ts
+  adminUsers.controller.ts
+  usecases/
+    GetUserDetail.ts
+    DeactivateUser.ts
+  repos/
+    AdminUsersRepo.ts (interface)
+    AdminUsersRepo.drizzle.ts
+  schemas/
+    adminUsers.schemas.ts
+server/shared/
+  authGuards, errors, auditLogs, logger
+
+========================================================
+B) MOBILE UI (Expo) — PREMIUM USER DETAIL SCREEN
+========================================================
+1) Routing
+- From Users list, tapping a row (when NOT selecting) should open User Detail:
+  app/(admin)/users/[id].tsx (or your current route)
+- Pass params:
+  - id
+  - entityType (ADMIN/MANAGER/PATIENT)
+
+2) Screen layout (modern, comprehensive)
+Header:
+- Large title: user display name
+- Status pill (ACTIVE/INACTIVE)
+- Subheader: role + clinic name (if manager/patient) OR “Admin (Global)”
+- Right: overflow menu (optional) or keep minimal
+
+Sections (cards):
+A) Overview
+- Display name
+- Role
+- Status + statusReason (if inactive)
+- CreatedAt
+
+B) Contact
+- Email (tap to mail)
+- Phone (tap to call)
+(Show only if exists)
+
+C) Clinic
+- Clinic card (if manager/patient):
+  - clinic name + clinic status pill
+  - button “Open Clinic” navigates to clinic detail
+
+D) Security (safe)
+- Last login time (if available)
+- “Deactivate User” destructive button at bottom
+
+E) Activity (optional but premium)
+- Show last 5 audit events for this user (if endpoint exists), else omit gracefully.
+
+3) Deactivate flow (delete)
+- Button: “Deactivate User”
+- On tap: confirmation modal
+  Title: “Deactivate this user?”
+  Body: “User will lose access immediately. This action can be reversed by reactivating.”
+  Warning: “Primary clinic manager cannot be deactivated without reassignment.”
+  Buttons: Cancel / Deactivate
+- Call backend:
+  - either POST /v1/admin/users/:id/deactivate
+  - or bulk-deactivate with single target
+- On success:
+  - toast “User deactivated”
+  - navigate back
+  - refresh Users list automatically
+
+4) UX details
+- Skeleton loading while fetching user detail
+- Error state with Retry
+- Ensure selection mode does not navigate accidentally
+- Ensure this page uses white theme tokens consistently
+
+========================================================
+C) PROD-READY SAFETY
+========================================================
+- Never show password or reset tokens.
+- If trying to deactivate blocked targets:
+  - show friendly toast based on error code:
+    - BLOCKED_SELF -> “You cannot deactivate your own admin account.”
+    - PRIMARY_MANAGER_DELETE_BLOCKED -> “Reassign clinic’s primary manager first.”
+- Add audit logs for every deactivate action.
+
+========================================================
+D) TESTS
+========================================================
+Backend tests:
+- Deactivate blocks self
+- Deactivate blocks primary manager
+- Deactivate succeeds for normal manager/patient and sets INACTIVE
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Files changed/added
+2) New/updated endpoints + sample curl
+3) Manual QA checklist:
+- Open user detail from list
+- Deactivate user -> confirm -> user becomes inactive and list refreshes
+- Blocked cases show correct message
+4) Any TODOs
+
+IMPLEMENTATION ORDER:
+1) Backend: implement GetUserDetail and DeactivateUser (or reuse bulk endpoint cleanly) + tests
+2) Mobile: build premium user detail screen + fetch + skeleton states
+3) Wire deactivate flow + confirmation + navigation refresh
+4) Polish + verify end-to-end
+
+Proceed now. Make it SOLID, premium, production-ready.
+END.

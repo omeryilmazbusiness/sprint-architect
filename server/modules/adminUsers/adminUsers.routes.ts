@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../../auth/middleware";
-import { handleBulkDeactivate } from "./adminUsers.controller";
+import { handleBulkDeactivate, handleDeactivateSingle } from "./adminUsers.controller";
 
 const router = Router();
 
@@ -9,6 +9,13 @@ router.post(
   authMiddleware,
   requireRole("ADMIN"),
   handleBulkDeactivate,
+);
+
+router.post(
+  "/users/:id/deactivate",
+  authMiddleware,
+  requireRole("ADMIN"),
+  handleDeactivateSingle,
 );
 
 export default router;

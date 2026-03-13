@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,113 +8,170 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Linking,
   Modal,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import {
-  Card, SectionHeader, StatusPill, Divider, TextField, LoadingState, ErrorState,
-  SecondaryButton, DestructiveButton,
-} from "@/components/ui";
-import { getUser, updateUser, deactivateUser, resetUserPassword, AdminUser, UpdateUserInput } from "@/lib/api/adminUsers";
-import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
+import { StatusPill, LoadingState, ErrorState, Divider } from "@/components/ui";
+import { getUser, deactivateSingleUser, resetUserPasswordAuto, type AdminUser } from "@/lib/api/adminUsers";
+import { useInvalidateAdminUsers } from "@/hooks/useAdminUsersQuery";
+
+function InfoRow({ icon, label, value, onPress }: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  value: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.infoRow, onPress && { opacity: pressed ? 0.7 : 1 }]}
+      onPress={onPress}
+      disabled={!onPress}
+    >
+      <View style={styles.infoIconWrap}>
+        <Ionicons name={icon} size={15} color={T.accent} />
+      </View>
+      <View style={styles.infoText}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue} numberOfLines={1}>{value}</Text>
+      </View>
+      {onPress && <Ionicons name="open-outline" size={13} color={T.textMuted} />}
+    </Pressable>
+  );
+}
+
+function ActionRow({ icon, label, destructive, onPress }: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  destructive?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
+      onPress={onPress}
+    >
+      <View style={[styles.actionIcon, { backgroundColor: destructive ? T.dangerBg : T.accent + "12" }]}>
+        <Ionicons name={icon} size={16} color={destructive ? T.danger : T.accent} />
+      </View>
+      <Text style={[styles.actionLabel, destructive && { color: T.danger }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={14} color={destructive ? T.danger + "80" : T.textMuted} />
+    </Pressable>
+  );
+}
+
+function SectionCard({ children, style }: { children: React.ReactNode; style?: object }) {
+  return <View style={[styles.card, cardShadow, style]}>{children}</View>;
+}
+
+function SectionLabel({ text }: { text: string }) {
+  return <Text style={styles.sectionLabel}>{text}</Text>;
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "Never";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) +
+    " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+function getInitials(user: AdminUser): string {
+  if (user.fullName) {
+    const parts = user.fullName.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return user.email.slice(0, 2).toUpperCase();
+}
 
 export default function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
+  const invalidateUsers = useInvalidateAdminUsers();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
-  const [clinicId, setClinicId] = useState<string | null>(null);
-  const [status, setStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
-  const [dirty, setDirty] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [showClinicPicker, setShowClinicPicker] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery<AdminUser>({
     queryKey: ["/v1/admin/users", id],
     queryFn: () => getUser(id),
   });
 
-  const { data: clinicsData } = useQuery<ClinicListResponse>({
-    queryKey: ["/v1/admin/clinics", ""],
-    queryFn: () => listClinics({ pageSize: 100 }),
-  });
-
-  useEffect(() => {
-    if (data) {
-      setEmail(data.email);
-      setRole(data.role);
-      setClinicId(data.clinicId);
-      setStatus(data.status);
-    }
-  }, [data]);
-
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      const input: UpdateUserInput = { role, status };
-      if (email !== data?.email) input.email = email.trim().toLowerCase();
-      if (role === "MANAGER") input.clinicId = clinicId;
-      else input.clinicId = null;
-      return updateUser(id, input);
-    },
-    onSuccess: (updated) => {
-      qc.invalidateQueries({ queryKey: ["/v1/admin/users"] });
-      setDirty(false);
-      setEmail(updated.email);
-      setRole(updated.role);
-      setClinicId(updated.clinicId);
-      setStatus(updated.status);
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to save"),
-  });
-
-  const deactivateMutation = useMutation({
-    mutationFn: () => deactivateUser(id),
-    onSuccess: () => {
+  async function handleDeactivate() {
+    if (!data) return;
+    setIsDeactivating(true);
+    try {
+      await deactivateSingleUser(id, data.role as "ADMIN" | "MANAGER");
       setShowDeactivate(false);
-      qc.invalidateQueries({ queryKey: ["/v1/admin/users"] });
-      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
+      await invalidateUsers();
+      qc.removeQueries({ queryKey: ["/v1/admin/users", id] });
       router.back();
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to deactivate"),
-  });
+    } catch (e: any) {
+      setShowDeactivate(false);
+      Alert.alert("Cannot Deactivate", e?.message ?? "Deactivation failed");
+    } finally {
+      setIsDeactivating(false);
+    }
+  }
 
-  const resetMutation = useMutation({
-    mutationFn: () => resetUserPassword(id, newPassword),
-    onSuccess: () => {
+  async function handleResetPassword() {
+    if (!data) return;
+    setIsResetting(true);
+    try {
+      const result = await resetUserPasswordAuto(id);
       setShowReset(false);
-      setNewPassword("");
-      Alert.alert("Done", "Password has been reset successfully.");
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to reset password"),
-  });
+      setNewPassword(result.generatedPassword);
+      setShowPasswordModal(true);
+      await refetch();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "Failed to reset password");
+    } finally {
+      setIsResetting(false);
+    }
+  }
 
-  if (isLoading) return (
-    <View style={styles.root}>
-      <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
-      <LoadingState message="Loading user…" />
-    </View>
-  );
-  if (isError || !data) return (
-    <View style={styles.root}>
-      <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
-      <ErrorState onRetry={refetch} />
-    </View>
-  );
+  if (isLoading) {
+    return (
+      <View style={styles.root}>
+        <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
+        <LoadingState message="Loading user…" />
+      </View>
+    );
+  }
 
-  const selectedClinic = clinicsData?.rows.find((c) => c.id === clinicId);
+  if (isError || !data) {
+    return (
+      <View style={styles.root}>
+        <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
+        <ErrorState onRetry={refetch} />
+      </View>
+    );
+  }
+
+  const displayName = data.fullName ?? data.email;
+  const initials = getInitials(data);
+  const hasClinic = !!data.clinic;
+  const hasPhone = !!data.phoneE164;
+  const isInactive = data.status === "INACTIVE";
 
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="Edit User"
+        title="User Detail"
         backButton
         onBack={() => router.back()}
         right={<StatusPill status={data.status} small />}
@@ -123,143 +180,151 @@ export default function UserDetailScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 60 }]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
-        <Card style={styles.profileCard}>
-          <View style={styles.avatarWrap}>
-            <Text style={styles.avatarText}>{data.email.slice(0, 2).toUpperCase()}</Text>
+        <SectionCard style={styles.heroCard}>
+          <View style={styles.heroAvatar}>
+            <Text style={styles.heroInitials}>{initials}</Text>
           </View>
-          <View style={{ flex: 1, gap: 5 }}>
-            <Text style={styles.profileEmail} numberOfLines={1}>{data.email}</Text>
-            <View style={styles.profileMeta}>
-              <StatusPill status={data.role} small />
-              <Text style={styles.profileDate}>Since {new Date(data.createdAt).toLocaleDateString("en-GB")}</Text>
+          <Text style={styles.heroName} numberOfLines={2}>{displayName}</Text>
+          {data.fullName && (
+            <Text style={styles.heroEmail} numberOfLines={1}>{data.email}</Text>
+          )}
+          <View style={styles.heroChips}>
+            <View style={styles.roleChip}>
+              <Text style={styles.roleChipText}>{data.role}</Text>
             </View>
-          </View>
-        </Card>
-
-        <SectionHeader label="Profile" style={styles.sectionGap} />
-        <Card>
-          <View style={styles.fields}>
-            <TextField
-              label="Email Address"
-              value={email}
-              onChangeText={(v) => { setEmail(v); setDirty(true); }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            <View>
-              <Text style={styles.fieldLabel}>ROLE</Text>
-              <View style={styles.optionRow}>
-                {(["MANAGER", "ADMIN"] as const).map((r) => (
-                  <Pressable
-                    key={r}
-                    style={[styles.option, role === r ? styles.optionActive : styles.optionInactive]}
-                    onPress={() => { setRole(r); setDirty(true); }}
-                  >
-                    <Text style={[styles.optionText, { color: role === r ? T.primary : T.textSec }]}>{r}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {role === "MANAGER" && (
-              <View>
-                <Text style={styles.fieldLabel}>ASSIGNED CLINIC</Text>
-                <Pressable
-                  style={styles.clinicSelector}
-                  onPress={() => setShowClinicPicker(true)}
-                >
-                  <Text style={[styles.clinicSelectorText, { color: selectedClinic ? T.text : T.textMuted }]}>
-                    {selectedClinic?.name ?? "Select clinic…"}
-                  </Text>
-                  <Ionicons name="chevron-down" size={16} color={T.textMuted} />
-                </Pressable>
+            {data.mustChangePassword && (
+              <View style={styles.warningChip}>
+                <Ionicons name="warning-outline" size={11} color="#B45309" />
+                <Text style={styles.warningChipText}>Must change password</Text>
               </View>
             )}
-
-            <View>
-              <Text style={styles.fieldLabel}>STATUS</Text>
-              <View style={styles.optionRow}>
-                {(["ACTIVE", "INACTIVE", "SUSPENDED"] as const).map((s) => (
-                  <Pressable
-                    key={s}
-                    style={[styles.option, status === s ? styles.optionActive : styles.optionInactive]}
-                    onPress={() => { setStatus(s); setDirty(true); }}
-                  >
-                    <Text style={[styles.optionText, { color: status === s ? T.primary : T.textSec }]}>{s}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
           </View>
-        </Card>
-
-        <Pressable
-          style={[styles.saveBtn, { opacity: (!dirty || saveMutation.isPending) ? 0.5 : 1 }]}
-          onPress={() => saveMutation.mutate()}
-          disabled={!dirty || saveMutation.isPending}
-        >
-          {saveMutation.isPending ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>Save Changes</Text>
-          )}
-        </Pressable>
-
-        <SectionHeader label="Account Actions" style={styles.sectionGap} />
-        <Card noPad>
-          <Pressable
-            style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => setShowReset(true)}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: T.accent + "12" }]}>
-              <Ionicons name="key-outline" size={16} color={T.accent} />
+          {data.statusReason && isInactive && (
+            <View style={styles.statusReasonBadge}>
+              <Ionicons name="information-circle-outline" size={13} color={T.textSec} />
+              <Text style={styles.statusReasonText}>{data.statusReason.replace(/_/g, " ")}</Text>
             </View>
-            <Text style={styles.actionLabel}>Reset Password</Text>
-            <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
-          </Pressable>
-          {data.status !== "INACTIVE" && (
+          )}
+        </SectionCard>
+
+        <SectionLabel text="CONTACT" />
+        <SectionCard>
+          <InfoRow
+            icon="mail-outline"
+            label="Email"
+            value={data.email}
+            onPress={() => Linking.openURL(`mailto:${data.email}`)}
+          />
+          {hasPhone && (
             <>
-              <Divider inset={52} />
-              <Pressable
-                style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => setShowDeactivate(true)}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: T.dangerBg }]}>
-                  <Ionicons name="ban-outline" size={16} color={T.danger} />
-                </View>
-                <Text style={[styles.actionLabel, { color: T.danger }]}>Deactivate User</Text>
-                <Ionicons name="chevron-forward" size={14} color={T.danger} />
-              </Pressable>
+              <Divider inset={44} />
+              <InfoRow
+                icon="call-outline"
+                label="Phone"
+                value={data.phoneE164!}
+                onPress={() => Linking.openURL(`tel:${data.phoneE164}`)}
+              />
             </>
           )}
-        </Card>
+        </SectionCard>
+
+        {hasClinic && (
+          <>
+            <SectionLabel text="CLINIC" />
+            <SectionCard>
+              <View style={styles.clinicRow}>
+                <View style={styles.clinicIcon}>
+                  <Ionicons name="business-outline" size={16} color={T.primary} />
+                </View>
+                <View style={styles.clinicInfo}>
+                  <Text style={styles.clinicName}>{data.clinic!.name}</Text>
+                  <View style={styles.clinicMeta}>
+                    <StatusPill status={data.clinic!.status} small />
+                  </View>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [styles.openClinicBtn, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => router.push({
+                    pathname: "/(admin)/clinics/[id]",
+                    params: { id: data.clinicId! },
+                  })}
+                >
+                  <Text style={styles.openClinicText}>Open</Text>
+                  <Ionicons name="arrow-forward" size={12} color={T.accent} />
+                </Pressable>
+              </View>
+            </SectionCard>
+          </>
+        )}
+
+        <SectionLabel text="ACCOUNT" />
+        <SectionCard>
+          <InfoRow
+            icon="calendar-outline"
+            label="Member since"
+            value={formatDate(data.createdAt)}
+          />
+          <Divider inset={44} />
+          <InfoRow
+            icon="time-outline"
+            label="Last login"
+            value={formatDateTime(data.lastLoginAt)}
+          />
+        </SectionCard>
+
+        <SectionLabel text="ACTIONS" />
+        <SectionCard style={styles.actionsCard}>
+          <ActionRow
+            icon="key-outline"
+            label="Reset Password"
+            onPress={() => setShowReset(true)}
+          />
+          {!isInactive && (
+            <>
+              <Divider inset={52} />
+              <ActionRow
+                icon="ban-outline"
+                label="Deactivate User"
+                destructive
+                onPress={() => setShowDeactivate(true)}
+              />
+            </>
+          )}
+        </SectionCard>
       </ScrollView>
 
-      <Modal visible={showClinicPicker} transparent animationType="slide">
-        <View style={styles.sheetOverlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeaderRow}>
-              <Text style={styles.sheetTitle}>Select Clinic</Text>
-              <Pressable onPress={() => setShowClinicPicker(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={T.textSec} />
+      <Modal visible={showDeactivate} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <View style={[styles.modalIcon, { backgroundColor: T.dangerBg }]}>
+              <Ionicons name="ban-outline" size={26} color={T.danger} />
+            </View>
+            <Text style={styles.modalTitle}>Deactivate User?</Text>
+            <Text style={styles.modalBody}>
+              {displayName} will lose access immediately. You can reactivate them later.
+            </Text>
+            <Text style={styles.modalNote}>
+              Primary clinic managers cannot be deactivated without reassignment.
+            </Text>
+            <View style={styles.modalBtns}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => setShowDeactivate(false)}
+                disabled={isDeactivating}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.deactivateBtn, { opacity: isDeactivating ? 0.7 : 1 }]}
+                onPress={handleDeactivate}
+                disabled={isDeactivating}
+              >
+                {isDeactivating
+                  ? <ActivityIndicator color={T.danger} size="small" />
+                  : <Text style={styles.deactivateBtnText}>Deactivate</Text>}
               </Pressable>
             </View>
-            <ScrollView contentContainerStyle={styles.sheetContent}>
-              {(clinicsData?.rows ?? []).map((c) => (
-                <Pressable
-                  key={c.id}
-                  style={[styles.clinicOption, clinicId === c.id ? styles.clinicOptionActive : styles.clinicOptionInactive]}
-                  onPress={() => { setClinicId(c.id); setDirty(true); setShowClinicPicker(false); }}
-                >
-                  <Text style={[styles.clinicOptionText, { color: clinicId === c.id ? T.primary : T.text }]}>{c.name}</Text>
-                  {clinicId === c.id && <Ionicons name="checkmark" size={16} color={T.primary} />}
-                </Pressable>
-              ))}
-            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -267,57 +332,53 @@ export default function UserDetailScreen() {
       <Modal visible={showReset} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <View style={styles.modalIconWrap}>
-              <Ionicons name="key-outline" size={24} color={T.accent} />
+            <View style={[styles.modalIcon, { backgroundColor: T.accent + "12" }]}>
+              <Ionicons name="key-outline" size={26} color={T.accent} />
             </View>
-            <Text style={styles.modalTitle}>Reset Password</Text>
-            <TextField
-              label="New Password"
-              placeholder="Min 8 characters"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-              style={{ width: "100%" }}
-            />
+            <Text style={styles.modalTitle}>Reset Password?</Text>
+            <Text style={styles.modalBody}>
+              A new temporary password will be generated for {displayName}. They will be required to change it on next login.
+            </Text>
             <View style={styles.modalBtns}>
-              <Pressable style={styles.modalCancelBtn} onPress={() => { setShowReset(false); setNewPassword(""); }}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => setShowReset(false)}
+                disabled={isResetting}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalConfirmBtn, { opacity: resetMutation.isPending ? 0.7 : 1 }]}
-                onPress={() => {
-                  if (!newPassword || newPassword.length < 8) return Alert.alert("Validation", "Minimum 8 characters required");
-                  resetMutation.mutate();
-                }}
-                disabled={resetMutation.isPending}
+                style={[styles.confirmBtn, { opacity: isResetting ? 0.7 : 1 }]}
+                onPress={handleResetPassword}
+                disabled={isResetting}
               >
-                {resetMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalConfirmText}>Reset</Text>}
+                {isResetting
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.confirmBtnText}>Reset</Text>}
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
 
-      <Modal visible={showDeactivate} transparent animationType="fade">
+      <Modal visible={showPasswordModal} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <View style={[styles.modalIconWrap, { backgroundColor: T.dangerBg }]}>
-              <Ionicons name="ban-outline" size={24} color={T.danger} />
+            <View style={[styles.modalIcon, { backgroundColor: "#D1FAE5" }]}>
+              <Ionicons name="checkmark-circle-outline" size={26} color="#059669" />
             </View>
-            <Text style={styles.modalTitle}>Deactivate User</Text>
-            <Text style={styles.modalSub}>This user will no longer be able to log in. You can reactivate them later by editing their status.</Text>
-            <View style={styles.modalBtns}>
-              <Pressable style={styles.modalCancelBtn} onPress={() => setShowDeactivate(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalDestroyBtn, { opacity: deactivateMutation.isPending ? 0.7 : 1 }]}
-                onPress={() => deactivateMutation.mutate()}
-                disabled={deactivateMutation.isPending}
-              >
-                {deactivateMutation.isPending ? <ActivityIndicator color={T.danger} size="small" /> : <Text style={styles.modalDestroyText}>Deactivate</Text>}
-              </Pressable>
+            <Text style={styles.modalTitle}>Password Reset</Text>
+            <Text style={styles.modalBody}>New temporary password for {displayName}:</Text>
+            <View style={styles.passwordBox}>
+              <Text style={styles.passwordText} selectable>{newPassword ?? ""}</Text>
             </View>
+            <Text style={styles.modalNote}>Copy this password now — it won't be shown again.</Text>
+            <Pressable
+              style={[styles.confirmBtn, { width: "100%" }]}
+              onPress={() => { setShowPasswordModal(false); setNewPassword(null); }}
+            >
+              <Text style={styles.confirmBtnText}>Done</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -327,48 +388,309 @@ export default function UserDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 4 },
-  sectionGap: { marginTop: 20 },
-  profileCard: { flexDirection: "row", alignItems: "center", gap: 14 },
-  avatarWrap: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
-  profileEmail: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
-  profileMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
-  profileDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
-  fields: { gap: 16 },
-  fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, color: T.textSec, marginBottom: 8 },
-  optionRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  option: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: T.r10, borderWidth: 1.5 },
-  optionActive: { borderColor: T.primary, backgroundColor: T.primary + "10" },
-  optionInactive: { borderColor: T.border, backgroundColor: "transparent" },
-  optionText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
-  clinicSelector: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderWidth: 1.5, borderColor: T.border, borderRadius: T.r10, paddingHorizontal: 14, paddingVertical: 12 },
-  clinicSelectorText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15 },
-  saveBtn: { backgroundColor: T.primary, borderRadius: T.r12, paddingVertical: 15, alignItems: "center", marginTop: 16, shadowColor: T.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
-  saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
-  actionRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
-  actionIcon: { width: 32, height: 32, borderRadius: T.r8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  actionLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
-  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "60%", paddingBottom: 24 },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginTop: 10, marginBottom: 4 },
-  sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: T.border },
-  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  sheetContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
-  clinicOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 12, borderRadius: T.r10, borderWidth: 1 },
-  clinicOptionActive: { borderColor: T.primary, backgroundColor: T.primary + "08" },
-  clinicOptionInactive: { borderColor: T.border, backgroundColor: "transparent" },
-  clinicOptionText: { fontFamily: "Inter_400Regular", fontSize: 14, flex: 1 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
-  modal: { backgroundColor: T.surface, borderRadius: T.r20, padding: 24, width: "87%", alignItems: "center", gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16 },
-  modalIconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: T.accent + "12", alignItems: "center", justifyContent: "center" },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
-  modalSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center", lineHeight: 20 },
-  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
-  modalCancelBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", borderWidth: 1.5, borderColor: T.border },
-  modalCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
-  modalConfirmBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.primary },
-  modalConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
-  modalDestroyBtn: { flex: 1, borderRadius: T.r10, paddingVertical: 13, alignItems: "center", backgroundColor: T.dangerBg, borderWidth: 1.5, borderColor: T.dangerBorder },
-  modalDestroyText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.danger },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 8 },
+
+  heroCard: {
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 8,
+    marginBottom: 4,
+  },
+  heroAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: T.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  heroInitials: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 26,
+    color: "#fff",
+  },
+  heroName: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 22,
+    color: T.text,
+    textAlign: "center",
+  },
+  heroEmail: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textMuted,
+  },
+  heroChips: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  roleChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: T.primary + "12",
+    borderWidth: 1,
+    borderColor: T.primary + "30",
+  },
+  roleChipText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    color: T.primary,
+  },
+  warningChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  warningChipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: "#B45309",
+  },
+  statusReasonBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: T.r8,
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: T.border,
+  },
+  statusReasonText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.textSec,
+    textTransform: "capitalize",
+  },
+
+  sectionLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.6,
+    color: T.textMuted,
+    marginTop: 8,
+    marginBottom: 2,
+    paddingHorizontal: 4,
+  },
+
+  card: {
+    backgroundColor: T.surface,
+    borderRadius: T.r14,
+    borderWidth: 1,
+    borderColor: T.border,
+    overflow: "hidden",
+  },
+  actionsCard: {},
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  infoIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: T.r8,
+    backgroundColor: T.accent + "12",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  infoText: { flex: 1 },
+  infoLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: T.textMuted,
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: T.text,
+  },
+
+  clinicRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  clinicIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: T.r10,
+    backgroundColor: T.primary + "10",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  clinicInfo: { flex: 1 },
+  clinicName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: T.text,
+    marginBottom: 4,
+  },
+  clinicMeta: { flexDirection: "row" },
+  openClinicBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: T.r8,
+    borderWidth: 1,
+    borderColor: T.accent + "40",
+    backgroundColor: T.accent + "08",
+  },
+  openClinicText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    color: T.accent,
+  },
+
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  actionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: T.r8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  actionLabel: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: T.text,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modal: {
+    backgroundColor: T.surface,
+    borderRadius: T.r20,
+    padding: 24,
+    width: "88%",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  modalIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+    color: T.text,
+  },
+  modalBody: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: T.textSec,
+    textAlign: "center",
+    lineHeight: 21,
+  },
+  modalNote: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.textMuted,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  modalBtns: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginTop: 4,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: T.r10,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: T.border,
+  },
+  cancelBtnText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: T.textSec,
+  },
+  deactivateBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: T.r10,
+    alignItems: "center",
+    backgroundColor: T.dangerBg,
+    borderWidth: 1.5,
+    borderColor: T.dangerBorder,
+  },
+  deactivateBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: T.danger,
+  },
+  confirmBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: T.r10,
+    alignItems: "center",
+    backgroundColor: T.primary,
+  },
+  confirmBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#fff",
+  },
+  passwordBox: {
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1.5,
+    borderColor: T.border,
+    borderRadius: T.r10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    width: "100%",
+    alignItems: "center",
+  },
+  passwordText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    color: T.primary,
+    letterSpacing: 2,
+  },
 });

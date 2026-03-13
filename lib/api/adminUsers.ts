@@ -8,7 +8,9 @@ export interface AdminUser {
   role: "ADMIN" | "MANAGER";
   clinicId: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  statusReason: string | null;
   mustChangePassword: boolean;
+  lastLoginAt: string | null;
   createdAt: string;
   clinic?: { id: string; name: string; status: string } | null;
 }
@@ -121,6 +123,23 @@ export async function resetUserPasswordManual(id: string, password: string): Pro
 
 export async function deactivateUser(id: string): Promise<AdminUser> {
   const res = await apiRequest("DELETE", `/v1/admin/users/${id}`);
+  return res.json();
+}
+
+export async function deactivateSingleUser(
+  id: string,
+  entityType: "ADMIN" | "MANAGER" | "PATIENT",
+): Promise<{ ok: boolean }> {
+  const res = await apiRequest("POST", `/v1/admin/users/${id}/deactivate`, { entityType });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const code: string = body?.code ?? "DEACTIVATION_BLOCKED";
+    const messages: Record<string, string> = {
+      SELF_DEACTIVATION_BLOCKED: "You cannot deactivate your own admin account.",
+      PRIMARY_MANAGER_BLOCKED: "Reassign this clinic's primary manager before deactivating.",
+    };
+    throw new Error(messages[code] ?? body?.message ?? "Deactivation blocked");
+  }
   return res.json();
 }
 

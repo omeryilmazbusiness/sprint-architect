@@ -13,3 +13,9 @@ export const BulkDeactivateSchema = z.object({
 });
 
 export type BulkDeactivateInput = z.infer<typeof BulkDeactivateSchema>;
+
+export const DeactivateSingleUserSchema = z.object({
+  entityType: z.enum(["ADMIN", "MANAGER", "PATIENT"]),
+});
+
+export type DeactivateSingleUserInput = z.infer<typeof DeactivateSingleUserSchema>;
