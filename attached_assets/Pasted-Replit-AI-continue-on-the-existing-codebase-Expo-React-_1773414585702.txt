@@ -1,0 +1,169 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Audit the current Admin → Users “Select users / Delete selected / Cancel (Vazgeç)” feature and upgrade it to a premium, modern, production-ready experience. Must be SOLID-compliant.
+
+KEY OUTCOME:
+- Users page has a professional selection mode:
+  - “Select” (Select Users) button
+  - Multi-select checkboxes
+  - “Delete selected” action
+  - “Cancel / Vazgeç” action to exit selection mode and clear selection
+- UI looks premium (white theme, clean cards, spacing, animations)
+- Backend is safe (soft delete/deactivate), robust, and modular (SOLID layering)
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin design system.
+- RBAC: ADMIN only.
+- Deleting = soft delete/deactivate (status=INACTIVE), never hard delete.
+- Must NOT allow deactivating current logged-in admin.
+- Must block deactivating a clinic’s primary manager unless reassigned (return blocked list).
+- Must show confirmation modal before deletion.
+- Must show result summary (deactivated vs blocked).
+- Must handle loading/error states and avoid focus/selection bugs.
+
+========================================================
+A) STEP 1 — AUDIT WHAT EXISTS NOW (MANDATORY)
+========================================================
+1) Locate current Users screen implementation and selection logic.
+2) Identify current UX problems:
+- Where “Select” is placed (header? toolbar?)
+- Checkbox design and tap targets
+- Cancel behavior (does it clear selection?)
+- Delete selected (does it confirm? show feedback?)
+- Any re-render/scroll performance issues
+3) Verify backend endpoint exists and is correct:
+- bulk deactivate endpoint
+- validation rules
+- audit logs
+4) Produce a short audit report:
+- “What exists”
+- “What is broken/missing”
+- “What we will change”
+
+Do NOT start refactor until this audit is complete.
+
+========================================================
+B) STEP 2 — PREMIUM UX SPEC (IMPLEMENT)
+========================================================
+1) Top App Header:
+- Title: “Users”
+- Right action:
+  - Normal mode: “Select”
+  - Selection mode: “Vazgeç” (Cancel)
+
+2) Selection Mode UI:
+- Enter selection mode:
+  - tap “Select” OR long-press any row (pro UX)
+- In selection mode:
+  - Each row shows a checkbox at left (or right) with big hit area
+  - Row tap toggles selection (no navigation)
+  - Show a sticky bottom action bar:
+    - “Selected: N”
+    - “Delete selected” (disabled if N=0)
+    - Optional “Select all”
+- Exit selection mode:
+  - Tap “Vazgeç” OR after successful delete
+  - Clears all selections
+
+3) Delete Flow:
+- Tap “Delete selected” => confirmation modal:
+  Title: “Deactivate users?”
+  Body: “Selected users will be deactivated and lose access immediately.”
+  Secondary note: “Primary clinic managers may require reassignment.”
+  Buttons: “Cancel” / “Deactivate”
+- On success:
+  - Toast: “Deactivated X users”
+  - If blocked exists: “Y blocked” with reason(s)
+  - Refetch list + clear selection + exit selection mode
+
+4) Row Card Design (premium):
+- Big display name on first line
+- Second line: chips row:
+  - Clinic (or “Admin”)
+  - Role (ADMIN/MANAGER/GUEST)
+  - Status (ACTIVE/INACTIVE)
+- Right side:
+  - Normal mode: chevron
+  - Selecting mode: checkbox (or keep checkbox left and remove chevron)
+- Subtle border/shadow and consistent spacing.
+
+5) States:
+- Loading skeleton list
+- Empty state with “Clear filters” CTA
+- Error state with “Retry” CTA
+
+========================================================
+C) STEP 3 — SOLID FRONTEND STRUCTURE (MANDATORY)
+========================================================
+Refactor to modular, testable UI:
+- hooks/useSelectionMode.ts
+  - isSelecting, selectedSet, toggleSelectionMode, toggleItem, clear, selectAll
+- components/users/UserRowCard.tsx
+- components/users/SelectionActionBar.tsx
+- components/modals/ConfirmModal.tsx
+- services/api/adminUsers.ts
+  - bulkDeactivateUsers(targets)
+- hooks/useAdminUsersQuery.ts (fetch + pagination + filters)
+
+No massive screen components; keep logic separated.
+
+========================================================
+D) STEP 4 — SOLID BACKEND VERIFICATION / FIX (MANDATORY)
+========================================================
+Ensure backend is production-ready:
+
+Endpoint:
+POST /v1/admin/users/bulk-deactivate
+Body:
+{ targets: [{id, entityType}] }
+
+Rules:
+- Block current admin (BLOCKED_SELF)
+- Block clinic primary manager (PRIMARY_MANAGER_DELETE_BLOCKED)
+- Deactivate:
+  - users.status=INACTIVE / patients.status=INACTIVE
+  - statusReason="ADMIN_DEACTIVATED"
+- Audit log: ADMIN_BULK_DEACTIVATE with metadata
+
+If endpoint does not exist or is not SOLID:
+- Implement in module:
+server/modules/adminUsers/
+  routes/controller/usecases/repos/schemas
+
+Return:
+{ deactivated, blocked:[{id, reason}] }
+
+========================================================
+E) TESTS + QA
+========================================================
+1) Backend tests:
+- blocks self
+- blocks primary manager
+- deactivates valid targets
+2) Manual QA checklist:
+- Enter selection mode via Select
+- Select 3 rows, delete selected, confirm, list updates
+- Vazgeç clears selection and exits mode
+- Long press selects and enters mode
+- Blocked cases show correct message
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing:
+1) Audit summary (what was wrong and fixed)
+2) Files changed/added
+3) Endpoint sample curl for bulk-deactivate
+4) Manual QA checklist
+5) Tests added + command to run
+
+IMPLEMENTATION ORDER:
+1) Audit existing implementation
+2) Backend verification/fix + tests
+3) Frontend refactor into hooks/components (SOLID)
+4) Apply premium UI + selection mode + Vazgeç + Delete selected
+5) Final polish + run full test suite
+
+Proceed now. Do not just describe — implement changes and verify.
+END.
