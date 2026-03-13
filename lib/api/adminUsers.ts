@@ -123,3 +123,22 @@ export async function deactivateUser(id: string): Promise<AdminUser> {
   const res = await apiRequest("DELETE", `/v1/admin/users/${id}`);
   return res.json();
 }
+
+export interface BulkDeactivateTarget {
+  id: string;
+  entityType: "ADMIN" | "MANAGER" | "PATIENT";
+}
+
+export interface BulkDeactivateResult {
+  deactivated: number;
+  blocked: { id: string; reason: string }[];
+}
+
+export async function bulkDeactivate(
+  targets: BulkDeactivateTarget[],
+): Promise<BulkDeactivateResult> {
+  const res = await apiRequest("POST", "/v1/admin/users/bulk-deactivate", {
+    targets,
+  });
+  return res.json();
+}

@@ -62,6 +62,31 @@ The Admin Dashboard (`app/(admin)/dashboard.tsx`) uses SOLID-friendly modular co
 - **`components/dashboard/ActivityFeed.tsx`**: Last 5 audit events — icon, message, time-ago. No "Attention needed" language.
 - **`services/navigation/filteredNavigation.ts`**: `goToInvoices({ status?, clinicId?, period? })` and `goToClinics({ status? })` — builds params, omits empty/undefined values, uses `router.push`.
 
+### Admin Users Module (SOLID) + Bulk Deactivation
+
+The `server/modules/adminUsers/` module provides SOLID-layered user management:
+- **DTO** (`dtos/BulkDeactivateDto.ts`): Defines `BulkDeactivateTarget` (id + entityType) and `BulkDeactivateResultDto` (deactivated count + blocked array with reasons).
+- **Repo** (`repos/AdminUsersRepo.drizzle.ts`): Drizzle queries for listing unified entities (managers + patients + admins) with search/filter, and deactivating individual targets. `listUnified` uses `fullName ?? email` for display and searches both name and email columns.
+- **Use Case** (`usecases/BulkDeactivateUsers.ts`): Blocks self-deactivation (`SELF_DEACTIVATION_BLOCKED`) and primary manager deactivation (`PRIMARY_MANAGER_BLOCKED`); deactivates valid targets; adds audit log entries.
+- **Routes** (`adminUsers.routes.ts`): `POST /v1/admin/users/bulk-deactivate` — ADMIN only, zod-validated (targets array min 1).
+- Registered in `server/routes.ts` at `/v1/admin`.
+
+**Frontend bulk deactivation components:**
+- `hooks/useSelection.ts`: Selection mode state — `selectionMode`, `selectedIds` (Set), `toggle()`, `enterSelection()`, `exitSelection()`, `selectAll()`, `clearAll()`, `isSelected()`, `count`.
+- `hooks/useAdminUsersQuery.ts`: React Query wrapper for `/v1/admin/users` with search/entityType/status/clinicId params. Exports `useInvalidateAdminUsers()` for cache busting after mutations.
+- `components/users/UserListRowCard.tsx`: Premium card with circular avatar (2-letter initials), bold name, email subtitle, chip row (clinic, type badge, status pill). Selection mode shows checkbox overlay; long-press enters selection.
+- `components/users/SelectionToolbar.tsx`: Sticky bottom bar in selection mode — Cancel | count text | All/None toggle | Deactivate (red, disabled when count=0).
+- `components/users/BulkDeleteModal.tsx`: Confirmation modal — warns about primary manager protection, count display, Cancel + Deactivate (with loading spinner) buttons.
+- `lib/api/adminUsers.ts`: `bulkDeactivate(targets)` API function using composite IDs (`"MANAGER::uuid"` | `"ADMIN::uuid"` | `"PATIENT::uuid"`).
+
+**`app/(admin)/users/index.tsx` (fully rewritten):**
+- Uses `useAdminUsersQuery`, `useSelection`, `UserListRowCard`, `SelectionToolbar`, `BulkDeleteModal`.
+- Search bar + 3 filter chips (Clinic, Type, Status) + active filter chips displayed below.
+- "Select" button (header right) and long-press on card both enter selection mode.
+- In selection mode: filter area hides, SelectionToolbar appears at bottom, tapping rows toggles selection.
+- Bulk deactivate: calls `POST /v1/admin/users/bulk-deactivate`, invalidates cache, shows Alert if any blocked.
+- Skeleton loading rows while data loads.
+
 ### API Routes
 
 The API provides distinct endpoints for different user roles and functionalities. Manager routes (`/v1/manager/*`) handle CRUD operations for patients (with status/missing filters), doctors (with extended fields: email, university, graduationYear, experienceYears, bio, languages, certifications, diplomaUrl), hotels, transports (with vehiclePlate, vehicleModel, vehicleBrand), and patient plans, along with appointment and document management. `doctorId` is required on appointment create/update. `POST /v1/manager/patients/:id/assign-documents` accepts `{items:[{documentTypeId,instructionText?}]}` and performs upsert (creates or resets to ASSIGNED). `PUT /v1/manager/document-types/:id` allows editing document types. `GET /v1/documents/:id/signed-url` returns a short-lived JWT-signed download URL. A clinic-wide appointments range endpoint (`GET /v1/manager/appointments?from=&to=`) powers the calendar dashboard. The premium patient aggregate endpoint (`GET /v1/manager/patients/:id/details`) returns patient + plan + doctor + hotel + transport + documents + requiredDocuments + nextAppointment + appointments + tracking in a single call. A tracking endpoint (`PUT /v1/manager/patients/:id/tracking`) persists the patient journey step. Admin routes (`/v1/admin/*`) provide comprehensive control over clinics, users, and invoices. Patient routes include document uploads with `uploadedAt` tracking. Authentication routes cover staff and patient login, token refresh, and logout.

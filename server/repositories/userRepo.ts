@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { users, patients, clinics } from "@shared/schema";
-import { eq, ilike, and, count, sql } from "drizzle-orm";
+import { eq, ilike, and, or, count, sql } from "drizzle-orm";
 import { hashPassword } from "../auth/password";
 import crypto from "crypto";
 
@@ -68,7 +68,14 @@ export const userRepo = {
 
     if (showManagers) {
       const conditions = [];
-      if (filters.search) conditions.push(ilike(users.email, `%${filters.search}%`));
+      if (filters.search) {
+        conditions.push(
+          or(
+            ilike(users.email, `%${filters.search}%`),
+            ilike(users.fullName, `%${filters.search}%`),
+          ),
+        );
+      }
       if (filters.entityType && (filters.entityType === "ADMIN" || filters.entityType === "MANAGER")) {
         conditions.push(eq(users.role, filters.entityType));
       }
@@ -87,9 +94,9 @@ export const userRepo = {
           entityType: u.role as "ADMIN" | "MANAGER",
           clinicId: u.clinicId ?? null,
           clinicName: (u as any).clinic?.name ?? null,
-          displayName: u.email,
+          displayName: u.fullName ?? u.email,
           email: u.email,
-          phone: null,
+          phone: u.phoneE164 ?? null,
           status: u.status,
           createdAt: u.createdAt.toISOString(),
         });

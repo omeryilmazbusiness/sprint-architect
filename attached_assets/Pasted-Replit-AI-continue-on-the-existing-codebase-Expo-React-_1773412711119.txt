@@ -1,0 +1,194 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Upgrade Admin “Users” page to a premium, modern, production-ready UX with:
+1) Modern list cards: big user name, with clinic/role/status shown under it.
+2) Selection mode: select single or multiple users via checkboxes.
+3) Bulk delete action: “Delete selected” (soft delete/deactivate), with confirmation.
+4) Must be SOLID/modular on backend and clean modular UI on frontend.
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin design system.
+- RBAC: ADMIN only.
+- Deletion must be SAFE and production-ready:
+  - Soft delete / deactivate, not storing passwords or exposing secrets.
+  - Prevent deleting the currently logged-in admin.
+  - Prevent deactivating a clinic’s primary manager without reassignment (or show validation error).
+- Case-insensitive search must keep working.
+- All actions must show loading/progress and error toasts.
+- Maintain audit logs for bulk actions.
+
+========================================================
+A) UX REQUIREMENTS (ADMIN USERS SCREEN)
+========================================================
+1) Users list item design (premium card row):
+- Top line: DisplayName (large, bold)
+- Second line: chips row (small pills):
+  - Clinic: {clinicName} (if exists, else “Admin”)
+  - Role: ADMIN / MANAGER / GUEST (PATIENT)
+  - Status: ACTIVE / INACTIVE
+- Right side:
+  - Chevron normally (tap opens detail if exists)
+  - Checkbox when selection mode is on
+
+2) Selection mode UX:
+- Top action bar:
+  - “Select” button toggles selection mode ON/OFF
+- When selection mode ON:
+  - Each row shows checkbox
+  - Header shows: “Selected: N”
+  - Actions:
+    - “Select all” (optional)
+    - “Delete selected” (disabled if N=0)
+    - “Cancel”
+- Long press on a row should also enter selection mode and select that row.
+
+3) Delete confirmation:
+- Modal with clear text:
+  “Selected users will be deactivated and will lose access immediately.”
+- Secondary warning:
+  “Primary clinic managers may require reassignment.”
+
+4) Empty/loading states:
+- Skeleton list while loading
+- Empty state with “No users found” and “Clear filters”
+
+========================================================
+B) BACKEND — SOLID MODULAR IMPLEMENTATION
+========================================================
+Implement within a module boundary:
+server/modules/adminUsers/
+  adminUsers.routes.ts
+  adminUsers.controller.ts
+  usecases/
+    ListUsers.ts
+    BulkDeactivateUsers.ts
+  repos/
+    AdminUsersRepo.ts (interface)
+    AdminUsersRepo.drizzle.ts
+  schemas/
+    adminUsers.schemas.ts (zod)
+server/shared/
+  errors, auth guards, audit log
+
+Rules:
+- Controller: validate + call usecase
+- Usecase: business rules (cannot deactivate self, cannot deactivate primary manager) + calls repo
+- Repo: Drizzle queries only
+
+1) Users list endpoint (already exists but ensure stable DTO):
+GET /v1/admin/users?clinicId=&entityType=&status=&search=&page=&pageSize=
+Return items with:
+{
+  id,
+  entityType: "ADMIN"|"MANAGER"|"PATIENT",
+  displayName,
+  clinicId,
+  clinicName,
+  role,
+  status,
+  email?,
+  phoneE164?,
+  createdAt
+}
+Pagination: totalCount, page, pageSize
+
+2) Bulk deactivate endpoint (NEW):
+POST /v1/admin/users/bulk-deactivate
+Body (zod):
+{
+  userIds: string[],      // managers/admins
+  patientIds?: string[]   // if entityType PATIENT is separate table
+}
+Or better unified:
+{
+  targets: [
+    { id: string, entityType: "ADMIN"|"MANAGER"|"PATIENT" }
+  ]
+}
+Behavior:
+- Validate all IDs exist.
+- Do not allow deactivating currently logged-in admin.
+- If a MANAGER is the clinic.primaryManagerUserId:
+  - Either block with error code PRIMARY_MANAGER_DELETE_BLOCKED
+  - Or require parameter force=false by default and return a list of blocked ids.
+Recommended: block and return blocked list.
+
+Effect:
+- For ADMIN/MANAGER: set users.status = INACTIVE and statusReason="ADMIN_DEACTIVATED"
+- For PATIENT: set patients.status = INACTIVE (or a dedicated field) and statusReason="ADMIN_DEACTIVATED"
+- Add audit log entry: ADMIN_BULK_DEACTIVATE with metadata (counts, ids)
+
+Return:
+{
+  deactivated: number,
+  blocked: [{id, reason}],
+}
+
+3) Optional single deactivate endpoint (not required if bulk covers it)
+DELETE /v1/admin/users/:id -> internally calls same usecase.
+
+========================================================
+C) FRONTEND — MODULAR IMPLEMENTATION
+========================================================
+1) Create reusable components:
+- components/users/UserListRowCard.tsx
+- components/users/SelectionToolbar.tsx
+- hooks/useAdminUsersQuery.ts (fetch list with filters + pagination)
+- hooks/useSelection.ts (selected ids, toggle, select all)
+- services/api/adminUsers.ts (API calls)
+- services/navigation/routeFilters.ts (if needed)
+
+2) Screen behavior:
+- Admin Users screen uses query hook
+- When selection mode ON:
+  - tapping row toggles selection (no navigation)
+- When selection mode OFF:
+  - tapping row opens detail (if exists) or does nothing
+- Bulk deactivate:
+  - gather selected targets with entityType
+  - call bulk-deactivate endpoint
+  - show toast with results:
+    - “Deactivated 5 users”
+    - “2 blocked (primary manager)”
+  - refresh list and clear selection
+
+3) UX polish:
+- Smooth animations for entering selection mode
+- Sticky action bar at bottom for “Delete selected”
+- Disable delete if none selected
+- Ensure scroll performance (FlatList)
+
+========================================================
+D) TESTS + QA
+========================================================
+Backend tests:
+- bulk deactivate blocks current admin
+- bulk deactivate blocks primary manager
+- bulk deactivate deactivates mixed manager/patient targets
+- audit log created
+
+Manual QA checklist:
+- Enter selection mode, select 1 user, delete, user becomes inactive
+- Select multiple, delete, list updates
+- Try delete self -> blocked
+- Try delete primary manager -> blocked with message
+- UI shows big name + chips for clinic/role/status
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Files changed/added
+2) New endpoint + sample curl for bulk-deactivate
+3) UI usage instructions (how to select/delete)
+4) Manual QA checklist
+
+IMPLEMENTATION ORDER:
+1) Backend: add bulk-deactivate usecase + endpoint + validations + audit
+2) Frontend: modern row card layout
+3) Frontend: selection mode + toolbar + bulk action
+4) Tests + polish
+
+Proceed now. Keep it SOLID, premium, production-ready.
+END.
