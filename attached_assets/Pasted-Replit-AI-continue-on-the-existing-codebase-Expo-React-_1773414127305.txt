@@ -1,0 +1,149 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Make Admin → Users list professional and production-ready with selection mode:
+- A “Select” action to enter selection mode
+- Ability to select one or multiple rows (checkboxes)
+- A “Delete Selected” bulk action (safe: soft delete/deactivate)
+- A “Cancel” action to exit selection mode and clear selection
+All must be SOLID-compliant, modular, and robust.
+
+NON-NEGOTIABLE:
+- White theme premium style (consistent with Admin).
+- RBAC: ADMIN only.
+- No password exposure.
+- Bulk delete = deactivate (soft delete), not hard delete.
+- Must block unsafe deletions:
+  - cannot deactivate currently logged-in admin
+  - cannot deactivate a clinic’s primary manager without reassignment (return blocked list)
+- Must show confirmation modal before bulk delete.
+- Must show clear results (deactivated vs blocked).
+- Must not crash, must handle empty state, loading, network errors.
+
+========================================================
+A) UX SPEC (ADMIN USERS PAGE)
+========================================================
+1) Default mode (normal browsing):
+- Top bar shows title “Users”
+- Right action: “Select”
+- List rows are tappable (optional) and show big DisplayName + chips (Clinic/Role/Status)
+
+2) Selection mode:
+- Replace top right action with “Cancel”
+- Show a sticky Selection Toolbar (top or bottom) containing:
+  - “Selected: N”
+  - “Delete Selected” (disabled if N=0)
+  - Optional “Select all”
+- Each list row shows a checkbox; tapping row toggles selection.
+- Long press on a row from normal mode enters selection mode and selects it.
+
+3) Confirmation modal:
+- When tapping “Delete Selected”:
+  - Show modal:
+    Title: “Deactivate users?”
+    Body: “Selected users will be deactivated and lose access immediately.”
+    Secondary note: “Primary clinic managers may require reassignment.”
+  - Buttons: Cancel / Deactivate
+
+4) Result feedback:
+- After API returns:
+  - Toast: “Deactivated X users”
+  - If blocked > 0: “Y blocked (primary manager)”
+- Refresh list and exit selection mode automatically.
+
+========================================================
+B) BACKEND — SOLID MODULAR IMPLEMENTATION
+========================================================
+Implement or update module:
+server/modules/adminUsers/
+  adminUsers.routes.ts
+  adminUsers.controller.ts
+  usecases/
+    BulkDeactivateUsers.ts
+    ListUsers.ts
+  repos/
+    AdminUsersRepo.ts (interface)
+    AdminUsersRepo.drizzle.ts
+  schemas/
+    adminUsers.schemas.ts (zod)
+server/shared/
+  auth (ADMIN guard)
+  errors (standard codes)
+  audit logs
+
+Endpoint (ADMIN only):
+POST /v1/admin/users/bulk-deactivate
+Body (zod):
+{
+  targets: [{ id: string, entityType: "ADMIN" | "MANAGER" | "PATIENT" }]
+}
+Rules in use-case:
+- Block if target id is the current admin userId -> BLOCKED_SELF
+- Block if entityType=MANAGER and manager is clinics.primaryManagerUserId -> PRIMARY_MANAGER_DELETE_BLOCKED
+- Otherwise set status=INACTIVE + statusReason="ADMIN_DEACTIVATED"
+- For PATIENT table, set patient.status=INACTIVE (or equivalent) + statusReason
+- Audit log: ADMIN_BULK_DEACTIVATE with counts + ids
+Return:
+{
+  deactivated: number,
+  blocked: [{ id, entityType, reason }]
+}
+
+Make sure list endpoint returns enough info to display (displayName, clinicName, role, status, etc.)
+
+========================================================
+C) FRONTEND — MODULAR IMPLEMENTATION (Expo RN)
+========================================================
+1) Create selection hook:
+- hooks/useSelectionMode.ts
+  - isSelecting
+  - selectedMap or selectedTargets array
+  - toggleSelecting()
+  - toggleSelected(target)
+  - clearSelection()
+  - selectAll(list)
+2) Create UI components:
+- components/users/UserRowCard.tsx (supports checkbox mode)
+- components/users/SelectionBar.tsx (Selected count + Delete + Cancel)
+- components/modals/ConfirmModal.tsx (reusable)
+3) Update Users screen:
+- Top header actions:
+  - Normal: “Select”
+  - Selecting: “Cancel”
+- Row behavior:
+  - If selecting: toggle checkbox
+  - If not selecting: normal click action (optional)
+- Delete Selected triggers confirm modal then calls API
+- Use typed api function:
+  - services/api/adminUsers.ts -> bulkDeactivateUsers(targets)
+- On success: toast + refetch + exit selection mode
+
+4) Edge cases:
+- If list refetch changes items, keep selection only for ids still present (or clear selection).
+- If API returns blocked list, keep selection for blocked only (optional) or clear all and show message.
+
+========================================================
+D) OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation, print:
+1) Files changed/added
+2) Endpoint confirmation with sample curl:
+POST /v1/admin/users/bulk-deactivate
+3) Manual QA checklist:
+- Enter selection mode via Select
+- Select 1 and multiple rows
+- Cancel exits selection mode and clears selections
+- Delete Selected shows confirmation modal and deactivates users
+- Trying to deactivate self is blocked
+- Trying to deactivate primary manager is blocked
+- UI shows results and refreshes list
+
+IMPLEMENTATION ORDER:
+1) Backend: ensure bulk-deactivate endpoint + use-case rules + audit logs
+2) Frontend: add selection mode state + Cancel
+3) Frontend: add selection toolbar + confirm modal + API wiring
+4) Polish: animations, disabled states, toasts
+5) Tests (backend) + final verification
+
+Proceed now. Keep it premium white theme and SOLID boundaries.
+END.
