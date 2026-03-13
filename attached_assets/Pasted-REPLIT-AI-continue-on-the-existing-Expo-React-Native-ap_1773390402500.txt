@@ -1,0 +1,113 @@
+REPLIT AI — continue on the existing Expo React Native app (expo-router) + backend. DO NOT re-scaffold.
+
+PROBLEM:
+On the “New Clinic / Create Clinic” screen, when I tap an input and type ONE character, the keyboard/input loses focus and “closes” (or collapses) and I must tap again to continue typing. This repeats and makes the form unusable.
+
+GOAL:
+Diagnose the exact root cause and fix it in a production-ready way, keeping the premium white theme and proper keyboard handling.
+
+NON-NEGOTIABLE:
+- You MUST reproduce the bug and identify the exact file/line.
+- Fix must be robust on iOS + Android.
+- No “quick hacks” that break the form; keep clean React patterns.
+- Do not introduce performance regressions or re-render loops.
+- Use best practices for forms:
+  - stable state updates
+  - stable component keys
+  - no conditional unmounting of inputs during typing
+  - KeyboardAvoidingView + ScrollView done correctly
+
+========================================================
+A) REPRODUCE & CAPTURE EVIDENCE (MANDATORY)
+========================================================
+1) Open New Clinic screen, focus “Clinic Name”.
+2) Type a single character and observe focus loss.
+3) Capture:
+- Console logs / warnings
+- Component re-render count (add temporary console.log renders)
+- Navigation events (any router.replace / router.push triggered?)
+- Any state changes that cause the input component to unmount/remount
+
+4) Identify which common causes applies:
+- (1) The input component is being re-mounted because its parent key changes.
+- (2) A conditional render causes the whole form/card to re-render with different subtree.
+- (3) The form is inside a FlatList/ScrollView with dynamic keyExtractor causing remount.
+- (4) A “value” prop is wrong (switching controlled/uncontrolled), causing reset/focus loss.
+- (5) onChangeText triggers navigation or form submit accidentally.
+- (6) KeyboardAvoidingView configuration + reflow causes blur.
+- (7) Auto formatting code replaces the whole input component (e.g., changing key).
+You must confirm the real cause with evidence.
+
+========================================================
+B) FIX STRATEGY (PROD-READY)
+========================================================
+Apply the correct fix based on the root cause. Use these rules:
+
+1) Ensure inputs are stable (no remount):
+- Remove dynamic keys from input components.
+- Ensure the parent container does not have changing “key” prop.
+- Do not recreate the entire form component on each keystroke.
+
+2) Ensure state updates do not trigger layout resets:
+- Use a single form state object (useReducer recommended) or a stable form library pattern.
+- Avoid derived state that recalculates component trees on each keystroke.
+
+3) Prevent navigation or modal close while typing:
+- Confirm no “auto close” happens due to state like `isOpen` / `visible` toggling.
+- If form is in a modal/bottom sheet:
+  - ensure it does not close on backdrop press caused by keyboard events
+  - ensure “onDismiss” is not triggered by state changes
+  - ensure `keyboardShouldPersistTaps="handled"` is set
+
+4) Keyboard handling best practices:
+- Wrap with KeyboardAvoidingView (platform-specific behavior)
+- Inside, a ScrollView with:
+  - keyboardShouldPersistTaps="handled"
+  - contentContainerStyle paddingBottom large enough
+- Do NOT nest multiple ScrollViews that fight for focus.
+
+5) Performance: reduce unnecessary re-renders:
+- Use React.memo for heavy components if needed.
+- Use useCallback for handlers, but don’t overdo.
+
+========================================================
+C) IMPLEMENTATION REQUIREMENTS FOR NEW CLINIC FORM
+========================================================
+After fixing focus loss, confirm the New Clinic form remains premium:
+- Sections: Clinic Info, Contact, Billing, Notes
+- Multi-select services chips
+- Inline validation
+- Submit disables while saving
+- On success navigates away and refreshes list (as previously required)
+
+========================================================
+D) VERIFICATION (MANDATORY)
+========================================================
+After fixing:
+1) Manual test:
+- Tap Clinic Name and type continuously 20+ chars without focus loss.
+- Repeat for Address multiline, Email, Phone.
+- Test iOS + Android behaviors in Expo if possible.
+2) Confirm no warning:
+- “setState on unmounted component”
+- “A component is changing an uncontrolled input…”
+3) Add a small regression test or at least a QA checklist entry.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+At the end print:
+1) Root cause (what exactly caused the focus loss)
+2) Files changed
+3) Before/after explanation of the fix
+4) Manual QA checklist
+
+IMPLEMENTATION ORDER:
+1) Reproduce + pinpoint file/line + root cause evidence
+2) Apply minimal correct fix (stabilize input tree, remove remount triggers)
+3) Verify typing works smoothly
+4) Cleanup temporary logs
+5) Update README/notes if needed
+
+Proceed now. Do not guess — reproduce and fix based on evidence.
+END.

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,28 +9,37 @@ import {
   ScrollView,
   Platform,
   Alert,
+  TextStyle,
+  ViewStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { T, cardShadow } from "@/constants/adminTheme";
+import { T } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { Card, SectionHeader, PrimaryButton } from "@/components/ui";
 import { createClinic } from "@/lib/api/adminClinics";
 import { SERVICES } from "@/constants/services";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const CURRENCIES = ["EUR", "USD", "TRY", "GBP"] as const;
+type Currency = (typeof CURRENCIES)[number];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(fields: {
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+type FormFields = {
   name: string;
   contactEmail: string;
   billingEmail: string;
   services: string[];
   billingUnitPrice: string;
   websiteUrl: string;
-}) {
-  const errors: Partial<Record<keyof typeof fields, string>> = {};
+};
+
+function validate(fields: FormFields): Partial<Record<keyof FormFields, string>> {
+  const errors: Partial<Record<keyof FormFields, string>> = {};
   if (!fields.name.trim()) errors.name = "Clinic name is required";
   else if (fields.name.trim().length < 2) errors.name = "Name must be at least 2 characters";
   if (fields.contactEmail && !EMAIL_RE.test(fields.contactEmail.trim()))
@@ -40,13 +49,110 @@ function validate(fields: {
   if (fields.services.length === 0) errors.services = "Select at least one service";
   if (fields.billingUnitPrice && isNaN(Number(fields.billingUnitPrice)))
     errors.billingUnitPrice = "Must be a number";
-  if (
-    fields.websiteUrl &&
-    !/^https?:\/\/.+\..+/.test(fields.websiteUrl.trim())
-  )
+  if (fields.websiteUrl && !/^https?:\/\/.+\..+/.test(fields.websiteUrl.trim()))
     errors.websiteUrl = "Enter a valid URL (https://...)";
   return errors;
 }
+
+// ─── Module-level helper components ───────────────────────────────────────────
+// IMPORTANT: These MUST be at module level (not inside CreateClinicScreen).
+// Defining them inside the parent component means a new function reference is
+// created on every render → React treats it as a new component type →
+// TextInputs unmount/remount → keyboard focus is lost after each keystroke.
+
+function FieldLabel({
+  label,
+  required,
+}: {
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <Text style={styles.fieldLabel}>
+      {label}
+      {required && <Text style={styles.required}> *</Text>}
+    </Text>
+  );
+}
+
+function FieldError({ error }: { error?: string }) {
+  if (!error) return null;
+  return <Text style={styles.fieldError}>{error}</Text>;
+}
+
+function Field({
+  label,
+  required,
+  children,
+  style,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.field, style]}>
+      <FieldLabel label={label} required={required} />
+      {children}
+    </View>
+  );
+}
+
+type InputBoxProps = {
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder: string;
+  keyboardType?: TextInput["props"]["keyboardType"];
+  autoCapitalize?: TextInput["props"]["autoCapitalize"];
+  returnKeyType?: TextInput["props"]["returnKeyType"];
+  onSubmitEditing?: () => void;
+  multiline?: boolean;
+  hasError?: boolean;
+  testID?: string;
+};
+
+const InputBox = React.forwardRef<TextInput, InputBoxProps>(
+  (
+    {
+      value,
+      onChangeText,
+      placeholder,
+      keyboardType,
+      autoCapitalize = "words",
+      returnKeyType = "next",
+      onSubmitEditing,
+      multiline,
+      hasError,
+      testID,
+    },
+    ref,
+  ) => {
+    return (
+      <TextInput
+        ref={ref}
+        testID={testID}
+        style={[
+          styles.input,
+          multiline ? styles.inputMulti : undefined,
+          hasError ? styles.inputError : undefined,
+        ]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={T.textMuted}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
+        multiline={multiline}
+        blurOnSubmit={!multiline}
+      />
+    );
+  },
+);
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CreateClinicScreen() {
   const qc = useQueryClient();
@@ -60,9 +166,9 @@ export default function CreateClinicScreen() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [billingEmail, setBillingEmail] = useState("");
   const [billingUnitPrice, setBillingUnitPrice] = useState("");
-  const [currency, setCurrency] = useState<(typeof CURRENCIES)[number]>("EUR");
+  const [currency, setCurrency] = useState<Currency>("EUR");
   const [notes, setNotes] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [submitted, setSubmitted] = useState(false);
 
   const addressRef = useRef<TextInput>(null);
@@ -92,15 +198,7 @@ export default function CreateClinicScreen() {
     },
   });
 
-  function toggleService(code: string) {
-    setSelectedServices((prev) => {
-      const next = prev.includes(code) ? prev.filter((s) => s !== code) : [...prev, code];
-      if (submitted) validateAndSet({ services: next });
-      return next;
-    });
-  }
-
-  function validateAndSet(overrides?: Partial<Parameters<typeof validate>[0]>) {
+  function runValidation(overrides?: Partial<FormFields>) {
     const errs = validate({
       name,
       contactEmail,
@@ -114,9 +212,30 @@ export default function CreateClinicScreen() {
     return Object.keys(errs).length === 0;
   }
 
+  const toggleService = useCallback(
+    (code: string) => {
+      setSelectedServices((prev) => {
+        const next = prev.includes(code) ? prev.filter((s) => s !== code) : [...prev, code];
+        if (submitted) {
+          const errs = validate({
+            name,
+            contactEmail,
+            billingEmail,
+            services: next,
+            billingUnitPrice,
+            websiteUrl,
+          });
+          setErrors(errs);
+        }
+        return next;
+      });
+    },
+    [submitted, name, contactEmail, billingEmail, billingUnitPrice, websiteUrl],
+  );
+
   function handleSubmit() {
     setSubmitted(true);
-    if (!validateAndSet()) return;
+    if (!runValidation()) return;
 
     const price = billingUnitPrice ? parseFloat(billingUnitPrice) : undefined;
     mutation.mutate({
@@ -133,82 +252,59 @@ export default function CreateClinicScreen() {
     });
   }
 
-  function FieldError({ field }: { field: string }) {
-    if (!errors[field]) return null;
-    return <Text style={styles.fieldError}>{errors[field]}</Text>;
-  }
+  const handleNameChange = useCallback(
+    (v: string) => {
+      setName(v);
+      if (submitted) runValidation({ name: v });
+    },
+    [submitted, contactEmail, billingEmail, selectedServices, billingUnitPrice, websiteUrl],
+  );
 
-  function Field({
-    label,
-    required,
-    children,
-  }: {
-    label: string;
-    required?: boolean;
-    children: React.ReactNode;
-  }) {
-    return (
-      <View style={styles.field}>
-        <Text style={styles.fieldLabel}>
-          {label}
-          {required && <Text style={styles.required}> *</Text>}
-        </Text>
-        {children}
-      </View>
-    );
-  }
+  const handleEmailChange = useCallback(
+    (v: string) => {
+      setContactEmail(v);
+      if (submitted) runValidation({ contactEmail: v });
+    },
+    [submitted, name, billingEmail, selectedServices, billingUnitPrice, websiteUrl],
+  );
 
-  function InputBox({
-    value,
-    onChangeText,
-    placeholder,
-    keyboardType,
-    autoCapitalize,
-    returnKeyType,
-    onSubmitEditing,
-    ref: inputRef,
-    multiline,
-    errorKey,
-    testID,
-  }: {
-    value: string;
-    onChangeText: (t: string) => void;
-    placeholder: string;
-    keyboardType?: TextInput["props"]["keyboardType"];
-    autoCapitalize?: TextInput["props"]["autoCapitalize"];
-    returnKeyType?: TextInput["props"]["returnKeyType"];
-    onSubmitEditing?: () => void;
-    ref?: React.RefObject<TextInput>;
-    multiline?: boolean;
-    errorKey?: string;
-    testID?: string;
-  }) {
-    const hasError = errorKey && !!errors[errorKey];
-    return (
-      <TextInput
-        ref={inputRef}
-        testID={testID}
-        style={[styles.input, multiline && styles.inputMulti, hasError && styles.inputError]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={T.textMuted}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize ?? "words"}
-        returnKeyType={returnKeyType ?? "next"}
-        onSubmitEditing={onSubmitEditing}
-        multiline={multiline}
-        blurOnSubmit={!multiline}
-      />
-    );
-  }
+  const handleWebsiteChange = useCallback(
+    (v: string) => {
+      setWebsiteUrl(v);
+      if (submitted) runValidation({ websiteUrl: v });
+    },
+    [submitted, name, contactEmail, billingEmail, selectedServices, billingUnitPrice],
+  );
+
+  const handleBillingEmailChange = useCallback(
+    (v: string) => {
+      setBillingEmail(v);
+      if (submitted) runValidation({ billingEmail: v });
+    },
+    [submitted, name, contactEmail, selectedServices, billingUnitPrice, websiteUrl],
+  );
+
+  const handlePriceChange = useCallback(
+    (v: string) => {
+      setBillingUnitPrice(v);
+      if (submitted) runValidation({ billingUnitPrice: v });
+    },
+    [submitted, name, contactEmail, billingEmail, selectedServices, websiteUrl],
+  );
+
+  const focusAddress = useCallback(() => addressRef.current?.focus(), []);
+  const focusPhone = useCallback(() => phoneRef.current?.focus(), []);
+  const focusEmail = useCallback(() => emailRef.current?.focus(), []);
+  const focusWebsite = useCallback(() => websiteRef.current?.focus(), []);
+  const focusBillingEmail = useCallback(() => billingEmailRef.current?.focus(), []);
+  const focusPrice = useCallback(() => priceRef.current?.focus(), []);
 
   return (
     <View style={styles.root}>
       <AdminHeader title="New Clinic" backButton onBack={() => router.back()} />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
@@ -225,17 +321,17 @@ export default function CreateClinicScreen() {
                 testID="clinic-name-input"
                 style={[styles.input, errors.name ? styles.inputError : undefined]}
                 value={name}
-                onChangeText={(v) => { setName(v); if (submitted) validateAndSet({ name: v }); }}
+                onChangeText={handleNameChange}
                 placeholder="e.g. Istanbul Medical Center"
                 placeholderTextColor={T.textMuted}
                 returnKeyType="next"
-                onSubmitEditing={() => addressRef.current?.focus()}
+                onSubmitEditing={focusAddress}
                 autoCapitalize="words"
               />
-              <FieldError field="name" />
+              <FieldError error={errors.name} />
             </Field>
 
-            <Field label="Address">
+            <Field label="Address" style={styles.fieldLast}>
               <TextInput
                 ref={addressRef}
                 testID="clinic-address-input"
@@ -245,11 +341,10 @@ export default function CreateClinicScreen() {
                 placeholder="Street, district, city, country"
                 placeholderTextColor={T.textMuted}
                 returnKeyType="next"
-                onSubmitEditing={() => phoneRef.current?.focus()}
+                onSubmitEditing={focusPhone}
                 multiline
                 autoCapitalize="words"
               />
-              <FieldError field="address" />
             </Field>
           </Card>
 
@@ -266,8 +361,7 @@ export default function CreateClinicScreen() {
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                errorKey="contactPhone"
+                onSubmitEditing={focusEmail}
               />
             </Field>
 
@@ -276,30 +370,30 @@ export default function CreateClinicScreen() {
                 ref={emailRef}
                 testID="clinic-email-input"
                 value={contactEmail}
-                onChangeText={(v) => { setContactEmail(v); if (submitted) validateAndSet({ contactEmail: v }); }}
+                onChangeText={handleEmailChange}
                 placeholder="contact@clinic.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
-                onSubmitEditing={() => websiteRef.current?.focus()}
-                errorKey="contactEmail"
+                onSubmitEditing={focusWebsite}
+                hasError={!!errors.contactEmail}
               />
-              <FieldError field="contactEmail" />
+              <FieldError error={errors.contactEmail} />
             </Field>
 
-            <Field label="Website">
+            <Field label="Website" style={styles.fieldLast}>
               <InputBox
                 ref={websiteRef}
                 testID="clinic-website-input"
                 value={websiteUrl}
-                onChangeText={(v) => { setWebsiteUrl(v); if (submitted) validateAndSet({ websiteUrl: v }); }}
+                onChangeText={handleWebsiteChange}
                 placeholder="https://clinic.com"
                 keyboardType="url"
                 autoCapitalize="none"
                 returnKeyType="done"
-                errorKey="websiteUrl"
+                hasError={!!errors.websiteUrl}
               />
-              <FieldError field="websiteUrl" />
+              <FieldError error={errors.websiteUrl} />
             </Field>
           </Card>
 
@@ -318,14 +412,19 @@ export default function CreateClinicScreen() {
                     onPress={() => toggleService(svc.code)}
                   >
                     {active && <Ionicons name="checkmark" size={13} color="#fff" />}
-                    <Text style={[styles.chipText, active ? styles.chipTextActive : styles.chipTextInactive]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        active ? styles.chipTextActive : styles.chipTextInactive,
+                      ]}
+                    >
                       {svc.label}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
-            <FieldError field="services" />
+            <FieldError error={errors.services} />
           </Card>
 
           {/* ── D. Billing ─────────────────────────────────── */}
@@ -336,15 +435,15 @@ export default function CreateClinicScreen() {
                 ref={billingEmailRef}
                 testID="clinic-billing-email-input"
                 value={billingEmail}
-                onChangeText={(v) => { setBillingEmail(v); if (submitted) validateAndSet({ billingEmail: v }); }}
+                onChangeText={handleBillingEmailChange}
                 placeholder="billing@clinic.com (defaults to contact email)"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
-                onSubmitEditing={() => priceRef.current?.focus()}
-                errorKey="billingEmail"
+                onSubmitEditing={focusBillingEmail}
+                hasError={!!errors.billingEmail}
               />
-              <FieldError field="billingEmail" />
+              <FieldError error={errors.billingEmail} />
             </Field>
 
             <Field label="Unit Price per Patient">
@@ -352,17 +451,17 @@ export default function CreateClinicScreen() {
                 ref={priceRef}
                 testID="clinic-unit-price-input"
                 value={billingUnitPrice}
-                onChangeText={(v) => { setBillingUnitPrice(v); if (submitted) validateAndSet({ billingUnitPrice: v }); }}
+                onChangeText={handlePriceChange}
                 placeholder="e.g. 250"
                 keyboardType="decimal-pad"
                 autoCapitalize="none"
                 returnKeyType="done"
-                errorKey="billingUnitPrice"
+                hasError={!!errors.billingUnitPrice}
               />
-              <FieldError field="billingUnitPrice" />
+              <FieldError error={errors.billingUnitPrice} />
             </Field>
 
-            <Field label="Currency">
+            <Field label="Currency" style={styles.fieldLast}>
               <View style={styles.currencyRow}>
                 {CURRENCIES.map((cur) => (
                   <Pressable
@@ -370,7 +469,12 @@ export default function CreateClinicScreen() {
                     style={[styles.currencyChip, currency === cur && styles.currencyChipActive]}
                     onPress={() => setCurrency(cur)}
                   >
-                    <Text style={[styles.currencyText, currency === cur && styles.currencyTextActive]}>
+                    <Text
+                      style={[
+                        styles.currencyText,
+                        currency === cur && styles.currencyTextActive,
+                      ]}
+                    >
                       {cur}
                     </Text>
                   </Pressable>
@@ -382,12 +486,16 @@ export default function CreateClinicScreen() {
           {/* ── E. Notes ───────────────────────────────────── */}
           <SectionHeader label="Notes" style={styles.sectionGap} />
           <Card style={styles.card}>
-            <InputBox
+            <TextInput
               ref={notesRef}
+              style={[styles.input, styles.inputMulti]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Internal notes about this clinic (optional)"
+              placeholderTextColor={T.textMuted}
               multiline
+              returnKeyType="default"
+              autoCapitalize="sentences"
             />
           </Card>
 
@@ -413,16 +521,30 @@ export default function CreateClinicScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
+  flex: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 16, gap: 4 },
-  sectionGap: { marginTop: 20 },
+  sectionGap: { marginTop: 20 } as TextStyle,
   card: { gap: 0 },
 
-  field: { gap: 6, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  field: {
+    gap: 6,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: T.border,
+  },
+  fieldLast: { borderBottomWidth: 0 },
   fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
   required: { color: T.danger },
-  fieldError: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.danger, marginTop: 2 },
+  fieldError: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.danger,
+    marginTop: 2,
+  },
 
   input: {
     fontFamily: "Inter_400Regular",
@@ -431,10 +553,16 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === "ios" ? 6 : 4,
     minHeight: 36,
   },
-  inputMulti: { minHeight: 64, textAlignVertical: "top" },
+  inputMulti: { minHeight: 72, textAlignVertical: "top" },
   inputError: { color: T.text },
 
-  sectionHint: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, marginBottom: 14, paddingTop: 8 },
+  sectionHint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textSec,
+    marginBottom: 14,
+    paddingTop: 8,
+  },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, paddingBottom: 8 },
   chip: {
     flexDirection: "row",
