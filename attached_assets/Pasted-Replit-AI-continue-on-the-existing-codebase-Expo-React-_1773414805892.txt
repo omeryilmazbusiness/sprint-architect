@@ -1,0 +1,184 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+Admin → Users page “Select / Delete selected / Cancel (Vazgeç)” is STILL broken. I want you to FIX IT FOR REAL by:
+1) Auditing the current implementation (frontend + backend),
+2) Identifying the exact cause(s) why it still fails,
+3) Rebuilding the feature cleanly end-to-end (SOLID + production-ready),
+4) Verifying with tests + manual QA steps.
+
+NON-NEGOTIABLE:
+- You MUST inspect existing code first and explain what is wrong.
+- Then rebuild the feature using clean modular structure (do not patch randomly).
+- Premium white theme UX.
+- Selection mode must include:
+  - “Select” button
+  - multi-select checkboxes
+  - “Delete selected”
+  - “Cancel / Vazgeç” to exit selection mode and clear selection
+- Backend deletion must be SAFE: soft delete/deactivate (status=INACTIVE).
+- RBAC: ADMIN only.
+- Must block:
+  - deactivating the currently logged-in admin
+  - deactivating a clinic’s primary manager (unless reassigned)
+- Must show:
+  - confirmation modal
+  - result summary (deactivated vs blocked)
+- Must handle loading/error/empty states.
+- Must not cause focus loss, list remount flicker, or selection disappearing.
+
+========================================================
+A) PHASE 1 — AUDIT & ROOT CAUSE (MANDATORY)
+========================================================
+1) Locate the current Users screen and selection logic.
+2) Run and reproduce the failure in dev:
+- What exactly fails?
+  - Select mode not entering?
+  - Checkboxes not toggling?
+  - Cancel not clearing?
+  - Delete not calling API?
+  - API returns error?
+  - UI not refreshing?
+3) Capture evidence:
+- Mobile console logs
+- Network request (URL, payload, status, response)
+- Backend logs + DB changes
+4) Write a short root cause report with:
+- What exists now
+- Exact bug(s) found (file path + line references)
+- Why it fails (state, rerender, wrong endpoint, wrong payload, RBAC, etc.)
+
+DO NOT start rebuilding until you have this report.
+
+========================================================
+B) PHASE 2 — BACKEND REBUILD (SOLID, PROD-READY)
+========================================================
+If backend endpoint is missing/buggy, rebuild cleanly under a module.
+Required endpoint:
+
+POST /v1/admin/users/bulk-deactivate
+ADMIN only.
+Body (zod):
+{
+  targets: [{ id: string, entityType: "ADMIN" | "MANAGER" | "PATIENT" }]
+}
+
+Behavior (use-case rules):
+- Determine current authenticated admin id from token.
+- Validate each target exists.
+- BLOCK rules:
+  1) If target id == current admin id -> BLOCKED_SELF
+  2) If target is MANAGER and is clinics.primaryManagerUserId -> PRIMARY_MANAGER_DELETE_BLOCKED
+- Deactivate allowed targets:
+  - users.status = INACTIVE, statusReason="ADMIN_DEACTIVATED"
+  - patients.status = INACTIVE, statusReason="ADMIN_DEACTIVATED" (if patients table)
+- Create audit log: ADMIN_BULK_DEACTIVATE with metadata (counts, ids).
+Return:
+{
+  deactivated: number,
+  blocked: [{ id, entityType, reason }]
+}
+
+SOLID module structure (mandatory):
+server/modules/adminUsers/
+  adminUsers.routes.ts
+  adminUsers.controller.ts
+  usecases/BulkDeactivateUsers.ts
+  repos/AdminUsersRepo.ts
+  repos/AdminUsersRepo.drizzle.ts
+  schemas/adminUsers.schemas.ts
+server/shared/{authGuards, errors, auditLogs}
+
+No Drizzle in controller. Drizzle only in repo.
+
+Add backend tests:
+- blocks self
+- blocks primary manager
+- deactivates valid targets
+
+========================================================
+C) PHASE 3 — FRONTEND REBUILD (PREMIUM UX + MODULAR)
+========================================================
+Rebuild the feature on Admin Users screen using a clean pattern:
+
+1) State management (single source of truth):
+Create hook: hooks/useSelectionMode.ts
+- isSelecting: boolean
+- selected: Map<string, {id, entityType}> or Set with metadata
+- enterSelectionMode()
+- exitSelectionMode() (clears)
+- toggleItem(target)
+- clear()
+- selectAll(listTargets)
+
+2) UI components (reusable):
+- components/users/AdminUserRowCard.tsx
+  - supports normal vs selecting mode
+  - shows big name + chips (clinic/role/status)
+  - checkbox visible in selection mode
+- components/users/SelectionBottomBar.tsx
+  - shows Selected count
+  - Delete selected button
+  - optional Select all
+- components/modals/ConfirmModal.tsx
+  - reusable confirm dialog
+
+3) Screen behavior:
+- Header right:
+  - normal: “Select”
+  - selecting: “Vazgeç”
+- Long press row enters selection mode + selects the row (modern UX)
+- In selection mode:
+  - row tap toggles selection ONLY (no navigation)
+- Delete selected:
+  - opens confirm modal
+  - calls API (services/api/adminUsers.ts -> bulkDeactivateUsers)
+  - shows toast summary:
+    - “Deactivated X users”
+    - “Blocked Y (primary manager/self)”
+  - refetch list
+  - exit selection mode
+
+4) Robustness:
+- Prevent list item remounts that clear selection:
+  - Use stable keyExtractor (id+entityType).
+  - Do not wrap rows in components that recreate keys.
+- Handle pagination:
+  - Selection persists across pages optionally OR clear selection on page change (choose one; recommended: clear on page change for simplicity).
+- Ensure cancel always clears selection.
+
+5) Premium white theme:
+- Use existing tokens/components.
+- Checkbox hit area must be large.
+- Bottom bar sticky with shadow and safe area padding.
+
+========================================================
+D) PHASE 4 — VERIFICATION (MANDATORY)
+========================================================
+1) Manual QA:
+- Select -> choose multiple -> delete -> confirm -> list updates, users become inactive
+- Vazgeç clears selection
+- Long press enters selection mode
+- Try selecting yourself -> blocked summary shown
+- Try selecting primary manager -> blocked summary shown
+2) Confirm no crashes, no focus loss, no flicker.
+3) Run tests (backend + any existing test suite).
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+When complete, output:
+1) Root cause report (Phase 1) with exact issues found
+2) Files changed/added
+3) Endpoint + sample curl
+4) Manual QA checklist
+5) Tests added + command to run
+
+IMPLEMENTATION ORDER:
+1) Audit + reproduce + root cause report
+2) Backend rebuild + tests
+3) Frontend rebuild with hook + components + premium UI
+4) Verification + cleanup
+
+Proceed now. Implement the rebuild and verify it works.
+END.
