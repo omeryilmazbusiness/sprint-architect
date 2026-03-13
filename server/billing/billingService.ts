@@ -236,26 +236,30 @@ export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
 
   const clinicIdsToSuspend = [...new Set(overdueInvoices.map((i) => i.clinicId))];
 
-  for (const inv of overdueInvoices) {
-    await db.update(invoices).set({ status: "UNPAID" }).where(eq(invoices.id, inv.id));
-  }
+  await db.transaction(async (trx) => {
+    for (const inv of overdueInvoices) {
+      await trx.update(invoices).set({ status: "UNPAID" }).where(eq(invoices.id, inv.id));
+    }
+
+    for (const clinicId of clinicIdsToSuspend) {
+      await trx
+        .update(clinics)
+        .set({ status: "SUSPENDED", statusReason: "BILLING_UNPAID" } as any)
+        .where(eq(clinics.id, clinicId));
+
+      await trx
+        .update(users)
+        .set({ status: "SUSPENDED", statusReason: "BILLING_SUSPENDED" } as any)
+        .where(
+          and(
+            eq(users.clinicId, clinicId),
+            or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
+          )
+        );
+    }
+  });
 
   for (const clinicId of clinicIdsToSuspend) {
-    await db
-      .update(clinics)
-      .set({ status: "SUSPENDED", statusReason: "BILLING_UNPAID" } as any)
-      .where(eq(clinics.id, clinicId));
-
-    await db
-      .update(users)
-      .set({ status: "SUSPENDED", statusReason: "BILLING_SUSPENDED" } as any)
-      .where(
-        and(
-          eq(users.clinicId, clinicId),
-          or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
-        )
-      );
-
     auditLog({
       clinicId,
       actorId: "system",
@@ -269,20 +273,22 @@ export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
 }
 
 export async function reactivateClinicAfterPayment(clinicId: string, paidByUserId?: string): Promise<void> {
-  await db
-    .update(clinics)
-    .set({ status: "ACTIVE", statusReason: null } as any)
-    .where(eq(clinics.id, clinicId));
+  await db.transaction(async (trx) => {
+    await trx
+      .update(clinics)
+      .set({ status: "ACTIVE", statusReason: null } as any)
+      .where(eq(clinics.id, clinicId));
 
-  await db
-    .update(users)
-    .set({ status: "ACTIVE", statusReason: null } as any)
-    .where(
-      and(
-        eq(users.clinicId, clinicId),
-        or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
-      )
-    );
+    await trx
+      .update(users)
+      .set({ status: "ACTIVE", statusReason: null } as any)
+      .where(
+        and(
+          eq(users.clinicId, clinicId),
+          or(eq(users.role, "MANAGER"), eq(users.role, "PATIENT"))
+        )
+      );
+  });
 
   auditLog({
     clinicId,

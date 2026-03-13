@@ -49,12 +49,12 @@ export async function bulkDeactivateUsers(
     patientIdsToDeactivate.push(target.id);
   }
 
-  const [deactivatedUsers, deactivatedPatients] = await Promise.all([
-    adminUsersRepo.deactivateUsers(userIdsToDeactivate),
-    adminUsersRepo.deactivatePatients(patientIdsToDeactivate),
-  ]);
+  const counts = await adminUsersRepo.deactivateBothInTransaction(
+    userIdsToDeactivate,
+    patientIdsToDeactivate,
+  );
 
-  const deactivated = deactivatedUsers + deactivatedPatients;
+  const deactivated = counts.users + counts.patients;
 
   auditLog({
     actorId,

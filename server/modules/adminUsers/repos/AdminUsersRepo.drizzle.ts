@@ -1,4 +1,5 @@
 import { db } from "../../../db";
+import type { DrizzleTx } from "../../../tx/TransactionManager";
 import { users, patients, clinics } from "@shared/schema";
 import { eq, inArray, isNotNull } from "drizzle-orm";
 
@@ -48,5 +49,35 @@ export const adminUsersRepo = {
       .where(inArray(patients.id, ids))
       .returning({ id: patients.id });
     return result.length;
+  },
+
+  async deactivateBothInTransaction(
+    userIds: string[],
+    patientIds: string[],
+  ): Promise<{ users: number; patients: number }> {
+    return db.transaction(async (trx: DrizzleTx) => {
+      let userCount = 0;
+      let patientCount = 0;
+
+      if (userIds.length > 0) {
+        const r = await trx
+          .update(users)
+          .set({ status: "INACTIVE", statusReason: "ADMIN_DEACTIVATED" })
+          .where(inArray(users.id, userIds))
+          .returning({ id: users.id });
+        userCount = r.length;
+      }
+
+      if (patientIds.length > 0) {
+        const r = await trx
+          .update(patients)
+          .set({ status: "INACTIVE", statusReason: "ADMIN_DEACTIVATED" })
+          .where(inArray(patients.id, patientIds))
+          .returning({ id: patients.id });
+        patientCount = r.length;
+      }
+
+      return { users: userCount, patients: patientCount };
+    });
   },
 };

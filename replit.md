@@ -20,7 +20,20 @@ The backend is an Express 5 application in TypeScript, with a structured separat
 
 ### Database (Drizzle ORM + PostgreSQL)
 
-The application uses PostgreSQL with Drizzle ORM. The schema defines entities for `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, `patientDocuments`, `refreshTokens`, `devices`, `invoices`, `auditLogs`, and `notifications`. Multi-tenancy is supported via `clinicId` on relevant resources. Extended fields include `websiteUrl`, `billingEmail`, `notes`, `deletedAt` (soft-delete), and `primaryManagerUserId` for `clinics`, and `fullName`, `phoneE164` for `users`. Soft-deleted clinics are automatically excluded from queries and lead to deactivation of associated manager users.
+The application uses **Replit built-in PostgreSQL** with Drizzle ORM (`drizzle-orm/node-postgres`, driver: `pg`). The schema defines entities for `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, `patientDocuments`, `refreshTokens`, `devices`, `invoices`, `auditLogs`, and `notifications`. Multi-tenancy is supported via `clinicId` on relevant resources. Extended fields include `websiteUrl`, `billingEmail`, `notes`, `deletedAt` (soft-delete), and `primaryManagerUserId` for `clinics`, and `fullName`, `phoneE164` for `users`. Soft-deleted clinics are automatically excluded from queries and lead to deactivation of associated manager users.
+
+**Typed config (`server/config.ts`):** Validates all env vars with Zod. Automatically selects `DATABASE_URL_TEST` when `NODE_ENV=test`, falling back to auto-deriving by appending `_test` to the production DB name. Logs safe DB info (host + dbname, never password) at startup.
+
+**Test/Prod separation:**
+- Dev/Prod DB: `heliumdb` (uses `DATABASE_URL`)
+- Test DB: `heliumdb_test` (uses `DATABASE_URL_TEST` or auto-derived; created on Replit's same Postgres instance)
+- `server/scripts/resetTestDb.ts`: Safe reset script with guards — refuses if `NODE_ENV !== "test"`, DB name lacks "test", or host matches a cloud provider pattern.
+- New npm scripts: `db:migrate`, `db:seed`, `test:db:reset`, updated `test` + `test:watch` to inject `NODE_ENV=test`.
+
+**Transaction Manager (`server/tx/TransactionManager.ts`):** Provides `tx.run(async trx => {...})` abstraction for Drizzle transactions. Critical flows wrapped atomically:
+- Bulk user/patient deactivation (`deactivateBothInTransaction`)
+- Invoice overdue → UNPAID + clinic/user suspension (`markOverdueInvoicesAsUnpaid`)
+- Invoice paid → clinic/user reactivation (`reactivateClinicAfterPayment`)
 
 ### Create Manager Flow
 

@@ -1,0 +1,149 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+1) First, CONFIRM which database provider/environment is currently used (Neon/Supabase/Railway/AWS RDS/Render/Local Postgres etc.) and prove it with evidence from the codebase.
+2) Then, set up a professional, production-ready separation for TEST and PROD databases based on the detected provider.
+3) Ensure the solution is SOLID + ACID-friendly (typed config, transactional boundaries, safe reset scripts, no secret leaks).
+
+NON-NEGOTIABLE:
+- Do NOT guess. You must inspect the repo to confirm DB provider and connection method.
+- Never hardcode secrets.
+- Test DB and Prod DB MUST be separate and cannot be mixed.
+- Tests MUST use only the test database.
+- Add safety guards to prevent accidental prod deletes/resets.
+- Provide clear documentation for how to connect to each DB (psql + GUI).
+- Keep Drizzle as ORM. Keep Node/Express architecture modular.
+
+========================================================
+PHASE 1 — DB PROVIDER CONFIRMATION (MANDATORY)
+========================================================
+1) Inspect and report:
+- Where DB is initialized (file path)
+- Which driver is used (e.g., pg / postgres-js / neon serverless)
+- Drizzle initialization file(s) and config (drizzle.config.*)
+- Environment variables used (e.g., DATABASE_URL, POSTGRES_URL, SUPABASE_DB_URL, etc.)
+
+2) Determine DB provider by:
+- Parsing the DATABASE_URL (or equivalent) host domain.
+Examples:
+- *.neon.tech -> Neon
+- *.supabase.co -> Supabase (managed Postgres)
+- *.railway.app -> Railway Postgres
+- *.render.com -> Render Postgres
+- rds.amazonaws.com -> AWS RDS
+- localhost/127.0.0.1 -> Local Postgres
+
+3) Output:
+A) “Detected DB Provider: <name>”
+B) “Evidence”:
+   - masked connection string host (NO PASSWORD)
+   - relevant file paths
+C) “Current environment variables found”
+
+If multiple possible DB URLs exist, identify which is actually used at runtime.
+
+========================================================
+PHASE 2 — TEST vs PROD DATABASE SEPARATION (PROD-READY)
+========================================================
+1) Introduce strict env vars:
+- DATABASE_URL_PROD  (or keep DATABASE_URL for prod)
+- DATABASE_URL_TEST
+- NODE_ENV = development | test | production
+
+Rules:
+- If NODE_ENV === "test" => app must use DATABASE_URL_TEST only
+- Else => app uses DATABASE_URL (or DATABASE_URL_PROD)
+- Fail fast if required var missing
+
+2) Create typed config module with zod validation:
+server/shared/config.ts
+- validate env vars
+- export { dbUrl, env, ... }
+- log only safe info (provider + host), never password
+
+3) DB initialization:
+server/shared/db/index.ts
+- create drizzle client from dbUrl
+- expose db instance
+- ensure repositories use this db (DIP-friendly)
+
+4) Safety guard scripts:
+- server/scripts/resetTestDb.ts
+  - MUST assert NODE_ENV==="test"
+  - MUST refuse to run if db host looks like prod (extra safety)
+  - drops/truncates tables in TEST DB only
+  - runs migrations + seed
+Add npm scripts:
+- db:migrate
+- db:seed
+- test:db:reset
+- test (sets NODE_ENV=test)
+
+5) Migrations:
+- Ensure migrations can run against both DBs.
+- Ensure seed is safe and minimal.
+
+========================================================
+PHASE 3 — ACID + SOLID IMPROVEMENTS FOR CRITICAL FLOWS
+========================================================
+1) Identify critical multi-step operations and wrap in DB transactions:
+- invoice pending->unpaid transition + clinic suspension + user disable
+- mark invoice paid + clinic reactivation + user enable
+- bulk deactivate users
+- document upload: fileUrl + status update
+Use Drizzle transaction API.
+Add a TransactionManager abstraction (optional but recommended):
+server/shared/tx/TransactionManager.ts
+so use-cases can run tx.run(async (trx)=>{...})
+
+2) Enforce SOLID module boundaries for touched parts:
+- controllers thin
+- use-cases contain rules
+- repos contain Drizzle queries
+
+========================================================
+PHASE 4 — DOCUMENTATION (MANDATORY)
+========================================================
+Update README with:
+1) “Which DB provider we use” (from Phase 1)
+2) Env vars:
+- DATABASE_URL (prod/dev)
+- DATABASE_URL_TEST
+3) How to connect:
+- psql command templates for prod & test (mask placeholders)
+- GUI steps (TablePlus/DBeaver)
+4) How to run:
+- migrations
+- seed
+- tests safely (test DB only)
+5) Warning section:
+- “Never run reset scripts on prod”
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completing, print:
+1) Detected DB provider + evidence (masked)
+2) Files changed/added
+3) New env var list and examples (masked)
+4) New npm scripts
+5) Exact steps:
+- set secrets in Replit
+- migrate prod
+- migrate test
+- run test reset
+- run tests
+6) A short verification checklist:
+- app boots in dev
+- app boots in test using test DB
+- tests never touch prod DB
+
+IMPLEMENTATION ORDER:
+1) Phase 1 confirm DB provider (mandatory)
+2) Add typed config + db initialization refactor
+3) Add test/prod separation + safety guards + scripts
+4) Add transaction wrappers for critical flows
+5) Update README + verify
+
+Proceed now. Do not guess — confirm the DB provider first.
+END.
