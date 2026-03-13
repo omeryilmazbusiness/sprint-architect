@@ -54,27 +54,31 @@ function ServiceChips({ services }: { services: string[] }) {
 
 function ManagerRow({ clinic }: { clinic: Clinic }) {
   const mgr = clinic.primaryManager;
-  const phone = clinic.contactPhone;
+  const displayPhone = mgr?.phoneE164 ?? clinic.contactPhone;
+  const displayName = mgr ? (mgr.fullName ?? mgr.email) : null;
 
-  if (!mgr && !phone) return null;
+  if (!mgr && !displayPhone) return null;
 
   return (
     <View style={styles.managerRow}>
       <Ionicons name="person-outline" size={11} color={T.textMuted} />
       <Text style={styles.managerText} numberOfLines={1}>
-        {mgr ? mgr.email : "No manager"}
+        {displayName ?? "No manager"}
       </Text>
-      {phone && (
+      {mgr && mgr.fullName && (
+        <Text style={styles.managerEmail} numberOfLines={1}>{mgr.email}</Text>
+      )}
+      {displayPhone && (
         <Pressable
           style={styles.phonePill}
           onPress={(e) => {
             e.stopPropagation?.();
-            Linking.openURL(`tel:${phone}`);
+            Linking.openURL(`tel:${displayPhone}`);
           }}
           hitSlop={8}
         >
           <Ionicons name="call-outline" size={10} color={T.accent} />
-          <Text style={styles.phoneText}>{phone}</Text>
+          <Text style={styles.phoneText}>{displayPhone}</Text>
         </Pressable>
       )}
     </View>
@@ -343,10 +347,16 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   managerText: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
     fontSize: 11.5,
+    color: T.text,
+    flexShrink: 1,
+  },
+  managerEmail: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
     color: T.textMuted,
+    flexShrink: 1,
   },
   phonePill: {
     flexDirection: "row",

@@ -187,6 +187,8 @@ export const userRepo = {
     password: string;
     role: UserRole;
     clinicId?: string | null;
+    fullName?: string | null;
+    phoneE164?: string | null;
     status?: UserStatus;
     mustChangePassword?: boolean;
   }) {
@@ -196,6 +198,8 @@ export const userRepo = {
       passwordHash,
       role: input.role,
       clinicId: input.clinicId ?? null,
+      fullName: input.fullName ?? null,
+      phoneE164: input.phoneE164 ?? null,
       status: input.status ?? "ACTIVE",
       mustChangePassword: input.mustChangePassword ?? false,
     }).returning();
@@ -206,6 +210,8 @@ export const userRepo = {
     email?: string;
     role?: UserRole;
     clinicId?: string | null;
+    fullName?: string | null;
+    phoneE164?: string | null;
     status?: UserStatus;
   }) {
     const [updated] = await db

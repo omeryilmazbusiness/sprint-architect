@@ -517,6 +517,40 @@ router.put("/clinics/:id/billing", async (req, res, next) => {
   }
 });
 
+const PrimaryManagerSchema = z.object({
+  managerUserId: z.string().nullable(),
+});
+
+router.put("/clinics/:id/primary-manager", async (req, res, next) => {
+  try {
+    const parsed = PrimaryManagerSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError("VALIDATION_ERROR", parsed.error.message, 400);
+    const clinic = await clinicRepo.findById(req.params.id);
+    if (!clinic) throw new AppError("NOT_FOUND", "Clinic not found", 404);
+
+    if (parsed.data.managerUserId !== null) {
+      const mgr = await userRepo.findById(parsed.data.managerUserId);
+      if (!mgr || mgr.role !== "MANAGER" || mgr.clinicId !== req.params.id) {
+        throw new AppError("VALIDATION_ERROR", "managerUserId must be a MANAGER belonging to this clinic", 400);
+      }
+    }
+
+    await clinicRepo.setPrimaryManager(req.params.id, parsed.data.managerUserId);
+    auditLog({
+      clinicId: req.params.id,
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "CLINIC_PRIMARY_MANAGER_CHANGED",
+      resourceType: "clinic",
+      resourceId: req.params.id,
+      metadata: { managerUserId: parsed.data.managerUserId },
+    });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete("/clinics/:id", async (req, res, next) => {
   try {
     const existing = await clinicRepo.findById(req.params.id);
@@ -540,13 +574,18 @@ router.delete("/clinics/:id", async (req, res, next) => {
 
 const UserCreateSchema = z.object({
   email: z.string().email(),
+  fullName: z.string().min(1).max(200).optional(),
+  phoneE164: z.string().max(20).optional(),
   role: z.enum(["ADMIN", "MANAGER"]),
   clinicId: z.string().nullable().optional(),
+  setAsPrimaryManager: z.boolean().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
 });
 
 const UserUpdateSchema = z.object({
   email: z.string().email().optional(),
+  fullName: z.string().min(1).max(200).nullable().optional(),
+  phoneE164: z.string().max(20).nullable().optional(),
   role: z.enum(["ADMIN", "MANAGER"]).optional(),
   clinicId: z.string().nullable().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
@@ -581,27 +620,38 @@ router.post("/users", async (req, res, next) => {
   try {
     const parsed = UserCreateSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError("VALIDATION_ERROR", parsed.error.message, 400);
-    if (parsed.data.role === "MANAGER" && !parsed.data.clinicId) {
+
+    const { role, clinicId, setAsPrimaryManager, ...rest } = parsed.data;
+
+    if (role === "MANAGER" && !clinicId) {
       throw new AppError("VALIDATION_ERROR", "MANAGER role requires a clinicId", 400);
     }
+    const resolvedClinicId = role === "ADMIN" ? null : (clinicId ?? null);
+
     const existing = await userRepo.findByEmail(parsed.data.email);
     if (existing) throw new AppError("CONFLICT", "Email already in use", 409);
 
     const generatedPassword = generateSecurePassword();
     const user = await userRepo.create({
-      ...parsed.data,
+      ...rest,
+      role,
+      clinicId: resolvedClinicId,
       password: generatedPassword,
       mustChangePassword: true,
     });
 
+    if (role === "MANAGER" && resolvedClinicId && (setAsPrimaryManager !== false)) {
+      await clinicRepo.setPrimaryManager(resolvedClinicId, user.id);
+    }
+
     auditLog({
-      clinicId: parsed.data.clinicId ?? undefined,
+      clinicId: resolvedClinicId ?? undefined,
       actorId: req.actor!.sub,
       actorRole: req.actor!.role,
       action: "USER_CREATED",
       resourceType: "user",
       resourceId: user.id,
-      metadata: { email: user.email, role: user.role },
+      metadata: { email: user.email, role: user.role, setAsPrimaryManager },
     });
 
     res.status(201).json({ ...user, generatedPassword });

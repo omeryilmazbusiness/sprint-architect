@@ -1,0 +1,177 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + Postgres/Drizzle). DO NOT re-scaffold.
+
+OBJECTIVE:
+Improve Admin clinic → manager creation flow with a modern, professional UX and correct business rules:
+1) On Clinic Detail screen, tapping “Create Manager” must navigate to the Create User flow.
+2) Create User must be a premium bottom-sheet popup (slide-up modal), not a separate page.
+3) Admin can create users only with roles: ADMIN or MANAGER.
+4) Every MANAGER must be linked to exactly one clinic (required). Admin users must NOT be linked to a clinic.
+5) Clinics list cards must display the current clinic manager name + phone/email (primary manager), and update dynamically when manager is created/changed.
+
+NON-NEGOTIABLE:
+- White theme consistent with Admin UI primitives.
+- RBAC strict: only ADMIN can create users.
+- zod validation on backend.
+- No duplicate managers mapping issues (choose a “primary manager” strategy).
+- After creation, UI should refresh and reflect the new manager immediately.
+
+========================================================
+A) BUSINESS RULES — MUST IMPLEMENT
+========================================================
+1) Roles allowed to create: ADMIN, MANAGER only.
+2) MANAGER:
+- must have clinicId (required)
+- must belong to only one clinic (clinicId single FK)
+3) ADMIN:
+- clinicId must be null
+4) “Primary Manager” per clinic:
+- Approach A (recommended):
+  - Add clinics.primaryManagerUserId nullable
+  - When creating a manager with clinicId, set clinic.primaryManagerUserId = that userId (or allow admin to pick “set as primary” checkbox)
+  - Clinics list shows that primary manager.
+- Approach B (fallback):
+  - Use earliest created manager as default primary (ORDER BY createdAt ASC), but then “changing manager” is ambiguous.
+Choose Approach A for professional UX.
+
+========================================================
+B) BACKEND CHANGES (Express + Drizzle)
+========================================================
+1) DB schema updates:
+- clinics: add primaryManagerUserId nullable (FK users.id)
+- users: ensure fields exist:
+  - email (unique)
+  - passwordHash
+  - role (ADMIN|MANAGER)
+  - clinicId nullable
+  - fullName (nullable but recommended)
+  - phoneE164 (nullable)
+  - status
+- Add indexes as needed.
+
+2) Create user endpoint (ADMIN only):
+POST /v1/admin/users
+Body (zod):
+{
+  role: "ADMIN" | "MANAGER",
+  fullName: string,
+  email: string,
+  phoneE164?: string,
+  clinicId?: string,   // REQUIRED if role=MANAGER
+  tempPassword?: string (optional) OR system generates
+  setAsPrimaryManager?: boolean (default true for manager)
+}
+Rules:
+- if role=MANAGER and clinicId missing -> VALIDATION_ERROR
+- if role=ADMIN -> clinicId must be null (ignore clinicId)
+- hash password (generate strong temp password if not provided)
+- create user
+- if role=MANAGER and setAsPrimaryManager true:
+  - update clinics.primaryManagerUserId = new manager id
+- return created user and (if generated) return oneTimePassword ONLY once in response for admin to copy
+  - DO NOT store plaintext password in DB
+
+3) Clinics list endpoint must include manager info dynamically:
+GET /v1/admin/clinics
+Return each clinic with:
+- primaryManager: { id, fullName, email, phoneE164 } (nullable)
+Ensure the join uses clinics.primaryManagerUserId.
+If null, fallback to earliest manager (optional).
+
+4) Clinic detail endpoint:
+GET /v1/admin/clinics/:id
+Include manager info and a flag whether primary manager exists.
+
+5) Optional: Change primary manager endpoint (ADMIN only)
+PUT /v1/admin/clinics/:id/primary-manager
+Body: { managerUserId: string | null }
+Validations:
+- managerUserId must be a MANAGER with same clinicId
+Used when admin wants to change manager later.
+
+========================================================
+C) MOBILE ADMIN UI CHANGES (Expo)
+========================================================
+1) Clinic Detail:
+- Add a “Create Manager” button (if already exists, wire it):
+  - When tapped, open Create User bottom-sheet in MANAGER mode with clinic pre-selected.
+  - If you need navigation:
+    - navigate to clinic detail -> then open bottom sheet, OR pass params to a CreateUser screen that is a modal.
+Preferred: open bottom sheet from clinic detail directly with clinicId prefilled.
+
+2) Create User (Bottom Sheet popup) — premium UX
+Create a reusable bottom sheet component:
+- components/admin/CreateUserSheet.tsx
+Open it from:
+- Admin Users screen (generic create)
+- Clinic Detail “Create Manager” (prefilled)
+UI sections:
+A) Role selector (segmented control): MANAGER / ADMIN
+- Default when opened from clinic detail: MANAGER
+- If role=MANAGER: show Clinic dropdown (required)
+  - If opened from clinic detail: clinic dropdown disabled and prefilled
+- If role=ADMIN: hide clinic selector entirely
+
+B) Identity
+- Full name (required)
+- Email (required)
+- Phone (optional, E.164 formatting if you already have country picker; otherwise plain input)
+
+C) Password
+- Default: auto-generate strong temporary password
+- Show “Generate password” toggle + display one-time password in a secure reveal after creation with “Copy” button
+- Do NOT permanently display stored password later.
+
+D) Primary manager toggle
+- Only for MANAGER:
+  - checkbox “Set as primary manager for this clinic” (default true)
+Explain it briefly.
+
+Submit UX:
+- Validate inline
+- Disable submit while loading
+- On success:
+  - toast “User created”
+  - close sheet
+  - refresh clinics list and clinic detail manager block immediately
+  - if oneTimePassword returned, show a secure modal with copy (shown once)
+
+3) Clinics list cards — show manager info
+- On clinics list screen, each card shows:
+  - Clinic name + status pill
+  - Manager block:
+    - Manager name (or “No manager assigned”)
+    - Phone/email
+- Ensure list refresh after create manager so it updates dynamically.
+
+4) Admin Users screen “Create User”
+- Create User action opens the same CreateUserSheet
+- Role selector only allows ADMIN or MANAGER
+- If MANAGER role selected, clinic dropdown required.
+
+========================================================
+D) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) DB migration commands
+3) New/updated endpoints + sample curl:
+  - create user (manager with clinicId)
+  - list clinics shows primaryManager
+4) Manual QA checklist:
+  - Clinic Detail -> Create Manager opens bottom sheet with clinic prefilled
+  - Creating manager sets primary manager and clinics list updates instantly
+  - Admin create user can create only MANAGER/ADMIN
+  - Manager cannot be created without clinicId
+  - Admin created has clinicId null
+  - One-time password reveal works and is not stored/displayed later
+
+IMPLEMENTATION ORDER:
+1) DB schema: clinics.primaryManagerUserId + migrations
+2) Backend: create user endpoint + clinic list/detail join + optional change primary manager endpoint
+3) Mobile: CreateUserSheet component + integrate into Clinic Detail and Users screen
+4) Clinics list card UI updates + refresh logic
+5) Tests for backend validations + primary manager assignment
+6) Final polish + docs update
+
+Proceed now. Keep UX premium white theme and SOLID backend boundaries.
+END.

@@ -6,30 +6,24 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Modal,
-  Alert,
   Platform,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
-  Clipboard,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { StatusPill, EmptyState, LoadingState, ErrorState, TextField, Divider } from "@/components/ui";
+import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
-import {
-  listUnifiedEntities, createUser, UnifiedEntity, UnifiedListResponse,
-  AdminUserCreated, CreateUserInput,
-} from "@/lib/api/adminUsers";
+import { listUnifiedEntities, UnifiedEntity, UnifiedListResponse } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
+import CreateUserSheet from "@/components/admin/CreateUserSheet";
 
 type EntityType = "ALL" | "MANAGER" | "PATIENT" | "ADMIN";
 const STATUS_FILTERS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED"] as const;
@@ -49,7 +43,6 @@ function entityIcon(type: string): string {
 
 export default function UsersScreen() {
   const { user, logout } = useAuth();
-  const qc = useQueryClient();
   const params = useLocalSearchParams<{ preselectedClinicId?: string }>();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -63,12 +56,6 @@ export default function UsersScreen() {
   const [pickerOpen, setPickerOpen] = useState<"clinic" | "type" | "status" | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<"ADMIN" | "MANAGER">("MANAGER");
-  const [newClinicId, setNewClinicId] = useState(params.preselectedClinicId ?? "");
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<UnifiedListResponse>({
     queryKey: ["/v1/admin/users", debouncedSearch, entityTypeFilter, statusFilter, clinicFilter],
@@ -85,37 +72,6 @@ export default function UsersScreen() {
     queryKey: ["/v1/admin/clinics", "all"],
     queryFn: () => listClinics({ pageSize: 200 }),
   });
-
-  const createMutation = useMutation({
-    mutationFn: createUser,
-    onSuccess: (result: AdminUserCreated) => {
-      qc.invalidateQueries({ queryKey: ["/v1/admin/users"] });
-      qc.invalidateQueries({ queryKey: ["/v1/admin/metrics"] });
-      setShowCreate(false);
-      setGeneratedPassword(result.generatedPassword);
-      setConfirmed(false);
-      setShowPassword(true);
-      resetForm();
-    },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to create user"),
-  });
-
-  function resetForm() {
-    setNewEmail("");
-    setNewRole("MANAGER");
-    setNewClinicId("");
-  }
-
-  function handleCreate() {
-    if (!newEmail.trim()) return Alert.alert("Validation", "Email is required");
-    if (newRole === "MANAGER" && !newClinicId) return Alert.alert("Validation", "Clinic is required for Manager");
-    createMutation.mutate({ email: newEmail.trim().toLowerCase(), role: newRole, clinicId: newClinicId || null });
-  }
-
-  function copyPassword() {
-    if (Clipboard?.setString) Clipboard.setString(generatedPassword);
-    Alert.alert("Copied", "Password copied to clipboard.");
-  }
 
   async function handleLogout() { await logout(); router.replace("/(auth)/login"); }
 
@@ -269,107 +225,12 @@ export default function UsersScreen() {
         allLabel="All Statuses"
       />
 
-      <Modal visible={showCreate} transparent animationType="slide">
-        <View style={styles.sheetOverlay}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} keyboardShouldPersistTaps="handled">
-            <View style={styles.sheet}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetHeaderRow}>
-                <Text style={styles.sheetTitle}>New Staff User</Text>
-                <Pressable onPress={() => { setShowCreate(false); resetForm(); }} hitSlop={10}>
-                  <Ionicons name="close" size={22} color={T.textSec} />
-                </Pressable>
-              </View>
-              <View style={styles.sheetBody}>
-                <TextField
-                  label="Email Address *"
-                  placeholder="user@clinic.com"
-                  value={newEmail}
-                  onChangeText={setNewEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <View style={styles.infoBadge}>
-                  <Ionicons name="key-outline" size={14} color={T.accent} />
-                  <Text style={styles.infoText}>A secure password will be generated automatically</Text>
-                </View>
-                <Text style={styles.fieldLabel}>ROLE</Text>
-                <View style={styles.roleRow}>
-                  {(["MANAGER", "ADMIN"] as const).map((r) => (
-                    <Pressable
-                      key={r}
-                      style={[styles.roleOption, newRole === r ? styles.roleOptionActive : styles.roleOptionInactive]}
-                      onPress={() => setNewRole(r)}
-                    >
-                      <Text style={[styles.roleOptionText, { color: newRole === r ? T.primary : T.textSec }]}>{r}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                {newRole === "MANAGER" && (
-                  <>
-                    <Text style={styles.fieldLabel}>CLINIC *</Text>
-                    <ScrollView style={styles.clinicPicker} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-                      {clinics.map((c) => (
-                        <Pressable
-                          key={c.id}
-                          style={[styles.clinicOption, newClinicId === c.id ? styles.clinicOptionActive : styles.clinicOptionInactive]}
-                          onPress={() => setNewClinicId(c.id)}
-                        >
-                          <Text style={[styles.clinicOptionText, { color: newClinicId === c.id ? T.primary : T.text }]} numberOfLines={1}>{c.name}</Text>
-                          {newClinicId === c.id && <Ionicons name="checkmark" size={14} color={T.primary} />}
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </>
-                )}
-                <View style={styles.sheetBtns}>
-                  <Pressable style={styles.cancelBtn} onPress={() => { setShowCreate(false); resetForm(); }}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.createBtn, { opacity: createMutation.isPending ? 0.7 : 1 }]}
-                    onPress={handleCreate}
-                    disabled={createMutation.isPending}
-                  >
-                    {createMutation.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.createBtnText}>Create</Text>}
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
+      <CreateUserSheet
+        visible={showCreate}
+        onClose={() => setShowCreate(false)}
+        defaultRole="MANAGER"
+      />
 
-      <Modal visible={showPassword} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.pwModal}>
-            <View style={styles.pwIconWrap}>
-              <Ionicons name="shield-checkmark-outline" size={32} color={T.success} />
-            </View>
-            <Text style={styles.pwTitle}>User Created</Text>
-            <Text style={styles.pwSub}>Save this password — it will only be shown once.</Text>
-            <View style={styles.pwBox}>
-              <Text style={styles.pwValue} selectable>{generatedPassword}</Text>
-              <Pressable style={styles.copyBtn} onPress={copyPassword}>
-                <Ionicons name="copy-outline" size={18} color={T.accent} />
-              </Pressable>
-            </View>
-            <Pressable style={styles.confirmRow} onPress={() => setConfirmed(!confirmed)}>
-              <View style={[styles.checkbox, { borderColor: confirmed ? T.success : T.border, backgroundColor: confirmed ? T.success : "transparent" }]}>
-                {confirmed && <Ionicons name="checkmark" size={12} color="#fff" />}
-              </View>
-              <Text style={styles.confirmText}>I have saved this password</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.doneBtn, { backgroundColor: confirmed ? T.primary : T.primary + "50" }]}
-              onPress={() => { if (confirmed) setShowPassword(false); }}
-              disabled={!confirmed}
-            >
-              <Text style={styles.doneBtnText}>Done</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

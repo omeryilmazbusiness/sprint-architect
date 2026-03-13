@@ -8,6 +8,8 @@ import { computeNextInvoiceDate } from "../billing/billingService";
 export interface PrimaryManager {
   id: string;
   email: string;
+  fullName: string | null;
+  phoneE164: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -18,28 +20,57 @@ function parseClinic<T extends { services?: string | null }>(clinic: T): T & { s
   return { ...clinic, services };
 }
 
-/** Fetch the primary (earliest-created) MANAGER per clinic for a given list of clinic IDs. */
-async function fetchPrimaryManagers(clinicIds: string[]): Promise<Map<string, PrimaryManager>> {
-  if (clinicIds.length === 0) return new Map();
-
-  const allManagers = await db.query.users.findMany({
-    where: and(
-      inArray(users.clinicId, clinicIds),
-      eq(users.role, "MANAGER"),
-    ),
-    orderBy: (u, { asc }) => asc(u.createdAt),
-    columns: { id: true, email: true, clinicId: true, createdAt: true },
-  });
+/**
+ * Fetch the primary manager for a set of clinics.
+ * Strategy: use clinics.primaryManagerUserId (Approach A).
+ * Falls back to earliest-created MANAGER if primaryManagerUserId is null.
+ */
+async function fetchPrimaryManagers(
+  clinicRows: Array<{ id: string; primaryManagerUserId?: string | null }>
+): Promise<Map<string, PrimaryManager>> {
+  if (clinicRows.length === 0) return new Map();
 
   const map = new Map<string, PrimaryManager>();
-  for (const mgr of allManagers) {
-    if (mgr.clinicId && !map.has(mgr.clinicId)) {
-      map.set(mgr.clinicId, {
-        id: mgr.id,
-        email: mgr.email,
-      });
+
+  const explicitIds = clinicRows
+    .filter((c) => c.primaryManagerUserId)
+    .map((c) => c.primaryManagerUserId as string);
+
+  const clinicsWithoutPrimary = clinicRows.filter((c) => !c.primaryManagerUserId);
+
+  const [explicitManagers, fallbackManagers] = await Promise.all([
+    explicitIds.length > 0
+      ? db.query.users.findMany({
+          where: inArray(users.id, explicitIds),
+          columns: { id: true, email: true, fullName: true, phoneE164: true, clinicId: true },
+        })
+      : Promise.resolve([]),
+    clinicsWithoutPrimary.length > 0
+      ? db.query.users.findMany({
+          where: and(
+            inArray(users.clinicId, clinicsWithoutPrimary.map((c) => c.id)),
+            eq(users.role, "MANAGER"),
+          ),
+          orderBy: (u, { asc }) => asc(u.createdAt),
+          columns: { id: true, email: true, fullName: true, phoneE164: true, clinicId: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  for (const clinic of clinicRows) {
+    if (clinic.primaryManagerUserId) {
+      const mgr = explicitManagers.find((m) => m.id === clinic.primaryManagerUserId);
+      if (mgr) {
+        map.set(clinic.id, { id: mgr.id, email: mgr.email, fullName: mgr.fullName ?? null, phoneE164: mgr.phoneE164 ?? null });
+      }
+    } else {
+      const mgr = fallbackManagers.find((m) => m.clinicId === clinic.id);
+      if (mgr) {
+        map.set(clinic.id, { id: mgr.id, email: mgr.email, fullName: mgr.fullName ?? null, phoneE164: mgr.phoneE164 ?? null });
+      }
     }
   }
+
   return map;
 }
 
@@ -72,8 +103,7 @@ export const clinicRepo = {
     ]);
 
     const parsed = rows.map(parseClinic);
-    const clinicIds = parsed.map((c) => c.id);
-    const primaryManagers = await fetchPrimaryManagers(clinicIds);
+    const primaryManagers = await fetchPrimaryManagers(parsed);
 
     return {
       rows: parsed.map((c) => ({
@@ -117,11 +147,15 @@ export const clinicRepo = {
 
     const sanitizedManagers = managers.map(({ passwordHash, ...m }) => m);
 
+    const primaryMgrMap = await fetchPrimaryManagers([clinic]);
+    const primaryManager = primaryMgrMap.get(id) ?? null;
+
     return {
       ...parseClinic(clinic),
       nextInvoiceDate: nextInvoiceDate.toISOString(),
       currentPeriodInvoice,
       managers: sanitizedManagers,
+      primaryManager,
       invoiceTimeline: clinicInvoices,
     };
   },
@@ -158,6 +192,15 @@ export const clinicRepo = {
     return parseClinic(clinic);
   },
 
+  async setPrimaryManager(clinicId: string, managerUserId: string | null) {
+    const [updated] = await db
+      .update(clinics)
+      .set({ primaryManagerUserId: managerUserId })
+      .where(and(eq(clinics.id, clinicId), isNull(clinics.deletedAt)))
+      .returning();
+    return updated ?? null;
+  },
+
   async update(id: string, input: {
     name?: string;
     address?: string | null;
@@ -171,6 +214,7 @@ export const clinicRepo = {
     currency?: string;
     billingAnchorDay?: number;
     notes?: string | null;
+    primaryManagerUserId?: string | null;
   }) {
     const setData: Record<string, any> = { ...input };
     if (input.services !== undefined) {

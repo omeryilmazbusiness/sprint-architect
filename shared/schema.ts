@@ -86,6 +86,7 @@ export const clinics = pgTable("clinics", {
   currency: text("currency").notNull().default("EUR"),
   billingAnchorDay: integer("billing_anchor_day").notNull().default(1),
   notes: text("notes"),
+  primaryManagerUserId: varchar("primary_manager_user_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -98,6 +99,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").notNull().default("MANAGER"),
   clinicId: varchar("clinic_id").references(() => clinics.id),
+  fullName: text("full_name"),
+  phoneE164: text("phone_e164"),
   status: userStatusEnum("status").notNull().default("ACTIVE"),
   statusReason: text("status_reason"),
   mustChangePassword: boolean("must_change_password").notNull().default(false),

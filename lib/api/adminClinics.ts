@@ -3,6 +3,8 @@ import { apiRequest } from "@/lib/query-client";
 export interface PrimaryManager {
   id: string;
   email: string;
+  fullName: string | null;
+  phoneE164: string | null;
 }
 
 export interface Clinic {
@@ -61,6 +63,8 @@ export interface InvoiceSummary {
 export interface ClinicManager {
   id: string;
   email: string;
+  fullName: string | null;
+  phoneE164: string | null;
   role: string;
   status: string;
   createdAt: string;

@@ -24,7 +24,23 @@ The backend is an Express 5 application developed with TypeScript. Its structure
 
 The application utilizes PostgreSQL with Drizzle ORM. The schema defines core entities such as `clinics`, `users`, `patients`, `doctors`, `hotels`, `transports`, `patientPlans`, `appointments`, `documentTypes`, and `patientDocuments`. It also includes `refreshTokens` for persistent sessions, `devices` for patient single-device binding, `invoices` for billing, `auditLogs` for security, and `notifications` for in-app manager notifications. The database supports multi-tenancy through `clinicId` on relevant resources.
 
-The `clinics` table has the following extended fields: `websiteUrl` (optional URL), `billingEmail` (optional billing-specific email, distinct from contactEmail), `notes` (optional internal notes text), `deletedAt` (soft-delete timestamp, NULL = active, non-NULL = deleted). Services are stored as JSON-encoded arrays of enum codes: `RINOPLASTY`, `EYE`, `DENTAL` — always send and store enum codes, not display labels. Soft-deleted clinics (`deletedAt IS NOT NULL`) are automatically excluded from all list and detail queries; the `softDelete()` method also sets `status = "INACTIVE"` and deactivates all associated MANAGER users.
+The `clinics` table has the following extended fields: `websiteUrl` (optional URL), `billingEmail` (optional billing-specific email, distinct from contactEmail), `notes` (optional internal notes text), `deletedAt` (soft-delete timestamp, NULL = active, non-NULL = deleted), `primaryManagerUserId` (nullable, soft-FK to users.id — the designated primary manager shown on clinic cards). Services are stored as JSON-encoded arrays of enum codes: `RINOPLASTY`, `EYE`, `DENTAL` — always send and store enum codes, not display labels. Soft-deleted clinics (`deletedAt IS NOT NULL`) are automatically excluded from all list and detail queries; the `softDelete()` method also sets `status = "INACTIVE"` and deactivates all associated MANAGER users.
+
+The `users` table has extended fields: `fullName` (nullable varchar 200 — display name for managers/admins), `phoneE164` (nullable varchar 20 — phone number in E.164 format). These are returned throughout the admin API wherever users are listed.
+
+### Create Manager Flow
+
+The `CreateUserSheet` component (`components/admin/CreateUserSheet.tsx`) provides a premium bottom-sheet modal for creating staff users. It:
+- Opens from Clinic Detail ("Create Manager" action row) with clinic pre-filled and locked
+- Opens from Users screen ("New User" button) with free clinic selection
+- Has a segmented MANAGER/ADMIN role picker
+- Collects Full Name (required), Email (required), Phone (optional, E.164)
+- Shows a clinic picker (slides up inner picker) for MANAGER role
+- Has a "Set as primary manager" toggle (enabled by default)
+- On success: shows a one-time OTP modal with the generated password and a Copy button; tapping "Done" dismisses both the OTP modal and the sheet
+- Invalidates `/v1/admin/users`, `/v1/admin/clinics`, `/v1/admin/metrics` queries on success
+
+The clinic list cards display `primaryManager.fullName` (or email as fallback) and `primaryManager.phoneE164` (or clinic contactPhone as fallback) in the manager row. The clinic detail managers section also shows fullName + email sub-label.
 
 ### API Routes
 

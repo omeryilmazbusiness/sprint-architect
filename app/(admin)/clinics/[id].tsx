@@ -25,6 +25,7 @@ import {
   ClinicDetail, InvoiceSummary,
 } from "@/lib/api/adminClinics";
 import { SERVICES, serviceLabel } from "@/constants/services";
+import CreateUserSheet from "@/components/admin/CreateUserSheet";
 
 function fmt(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -44,6 +45,7 @@ export default function ClinicDetailScreen() {
 
   const [showEdit, setShowEdit] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
 
   const [editName, setEditName] = useState("");
   const [editCurrency, setEditCurrency] = useState("");
@@ -264,9 +266,18 @@ export default function ClinicDetailScreen() {
                   {i > 0 && <Divider inset={52} />}
                   <View style={styles.managerRow}>
                     <View style={styles.mgrAvatar}>
-                      <Text style={styles.mgrAvatarText}>{mgr.email.slice(0, 2).toUpperCase()}</Text>
+                      <Text style={styles.mgrAvatarText}>
+                        {(mgr.fullName ?? mgr.email).slice(0, 2).toUpperCase()}
+                      </Text>
                     </View>
-                    <Text style={styles.mgrEmail} numberOfLines={1}>{mgr.email}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.mgrEmail} numberOfLines={1}>
+                        {mgr.fullName ?? mgr.email}
+                      </Text>
+                      {mgr.fullName && (
+                        <Text style={styles.mgrSub} numberOfLines={1}>{mgr.email}</Text>
+                      )}
+                    </View>
                     <StatusPill status={mgr.status} small />
                   </View>
                 </View>
@@ -306,7 +317,7 @@ export default function ClinicDetailScreen() {
         <Card noPad>
           <Pressable
             style={({ pressed }) => [styles.actionRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push({ pathname: "/(admin)/users", params: { preselectedClinicId: id } })}
+            onPress={() => setShowCreateUser(true)}
           >
             <View style={[styles.actionIcon, { backgroundColor: T.primary + "12" }]}>
               <Ionicons name="person-add-outline" size={16} color={T.primary} />
@@ -425,6 +436,17 @@ export default function ClinicDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      <CreateUserSheet
+        visible={showCreateUser}
+        onClose={() => setShowCreateUser(false)}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["/v1/admin/clinics", id, "detail"] });
+        }}
+        defaultRole="MANAGER"
+        preselectedClinicId={id}
+        preselectedClinicName={data?.name}
+      />
     </View>
   );
 }
@@ -469,7 +491,8 @@ const styles = StyleSheet.create({
   managerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   mgrAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: T.primary + "12", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   mgrAvatarText: { fontFamily: "Inter_700Bold", fontSize: 12, color: T.primary },
-  mgrEmail: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.text },
+  mgrEmail: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  mgrSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 1 },
   invRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
   invPeriod: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
   invMeta: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 2 },

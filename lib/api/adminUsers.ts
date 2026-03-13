@@ -3,6 +3,8 @@ import { apiRequest } from "@/lib/query-client";
 export interface AdminUser {
   id: string;
   email: string;
+  fullName: string | null;
+  phoneE164: string | null;
   role: "ADMIN" | "MANAGER";
   clinicId: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
@@ -57,8 +59,11 @@ export async function listUnifiedEntities(params?: {
 
 export interface CreateUserInput {
   email: string;
+  fullName?: string;
+  phoneE164?: string;
   role: "ADMIN" | "MANAGER";
   clinicId?: string | null;
+  setAsPrimaryManager?: boolean;
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
 }
 
