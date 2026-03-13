@@ -1,10 +1,11 @@
 import { db } from "../db";
 import { clinics, invoices, patients, users } from "@shared/schema";
-import { eq, and, lt, not, gte, inArray, isNotNull, or } from "drizzle-orm";
+import { eq, and, lt, not, gte, isNotNull, or, inArray, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { auditLog } from "../api/auditLogger";
 import { getEmailProvider } from "../email/getEmailProvider";
 import { invoiceEmailHtml, invoiceEmailText, monthlyReportHtml, monthlyReportText } from "../email/templates";
+import { getPeriodBoundaries, BILLABLE_STATUSES } from "./billingCalculator";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -61,10 +62,8 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
   const generatedInvoices: (typeof invoices.$inferSelect)[] = [];
   const emailProvider = getEmailProvider();
 
-  const [year, month] = period.split("-").map(Number);
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 1);
-  const dueAt = computeLastDayDueAt(year, month);
+  const { periodStart, periodEnd, startDate, endDate } = getPeriodBoundaries(period);
+  const dueAt = computeLastDayDueAt(...period.split("-").map(Number) as [number, number]);
 
   for (const clinic of allClinics) {
     const existing = await db.query.invoices.findFirst({
@@ -78,10 +77,39 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
       .where(
         and(
           eq(patients.clinicId, clinic.id),
+          inArray(patients.status, [...BILLABLE_STATUSES]),
+          or(
+            and(
+              isNotNull(patients.arrivalDate),
+              sql`${patients.arrivalDate} >= ${periodStart}`,
+              sql`${patients.arrivalDate} < ${periodEnd}`
+            ),
+            and(
+              isNull(patients.arrivalDate),
+              gte(patients.createdAt, startDate),
+              lt(patients.createdAt, endDate)
+            )
+          )
+        )
+      );
+
+    const [{ fallbackCount }] = await db
+      .select({ fallbackCount: sql<number>`count(*)::int` })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.clinicId, clinic.id),
+          inArray(patients.status, [...BILLABLE_STATUSES]),
+          isNull(patients.arrivalDate),
           gte(patients.createdAt, startDate),
           lt(patients.createdAt, endDate)
         )
       );
+    if (fallbackCount > 0) {
+      console.warn(
+        `[billing] ${fallbackCount} patient(s) in clinic ${clinic.id} had no arrivalDate for period ${period} — using createdAt as fallback`
+      );
+    }
 
     const unitPrice = clinic.billingUnitPrice ?? parseFloat(process.env.DEFAULT_UNIT_PRICE ?? "50");
     const total = count * unitPrice;

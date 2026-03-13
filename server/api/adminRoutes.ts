@@ -490,6 +490,33 @@ router.put("/clinics/:id", async (req, res, next) => {
   }
 });
 
+const ClinicBillingSchema = z.object({
+  billingUnitPrice: z.number().nonnegative().nullable(),
+  currency: z.string().length(3).optional(),
+});
+
+router.put("/clinics/:id/billing", async (req, res, next) => {
+  try {
+    const parsed = ClinicBillingSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError("VALIDATION_ERROR", parsed.error.message, 400);
+    const existing = await clinicRepo.findById(req.params.id);
+    if (!existing) throw new AppError("NOT_FOUND", "Clinic not found", 404);
+    const updated = await clinicRepo.update(req.params.id, parsed.data);
+    auditLog({
+      clinicId: req.params.id,
+      actorId: req.actor!.sub,
+      actorRole: req.actor!.role,
+      action: "CLINIC_BILLING_UPDATED",
+      resourceType: "clinic",
+      resourceId: req.params.id,
+      metadata: parsed.data,
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete("/clinics/:id", async (req, res, next) => {
   try {
     const existing = await clinicRepo.findById(req.params.id);
@@ -682,26 +709,6 @@ router.delete("/users/:id", async (req, res, next) => {
 });
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
-
-router.post("/invoices/generate", async (req, res, next) => {
-  try {
-    const period = req.query.period as string;
-    if (!period) throw new AppError("VALIDATION_ERROR", "period query param is required", 400);
-    validatePeriod(period);
-    const generated = await invoiceRepo.generateForPeriod(period);
-    
-    auditLog({
-      actorId: req.actor!.sub,
-      actorRole: req.actor!.role,
-      action: "INVOICE_GENERATED",
-      metadata: { period, count: generated.length },
-    });
-
-    res.json(generated);
-  } catch (e) {
-    next(e);
-  }
-});
 
 router.post("/billing/run", async (req, res, next) => {
   try {

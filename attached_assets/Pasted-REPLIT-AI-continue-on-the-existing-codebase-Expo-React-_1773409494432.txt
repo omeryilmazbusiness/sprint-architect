@@ -1,0 +1,214 @@
+REPLIT AI — continue on the existing codebase (Expo React Native mobile + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a production-ready, SOLID, modular invoicing system where:
+- Each clinic’s monthly invoice total = (monthly billable patient count in that clinic) × (clinic unit price per patient).
+- Unit price is configured per clinic.
+- Invoice statuses are ONLY: PENDING, UNPAID, PAID.
+- System is idempotent, timezone-correct (Europe/Istanbul), and enforces suspension rules.
+
+NON-NEGOTIABLE SOLID ARCHITECTURE:
+Backend changes MUST be done using module boundaries and layered design:
+- routes/controllers: request parsing + call use-case only
+- application/use-cases: business rules only (no Drizzle queries)
+- domain: entities/enums/errors + invariants
+- infrastructure/repositories: Drizzle queries only
+- providers: Clock, EmailProvider (optional), Logger
+- shared: RBAC, clinic scope guard, error handler, pagination, validation
+
+No “god services”. Each use-case single responsibility.
+
+========================================================
+A) BILLING RULES (MUST IMPLEMENT EXACTLY)
+========================================================
+1) Period format: YYYY-MM (e.g., 2026-03), timezone Europe/Istanbul.
+2) Billable patient count definition (choose this default):
+- Count patients with:
+  - clinicId = clinic
+  - arrivalDate within period month boundaries
+  - status IN (APPROVED, ENDED)
+- Exclude status PENDING.
+(If arrivalDate missing, fallback to createdAt within month, but log a warning and document it.)
+
+3) Invoice total:
+total = patientCount * unitPrice
+- unitPrice is taken from clinic.billingUnitPrice
+- if null, fallback to a global default env BILLING_UNIT_PRICE_DEFAULT
+- currency from clinic.currency (default EUR)
+
+4) Invoice lifecycle:
+- On LAST day of month at 09:00 local:
+  - create invoices for ALL active clinics (idempotent) with status PENDING
+  - set dueAt = last day 23:59 local
+- At 00:00 daily:
+  - any invoice still PENDING where dueAt < now becomes UNPAID
+  - UNPAID triggers immediate clinic SUSPENDED and disables clinic managers + guests access
+- Admin can mark invoice as PAID in invoice detail:
+  - set paidAt + paidByAdminId
+  - set clinic ACTIVE again and re-enable managers + guests
+
+5) Manual “Generate invoice” must NOT exist (no UI, no endpoint). Scheduler only.
+
+========================================================
+B) DATABASE (Drizzle) — SCHEMA UPDATES
+========================================================
+1) clinics table:
+- billingUnitPrice (numeric)
+- currency (string default "EUR")
+- status: ACTIVE | SUSPENDED
+- contactEmail (for invoice emailing if you already have)
+- deletedAt nullable (if you use soft delete)
+Indexes: status, deletedAt
+
+2) patients table:
+- arrivalDate, departureDate
+- status: PENDING | APPROVED | ENDED
+(If your status differs, migrate carefully and document mapping.)
+
+3) invoices table:
+- id
+- clinicId
+- period (YYYY-MM)
+- patientCount (int)
+- unitPrice (numeric)
+- currency (string)
+- total (numeric)
+- status: PENDING | UNPAID | PAID
+- createdAt
+- dueAt (datetime)
+- paidAt nullable
+- paidByAdminId nullable
+Unique constraint: (clinicId, period)
+Indexes: clinicId, period, status
+
+4) audit_logs table:
+- record actions for: INVOICE_CREATED, INVOICE_BECAME_UNPAID, CLINIC_SUSPENDED, INVOICE_PAID, CLINIC_REACTIVATED
+
+========================================================
+C) BACKEND MODULES (EXPRESS) — IMPLEMENT MODULAR
+========================================================
+Create/ensure modules:
+server/modules/invoice/
+  invoice.routes.ts
+  invoice.controller.ts
+  usecases/
+    GenerateMonthlyInvoices.ts
+    RollPendingToUnpaid.ts
+    MarkInvoicePaid.ts
+    ListAdminInvoices.ts
+    ListManagerInvoices.ts
+    GetInvoiceDetail.ts
+  domain/
+    Invoice.ts, enums, errors
+  repo/
+    InvoiceRepository.ts (interface)
+    InvoiceRepositoryDrizzle.ts (implementation)
+  services/
+    InvoiceCalculator.ts (interface)
+    PerPatientMonthlyCalculator.ts (implementation)
+server/modules/clinic/
+  ClinicRepository... (for status updates)
+server/modules/patient/
+  PatientRepository... (for countBillablePatients)
+server/shared/
+  auth guards, clinic-suspension guard, error handler, zod helpers, clock
+
+Use-cases must depend on repository interfaces + Clock + Calculator.
+
+========================================================
+D) BACKEND ENDPOINTS (NO GENERATE)
+========================================================
+ADMIN:
+- GET /v1/admin/invoices?period=&status=&clinicId=
+- GET /v1/admin/invoices/:id
+- PUT /v1/admin/invoices/:id/status
+  body: { status: "PAID" }
+  (Only PAID allowed from admin UI; other transitions are scheduler-driven.)
+- GET /v1/admin/clinics (must include billingUnitPrice + currency)
+- PUT /v1/admin/clinics/:id/billing
+  body: { billingUnitPrice, currency }
+
+MANAGER:
+- GET /v1/manager/invoices?period=&status=
+- GET /v1/manager/invoices/:id
+
+Validation:
+- zod for all params/body
+- standardized errors
+
+========================================================
+E) SCHEDULER (PROD-READY)
+========================================================
+Use node-cron with timezone Europe/Istanbul:
+
+1) Invoice creation job:
+- Trigger: 09:00 on last day of month
+- Use-case: GenerateMonthlyInvoices(period)
+- Must be idempotent via upsert on (clinicId, period).
+
+2) Rollover job:
+- Trigger: 00:00 daily
+- Use-case: RollPendingToUnpaid(now)
+- For each invoice turned UNPAID:
+  - suspend clinic (clinic.status=SUSPENDED)
+  - disable all clinic MANAGER users + PATIENT/guests (status INACTIVE or block via clinic guard)
+  - audit logs
+
+Access enforcement:
+- Middleware must block MANAGER/PATIENT requests if clinic.status=SUSPENDED
+- Must also block login attempts (even with valid credentials)
+
+========================================================
+F) MOBILE (ADMIN UI) — BILLING SETTINGS + INVOICE DETAIL
+========================================================
+1) Clinic Detail:
+- Show billingUnitPrice + currency
+- Add “Edit billing” bottom sheet
+- When tapping “Invoices”, navigate to invoices list filtered by clinicId:
+  router.push({ pathname:"/(admin)/invoices", params:{ clinicId } })
+- Invoices screen must read params and apply filters automatically.
+
+2) Invoice Detail:
+- Show patientCount, unitPrice, total, status
+- If status is UNPAID or PENDING: show “Mark as PAID” button with confirmation
+- On success: refresh invoice and show toast
+
+3) Remove any “Generate invoice” buttons/menus everywhere.
+
+========================================================
+G) TESTS (MANDATORY)
+========================================================
+Add automated tests for:
+1) PerPatientMonthlyCalculator counts correct billable patients for a period
+2) GenerateMonthlyInvoices upserts and never duplicates
+3) RollPendingToUnpaid changes status and suspends clinics + blocks access
+4) MarkInvoicePaid reactivates clinic/users
+5) List invoices filtering by clinicId/period/status works
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Module tree + where SOLID boundaries are enforced
+2) DB migration commands
+3) Cron expressions + timezone explanation
+4) Sample curl:
+   - list admin invoices filtered by clinicId+period
+   - mark paid
+5) Manual QA checklist:
+   - invoice auto created (simulate by calling use-case in dev)
+   - pending -> unpaid rollover (simulate dueAt)
+   - clinic suspension blocks manager/guest
+   - admin marks paid -> access restored
+
+IMPLEMENTATION ORDER:
+1) DB schema + migrations
+2) Repositories (Drizzle) + interfaces
+3) Calculator service + use-cases
+4) Scheduler wiring
+5) Access enforcement guard (suspended clinic)
+6) Admin UI billing settings + invoice detail paid action
+7) Tests + final verification
+
+Proceed now. No manual invoice generation anywhere.
+END.

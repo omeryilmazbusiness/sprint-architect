@@ -3,13 +3,8 @@ import { invoices, clinics, patients } from "@shared/schema";
 import { eq, and, sql, gte, lt, not, isNotNull } from "drizzle-orm";
 import { reactivateClinicAfterPayment } from "../billing/billingService";
 import { auditLog } from "../api/auditLogger";
-import { generatePendingInvoicesForPeriod } from "../billing/billingService";
 
 export const invoiceRepo = {
-  async generateForPeriod(period: string) {
-    return generatePendingInvoicesForPeriod(period);
-  },
-
   async list(filters: { clinicId?: string; period?: string; status?: any; page?: number; pageSize?: number }) {
     const page = Math.max(1, filters.page ?? 1);
     const pageSize = Math.min(100, filters.pageSize ?? 20);

@@ -169,7 +169,7 @@ export default function AdminInvoicesScreen() {
             <EmptyState
               icon="document-text-outline"
               title="No invoices found"
-              subtitle={hasFilters ? "Try clearing your filters" : "Generate invoices for a billing period"}
+              subtitle={hasFilters ? "Try clearing your filters" : "Invoices are generated automatically at end of each month"}
             />
           }
           renderItem={({ item }) => {
