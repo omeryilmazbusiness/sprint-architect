@@ -1,0 +1,140 @@
+Replit AI — continue on the existing Expo React Native codebase (expo-router) + existing backend. DO NOT re-scaffold.
+
+OBJECTIVE:
+Upgrade Admin Dashboard to a premium, modern, highly usable screen with:
+1) A top banner slider (carousel) occupying ~top 1/3 of the screen.
+2) Functional Quick Action buttons for Clinics and Invoices that navigate to the correct pages WITH FILTERS applied.
+3) Overall dashboard polish (KPI cards, activity feed, layout hierarchy) in white theme.
+
+NON-NEGOTIABLE:
+- White theme consistent with existing Admin theme tokens/components.
+- No “Attention needed” section.
+- All buttons must be functional and route correctly.
+- Filtered navigation must be reliable (route params -> screen reads params -> applies filters -> fetch).
+- Loading/empty/error states must be present.
+- No heavy UI libraries unless already present; prefer lightweight solution.
+
+========================================================
+A) TOP BANNER SLIDER (CAROUSEL) — premium hero area
+========================================================
+1) Add a banner carousel at the top of Admin Dashboard (approx top 33% height).
+Implementation:
+- Use a horizontal FlatList pagingEnabled OR existing carousel lib if already installed.
+- Include:
+  - 3 slides (cards) with background imagery/gradient (subtle) matching white theme.
+  - Indicator dots.
+  - Each slide has:
+    - Title (bold)
+    - Short subtitle
+    - Primary CTA button
+    - Small KPI line (e.g., “UNPAID: 3 clinics”)
+Slides (use real data from API):
+Slide 1: Billing Overview
+- Show counts: Pending, Unpaid, Paid
+- CTA: “View Invoices” -> navigate to invoices screen (no filters) OR to UNPAID if unpaid>0
+Slide 2: Clinics Health
+- Show counts: Active, Suspended
+- CTA: “View Suspended” -> clinics list filtered status=SUSPENDED
+Slide 3: This Month Summary (if data available)
+- e.g., total invoices this month, total revenue (if stored), or total guests
+- CTA: “View Reports” (if no reports screen exists, CTA navigates to invoices filtered by current period)
+
+If “current period” needed, compute YYYY-MM from local time Europe/Istanbul.
+
+========================================================
+B) KPI CARDS + QUICK ACTIONS (FUNCTIONAL & FILTERED)
+========================================================
+Below the banner, add:
+1) KPI cards row/grid (tap navigates with filters):
+- Suspended Clinics (tap -> clinics?status=SUSPENDED)
+- Unpaid Invoices (tap -> invoices?status=UNPAID)
+- Pending Invoices (tap -> invoices?status=PENDING)
+- Paid Invoices (tap -> invoices?status=PAID)
+
+2) Quick actions card:
+- Create Clinic -> navigate to create clinic screen
+- Clinics -> navigate to clinics list (no filters)
+- Invoices -> navigate to invoices list (no filters)
+- Users -> navigate to users screen
+
+Ensure that “Clinics” and “Invoices” quick actions in dashboard and in any sections:
+- when tapped, they route to correct screen with correct params
+- example:
+  router.push({ pathname:"/(admin)/invoices", params:{ status:"UNPAID" } })
+
+========================================================
+C) FILTERED NAVIGATION IMPLEMENTATION (MUST)
+========================================================
+1) Update target screens to accept route params:
+- Admin Invoices list screen:
+  - read params: status, clinicId, period
+  - set filter state from params on mount
+  - auto fetch
+  - show active filter chips
+- Admin Clinics list screen:
+  - read params: status
+  - set filter state
+  - auto fetch
+
+2) Prevent bugs:
+- Do NOT include empty params in API queries.
+- Validate enums:
+  - invoice status: PENDING|UNPAID|PAID
+  - clinic status: ACTIVE|SUSPENDED (or your schema)
+- If param invalid, ignore gracefully.
+
+3) Add a utility:
+- utils/navigationFilters.ts
+  - normalizeInvoiceFilters(params)
+  - normalizeClinicFilters(params)
+
+========================================================
+D) ACTIVITY FEED (PROFESSIONAL, NEUTRAL)
+========================================================
+Add an Activity card on dashboard:
+- shows last 5 important events (no “attention needed” wording)
+Examples:
+- “Clinic X suspended (Unpaid invoice)”
+- “Invoice #... marked PAID by Admin”
+- “New clinic created”
+Data source:
+- If audit logs endpoint exists, use it:
+  GET /v1/admin/audit-logs?limit=5
+If not, implement minimal backend endpoint that returns recent billing/clinic events.
+Activity rows must be clean list rows with time ago.
+
+========================================================
+E) UI POLISH — WHITE THEME & MODERN LAYOUT
+========================================================
+- Use existing theme tokens & components: Card, StatusPill, Buttons, Typography.
+- Banner carousel cards must be visually premium:
+  - subtle shadows, rounded corners, consistent spacing
+  - no clutter
+- Use skeleton loading placeholders for banner & KPI while loading.
+- Ensure dashboard scroll performance is good.
+
+========================================================
+F) OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Files changed/added
+2) Routes updated
+3) Filter params supported (invoices/clinics) and examples
+4) Manual QA checklist:
+- Banner slider shows 3 slides and indicators
+- Slide CTA navigates correctly
+- KPI cards navigate with correct filters
+- Invoices screen opens with filters pre-applied
+- Clinics screen opens with filters pre-applied
+- No “attention needed” section exists
+5) If any backend endpoints added (audit logs), list them and sample curl.
+
+IMPLEMENTATION ORDER:
+1) Implement filtered navigation mechanism (params -> filter state) for invoices & clinics screens
+2) Build banner carousel on dashboard using real API counts
+3) Add KPI cards + quick actions and ensure correct routing
+4) Add activity feed card
+5) Final polish (loading skeletons, spacing, performance)
+
+Proceed now. Keep it premium.
+END.

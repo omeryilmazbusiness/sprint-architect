@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusPill, EmptyState, LoadingState, ErrorState } from "@/components/ui";
@@ -22,6 +22,7 @@ import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
+import { normalizeInvoiceFilters } from "@/utils/navigationFilters";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -37,11 +38,18 @@ function statusAccent(status: string): string {
 export default function AdminInvoicesScreen() {
   const { user, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-
+  const routeParams = useLocalSearchParams<{ status?: string; clinicId?: string; period?: string }>();
   const [period, setPeriod] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [clinicFilter, setClinicFilter] = useState("");
   const [pickerOpen, setPickerOpen] = useState<"clinic" | "status" | null>(null);
+
+  useEffect(() => {
+    const filters = normalizeInvoiceFilters(routeParams as Record<string, string | undefined>);
+    setStatusFilter(filters.status ?? "ALL");
+    setClinicFilter(filters.clinicId ?? "");
+    setPeriod(filters.period ?? "");
+  }, [routeParams.status, routeParams.clinicId, routeParams.period]);
 
   const validPeriod = period.length === 7 && PERIOD_REGEX.test(period) ? period : undefined;
 
