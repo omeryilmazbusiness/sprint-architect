@@ -48,6 +48,17 @@ The `server/modules/adminDashboard/` implements a SOLID-layered dashboard aggreg
 
 The Admin Dashboard (`app/(admin)/dashboard.tsx`) uses modular components: `useAdminDashboard` hook for data fetching, `BannerCarousel` for overview slides, `KpiGrid` for pressable KPI cards, `RecentInvoicesList` for recent invoices, and `ActivityFeed` for audit events. Navigation to filtered views is handled by `services/navigation/filteredNavigation.ts`.
 
+### Admin Diagnostics Module
+
+`server/modules/adminDiagnostics/` is a SOLID-layered module providing `GET /v1/admin/diagnostics` (ADMIN + SUPER_ADMIN). It returns a stable DTO always with HTTP 200 — DB ping is wrapped in try/catch and returns `ok: false` with latency on failure rather than throwing. DTO: `{ api: {ok, latencyMs}, db: {ok, latencyMs}, env: {nodeEnv, timezone}, server: {version} }`.
+
+**Root cause of old Settings failures:** All four previous system-status endpoints (`/v1/admin/system/status`, `/system/jobs`, `/system/email`, `/system/security-metrics`) used `requireRole("ADMIN")` which excludes `SUPER_ADMIN`. Since the demo admin has role `SUPER_ADMIN`, all four returned 403 → `isError=true` → "Failed to load" on every card.
+
+**Admin Settings screen** (`app/(admin)/settings/index.tsx`) was rewritten to:
+- Remove the four failing queries and their JSX sections (SYSTEM STATUS, SCHEDULER & BILLING JOBS, EMAIL DELIVERY, SECURITY OVERVIEW)
+- Add four production-ready sections: **DIAGNOSTICS** (live `/v1/admin/diagnostics` data with Run + Copy buttons), **BILLING POLICY** (fully static billing rules card, never fails), **SUPPORT** (mailto report + copy support code JSON), **DATA MANAGEMENT** (static retention policy + Open Exports button)
+- Fix: Administration section now visible for both ADMIN and SUPER_ADMIN roles
+
 ### Admin Patients Module
 
 The `server/modules/adminPatients/` implements a SOLID-layered patient management module. It includes:

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  Linking,
+  Clipboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,18 +20,11 @@ import { useAuth } from "@/context/AuthContext";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { Card, SectionHeader, Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
-import {
-  fetchSystemStatus,
-  fetchJobsStatus,
-  fetchEmailStatus,
-  fetchSecurityMetrics,
-  type SystemStatusResponse,
-  type JobsStatusResponse,
-  type EmailStatusResponse,
-  type SecurityMetricsResponse,
-} from "@/lib/api/systemStatus";
+import { fetchDiagnostics, type DiagnosticsResult } from "@/lib/api/adminDiagnostics";
 
 const APP_VERSION = "1.0.0";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(isoDate: string | null | undefined): string {
   if (!isoDate) return "Never";
@@ -43,39 +38,29 @@ function formatDate(isoDate: string | null | undefined): string {
   }
 }
 
-function timeAgo(isoDate: string): string {
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const secs = Math.floor(diff / 1000);
-  if (secs < 60) return "just now";
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
+// ─── Small components ─────────────────────────────────────────────────────────
 
-function StatusPillSmall({ status }: { status: "OK" | "DEGRADED" | "DOWN" | "SUCCESS" | "FAILED" | "ENABLED" | "DISABLED" | null }) {
-  const map: Record<string, { bg: string; text: string; label: string }> = {
-    OK: { bg: T.success, text: "#fff", label: "OK" },
-    SUCCESS: { bg: T.success, text: "#fff", label: "SUCCESS" },
-    ENABLED: { bg: T.success, text: "#fff", label: "ENABLED" },
-    DEGRADED: { bg: T.warning, text: "#fff", label: "DEGRADED" },
-    DOWN: { bg: T.danger, text: "#fff", label: "DOWN" },
-    FAILED: { bg: T.danger, text: "#fff", label: "FAILED" },
-    DISABLED: { bg: T.textMuted, text: "#fff", label: "DISABLED" },
-  };
-  const cfg = status ? (map[status] ?? map.DISABLED) : map.DISABLED;
+function StatusBadge({ ok, labelOk = "OK", labelFail = "FAIL" }: { ok: boolean; labelOk?: string; labelFail?: string }) {
   return (
-    <View style={[ps.pill, { backgroundColor: cfg.bg }]}>
-      <Text style={[ps.pillText, { color: cfg.text }]}>{cfg.label}</Text>
+    <View style={[bd.pill, { backgroundColor: ok ? T.success : T.danger }]}>
+      <Text style={bd.text}>{ok ? labelOk : labelFail}</Text>
     </View>
   );
 }
-const ps = StyleSheet.create({
-  pill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  pillText: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.3 },
+const bd = StyleSheet.create({
+  pill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 6 },
+  text: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff", letterSpacing: 0.3 },
 });
+
+function EnvBadge({ env }: { env: string }) {
+  const isProd = env === "production";
+  const color = isProd ? T.success : T.warning;
+  return (
+    <View style={[bd.pill, { backgroundColor: color }]}>
+      <Text style={bd.text}>{isProd ? "PROD" : "DEV"}</Text>
+    </View>
+  );
+}
 
 function MetricRow({
   icon,
@@ -136,12 +121,12 @@ const sk = StyleSheet.create({
   pill: { width: 52, height: 22, borderRadius: 6, backgroundColor: T.border },
 });
 
-function CardError({ onRetry }: { onRetry: () => void }) {
+function CardError({ message, onRetry }: { message?: string; onRetry: () => void }) {
   return (
     <Card>
       <View style={ce.row}>
         <Ionicons name="warning-outline" size={16} color={T.danger} />
-        <Text style={ce.text}>Failed to load</Text>
+        <Text style={ce.text}>{message ?? "Could not load. Retry."}</Text>
         <Pressable onPress={onRetry} style={ce.btn}>
           <Text style={ce.btnText}>Retry</Text>
         </Pressable>
@@ -192,7 +177,7 @@ function SettingsRow({
       </View>
       <View style={sr.info}>
         <Text style={[sr.label, danger && { color: T.danger }]}>{label}</Text>
-        {subtitle ? <Text style={sr.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={sr.subtitle} numberOfLines={2}>{subtitle}</Text> : null}
       </View>
       {badge ? (
         <View style={[sr.badge, { backgroundColor: T.warning + "15", borderColor: T.warning + "40" }]}>
@@ -244,72 +229,63 @@ const sh2 = StyleSheet.create({
   label: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: T.textMuted, letterSpacing: 0.8 },
 });
 
+// ─── Static billing policy rows ───────────────────────────────────────────────
+
+const BILLING_RULES = [
+  {
+    icon: "calendar-outline" as const,
+    color: T.accent,
+    label: "Invoice creation",
+    sub: "Last day of month at 09:00 (Istanbul)",
+  },
+  {
+    icon: "time-outline" as const,
+    color: T.warning,
+    label: "Pending → Unpaid",
+    sub: "PENDING invoices roll over daily at 00:00 if unpaid",
+  },
+  {
+    icon: "close-circle-outline" as const,
+    color: T.danger,
+    label: "Unpaid → Suspension",
+    sub: "Clinic suspended; manager & patient access blocked",
+  },
+  {
+    icon: "checkmark-circle-outline" as const,
+    color: T.success,
+    label: "Paid → Reactivation",
+    sub: "Clinic and users restored immediately on payment",
+  },
+];
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function AdminSettings() {
   const { user, logout } = useAuth();
   const [showLogout, setShowLogout] = useState(false);
   const [showLogoutAll, setShowLogoutAll] = useState(false);
   const [logoutAllLoading, setLogoutAllLoading] = useState(false);
+  const [copiedDiag, setCopiedDiag] = useState(false);
+  const [copiedSupport, setCopiedSupport] = useState(false);
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : "AD";
-  const envLabel = __DEV__ ? "DEV" : "PROD";
-  const envColor = __DEV__ ? T.warning : T.success;
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
   const {
-    data: sysStatus,
-    isLoading: sysLoading,
-    isError: sysError,
-    refetch: refetchSys,
-    isRefetching: sysRefreshing,
-  } = useQuery<SystemStatusResponse>({
-    queryKey: ["/v1/admin/system/status"],
-    queryFn: fetchSystemStatus,
+    data: diagData,
+    isLoading: diagLoading,
+    isError: diagError,
+    refetch: refetchDiag,
+    isRefetching: diagRefreshing,
+  } = useQuery<DiagnosticsResult>({
+    queryKey: ["/v1/admin/diagnostics"],
+    queryFn: fetchDiagnostics,
     staleTime: 30_000,
   });
-
-  const {
-    data: jobsData,
-    isLoading: jobsLoading,
-    isError: jobsError,
-    refetch: refetchJobs,
-    isRefetching: jobsRefreshing,
-  } = useQuery<JobsStatusResponse>({
-    queryKey: ["/v1/admin/system/jobs"],
-    queryFn: fetchJobsStatus,
-    staleTime: 60_000,
-  });
-
-  const {
-    data: emailData,
-    isLoading: emailLoading,
-    isError: emailError,
-    refetch: refetchEmail,
-    isRefetching: emailRefreshing,
-  } = useQuery<EmailStatusResponse>({
-    queryKey: ["/v1/admin/system/email"],
-    queryFn: fetchEmailStatus,
-    staleTime: 30_000,
-  });
-
-  const {
-    data: secData,
-    isLoading: secLoading,
-    isError: secError,
-    refetch: refetchSec,
-    isRefetching: secRefreshing,
-  } = useQuery<SecurityMetricsResponse>({
-    queryKey: ["/v1/admin/system/security-metrics"],
-    queryFn: fetchSecurityMetrics,
-    staleTime: 60_000,
-  });
-
-  const isAnyRefreshing = sysRefreshing || jobsRefreshing || emailRefreshing || secRefreshing;
 
   function handlePullRefresh() {
-    refetchSys();
-    refetchJobs();
-    refetchEmail();
-    refetchSec();
+    refetchDiag();
   }
 
   async function handleLogout() {
@@ -329,6 +305,41 @@ export default function AdminSettings() {
     router.replace("/(auth)/login");
   }
 
+  function handleCopyDiagnostics() {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      email: user?.email ?? "unknown",
+      version: APP_VERSION,
+      diagnostics: diagData ?? null,
+    };
+    Clipboard?.setString?.(JSON.stringify(payload, null, 2));
+    setCopiedDiag(true);
+    setTimeout(() => setCopiedDiag(false), 2000);
+  }
+
+  function handleCopySupport() {
+    const payload = {
+      email: user?.email ?? "unknown",
+      role: user?.role ?? "unknown",
+      version: APP_VERSION,
+      timestamp: new Date().toISOString(),
+      diagnostics: diagData ?? "not loaded",
+    };
+    Clipboard?.setString?.(JSON.stringify(payload, null, 2));
+    setCopiedSupport(true);
+    setTimeout(() => setCopiedSupport(false), 2000);
+  }
+
+  function handleReportIssue() {
+    const subject = encodeURIComponent(
+      `Issue Report – HealthTour v${APP_VERSION} [${user?.email ?? "admin"}]`,
+    );
+    const body = encodeURIComponent(
+      `Describe the issue:\n\n\n---\nEmail: ${user?.email ?? "unknown"}\nVersion: ${APP_VERSION}\nTimestamp: ${new Date().toISOString()}\nEnvironment: ${diagData?.env.nodeEnv ?? "unknown"}`,
+    );
+    Linking.openURL(`mailto:?subject=${subject}&body=${body}`);
+  }
+
   return (
     <View style={s.root}>
       <AdminHeader title="Settings" userEmail={user?.email} onLogout={() => setShowLogout(true)} />
@@ -338,13 +349,13 @@ export default function AdminSettings() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isAnyRefreshing}
+            refreshing={diagRefreshing}
             onRefresh={handlePullRefresh}
             tintColor={T.accent}
           />
         }
       >
-        {/* ─── Profile ─────────────────────────────────────────── */}
+        {/* ─── Profile card ──────────────────────────────────────── */}
         <Card style={s.profileCard}>
           <View style={s.avatarWrap}>
             <Text style={s.avatarText}>{initials}</Text>
@@ -356,8 +367,10 @@ export default function AdminSettings() {
                 <Ionicons name="shield-outline" size={10} color={T.primary} />
                 <Text style={[s.badgeText, { color: T.primary }]}>{user?.role ?? "ADMIN"}</Text>
               </View>
-              <View style={[s.badge, { backgroundColor: envColor + "15", borderColor: envColor + "30" }]}>
-                <Text style={[s.badgeText, { color: envColor }]}>{envLabel}</Text>
+              <View style={[s.badge, { backgroundColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "15", borderColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "30" }]}>
+                <Text style={[s.badgeText, { color: diagData?.env.nodeEnv === "production" ? T.success : T.warning }]}>
+                  {diagData?.env.nodeEnv === "production" ? "PROD" : "DEV"}
+                </Text>
               </View>
             </View>
             <View style={s.lastLoginRow}>
@@ -369,7 +382,7 @@ export default function AdminSettings() {
           </View>
         </Card>
 
-        {/* ─── Security ────────────────────────────────────────── */}
+        {/* ─── Security ──────────────────────────────────────────── */}
         <SectionHeader label="Security" style={s.sectionGap} />
         <Card noPad>
           <SettingsRow
@@ -405,8 +418,8 @@ export default function AdminSettings() {
           />
         </Card>
 
-        {/* ─── Administration ──────────────────────────────────── */}
-        {user?.role === "ADMIN" && (
+        {/* ─── Administration ────────────────────────────────────── */}
+        {isAdmin && (
           <>
             <SectionHeader label="Administration" style={s.sectionGap} />
             <Card noPad>
@@ -434,196 +447,158 @@ export default function AdminSettings() {
           </>
         )}
 
-        {/* ─── System Status ───────────────────────────────────── */}
+        {/* ─── Diagnostics ───────────────────────────────────────── */}
         <SectionHeaderWithRefresh
-          label="SYSTEM STATUS"
-          onRefresh={() => refetchSys()}
-          loading={sysRefreshing}
+          label="DIAGNOSTICS"
+          onRefresh={() => refetchDiag()}
+          loading={diagRefreshing}
         />
-        {sysLoading ? (
-          <CardSkeleton rows={3} />
-        ) : sysError ? (
-          <CardError onRetry={() => refetchSys()} />
+        {diagLoading ? (
+          <CardSkeleton rows={4} />
+        ) : diagError ? (
+          <CardError message="Could not load diagnostics. Retry." onRetry={() => refetchDiag()} />
         ) : (
           <Card noPad>
             <MetricRow
               icon="server-outline"
-              iconColor={sysStatus?.api.status === "OK" ? T.success : T.danger}
-              label="API"
-              sub={sysStatus?.api.latencyMs != null ? `${sysStatus.api.latencyMs} ms` : undefined}
-              right={<StatusPillSmall status={sysStatus?.api.status ?? null} />}
+              iconColor={diagData?.api.ok ? T.success : T.danger}
+              label="API Connectivity"
+              sub={`${diagData?.api.latencyMs ?? 0} ms`}
+              right={<StatusBadge ok={diagData?.api.ok ?? true} />}
             />
             <MetricRow
               icon="layers-outline"
-              iconColor={sysStatus?.db.status === "OK" ? T.success : sysStatus?.db.status === "DEGRADED" ? T.warning : T.danger}
-              label="Database"
-              sub={sysStatus?.db.latencyMs != null ? `${sysStatus.db.latencyMs} ms` : undefined}
-              right={<StatusPillSmall status={sysStatus?.db.status ?? null} />}
+              iconColor={diagData?.db.ok ? T.success : T.danger}
+              label="DB Connectivity"
+              sub={`${diagData?.db.latencyMs ?? 0} ms`}
+              right={<StatusBadge ok={diagData?.db.ok ?? false} />}
             />
             <MetricRow
-              icon="cloud-upload-outline"
-              iconColor={sysStatus?.uploads.status === "ENABLED" ? T.success : T.textMuted}
-              label="File Storage"
-              right={<StatusPillSmall status={sysStatus?.uploads.status ?? null} />}
-              last
-            />
-          </Card>
-        )}
-
-        {/* ─── Scheduler & Billing Jobs ────────────────────────── */}
-        <SectionHeaderWithRefresh
-          label="SCHEDULER & BILLING JOBS"
-          onRefresh={() => refetchJobs()}
-          loading={jobsRefreshing}
-        />
-        {jobsLoading ? (
-          <CardSkeleton rows={3} />
-        ) : jobsError ? (
-          <CardError onRetry={() => refetchJobs()} />
-        ) : (
-          <Card noPad>
-            {(jobsData?.jobs ?? []).map((job, idx) => (
-              <View
-                key={job.name}
-                style={[jb.row, idx === (jobsData?.jobs.length ?? 0) - 1 && { borderBottomWidth: 0 }]}
-              >
-                <View style={[jb.iconWrap, { backgroundColor: job.lastRunStatus === "FAILED" ? T.danger + "15" : T.accent + "15" }]}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={16}
-                    color={job.lastRunStatus === "FAILED" ? T.danger : T.accent}
-                  />
-                </View>
-                <View style={jb.info}>
-                  <Text style={jb.label}>{job.label}</Text>
-                  <Text style={jb.schedule} numberOfLines={1}>{job.schedule}</Text>
-                  {job.lastRunAt ? (
-                    <Text style={jb.meta}>Last: {timeAgo(job.lastRunAt)}</Text>
-                  ) : (
-                    <Text style={jb.meta}>Never run</Text>
-                  )}
-                  {job.lastRunErrorSafe ? (
-                    <Text style={jb.error} numberOfLines={2}>{job.lastRunErrorSafe}</Text>
-                  ) : null}
-                </View>
-                <View style={jb.right}>
-                  {job.lastRunStatus ? (
-                    <StatusPillSmall status={job.lastRunStatus} />
-                  ) : (
-                    <View style={jb.pendingPill}>
-                      <Text style={jb.pendingText}>PENDING</Text>
-                    </View>
-                  )}
-                  <Text style={jb.nextRun}>Next: {formatDate(job.nextRunAt)}</Text>
-                </View>
-              </View>
-            ))}
-          </Card>
-        )}
-
-        {/* ─── Email Delivery Status ───────────────────────────── */}
-        <SectionHeaderWithRefresh
-          label="EMAIL DELIVERY"
-          onRefresh={() => refetchEmail()}
-          loading={emailRefreshing}
-        />
-        {emailLoading ? (
-          <CardSkeleton rows={3} />
-        ) : emailError ? (
-          <CardError onRetry={() => refetchEmail()} />
-        ) : (
-          <Card noPad>
-            <MetricRow
-              icon="mail-outline"
-              iconColor={emailData?.smtpConfigured ? T.success : T.warning}
-              label="SMTP"
-              sub={emailData?.smtpConfigured ? "External mail server configured" : "Dev console (no real emails sent)"}
-              right={
-                <View style={[ps.pill, { backgroundColor: emailData?.smtpConfigured ? T.success : T.warning }]}>
-                  <Text style={[ps.pillText, { color: "#fff" }]}>{emailData?.smtpConfigured ? "CONFIGURED" : "DEV MODE"}</Text>
-                </View>
-              }
-            />
-            <MetricRow
-              icon="send-outline"
-              iconColor={emailData?.lastEmailStatus === "SUCCESS" ? T.success : emailData?.lastEmailStatus === "FAILED" ? T.danger : T.textMuted}
-              label="Last Email"
-              sub={emailData?.lastEmailAt ? timeAgo(emailData.lastEmailAt) : "No emails sent yet"}
-              right={<StatusPillSmall status={emailData?.lastEmailStatus ?? null} />}
-            />
-            <MetricRow
-              icon="alert-circle-outline"
-              iconColor={emailData?.failedLast24h ? T.danger : T.success}
-              label="Failed (24h)"
-              right={
-                <Text style={[em.count, { color: emailData?.failedLast24h ? T.danger : T.success }]}>
-                  {emailData?.failedLast24h ?? 0}
-                </Text>
-              }
-              last
-            />
-          </Card>
-        )}
-
-        {/* ─── Security Overview ───────────────────────────────── */}
-        <SectionHeaderWithRefresh
-          label="SECURITY OVERVIEW"
-          onRefresh={() => refetchSec()}
-          loading={secRefreshing}
-        />
-        {secLoading ? (
-          <CardSkeleton rows={3} />
-        ) : secError ? (
-          <CardError onRetry={() => refetchSec()} />
-        ) : (
-          <Card noPad>
-            <MetricRow
-              icon="shield-checkmark-outline"
-              iconColor={secData?.thisAdmin2faEnabled ? T.success : T.warning}
-              label="Two-Factor Auth"
-              sub="For this admin account"
-              right={
-                <View style={[ps.pill, { backgroundColor: secData?.thisAdmin2faEnabled ? T.success : T.warning }]}>
-                  <Text style={[ps.pillText, { color: "#fff" }]}>{secData?.thisAdmin2faEnabled ? "ENABLED" : "DISABLED"}</Text>
-                </View>
-              }
-            />
-            <MetricRow
-              icon="warning-outline"
-              iconColor={secData?.failedAdminLoginsLast24h ? T.danger : T.success}
-              label="Failed Logins (24h)"
-              sub="Admin role login failures"
-              right={
-                <Text style={[em.count, { color: secData?.failedAdminLoginsLast24h ? T.danger : T.success }]}>
-                  {secData?.failedAdminLoginsLast24h ?? 0}
-                </Text>
-              }
-            />
-            <MetricRow
-              icon="phone-portrait-outline"
+              icon="globe-outline"
               iconColor={T.accent}
-              label="Active Sessions"
-              sub="Valid refresh tokens for this account"
-              right={
-                <Text style={[em.count, { color: T.accent }]}>
-                  {secData?.thisAdminActiveSessions ?? 0}
-                </Text>
-              }
+              label="Environment"
+              sub={diagData?.env.timezone ?? "—"}
+              right={<EnvBadge env={diagData?.env.nodeEnv ?? "development"} />}
+            />
+            <MetricRow
+              icon="code-slash-outline"
+              iconColor={T.textMuted}
+              label="Version"
+              right={<Text style={s.versionText}>v{diagData?.server.version ?? APP_VERSION}</Text>}
               last
             />
+            <View style={s.diagActions}>
+              <Pressable
+                style={({ pressed }) => [s.diagBtn, { opacity: pressed || diagRefreshing ? 0.7 : 1 }]}
+                onPress={() => refetchDiag()}
+              >
+                {diagRefreshing ? (
+                  <ActivityIndicator size={12} color={T.accent} />
+                ) : (
+                  <Ionicons name="refresh-outline" size={14} color={T.accent} />
+                )}
+                <Text style={s.diagBtnText}>Run Diagnostics</Text>
+              </Pressable>
+              <View style={s.diagBtnDivider} />
+              <Pressable
+                style={({ pressed }) => [s.diagBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={handleCopyDiagnostics}
+              >
+                <Ionicons
+                  name={copiedDiag ? "checkmark-outline" : "copy-outline"}
+                  size={14}
+                  color={copiedDiag ? T.success : T.accent}
+                />
+                <Text style={[s.diagBtnText, copiedDiag && { color: T.success }]}>
+                  {copiedDiag ? "Copied!" : "Copy Diagnostics"}
+                </Text>
+              </Pressable>
+            </View>
           </Card>
         )}
 
-        {/* ─── About ───────────────────────────────────────────── */}
+        {/* ─── Billing Policy ────────────────────────────────────── */}
+        <SectionHeader label="Billing Policy" style={s.sectionGap} />
+        <Card noPad>
+          {BILLING_RULES.map((rule, idx) => (
+            <MetricRow
+              key={rule.label}
+              icon={rule.icon}
+              iconColor={rule.color}
+              label={rule.label}
+              sub={rule.sub}
+              right={null}
+              last={idx === BILLING_RULES.length - 1}
+            />
+          ))}
+          <Pressable
+            style={({ pressed }) => [s.cardActionBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push("/(admin)/invoices")}
+          >
+            <Ionicons name="receipt-outline" size={15} color={T.accent} />
+            <Text style={s.cardActionText}>Open Invoices</Text>
+            <Ionicons name="chevron-forward" size={13} color={T.accent} />
+          </Pressable>
+        </Card>
+
+        {/* ─── Support ───────────────────────────────────────────── */}
+        <SectionHeader label="Support" style={s.sectionGap} />
+        <Card noPad>
+          <SettingsRow
+            icon="mail-outline"
+            iconColor={T.primary}
+            label="Report an Issue"
+            subtitle="Opens a pre-filled email draft"
+            onPress={handleReportIssue}
+          />
+          <Divider inset={64} />
+          <SettingsRow
+            icon={copiedSupport ? "checkmark-circle-outline" : "clipboard-outline"}
+            iconColor={copiedSupport ? T.success : T.accent}
+            label={copiedSupport ? "Copied!" : "Copy Support Code"}
+            subtitle="Includes your email, version, and diagnostics"
+            onPress={handleCopySupport}
+            rightElement={<View />}
+          />
+        </Card>
+
+        {/* ─── Data Management ───────────────────────────────────── */}
+        <SectionHeader label="Data Management" style={s.sectionGap} />
+        <Card noPad>
+          <MetricRow
+            icon="archive-outline"
+            iconColor={T.textMuted}
+            label="Audit Log Retention"
+            sub="Not configured — all records kept indefinitely"
+            right={null}
+          />
+          <MetricRow
+            icon="document-text-outline"
+            iconColor={T.textMuted}
+            label="Patient Records"
+            sub="Retained per clinic — no auto-expiry"
+            right={null}
+            last
+          />
+          <Pressable
+            style={({ pressed }) => [s.cardActionBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push("/(admin)/invoices")}
+          >
+            <Ionicons name="download-outline" size={15} color={T.accent} />
+            <Text style={s.cardActionText}>Open Exports</Text>
+            <Ionicons name="chevron-forward" size={13} color={T.accent} />
+          </Pressable>
+        </Card>
+
+        {/* ─── Footer ────────────────────────────────────────────── */}
         <View style={s.infoRow}>
           <Text style={s.infoLabel}>Version</Text>
           <Text style={s.infoValue}>v{APP_VERSION}</Text>
         </View>
-
         <Text style={s.brand}>HealthTour Operations Platform · v{APP_VERSION}</Text>
       </ScrollView>
 
-      {/* ─── Logout Modal ────────────────────────────────────── */}
+      {/* ─── Logout Modal ──────────────────────────────────────── */}
       <Modal visible={showLogout} transparent animationType="fade">
         <View style={s.overlay}>
           <View style={s.modal}>
@@ -644,7 +619,7 @@ export default function AdminSettings() {
         </View>
       </Modal>
 
-      {/* ─── Logout All Modal ────────────────────────────────── */}
+      {/* ─── Logout All Modal ──────────────────────────────────── */}
       <Modal visible={showLogoutAll} transparent animationType="fade">
         <View style={s.overlay}>
           <View style={s.modal}>
@@ -678,23 +653,7 @@ export default function AdminSettings() {
   );
 }
 
-const jb = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 13, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
-  iconWrap: { width: 34, height: 34, borderRadius: 9, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },
-  info: { flex: 1 },
-  label: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
-  schedule: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.accent, marginTop: 1 },
-  meta: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, marginTop: 2 },
-  error: { fontFamily: "Inter_400Regular", fontSize: 10, color: T.dangerText, marginTop: 3, backgroundColor: T.dangerBg, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3 },
-  right: { alignItems: "flex-end", gap: 5 },
-  nextRun: { fontFamily: "Inter_400Regular", fontSize: 10, color: T.textMuted, textAlign: "right" },
-  pendingPill: { backgroundColor: T.textMuted + "20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  pendingText: { fontFamily: "Inter_700Bold", fontSize: 10, color: T.textMuted },
-});
-
-const em = StyleSheet.create({
-  count: { fontFamily: "Inter_700Bold", fontSize: 18 },
-});
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
@@ -711,13 +670,50 @@ const s = StyleSheet.create({
   lastLoginRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   lastLoginText: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
 
+  versionText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.text },
+
+  diagActions: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.border,
+    paddingHorizontal: 4,
+  },
+  diagBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  diagBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12.5, color: T.accent },
+  diagBtnDivider: { width: StyleSheet.hairlineWidth, backgroundColor: T.border, marginVertical: 10 },
+
+  cardActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.border,
+  },
+  cardActionText: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.accent },
+
   infoRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 4, paddingVertical: 16, justifyContent: "space-between" },
   infoLabel: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.textSec },
   infoValue: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
-
   brand: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, textAlign: "center", marginTop: 8, marginBottom: 8 },
+
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
-  modal: { backgroundColor: T.surface, borderRadius: 20, padding: 24, width: "85%", alignItems: "center", gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 16 },
+  modal: {
+    backgroundColor: T.surface, borderRadius: 20, padding: 24, width: "85%", alignItems: "center", gap: 12,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24 },
+      android: { elevation: 16 },
+      web: { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any,
+    }),
+  },
   modalIcon: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
   modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
   modalSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20, textAlign: "center" },

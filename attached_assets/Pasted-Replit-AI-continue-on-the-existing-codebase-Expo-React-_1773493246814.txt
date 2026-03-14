@@ -1,0 +1,159 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+Admin Settings screen shows “failed data” for these sections:
+- SYSTEM STATUS
+- SCHEDULER & BILLING JOBS
+- EMAIL DELIVERY
+- SECURITY OVERVIEW
+
+REQUEST:
+1) First, diagnose why “failed data” appears (which API calls fail, and why).
+2) Then REMOVE those failing sections and replace them with the most essential, production-ready Admin Settings sections that work even when DB is empty.
+3) Ensure SOLID architecture and prod-ready UX:
+   - stable DTOs with safe defaults
+   - no “failed data” for empty DB
+   - true errors show a friendly message + Retry
+   - consistent internal error codes (use existing system codes if present)
+
+NON-NEGOTIABLE:
+- White theme premium UI.
+- Do not re-add duplicate features: Change password / 2FA / Logout all / Exports already exist.
+- Any new backend endpoints must be SOLID layered (controller->usecase->repo).
+- If an endpoint can return empty data, it must still return 200 with defaults.
+
+========================================================
+PHASE 1 — DIAGNOSE (MANDATORY)
+========================================================
+1) Find Admin Settings screen file path and list all queries/mutations it calls.
+2) Reproduce “failed data”:
+- Run app with empty DB
+- Open Admin Settings
+- Capture:
+  - network requests (URLs + status codes)
+  - backend logs
+  - any JSON parse errors in frontend
+3) Output a short root cause report:
+- Which call fails
+- What response it returns
+- Why UI shows failed data
+
+Do not proceed until root cause is documented.
+
+========================================================
+PHASE 2 — REPLACE SECTIONS WITH ESSENTIAL PROD-READY SECTIONS
+========================================================
+Remove these UI blocks entirely:
+- SYSTEM STATUS
+- SCHEDULER & BILLING JOBS
+- EMAIL DELIVERY
+- SECURITY OVERVIEW
+
+Replace with THESE sections (must implement):
+
+A) DIAGNOSTICS (Most useful in production)
+UI Card: “Diagnostics”
+Rows:
+- API Connectivity: OK/FAIL + latency ms
+- DB Connectivity: OK/FAIL + latency ms
+- Environment: DEV/PROD + timezone
+- App Version/Build (from app constants/config)
+Buttons:
+- “Run diagnostics” (re-fetch)
+- “Copy diagnostics” (copies a JSON summary for support)
+
+Backend:
+Implement ONE stable endpoint:
+GET /v1/admin/diagnostics
+ADMIN only
+Returns stable DTO ALWAYS 200:
+{
+  api: { ok: boolean, latencyMs: number },
+  db: { ok: boolean, latencyMs: number },
+  env: { nodeEnv: string, timezone: string },
+  server: { version?: string, commit?: string }
+}
+If DB is empty, still OK=true with latency and no dependence on data.
+
+B) BILLING POLICY (Static, always available)
+UI Card: “Billing Policy”
+Show static rules (no backend needed):
+- Invoices created: last day 09:00 (Istanbul)
+- Pending until 23:59, then unpaid
+- Unpaid => clinic suspended (manager/guest blocked)
+- Paid => clinic active
+Show invoice statuses: PENDING / UNPAID / PAID
+This card must never fail because it is static text.
+Add a button: “Open Invoices”
+
+C) SUPPORT / INCIDENT KIT (Very important)
+UI Card: “Support”
+- “Report an issue” -> opens mailto: with subject containing:
+  - user email
+  - timestamp
+  - lastRequestId (if you track)
+- “Copy support code” -> copies:
+  - current admin email
+  - app version/build
+  - lastRequestId (if available)
+  - diagnostics JSON (from section A)
+
+(Optional) backend:
+POST /v1/admin/support/ticket
+Creates a small record in audit_logs (action: SUPPORT_TICKET_CREATED) with metadata.
+Must be SOLID if implemented.
+
+D) DATA MANAGEMENT (Non-duplicate)
+Since exports already exist, show:
+- “Data retention policy” (static text):
+  - audit logs kept X days (if not implemented, say “Not configured”)
+- “Open exports” button -> navigates to existing export UI
+
+========================================================
+PHASE 3 — MAKE UI NEVER SAY “FAILED DATA” FOR EMPTY/OK CASES
+========================================================
+1) Replace any hardcoded “failed data” labels with:
+- Loading: skeleton
+- Error: “Could not load. Retry.”
+- Empty-but-success: show 0/“Not available” without error styling
+
+2) Diagnostics card:
+- If endpoint truly fails => show retry row (not “failed data”).
+- If endpoint returns ok=false for db/api => show DEGRADED state with guidance.
+
+========================================================
+PHASE 4 — SOLID BACKEND MODULES (if new endpoints are added)
+========================================================
+If you add /v1/admin/diagnostics:
+Create module:
+server/modules/adminDiagnostics/
+  adminDiagnostics.routes.ts
+  adminDiagnostics.controller.ts
+  usecases/GetDiagnostics.ts
+  repos/AdminDiagnosticsRepo.drizzle.ts (DB ping)
+  schemas/adminDiagnostics.schemas.ts
+Use zod + standard error handler.
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Root cause report (what caused “failed data”)
+2) Files changed/added
+3) New endpoints + sample curl:
+   GET /v1/admin/diagnostics
+4) Screenshot-like description of new Settings layout
+5) Manual QA checklist:
+- Empty DB: settings shows Diagnostics/Billing Policy/Support/Data without errors
+- API failure: diagnostics shows retry
+- Copy diagnostics works
+
+IMPLEMENTATION ORDER:
+1) Diagnose and document failing calls
+2) Implement /v1/admin/diagnostics endpoint (stable defaults)
+3) Replace Settings UI blocks with new essential sections
+4) Remove “failed data” label everywhere
+5) Verify with empty DB and with data
+
+Proceed now.
+END.
