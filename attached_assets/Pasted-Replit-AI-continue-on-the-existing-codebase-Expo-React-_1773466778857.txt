@@ -1,0 +1,150 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+On Admin → Users list, when selection mode is active:
+- In the header, show TWO action icons on the right:
+  1) “Deactivate selected” (soft delete / status=INACTIVE) — Trash icon
+  2) “Hard delete selected” (permanent DB delete / purge) — X icon (or separate “trash-x” icon if you prefer)
+Also show “Cancel (Vazgeç)” on the left to exit selection mode and clear selection.
+Must be SOLID + production-ready with strong safety.
+
+IMPORTANT UX NOTE:
+- Use distinct icons to avoid confusion:
+  - Trash = Deactivate (reversible)
+  - X = Hard Delete (irreversible, dangerous)
+- Hard delete must be protected by a stronger confirmation step (type-to-confirm).
+
+NON-NEGOTIABLE SAFETY RULES:
+- RBAC:
+  - Deactivate: ADMIN and SUPER_ADMIN allowed (as per existing permissions)
+  - Hard delete: SUPER_ADMIN ONLY (recommended)
+- Block:
+  - Cannot delete/deactivate currently logged-in admin
+  - Cannot hard delete SUPER_ADMIN accounts (default block)
+  - Cannot hard delete a clinic’s primary manager unless reassigned
+- Hard delete must run in a DB transaction (ACID).
+- Hard delete must check dependencies (purge-impact). If blocked, return reasons.
+- Never expose passwords.
+- Must return result summary (deactivated/purged/blocked).
+- SOLID: controllers thin; usecases contain logic; repos do Drizzle only.
+
+========================================================
+A) BACKEND — SOLID MODULES & ENDPOINTS
+========================================================
+1) Soft Deactivate bulk endpoint (must exist, verify)
+POST /v1/admin/users/bulk-deactivate
+Body:
+{ targets: [{ id, entityType }] }
+Return:
+{ deactivated, blocked:[{id,reason}] }
+
+2) NEW: Hard Delete (purge) bulk endpoint (SUPER_ADMIN only)
+POST /v1/admin/users/bulk-purge
+Body (zod):
+{
+  targets: [{ id: string, entityType: "ADMIN"|"MANAGER"|"PATIENT" }],
+  confirmText: string
+}
+Rules:
+- confirmText must equal: "PURGE" (minimum) AND additionally require typing the number of selected items:
+  Example: confirmText must be exactly "PURGE 5"
+Or better:
+  - confirmText must equal "PURGE" + current admin email
+Pick one and implement:
+Recommended:
+  confirmText must equal: `PURGE ${selectedCount}`
+
+Use-case rules:
+- Block self
+- Block SUPER_ADMIN targets
+- Block primary manager targets
+- Run dependency impact checks:
+  - if invoicesPaidBy > 0 or audit_logs references exist -> BLOCK (safer)
+- If allowed:
+  - transactionally delete:
+    - refresh_tokens, devices, notifications, credential_requests related to target
+    - finally delete from users or patients table
+- Write audit log: ADMIN_BULK_PURGE with metadata (ids, count)
+
+Return:
+{
+  purged: number,
+  blocked: [{id, entityType, reason}]
+}
+
+SOLID structure:
+server/modules/adminUsers/
+  usecases/BulkDeactivateUsers.ts
+  usecases/BulkPurgeUsers.ts
+  usecases/GetPurgeImpact.ts (reuse)
+  repos/AdminUsersRepo.ts + drizzle impl
+  schemas/adminUsers.schemas.ts
+
+========================================================
+B) FRONTEND — HEADER UI (SELECTION MODE)
+========================================================
+On Admin Users list screen:
+1) Normal mode:
+- headerTitle: “Users”
+- headerRight: “Select”
+
+2) Selection mode:
+- headerLeft: “Cancel (Vazgeç)” (X/back) -> exits selection, clears selection
+- headerTitle: “Selected: N”
+- headerRight: TWO icons side-by-side:
+  - Trash icon => Deactivate selected (soft)
+  - X icon => Hard delete selected (purge)
+
+Behavior:
+- Trash icon disabled when N=0
+- X icon disabled when N=0 and also hidden/disabled if user role is not SUPER_ADMIN
+
+3) Confirmation flows:
+A) Deactivate selected:
+- Standard confirm modal:
+  “Deactivate selected users? They lose access immediately.”
+- Call bulk-deactivate
+- Show toast summary and refresh list
+
+B) Hard delete selected:
+- Strong Danger modal/bottom sheet:
+  - Title: “Permanently delete users?”
+  - Body: “This removes users from the database and cannot be undone.”
+  - Show warning list of rules (self, primary manager, super admin blocked).
+  - Require type-to-confirm input:
+     placeholder: `Type "PURGE N"`
+  - Disable confirm until exact match
+- Call bulk-purge
+- Show toast summary and refresh list
+- Exit selection mode on success
+
+4) SOLID frontend structure:
+- hooks/useSelectionMode.ts (single source of truth)
+- services/api/adminUsers.ts:
+  - bulkDeactivateUsers()
+  - bulkPurgeUsers()
+- components/modals/ConfirmModal.tsx
+- components/modals/DangerConfirmModal.tsx (with type-to-confirm)
+- Keep screen thin.
+
+========================================================
+C) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) New endpoints + sample curl for bulk-purge
+3) Manual QA checklist:
+- select mode: shows cancel left; trash + X on right
+- deactivate works and blocks self/primary manager
+- purge is SUPER_ADMIN only; requires typing PURGE N; blocks unsafe targets
+- results show counts and blocked reasons
+- list refreshes and selection resets
+
+IMPLEMENTATION ORDER:
+1) Backend: implement bulk-purge SOLID usecase + repo + transaction + tests
+2) Frontend: header with dual icons + deactivate confirm + purge danger confirm
+3) Wire role check for SUPER_ADMIN visibility
+4) Tests + final verification
+
+Proceed now. Keep it production-grade and premium white theme.
+END.

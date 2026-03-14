@@ -18,12 +18,18 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { EmptyState, ErrorState } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
-import { bulkDeactivate, type BulkDeactivateTarget } from "@/lib/api/adminUsers";
+import {
+  bulkDeactivate,
+  bulkPurge,
+  type BulkDeactivateTarget,
+  type BulkPurgeTarget,
+} from "@/lib/api/adminUsers";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAdminUsersQuery, useInvalidateAdminUsers } from "@/hooks/useAdminUsersQuery";
 import { useSelection } from "@/hooks/useSelection";
 import { UserListRowCard } from "@/components/users/UserListRowCard";
 import { BulkDeleteModal } from "@/components/users/BulkDeleteModal";
+import { DangerPurgeModal } from "@/components/users/DangerPurgeModal";
 import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
@@ -77,6 +83,8 @@ export default function UsersScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
 
   const selection = useSelection();
 
@@ -176,13 +184,39 @@ export default function UsersScreen() {
     }
   }
 
+  async function handleBulkPurge(confirmText: string) {
+    const targets: BulkPurgeTarget[] = [];
+    for (const compositeId of selection.selectedIds) {
+      const [entityType, id] = compositeId.split("::");
+      targets.push({ id, entityType: entityType as BulkPurgeTarget["entityType"] });
+    }
+    setIsPurging(true);
+    try {
+      const result = await bulkPurge(targets, confirmText);
+      setShowPurgeModal(false);
+      selection.exitSelection();
+      await invalidateUsers();
+      const msg =
+        result.blocked.length > 0
+          ? `Deleted ${result.purged} user${result.purged !== 1 ? "s" : ""}. ` +
+            `${result.blocked.length} blocked: ${result.blocked.map((b) => b.reason).join(", ")}.`
+          : `${result.purged} user${result.purged !== 1 ? "s" : ""} permanently deleted.`;
+      Alert.alert(result.blocked.length > 0 ? "Partial Result" : "Done", msg);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "Purge failed");
+    } finally {
+      setIsPurging(false);
+    }
+  }
+
   const headerLeft = selection.selectionMode ? (
     <Pressable
-      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+      style={({ pressed }) => [styles.cancelBtn, { opacity: pressed ? 0.65 : 1 }]}
       onPress={selection.exitSelection}
       hitSlop={10}
     >
-      <Ionicons name="close" size={20} color={T.primary} />
+      <Ionicons name="close" size={15} color={T.primary} />
+      <Text style={styles.cancelBtnText}>Vazgeç</Text>
     </Pressable>
   ) : undefined;
 
@@ -205,7 +239,7 @@ export default function UsersScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.trashBtn,
-          selection.count === 0 && styles.trashBtnDisabled,
+          selection.count === 0 && styles.actionBtnDisabled,
           { opacity: pressed && selection.count > 0 ? 0.7 : 1 },
         ]}
         onPress={selection.count > 0 ? () => setShowDeleteModal(true) : undefined}
@@ -214,7 +248,24 @@ export default function UsersScreen() {
       >
         <Ionicons
           name="trash-outline"
-          size={18}
+          size={17}
+          color={selection.count > 0 ? "#fff" : T.textMuted}
+        />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.purgeBtn,
+          selection.count === 0 && styles.actionBtnDisabled,
+          { opacity: pressed && selection.count > 0 ? 0.7 : 1 },
+        ]}
+        onPress={selection.count > 0 ? () => setShowPurgeModal(true) : undefined}
+        disabled={selection.count === 0}
+        hitSlop={8}
+      >
+        <Ionicons
+          name="close-circle-outline"
+          size={17}
           color={selection.count > 0 ? "#fff" : T.textMuted}
         />
       </Pressable>
@@ -344,6 +395,14 @@ export default function UsersScreen() {
         onCancel={() => setShowDeleteModal(false)}
       />
 
+      <DangerPurgeModal
+        visible={showPurgeModal}
+        count={selection.count}
+        isLoading={isPurging}
+        onConfirm={handleBulkPurge}
+        onCancel={() => setShowPurgeModal(false)}
+      />
+
       <FilterPickerModal
         visible={pickerOpen === "clinic"}
         title="Filter by Clinic"
@@ -410,16 +469,41 @@ const styles = StyleSheet.create({
     color: T.accent,
   },
 
+  cancelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: T.r8,
+    borderWidth: 1,
+    borderColor: T.border,
+  },
+  cancelBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: T.primary,
+  },
+
   trashBtn: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: T.r8,
-    backgroundColor: T.danger,
+    backgroundColor: T.warning ?? "#d97706",
     flexShrink: 0,
   },
-  trashBtnDisabled: {
+  purgeBtn: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: T.r8,
+    backgroundColor: "#b91c1c",
+    flexShrink: 0,
+  },
+  actionBtnDisabled: {
     backgroundColor: T.border,
   },
 

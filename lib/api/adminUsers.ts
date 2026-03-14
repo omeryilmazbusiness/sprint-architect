@@ -161,3 +161,28 @@ export async function bulkDeactivate(
   });
   return res.json();
 }
+
+export interface BulkPurgeTarget {
+  id: string;
+  entityType: "ADMIN" | "MANAGER" | "PATIENT";
+}
+
+export interface BulkPurgeResult {
+  purged: number;
+  blocked: { id: string; entityType: string; reason: string }[];
+}
+
+export async function bulkPurge(
+  targets: BulkPurgeTarget[],
+  confirmText: string,
+): Promise<BulkPurgeResult> {
+  const res = await apiRequest("POST", "/v1/admin/users/bulk-purge", {
+    targets,
+    confirmText,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.message ?? "Purge request failed");
+  }
+  return res.json();
+}

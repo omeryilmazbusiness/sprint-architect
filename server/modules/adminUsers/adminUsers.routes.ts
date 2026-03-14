@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../../auth/middleware";
-import { handleBulkDeactivate, handleDeactivateSingle } from "./adminUsers.controller";
+import {
+  handleBulkDeactivate,
+  handleBulkPurge,
+  handleDeactivateSingle,
+} from "./adminUsers.controller";
 
 const router = Router();
 
@@ -9,6 +13,13 @@ router.post(
   authMiddleware,
   requireRole("ADMIN"),
   handleBulkDeactivate,
+);
+
+router.post(
+  "/users/bulk-purge",
+  authMiddleware,
+  requireRole("ADMIN"),
+  handleBulkPurge,
 );
 
 router.post(
