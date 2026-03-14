@@ -1,0 +1,83 @@
+Replit AI — continue on the existing codebase. DO NOT re-scaffold.
+
+REQUEST:
+Create a detailed, easy-to-understand report of EVERYTHING implemented for the ADMIN area so far (all features, screens, backend endpoints, DB tables/fields, business rules).
+I want it written for a non-technical person, but still specific and complete.
+
+IMPORTANT:
+- Do not guess. You must inspect the repository and backend routes to be accurate.
+- Include what is DONE, what is PARTIAL, and what is MISSING/BROKEN.
+
+OUTPUT FORMAT (must follow exactly):
+
+1) TITLE
+“Admin Module — Full Feature Report”
+
+2) ADMIN EXPERIENCE SUMMARY (simple language)
+- What Admin can do today (short bullet list)
+
+3) ADMIN SCREENS / ROUTES (mobile)
+For each screen, list:
+- Route path (exact file path under app/)
+- What the screen does (bullets)
+- Key actions (buttons) and where they navigate
+- Any known issues
+
+Must include at least:
+- Admin Dashboard
+- Clinics list
+- Create Clinic
+- Clinic Detail
+- Users list
+- User Detail (if exists)
+- Invoices list
+- Invoice Detail
+- Notifications (if exists)
+- Settings
+
+4) ADMIN BACKEND ENDPOINTS
+Group by module (clinics / users / invoices / notifications / dashboard / auth).
+For each endpoint, show:
+- Method + path
+- Who can call it (ADMIN only)
+- What it does
+- Main request fields and response fields (brief)
+- Any filters supported (clinicId/status/period/search)
+
+5) DATABASE (ADMIN-RELEVANT)
+List tables/columns relevant to Admin features:
+- clinics (fields)
+- users (fields)
+- invoices (fields)
+- audit_logs / notifications / credential_requests (if present)
+- explain status enums (clinic status, invoice status, user status)
+
+6) BUSINESS RULES ENFORCED (admin-relevant)
+Explain clearly:
+- invoice statuses and transitions
+- clinic suspension rules
+- who can create clinics/managers
+- soft delete policies (users/clinics)
+- primary manager rule (if exists)
+- any rate limits / password rules / security
+
+7) WHAT WAS RECENTLY CHANGED (CHANGELOG STYLE)
+- Last 10 meaningful changes with short explanations (based on git history if available; if not, infer from code changes but be explicit)
+
+8) GAPS / TODO (priority order)
+- Top 10 missing items or bugs blocking production
+- For each: why it matters and what needs to be done
+
+9) HOW TO VERIFY (manual checklist)
+- Step-by-step clicks in the app to verify each feature works
+
+REQUIREMENTS:
+- Use clean Turkish.
+- Be very concrete: include exact routes, exact endpoint paths, exact enums.
+- If anything is missing, say “YOK / EKSİK” clearly.
+- Start by printing a short file tree of admin-related folders only (app/(admin) and server/modules/*admin* etc).
+
+START NOW:
+1) Print admin-related file tree
+2) Produce the report in the exact format above
+END.
