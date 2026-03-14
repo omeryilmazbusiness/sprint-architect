@@ -23,6 +23,8 @@ import { StatusPill, Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
 import { COUNTRIES, Country, getCountryByCode, detectCountryFromPhone } from "@/constants/countries";
+import GuestListCard from "@/components/managerUsers/GuestListCard";
+import DoctorListCard from "@/components/managerDoctors/DoctorListCard";
 
 type TabType = "Guests" | "Doctors";
 
@@ -88,57 +90,38 @@ function formatDate(s?: string) {
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function GuestRow({ patient, onPress }: { patient: Patient; onPress: () => void }) {
-  const initials = patient.fullName
-    .split(" ").slice(0, 2)
-    .map((w) => w[0] ?? "").join("").toUpperCase();
-
-  const maskedKey = patient.patientKey.length > 8
-    ? `${patient.patientKey.slice(0, 4)}•••${patient.patientKey.slice(-4)}`
-    : patient.patientKey;
-
-  const missingTags: { label: string; warn: boolean }[] = [];
-  if ((patient.pendingDocCount ?? 0) > 0)
-    missingTags.push({ label: `${patient.pendingDocCount} Doc${patient.pendingDocCount === 1 ? "" : "s"} Pending`, warn: true });
-  if (!patient.plan?.hotelId) missingTags.push({ label: "No Hotel", warn: false });
-  if (!patient.plan?.transportId) missingTags.push({ label: "No Transport", warn: false });
-
-  const colors = ["#0A3D62", "#0369A1", "#059669", "#D97706", "#DC2626", "#7C3AED", "#DB2777"];
-  const avatarColor = colors[patient.fullName.length % colors.length];
-  const flagEmoji = patient.nationalityCode ? getCountryByCode(patient.nationalityCode)?.flag : null;
-
+function SkeletonCard() {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.75 : 1 }]}
-      onPress={onPress}
-    >
-      <View style={[styles.avatar, { backgroundColor: avatarColor + "15" }]}>
-        <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
-      </View>
-      <View style={styles.rowInfo}>
-        <View style={styles.rowTopLine}>
-          <Text style={styles.rowName} numberOfLines={1}>
-            {flagEmoji ? `${flagEmoji} ` : ""}{patient.fullName}
-          </Text>
-          <StatusPill status={patient.status} small />
+    <View style={skeletonStyles.card}>
+      <View style={skeletonStyles.topRow}>
+        <View style={skeletonStyles.avatar} />
+        <View style={skeletonStyles.lines}>
+          <View style={[skeletonStyles.line, { width: "60%" }]} />
+          <View style={[skeletonStyles.line, { width: "40%", marginTop: 6 }]} />
         </View>
-        <Text style={styles.rowMeta} numberOfLines={1}>
-          {maskedKey}{patient.arrivalDate ? ` · ✈ ${formatDate(patient.arrivalDate)}` : ""}
-        </Text>
-        {missingTags.length > 0 && (
-          <View style={styles.tagRow}>
-            {missingTags.map((tag) => (
-              <View key={tag.label} style={[styles.missingTag, tag.warn && styles.missingTagWarn]}>
-                <Text style={[styles.missingTagText, tag.warn && styles.missingTagTextWarn]}>{tag.label}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        <View style={[skeletonStyles.line, { width: 56, height: 20, borderRadius: 10 }]} />
       </View>
-      <Ionicons name="chevron-forward" size={18} color={T.textMuted} />
-    </Pressable>
+      <View style={[skeletonStyles.line, { width: "50%", height: 12 }]} />
+    </View>
   );
 }
+
+const skeletonStyles = StyleSheet.create({
+  card: {
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: T.border,
+    marginHorizontal: T.sp16,
+    marginBottom: T.sp12,
+    padding: T.sp16,
+    gap: 12,
+  },
+  topRow: { flexDirection: "row", alignItems: "center", gap: T.sp12 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.border },
+  lines: { flex: 1, gap: 6 },
+  line: { height: 13, backgroundColor: T.border, borderRadius: 6 },
+});
 
 function CountryPickerModal({
   visible,
@@ -433,25 +416,39 @@ function GuestsTab() {
       </View>
 
       {isLoading ? (
-        <View style={styles.loader}><ActivityIndicator color={T.accent} size="large" /></View>
+        <ScrollView contentContainerStyle={{ paddingTop: T.sp16, paddingBottom: 100 }}>
+          {[1, 2, 3, 4].map((k) => <SkeletonCard key={k} />)}
+        </ScrollView>
       ) : (
         <FlatList
           data={rows}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={{ paddingBottom: bottomPad + 100 }}
+          contentContainerStyle={{ paddingTop: T.sp12, paddingBottom: bottomPad + 100 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
-          ItemSeparatorComponent={() => <Divider inset={72} />}
+          ListHeaderComponent={
+            data?.total != null ? (
+              <Text style={styles.listCount}>
+                Guests ({data.total})
+              </Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={36} color={T.textMuted} />
+              <Ionicons name="people-outline" size={40} color={T.border} />
+              <Text style={styles.emptyTitle}>
+                {search || hasActiveFilters ? "No results" : "No guests yet"}
+              </Text>
               <Text style={styles.emptyText}>
-                {search || hasActiveFilters ? "No guests match your filters." : "No guests yet. Tap + to add your first guest."}
+                {search || hasActiveFilters
+                  ? "Try adjusting your search or filters"
+                  : "Tap the + button to add your first guest"}
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <GuestRow
+            <GuestListCard
               patient={item}
+              flagEmoji={item.nationalityCode ? getCountryByCode(item.nationalityCode)?.flag ?? null : null}
               onPress={() => router.push({ pathname: "/(manager)/patients/[id]", params: { id: item.id } })}
             />
           )}
@@ -805,31 +802,35 @@ function DoctorsTab() {
       </View>
 
       {isLoading ? (
-        <View style={styles.loader}><ActivityIndicator color={T.accent} size="large" /></View>
+        <ScrollView contentContainerStyle={{ paddingTop: T.sp16, paddingBottom: 100 }}>
+          {[1, 2, 3].map((k) => <SkeletonCard key={k} />)}
+        </ScrollView>
       ) : (
         <FlatList
           data={rows}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingBottom: bottomPad + 100 }}
+          contentContainerStyle={{ paddingTop: T.sp12, paddingBottom: bottomPad + 100 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
-          ItemSeparatorComponent={() => <Divider inset={16} />}
+          ListHeaderComponent={
+            rows.length > 0 ? (
+              <Text style={styles.listCount}>Doctors ({rows.length})</Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="medical-outline" size={36} color={T.textMuted} />
-              <Text style={styles.emptyText}>No doctors found.</Text>
+              <Ionicons name="medical-outline" size={40} color={T.border} />
+              <Text style={styles.emptyTitle}>No doctors found</Text>
+              <Text style={styles.emptyText}>
+                {debouncedSearch ? "Try a different search" : "Add your first doctor from the Doctors screen"}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.doctorCard}>
-              <View style={[styles.avatar, { backgroundColor: T.primary + "15" }]}>
-                <Ionicons name="person-outline" size={22} color={T.primary} />
-              </View>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>{item.fullName}</Text>
-                {item.specialty ? <Text style={styles.doctorSpecialty}>{item.specialty}</Text> : null}
-                {item.phone ? <Text style={styles.doctorPhone}>{item.phone}</Text> : null}
-              </View>
-            </View>
+            <DoctorListCard
+              doctor={item as any}
+              onEdit={() => {}}
+              onDelete={() => {}}
+            />
           )}
         />
       )}
@@ -1026,7 +1027,21 @@ const styles = StyleSheet.create({
   doctorName: { fontFamily: "Inter_700Bold", fontSize: 16, color: T.text, marginBottom: 2 },
   doctorSpecialty: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.primary, marginBottom: 4 },
   doctorPhone: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted },
-  empty: { paddingTop: 80, alignItems: "center", gap: T.sp12, paddingHorizontal: T.sp32 },
+  listCount: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 13,
+    color: T.textMuted,
+    paddingHorizontal: T.sp16,
+    paddingBottom: T.sp8,
+    paddingTop: 4,
+  },
+  empty: { paddingTop: 72, alignItems: "center", gap: T.sp8, paddingHorizontal: T.sp32 },
+  emptyTitle: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 16,
+    color: T.text,
+    textAlign: "center",
+  },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
   fab: {
     position: "absolute",

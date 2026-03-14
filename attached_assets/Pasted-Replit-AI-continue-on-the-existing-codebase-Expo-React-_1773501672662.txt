@@ -1,0 +1,169 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+REQUEST:
+Upgrade the Manager area list-card UX to premium, production-ready quality:
+1) Manager → Users tab: Guests list cards must look modern and professional.
+2) Manager → Doctors list: Doctor cards must match the same premium design language.
+3) Keep everything consistent (white theme), responsive, and robust (empty/loading/error states).
+
+NON-NEGOTIABLE:
+- No layout break on small screens (<360px).
+- Cards must have large tap targets and clear hierarchy.
+- Must handle empty lists gracefully (no “failed data”).
+- Must not introduce re-render/performance issues in FlatList.
+- SOLID-friendly frontend: list rows are presentational components; data fetching in hooks/services.
+- Keep existing API calls intact; do not change business logic unless required.
+
+========================================================
+PHASE 1 — AUDIT CURRENT LIST CARDS (MANDATORY)
+========================================================
+1) Locate exact route files for:
+- Manager Users screen (Guests list)
+- Manager Doctors screen
+2) Locate current row/card components used (if any).
+3) Identify UX problems:
+- spacing/typography inconsistent
+- missing chips/pills
+- weak status visuals
+- actions unclear
+- tap targets too small
+4) Print a short audit summary and which files will be changed.
+
+========================================================
+PHASE 2 — DESIGN SYSTEM FOR LIST CARDS (APPLY CONSISTENTLY)
+========================================================
+Create a shared “PremiumListCard” style pattern (do not duplicate styling):
+- components/ui/PremiumCard.tsx (if you already have Card, extend it)
+- tokens:
+  - radius: 18–22
+  - border: 1px subtle
+  - shadow: soft
+  - padding: 14–16
+  - spacing: 8–10
+- Use consistent text styles:
+  - title: 16–18, semibold
+  - subtitle: 12–13, muted
+  - meta: 11–12
+
+Create reusable small UI pieces:
+- components/ui/StatusPill.tsx (already exists, reuse)
+- components/ui/MetaChip.tsx (NEW) for small chips like “ARRIVING”, “DOCS PENDING”
+- components/ui/AvatarInitials.tsx (NEW) for clean avatar circle
+
+========================================================
+PHASE 3 — GUEST LIST CARD (Manager Users)
+========================================================
+Implement a dedicated row component:
+components/managerUsers/GuestListCard.tsx
+
+Card layout (premium, compact, information-rich):
+Top row:
+- Left: AvatarInitials (48x48)
+- Middle:
+  - Guest full name (bold, big)
+  - Secondary line: arrival → departure (if exists) OR “No travel dates”
+- Right:
+  - StatusPill (PENDING/APPROVED/ENDED/INACTIVE etc.)
+  - Chevron icon
+
+Second row (meta):
+- Masked guest key: “KEY: PATI•••0001” with copy icon button
+- Optional phone chip (tap to call) if exists
+
+Third row (tags/chips):
+- Show only if relevant, max 3 chips:
+  - “Docs Pending” (if any assigned docs status=PENDING)
+  - “Hotel Missing” (if no hotel assigned)
+  - “Upcoming Today” (if has appt today)
+Keep chips subtle (outline or glass).
+
+Interaction:
+- Whole card press navigates to Guest Detail
+- Copy button copies full key with toast
+- Ensure pressing copy does NOT trigger card navigation (use Pressable stop pattern)
+
+Performance:
+- Memoize row component (React.memo)
+- Use stable keyExtractor = patientId
+
+Empty/loading/error:
+- Skeleton card list while loading
+- Empty state CTA “Create Guest”
+- Error state “Retry”
+
+========================================================
+PHASE 4 — DOCTOR LIST CARD (Manager Doctors)
+========================================================
+Implement a dedicated row component:
+components/managerDoctors/DoctorListCard.tsx
+
+Card layout:
+Top row:
+- Left: avatar circle (or doctor icon)
+- Middle:
+  - Doctor full name (bold)
+  - Specialty (muted)
+- Right:
+  - “Edit” icon (pencil) (optional) OR chevron
+
+Second row (meta chips):
+- Phone chip (tap to call)
+- Email chip (tap mailto)
+- ExperienceYears chip (e.g., “8 yrs”)
+- University chip (optional, truncated)
+
+Third row:
+- Compact “actions” (optional):
+  - Edit
+  - Delete (confirm)
+If you already use modal forms, keep it.
+
+Performance:
+- React.memo
+- stable keyExtractor = doctorId
+
+Empty/loading/error states same.
+
+========================================================
+PHASE 5 — WIREFRAME IMPLEMENTATION IN SCREENS
+========================================================
+1) Update Manager Users screen to render GuestListCard in FlatList.
+2) Update Manager Doctors screen to render DoctorListCard.
+3) Ensure spacing and list content container padding consistent with other tabs.
+
+Add small “List header” area:
+- Title + count (e.g., “Guests (12)”)
+- Search bar (optional) with debounce
+- Filter button (optional) — if already exists, keep.
+
+========================================================
+PHASE 6 — QA / RESPONSIVE GUARANTEE
+========================================================
+Manual QA checklist:
+- Small screen <360px: no overlap, key line truncates, pills wrap nicely
+- Large names: ellipsize instead of pushing layout
+- Copy key works without opening detail
+- Tap card opens detail reliably
+- Skeleton looks premium
+- Empty state looks premium
+- Scroll performance smooth (no lag)
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation, print:
+1) Audit summary
+2) Files changed/added
+3) Screenshot-like description of final card layout
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit + identify current card components
+2) Build shared UI primitives (AvatarInitials, MetaChip) if missing
+3) Implement GuestListCard + wire into Users screen
+4) Implement DoctorListCard + wire into Doctors screen
+5) Polish responsive edge cases + performance memoization
+6) Verify on small width and with long sample data
+
+Proceed now. Make it premium, production-ready, and consistent.
+END.

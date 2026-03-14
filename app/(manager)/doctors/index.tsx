@@ -22,8 +22,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
-import { Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
+import DoctorListCard from "@/components/managerDoctors/DoctorListCard";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -166,43 +166,47 @@ export default function DoctorsScreen() {
       />
 
       {isLoading ? (
-        <View style={styles.loader}><ActivityIndicator color={T.accent} size="large" /></View>
+        <ScrollView contentContainerStyle={{ paddingTop: T.sp16, paddingBottom: bottomPad + 40 }}>
+          {[1, 2, 3, 4].map((k) => (
+            <View key={k} style={styles.skeletonCard}>
+              <View style={styles.skeletonRow}>
+                <View style={styles.skeletonAvatar} />
+                <View style={{ flex: 1, gap: 8 }}>
+                  <View style={[styles.skeletonLine, { width: "65%" }]} />
+                  <View style={[styles.skeletonLine, { width: "40%" }]} />
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={[styles.skeletonLine, { width: 80, height: 24, borderRadius: 12 }]} />
+                <View style={[styles.skeletonLine, { width: 100, height: 24, borderRadius: 12 }]} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <FlatList
           data={data?.rows ?? []}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingBottom: bottomPad + 40, paddingHorizontal: T.sp16, paddingTop: T.sp16 }}
+          contentContainerStyle={{ paddingTop: T.sp12, paddingBottom: bottomPad + 40 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
+          ListHeaderComponent={
+            (data?.rows?.length ?? 0) > 0 ? (
+              <Text style={styles.listCount}>Doctors ({data!.rows.length})</Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="medkit-outline" size={36} color={T.textMuted} />
-              <Text style={styles.emptyText}>No doctors yet. Add your first doctor.</Text>
+              <Ionicons name="medkit-outline" size={40} color={T.border} />
+              <Text style={styles.emptyTitle}>No doctors yet</Text>
+              <Text style={styles.emptyText}>Tap + to add your first doctor</Text>
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable onPress={() => handleEdit(item)} style={[styles.card, cardShadow]}>
-              <View style={styles.row}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {item.fullName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)}
-                  </Text>
-                </View>
-                <View style={styles.info}>
-                  <Text style={styles.name}>{item.fullName}</Text>
-                  {item.specialty && <Text style={styles.meta}>{item.specialty}</Text>}
-                  {item.phone && <Text style={styles.meta}>{item.phone}</Text>}
-                </View>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => Alert.alert("Delete Doctor", `Remove ${item.fullName}?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-                  ])}
-                >
-                  <Ionicons name="trash-outline" size={18} color={T.danger} />
-                </Pressable>
-              </View>
-            </Pressable>
+            <DoctorListCard
+              doctor={item}
+              onEdit={handleEdit}
+              onDelete={(id) => deleteMutation.mutate(id)}
+            />
           )}
         />
       )}
@@ -386,8 +390,30 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   name: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: T.text },
   meta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
-  empty: { paddingTop: 80, alignItems: "center", gap: T.sp12, paddingHorizontal: T.sp32 },
+  listCount: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 13,
+    color: T.textMuted,
+    paddingHorizontal: T.sp16,
+    paddingBottom: T.sp8,
+    paddingTop: 4,
+  },
+  empty: { paddingTop: 80, alignItems: "center", gap: T.sp8, paddingHorizontal: T.sp32 },
+  emptyTitle: { fontFamily: "Inter_600SemiBold" as any, fontSize: 16, color: T.text, textAlign: "center" },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
+  skeletonCard: {
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: T.border,
+    marginHorizontal: T.sp16,
+    marginBottom: T.sp12,
+    padding: T.sp16,
+    gap: 12,
+  },
+  skeletonRow: { flexDirection: "row", alignItems: "center", gap: T.sp12 },
+  skeletonAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.border, flexShrink: 0 },
+  skeletonLine: { height: 13, backgroundColor: T.border, borderRadius: 6 },
   modal: { flex: 1, backgroundColor: T.bg },
   modalHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
