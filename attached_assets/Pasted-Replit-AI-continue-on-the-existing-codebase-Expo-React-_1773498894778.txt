@@ -1,0 +1,159 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Redesign the Manager “Monthly Schedule” section with the most professional UX.
+It must be production-ready, SOLID-friendly (modular components + stable DTOs), and never break on empty data.
+
+NEW UX SPEC (EXACT):
+1) A premium MONTH calendar at top.
+2) Below the calendar, show 3 stacked card sections in this order:
+   A) Today Appointments (today’s agenda list)
+   B) Next Appointment (single next upcoming appointment card)
+   C) All Scheduled (full list of scheduled appointments, grouped by date)
+3) Calendar day coloring rules:
+- Today date cell: green selected box (always).
+- Future dates that have 1+ upcoming appointments: green highlight (lighter than today).
+- Past dates that have completed appointments only: gray highlight.
+- Dates with no appointments: normal.
+4) Tapping a day updates the “Today Appointments” card to show that day’s appointments (agenda).
+5) Must show time + patient + doctor + procedure/title + status.
+
+NON-NEGOTIABLE:
+- White theme premium.
+- No “failed data” for empty lists — show 0 and empty states.
+- Strict clinic scoping.
+- SOLID frontend structure: presentational components + hooks, no API calls inside UI components.
+- If backend returns empty, UI must still render beautifully.
+
+========================================================
+A) DATA MODEL / SOURCES (KEEP IT SOLID)
+========================================================
+Use one of these strategies:
+
+Preferred (best performance):
+- Backend provides month range endpoint:
+GET /v1/manager/appointments?from=ISO&to=ISO
+Return 200 always:
+[
+  { id, startAt, title, status, patientId, patientName, doctorName }
+]
+Frontend derives:
+- day markers (future/complete)
+- today agenda
+- next appointment
+- all scheduled grouped list
+
+If already exists, reuse. If missing, add it SOLID-style:
+server/modules/managerAppointments/
+  routes/controller/usecases/repos/schemas
+
+Important:
+- doctorName must exist per appointment (doctor is required).
+- status mapping: SCHEDULED/DONE/CANCELLED (or your enum).
+
+========================================================
+B) FRONTEND COMPONENT DESIGN (MODULAR)
+========================================================
+Create dedicated components:
+components/managerSchedule/
+  MonthlyCalendar.tsx          (calendar grid + day coloring + selection)
+  DayAgendaCard.tsx            (appointments list for selected day)
+  NextAppointmentCard.tsx      (single next appointment)
+  AllScheduledListCard.tsx     (grouped list)
+hooks/
+  useManagerMonthAppointments.ts  (fetch month range)
+  useScheduleDerivedData.ts       (derive markers/agenda/next/grouped)
+
+Rules:
+- MonthlyCalendar is presentational: it receives markers and selected date.
+- Derived computations happen in hook (memoized).
+
+========================================================
+C) CALENDAR UX — PROFESSIONAL IMPLEMENTATION
+========================================================
+1) Calendar header:
+- Month title (e.g., “March 2026”) + prev/next
+- Today button
+2) Month grid:
+- 7 columns
+- Day cell design:
+  - Today: solid green rounded rectangle (selected)
+  - Future with upcoming appointments: light green rounded background
+  - Past with only DONE: light gray background
+  - Selected day border (if selected day != today)
+- Day shows:
+  - day number
+  - small dot count indicator (optional) if multiple appts
+3) Interaction:
+- Tap day -> updates selectedDay state and agenda list below
+- Changing month triggers refetch range
+
+Performance:
+- Cache month results
+- Use memoized derived data
+- Avoid heavy re-renders
+
+========================================================
+D) BELOW CALENDAR — 3 CARD SECTIONS (ORDERED)
+========================================================
+A) “Today Appointments” card
+- If selected day is today: show today’s list
+- If selected day is other: title becomes “Appointments for {date}”
+Rows:
+- time (HH:mm)
+- patient name
+- doctor name
+- procedure/title
+- status pill
+Empty state: “No appointments scheduled.”
+
+B) “Next Appointment” card
+- Determine earliest appointment with startAt > now and status=SCHEDULED
+- Show one compact hero row:
+  - time + date
+  - patient
+  - doctor
+  - title
+- CTA: “Open patient” or “View in list”
+Empty state: “No upcoming appointments.”
+
+C) “All Scheduled” card
+- Group all appointments by date (ascending)
+- Show compact grouped list (date header + rows)
+- Provide optional filter chips:
+  - All / Upcoming / Completed
+- Empty state: “No scheduled appointments yet.”
+
+========================================================
+E) EMPTY/ERROR/LOADING STATES (PROD-READY)
+========================================================
+- Loading: skeleton calendar + skeleton cards
+- Error: a premium error card with Retry button
+- Empty DB: calendar still renders, all cards show empty states, no “failed data”
+
+========================================================
+F) OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Files changed/added
+2) Endpoints used/added + sample curl for month range
+3) Manual QA checklist:
+- Today is green
+- future appointment days green
+- past completed-only days gray
+- selecting a day updates agenda card
+- next appointment card correct
+- all scheduled list grouped correct
+- empty DB shows clean empty states
+4) Notes on SOLID structure (which hooks/components created)
+
+IMPLEMENTATION ORDER:
+1) Confirm existing appointments month endpoint; add if missing (SOLID)
+2) Build hooks: useManagerMonthAppointments + derived data
+3) Build MonthlyCalendar with day coloring rules
+4) Build 3 cards below calendar and wire selected day
+5) Polish states + responsive layout
+6) Verify performance and no overlaps on small screens
+
+Proceed now. Implement with premium white theme and strict rules above.
+END.

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,11 +13,11 @@ import { T } from "@/constants/adminTheme";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
-import { MonthCalendar } from "@/components/manager/MonthCalendar";
+import { ManagerScheduleSection } from "@/components/managerSchedule/ManagerScheduleSection";
 import { ManagerBannerCarousel } from "@/components/managerDashboard/ManagerBannerCarousel";
 import { ManagerKpiGrid } from "@/components/managerDashboard/ManagerKpiGrid";
 import { ManagerQuickActions } from "@/components/managerDashboard/ManagerQuickActions";
-import { ManagerTodaysAppointments } from "@/components/managerDashboard/ManagerTodaysAppointments";
+
 import { AppointmentsTodaySheet } from "@/components/managerDashboard/AppointmentsTodaySheet";
 import { useManagerDashboard } from "@/hooks/useManagerDashboard";
 
@@ -58,11 +58,6 @@ export default function ManagerDashboard() {
   });
 
   const { data, isLoading, isRefetching, refetch } = useManagerDashboard();
-
-  const todayAppts = useMemo(
-    () => data.todayAppointments.slice(0, 5),
-    [data.todayAppointments],
-  );
 
   async function handleLogout() {
     await logout();
@@ -106,26 +101,8 @@ export default function ManagerDashboard() {
             <ManagerQuickActions />
           </View>
 
-          <SectionLabel
-            label="Monthly Schedule"
-            action="Full Calendar"
-            onAction={() => router.push("/(manager-tabs)/users")}
-          />
-          <MonthCalendar />
-
-          <SectionLabel
-            label="Today's Appointments"
-            action={
-              data.todayAppointments.length > 0
-                ? `${data.todayAppointments.length} total`
-                : undefined
-            }
-          />
-          <ManagerTodaysAppointments
-            appointments={todayAppts}
-            isLoading={isLoading}
-            total={data.todayAppointments.length}
-          />
+          <SectionLabel label="Monthly Schedule" />
+          <ManagerScheduleSection />
         </View>
       </ScrollView>
 
