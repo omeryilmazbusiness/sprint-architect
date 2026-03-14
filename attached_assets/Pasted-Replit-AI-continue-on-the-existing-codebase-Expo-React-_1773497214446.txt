@@ -1,0 +1,195 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Analyze the current Manager Dashboard (it currently has Overview, Quick Actions, Monthly Schedule, Today’s Appointments).
+Then upgrade it to a premium, production-ready dashboard by:
+1) Adding the same “top 1/3 Banner Carousel” concept used in Admin (3D, rounded, premium) to the Manager Dashboard.
+2) Making Overview, Quick Actions, Monthly Schedule, and Today’s Appointments more professional, comprehensive, and useful.
+3) Keeping SOLID-friendly structure (modular components + hooks + stable DTOs).
+4) Ensure empty data renders as 0/empty states (no “failed data”).
+
+NON-NEGOTIABLE:
+- White theme consistent.
+- Strict clinic scoping for Manager.
+- No heavy dependencies; reuse existing banner components if already implemented.
+- Manager dashboard must NOT use admin endpoints; it must use manager-scoped endpoints only.
+- No UI break on small screens; robust responsive layout.
+- Loading skeletons + empty states + true error states.
+
+========================================================
+PHASE 1 — AUDIT CURRENT MANAGER DASHBOARD (MANDATORY)
+========================================================
+1) Identify the real manager dashboard route file path (the one that actually renders in UI).
+2) List what it currently shows:
+- Overview metrics (which numbers, from where)
+- Quick Actions (which actions)
+- Monthly Schedule (calendar or list)
+- Today’s Appointments
+3) Identify UX gaps:
+- missing critical metrics
+- unclear actions
+- inconsistent spacing/typography
+- weak empty states or error states
+
+Output a short audit summary before implementing changes.
+
+========================================================
+PHASE 2 — ADD MANAGER BANNER (TOP 1/3)
+========================================================
+1) Reuse Admin banner components if possible by making them generic:
+- components/common/BannerBackground3D.tsx
+- components/common/BannerSlide.tsx
+- components/common/BannerCarousel.tsx
+Or keep admin components but create a manager wrapper:
+- components/managerDashboard/ManagerBannerCarousel.tsx
+
+2) Manager banner slides (3 slides):
+Slide A: “Today Overview”
+- KPIs: Appointments today, Pending documents, Active guests
+- CTA: “View Today” -> navigates to monthly schedule focused on today or the Operations/appointments screen
+
+Slide B: “Operations Health”
+- KPIs: Missing assignments (hotel/transport/docs), Upcoming appointments (next 7 days)
+- CTA: “Fix Missing” -> navigates to Users list filtered missing docs/assignments
+
+Slide C: “This Month Snapshot”
+- KPIs: Total guests arriving this month, Total appointments this month
+- CTA: “Open Schedule” -> navigates to Monthly Schedule screen
+
+Empty state:
+- If all counts are 0, show a launch slide:
+  “System ready — create your first guest to start tracking.”
+  CTA -> New Guest (opens create guest bottom sheet)
+
+Design:
+- Same premium 3D gradient style (orange/blue/green/crimson).
+- Rounded corners, glass scrim, subtle blobs.
+- Must be readable.
+
+========================================================
+PHASE 3 — MANAGER DASHBOARD CONTENT UPGRADE
+========================================================
+A) Overview (KPI grid)
+Replace/upgrade to a 2x2 grid of the most useful KPIs:
+- Active Guests (Approved/In progress)
+- Appointments Today
+- Pending Documents (assigned/pending)
+- Missing Assignments (hotel/transport/documents missing)
+Each KPI card is tappable and routes to the relevant screen/filter.
+
+B) Quick Actions (professional)
+Add a clean action card with icons:
+- New Guest (open bottom sheet create guest)
+- Create Appointment (opens bottom sheet; doctor required per appointment)
+- Assign Documents (opens bottom sheet from selected guest flow OR navigates to Users)
+- Users (open Users list)
+- Services (open Services hub)
+Actions must be context-safe:
+- If action requires guest selection, route to Users and show a hint.
+
+C) Monthly Schedule (calendar + agenda)
+Ensure monthly schedule is truly useful:
+- Month calendar with dots on days with appointments
+- Under it: selected-day agenda list showing:
+  time + guest + appointment title + doctor + status
+- Month navigation + Today button
+- Cache month data for performance
+
+D) Today’s Appointments (focused list)
+Show:
+- next 5 appointments today (sorted by time)
+- each row: time, guest, doctor, title, status
+- quick action: “Mark done/cancel” only if endpoint exists; otherwise view only
+- tap row -> guest detail popup or guest detail page
+
+Empty states:
+- “No appointments today” should look like a premium empty card, not an error.
+
+========================================================
+PHASE 4 — BACKEND (MANAGER-SCOPED DTOs, SOLID)
+========================================================
+Do NOT call admin endpoints.
+
+Preferred approach:
+Create one manager dashboard endpoint (stable DTO, defaults):
+GET /v1/manager/dashboard
+Returns 200 ALWAYS with defaults:
+{
+  currentMonth: "YYYY-MM",
+  kpis: {
+    activeGuests: 0,
+    appointmentsToday: 0,
+    pendingDocuments: 0,
+    missingAssignments: 0
+  },
+  monthAppointments: [
+    { id, startAt, title, status, patientId, patientName, doctorName }
+  ],
+  todayAppointments: [
+    { id, startAt, title, status, patientId, patientName, doctorName }
+  ]
+}
+
+Implementation must be SOLID:
+server/modules/managerDashboard/
+  managerDashboard.routes.ts
+  managerDashboard.controller.ts
+  usecases/GetManagerDashboard.ts
+  repos/ManagerDashboardRepo.ts
+  repos/ManagerDashboardRepo.drizzle.ts
+  schemas/managerDashboard.schemas.ts
+
+Clinic scoping:
+- Manager’s clinicId derived from auth token/user record
+- All queries filtered by clinicId
+
+If monthAppointments list is too heavy:
+- Add query params: from/to and cache on mobile.
+
+========================================================
+PHASE 5 — FRONTEND (SOLID-FRIENDLY)
+========================================================
+1) Create hook:
+hooks/useManagerDashboard.ts (React Query)
+- returns stable defaults so UI never breaks
+
+2) Create components:
+components/managerDashboard/
+  ManagerBannerCarousel.tsx
+  ManagerKpiGrid.tsx
+  ManagerQuickActions.tsx
+  ManagerMonthlySchedule.tsx
+  ManagerTodaysAppointments.tsx
+
+Manager dashboard screen becomes only composition.
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+1) Empty DB / empty clinic:
+- Banner shows launch slide and zeros
+- No “failed data”
+2) With data:
+- Banner shows 3 slides and CTAs route correctly
+- Calendar dots match appointments
+- Agenda list accurate
+3) Small screen:
+- No overlap; CTA full-width if needed
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit summary of current manager dashboard and what you improved
+2) Files changed/added
+3) New endpoint(s) + sample curl for /v1/manager/dashboard
+4) Manual QA checklist
+
+IMPLEMENTATION ORDER:
+1) Audit current manager dashboard route
+2) Backend: implement /v1/manager/dashboard stable DTO (defaults)
+3) Frontend: hook + banner + upgraded sections
+4) Polish + verify
+
+Proceed now. Make it premium, SOLID, production-ready.
+END.
