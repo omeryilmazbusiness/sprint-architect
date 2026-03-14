@@ -28,6 +28,7 @@ The application uses **Replit built-in PostgreSQL** with Drizzle ORM (`drizzle-o
 - Dev/Prod DB: `heliumdb` (uses `DATABASE_URL`)
 - Test DB: `heliumdb_test` (uses `DATABASE_URL_TEST` or auto-derived; created on Replit's same Postgres instance)
 - `server/scripts/resetTestDb.ts`: Safe reset script with guards — refuses if `NODE_ENV !== "test"`, DB name lacks "test", or host matches a cloud provider pattern.
+- `server/scripts/resetLaunchDb.ts`: Production launch reset script — truncates all data via TRUNCATE CASCADE (preserves schema), refuses if `NODE_ENV=test` or dbname contains "test". DRY-RUN by default; requires `RESET_CONFIRM="YES_DELETE_ALL"` to execute. Optional bootstrap SUPER_ADMIN via `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD`. Run via "DB Reset Launch" workflow or `NODE_ENV=development tsx server/scripts/resetLaunchDb.ts`.
 - New npm scripts: `db:migrate`, `db:seed`, `test:db:reset`, updated `test` + `test:watch` to inject `NODE_ENV=test`.
 
 **Transaction Manager (`server/tx/TransactionManager.ts`):** Provides `tx.run(async trx => {...})` abstraction for Drizzle transactions. Critical flows wrapped atomically:

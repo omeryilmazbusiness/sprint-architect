@@ -39,6 +39,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start App"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "DB Reset Launch"
+
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -72,3 +76,14 @@ task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
 ensurePreviewReachable = "/status"
+
+[[workflows.workflow]]
+name = "DB Reset Launch"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development tsx server/scripts/resetLaunchDb.ts"
+
+[workflows.workflow.metadata]
+outputType = "console"

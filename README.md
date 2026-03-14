@@ -170,9 +170,67 @@ server/
 
 ---
 
-## ⚠️ WARNING — Never Reset Prod
+## Launch Database Reset (Clean Production Launch)
 
-**Never run `npm run test:db:reset` against your production database.** The script has safety guards but is designed for local/test databases only. Production data cannot be recovered after a reset.
+> **⚠️ IRREVERSIBLE — This wipes ALL application data. There is no undo.**
+
+Use `db:reset:launch` to reset the database to a clean "first production release" state — no clinics, no users, no patients, no invoices. Schema (tables, indexes, enums) is preserved; only rows are removed.
+
+### Commands
+
+```bash
+# DRY-RUN (safe — shows row counts, makes no changes):
+RESET_CONFIRM="" NODE_ENV=development tsx server/scripts/resetLaunchDb.ts
+
+# Real reset — wipes ALL data:
+RESET_CONFIRM="YES_DELETE_ALL" NODE_ENV=development tsx server/scripts/resetLaunchDb.ts
+
+# Real reset + create bootstrap SUPER_ADMIN (recommended for launch):
+RESET_CONFIRM="YES_DELETE_ALL" \
+  BOOTSTRAP_ADMIN_EMAIL="ops@yourcompany.com" \
+  BOOTSTRAP_ADMIN_PASSWORD="SecurePass123!" \
+  NODE_ENV=development tsx server/scripts/resetLaunchDb.ts
+```
+
+You can also trigger the reset from the **"DB Reset Launch"** workflow in the Replit panel (which runs DRY-RUN mode by default — set `RESET_CONFIRM` in your secrets to enable the real wipe).
+
+### Safety Guards (will refuse and abort if any check fails)
+
+1. `NODE_ENV` must NOT be `"test"` — prevents accidental use on test databases
+2. Database name must NOT contain `"test"` — double-check against wrong target
+3. `RESET_CONFIRM` must equal `"YES_DELETE_ALL"` — if anything else, DRY-RUN only
+
+### DRY-RUN Mode
+
+When `RESET_CONFIRM` is unset or doesn't match, the script:
+- Prints a table-by-table row count summary
+- Shows exactly what would be wiped
+- Exits with code 0 (no changes made)
+
+### Bootstrap Admin
+
+Provide both `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` to create an initial `SUPER_ADMIN` account after the wipe. The account is created with `mustChangePassword=true` — the operator must change the password on first login.
+
+**Password requirements:** Minimum 12 characters.
+
+### Expected Result After Reset
+
+| Table                | Rows |
+|----------------------|------|
+| clinics              | 0    |
+| users                | 0 (or 1 if bootstrap) |
+| patients             | 0    |
+| invoices             | 0    |
+| appointments         | 0    |
+| all other tables     | 0    |
+
+> The mobile app will show an empty system. No clinics, managers, or patients exist until created through the app.
+
+---
+
+## ⚠️ WARNING — Never Reset Prod Without Confirmation
+
+**Never run the launch reset against your production database without a deliberate `RESET_CONFIRM="YES_DELETE_ALL"` flag.** The script has safety guards but production data cannot be recovered after a reset.
 
 ---
 

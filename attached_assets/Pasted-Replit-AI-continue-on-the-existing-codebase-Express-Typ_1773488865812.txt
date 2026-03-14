@@ -1,0 +1,96 @@
+Replit AI — continue on the existing codebase (Express/TypeScript + PostgreSQL + Drizzle + Expo). DO NOT re-scaffold.
+
+REQUEST:
+Reset the DATABASE to a “fresh launch” state:
+- No clinics
+- No users (except optionally one initial SUPER_ADMIN bootstrap account)
+- No invoices
+- No patients
+- No credential requests, notifications, audit logs
+- No doctors/hotels/transports/doc types/patient docs/appointments/plans
+Basically: empty system as if first production release.
+
+CRITICAL SAFETY RULES (NON-NEGOTIABLE):
+1) You MUST implement a safe reset script with multiple guards.
+2) The script must require an explicit env var confirmation:
+   - RESET_CONFIRM="YES_DELETE_ALL"
+3) The script must refuse to run if:
+   - NODE_ENV==="test" (this is dev/prod reset only)
+   - OR database name contains "test" (avoid wrong target)
+4) The script must print a DRY-RUN summary first (what tables will be wiped, counts), then only wipe if RESET_CONFIRM matches.
+5) No secrets printed. Only masked DB host/dbname.
+
+========================================================
+A) IMPLEMENT RESET SCRIPT (DEV/PROD CLEAN LAUNCH)
+========================================================
+Create:
+server/scripts/resetLaunchDb.ts
+
+Behavior:
+1) Load config with zod (use existing server/config.ts).
+2) Determine active DB:
+- parse db URL
+- extract host, port, dbname
+3) Safety guards:
+- if NODE_ENV==="test" => throw
+- if dbname includes "test" => throw
+- if RESET_CONFIRM !== "YES_DELETE_ALL" => run DRY-RUN only and exit(0)
+4) DRY-RUN:
+- For each table in schema, count rows and print summary.
+- Print which tables will be truncated.
+5) Execute wipe (only when confirmed):
+- Use a transaction.
+- Use TRUNCATE ... RESTART IDENTITY CASCADE for all tables (order doesn’t matter with CASCADE).
+- Ensure no leftover data remains.
+6) After wipe:
+- Re-run migrations (if needed) OR assume schema exists and only data removed.
+Recommended:
+- Do NOT drop schema; only truncate data.
+7) OPTIONAL bootstrap (recommended for launching):
+- If BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD are provided:
+  - Create ONE initial SUPER_ADMIN user with those credentials
+  - mustChangePassword=true
+- Otherwise leave users empty.
+
+Add npm script:
+- npm run db:reset:launch
+which executes:
+NODE_ENV=production node server/scripts/resetLaunchDb.ts
+(or NODE_ENV=development, depending on your environment)
+
+========================================================
+B) UPDATE README / DOCUMENTATION
+========================================================
+Add docs explaining:
+- DRY-RUN mode (no RESET_CONFIRM)
+- Real delete mode (RESET_CONFIRM="YES_DELETE_ALL")
+- How to set bootstrap admin
+- Big warning: irreversible
+
+========================================================
+C) VERIFICATION CHECKLIST (MANDATORY OUTPUT)
+========================================================
+After running (or implementing), print:
+1) The exact commands to run:
+- Dry run:
+  RESET_CONFIRM="" npm run db:reset:launch
+- Real reset:
+  RESET_CONFIRM="YES_DELETE_ALL" npm run db:reset:launch
+- Optional bootstrap:
+  RESET_CONFIRM="YES_DELETE_ALL" BOOTSTRAP_ADMIN_EMAIL="..." BOOTSTRAP_ADMIN_PASSWORD="..." npm run db:reset:launch
+
+2) Expected result:
+- all tables row counts are 0 except users (if bootstrap enabled).
+
+3) Mention that mobile app will have no clinics/users unless bootstrap admin created.
+
+========================================================
+D) IMPLEMENTATION ORDER
+========================================================
+1) Write resetLaunchDb.ts with strict guards + dry run
+2) Add npm script
+3) Update README
+4) (Optional) Add a minimal test that script refuses to run when dbname contains "test" or NODE_ENV=test
+
+Proceed now. Implement safely and do not wipe any DB without confirmation guards.
+END.
