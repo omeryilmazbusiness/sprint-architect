@@ -1,0 +1,182 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+CONTEXT:
+Admin Settings already includes:
+- Logout all devices
+- Change password
+- 2FA management
+- (optional) export logs / export invoices CSV
+
+REQUEST:
+Remove the “Recent Activity” section and replace it with MORE professional, production-ready sections that add real operational value.
+Keep SOLID architecture and premium white theme.
+
+NON-NEGOTIABLE:
+- White theme premium UX.
+- No duplicate features (do not re-add logout/change password/2FA/export).
+- Any new data shown must be accurate and fetched from backend via SOLID modules.
+- Use loading/empty/error states with Retry.
+- No secrets in UI (never show SMTP password, DB password, etc.).
+
+========================================================
+A) WHAT TO ADD INSTEAD OF “RECENT ACTIVITY” (PROD-READY)
+========================================================
+Replace “Recent Activity” with these sections:
+
+1) System Status (Health & Latency)
+- API Health: /health latency + status
+- DB Health: new endpoint /v1/admin/system/ping (SELECT 1) + latency
+- Storage/Uploads Health (if you use uploads): show “Enabled / Disabled” and last error if tracked
+UI:
+- Card with 3 rows, each row shows status pill (OK/DEGRADED/DOWN) and latency ms
+- “Refresh” button
+
+2) Scheduler & Billing Jobs Status
+Show last run and next run for:
+- Invoice Creation Job (last day 09:00)
+- Pending->Unpaid Rollover Job (daily 00:00)
+- Monthly Report Job (1st day 00:00)
+Also show:
+- Last run result: SUCCESS/FAILED
+- If failed: short error message (safe)
+UI:
+- Card with rows + “View logs” (optional)
+Data requires backend job_runs tracking.
+
+3) Email Delivery Status (Operational)
+Show:
+- SMTP configured? (true/false)
+- Last email sent at + status (SUCCESS/FAILED)
+- Failed emails in queue (count) (if you have retry queue)
+UI:
+- Card with status pill and counts
+This requires email_events table or lightweight tracking.
+
+4) Security Overview (Non-duplicative)
+Do NOT repeat actions, show indicators:
+- 2FA enabled for this admin? (yes/no)
+- Failed login attempts last 24h (count) for admin logins (aggregated)
+- Active sessions count (refresh tokens not revoked) for this admin
+UI:
+- Card with metrics only (no action buttons, actions already exist)
+
+========================================================
+B) BACKEND — SOLID IMPLEMENTATION REQUIRED
+========================================================
+Implement minimal, SOLID endpoints to support these new sections.
+
+Modules:
+server/modules/systemStatus/
+  systemStatus.routes.ts
+  systemStatus.controller.ts
+  usecases/GetSystemStatus.ts
+  repos/SystemStatusRepo.ts
+  repos/SystemStatusRepo.drizzle.ts
+  schemas/systemStatus.schemas.ts
+
+server/modules/jobRuns/
+  jobRuns.routes.ts
+  jobRuns.controller.ts
+  usecases/GetJobStatus.ts
+  repos/JobRunsRepo.ts
+  repos/JobRunsRepo.drizzle.ts
+
+server/modules/emailStatus/
+  emailStatus.routes.ts
+  emailStatus.controller.ts
+  usecases/GetEmailStatus.ts
+  repos/EmailStatusRepo.ts
+  repos/EmailStatusRepo.drizzle.ts
+
+1) DB additions (if not already existing)
+A) job_runs table:
+- id, jobName, status(SUCCESS|FAILED), startedAt, finishedAt, errorMessageSafe, createdAt
+- optional: nextRunAt (or compute in backend)
+B) email_events table OR extend existing audit_logs metadata:
+- id, type(INVOICE_EMAIL|RESET_PASSWORD|MONTHLY_REPORT...), status(SUCCESS|FAILED), toEmail, createdAt, errorMessageSafe
+C) login_fail_events or use audit_logs with action=LOGIN_FAIL and timestamps
+
+2) Endpoints (ADMIN only):
+- GET /v1/admin/system/status
+Returns:
+{
+  api: { status, latencyMs },
+  db: { status, latencyMs },
+  uploads: { status }
+}
+
+- GET /v1/admin/system/jobs
+Returns:
+{
+  timezone: "Europe/Istanbul",
+  jobs: [
+    { name, schedule, lastRunAt, lastRunStatus, lastRunErrorSafe?, nextRunAt }
+  ]
+}
+
+- GET /v1/admin/system/email
+Returns:
+{
+  smtpConfigured: boolean,
+  lastEmailAt?: string,
+  lastEmailStatus?: "SUCCESS"|"FAILED",
+  failedLast24h: number
+}
+
+- GET /v1/admin/system/security-metrics
+Returns:
+{
+  thisAdmin2faEnabled: boolean,
+  failedAdminLoginsLast24h: number,
+  thisAdminActiveSessions: number
+}
+
+All must be zod validated and implemented with SOLID layering (controller->usecase->repo).
+
+3) Scheduler integration (if you already have scheduler jobs):
+- On each job run start/finish:
+  - write job_runs record with SUCCESS/FAILED and safe error message.
+- On each email send attempt:
+  - write email_events row with SUCCESS/FAILED.
+(Do NOT store sensitive content.)
+
+========================================================
+C) MOBILE — ADMIN SETTINGS UI UPDATE (PREMIUM)
+========================================================
+1) Remove “Recent Activity” section entirely.
+2) Add new sections/cards (in this order):
+- Profile & Security actions (existing, keep)
+- System Status (new)
+- Scheduler & Billing Jobs (new)
+- Email Delivery Status (new)
+- Security Overview metrics (new)
+
+UI rules:
+- Each card has a small “Refresh” link/button (optional).
+- Show skeleton while loading.
+- If error, show compact error message + Retry.
+- Keep spacing/typography consistent with Admin white theme.
+
+========================================================
+D) OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing print:
+1) Files changed/added
+2) DB migrations + commands
+3) New endpoints + sample curl
+4) Manual QA checklist:
+- Settings loads and shows new cards
+- Refresh works
+- Job status shows last run and next run
+- Email status shows configured flag and last send
+- No recent activity section remains
+
+IMPLEMENTATION ORDER:
+1) Backend: add job_runs + email_events tracking (if needed)
+2) Backend: implement system status endpoints (SOLID)
+3) Mobile: replace recent activity section with new cards
+4) Wire scheduler + email sending to write job/email events
+5) Verify end-to-end + polish
+
+Proceed now. Keep it production-grade and premium.
+END.

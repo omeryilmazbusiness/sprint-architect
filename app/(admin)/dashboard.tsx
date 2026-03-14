@@ -18,7 +18,6 @@ import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 import { BannerCarousel } from "@/components/dashboard/BannerCarousel";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { RecentInvoicesList } from "@/components/dashboard/RecentInvoicesList";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 function NavRow({
   icon,
@@ -142,9 +141,6 @@ export default function AdminDashboard() {
             isLoading={isLoading}
           />
 
-          {/* ── Activity Feed ─────────────────────────────────── */}
-          <Text style={[styles.sectionLabel, styles.sectionGap]}>RECENT ACTIVITY</Text>
-          <ActivityFeed activity={data?.activity} isLoading={isLoading} />
         </View>
       </ScrollView>
     </View>

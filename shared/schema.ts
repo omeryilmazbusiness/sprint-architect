@@ -369,6 +369,33 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const jobRunStatusEnum = pgEnum("job_run_status", ["SUCCESS", "FAILED"]);
+
+export const jobRuns = pgTable("job_runs", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  jobName: text("job_name").notNull(),
+  status: jobRunStatusEnum("status").notNull(),
+  startedAt: timestamp("started_at").notNull(),
+  finishedAt: timestamp("finished_at").notNull(),
+  errorMessageSafe: text("error_message_safe"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const emailEventStatusEnum = pgEnum("email_event_status", ["SUCCESS", "FAILED"]);
+
+export const emailEvents = pgTable("email_events", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  type: text("type").notNull(),
+  status: emailEventStatusEnum("status").notNull(),
+  toEmail: text("to_email").notNull(),
+  errorMessageSafe: text("error_message_safe"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertClinicSchema = createInsertSchema(clinics).pick({
   name: true,
   status: true,
@@ -399,6 +426,8 @@ export type Invoice = typeof invoices.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CredentialRequest = typeof credentialRequests.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type JobRun = typeof jobRuns.$inferSelect;
+export type EmailEvent = typeof emailEvents.$inferSelect;
 
 export const patientsRelations = relations(patients, ({ one, many }) => ({
   plan: one(patientPlans, { fields: [patients.id], references: [patientPlans.patientId] }),

@@ -6,6 +6,7 @@ import {
   isFirstDayOfMonth,
   sendMonthlyReport,
 } from "./billingService";
+import { insertJobRun } from "../modules/jobRuns/repos/JobRunsRepo.drizzle";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -23,8 +24,19 @@ function getIstanbulDateTime(): { hour: number; minute: number; day: number } {
   return { hour, minute, day };
 }
 
+function sanitizeError(err: unknown): string {
+  if (err instanceof Error) {
+    return (err.message ?? "")
+      .replace(/password=\S+/gi, "password=***")
+      .replace(/:[^@]+@/g, ":***@")
+      .slice(0, 200);
+  }
+  return "Unknown error";
+}
+
 function scheduleCron(
   label: string,
+  jobName: string,
   targetHour: number,
   targetMinute: number,
   condition: () => boolean,
@@ -42,11 +54,24 @@ function scheduleCron(
 
     lastRanDate = dateKey;
     console.log(`[scheduler] Running job: ${label}`);
+    const startedAt = new Date();
     try {
       await fn();
+      const finishedAt = new Date();
       console.log(`[scheduler] Job completed: ${label}`);
+      insertJobRun({ jobName, status: "SUCCESS", startedAt, finishedAt }).catch((e) =>
+        console.error(`[scheduler] Failed to record job run for ${jobName}:`, e)
+      );
     } catch (err) {
+      const finishedAt = new Date();
       console.error(`[scheduler] Job failed: ${label}`, err);
+      insertJobRun({
+        jobName,
+        status: "FAILED",
+        startedAt,
+        finishedAt,
+        errorMessageSafe: sanitizeError(err),
+      }).catch((e) => console.error(`[scheduler] Failed to record job run for ${jobName}:`, e));
     }
   }, 60 * 1000);
 }
@@ -60,6 +85,7 @@ export function startBillingScheduler(): void {
   // Job A — Generate invoices on last day of month at 09:00
   scheduleCron(
     "Job A — Generate PENDING invoices (09:00 last day of month)",
+    "job_a_generate_invoices",
     9, 0,
     () => isLastDayOfMonth(),
     async () => {
@@ -72,6 +98,7 @@ export function startBillingScheduler(): void {
   // Job B — Mark overdue as UNPAID at 00:00 daily
   scheduleCron(
     "Job B — Mark overdue PENDING as UNPAID (00:00 daily)",
+    "job_b_mark_overdue",
     0, 0,
     () => true,
     async () => {
@@ -83,6 +110,7 @@ export function startBillingScheduler(): void {
   // Job C — Monthly report on the 1st of each month at 00:00
   scheduleCron(
     "Job C — Monthly status report (00:00 on 1st of month)",
+    "job_c_monthly_report",
     0, 0,
     () => isFirstDayOfMonth(),
     async () => {
