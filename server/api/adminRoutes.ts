@@ -303,43 +303,6 @@ router.post("/credential-requests/:id/reject", async (req, res, next) => {
   }
 });
 
-router.post("/patients/:id/regenerate-access-key", async (req, res, next) => {
-  try {
-    const patient = await db.query.patients.findFirst({ where: eq(patients.id, req.params.id) });
-    if (!patient) throw new AppError("NOT_FOUND", "Patient not found", 404);
-
-    let newKey = generateGuestKey();
-    let attempts = 0;
-    while (attempts < 5) {
-      const existing = await patientRepo.findByKey(newKey);
-      if (!existing) break;
-      newKey = generateGuestKey();
-      attempts++;
-    }
-
-    await db.update(patients)
-      .set({ patientKey: newKey })
-      .where(eq(patients.id, patient.id));
-
-    await authRepo.revokeDevice(patient.id);
-    await authRepo.revokeAllRefreshTokensForPatient(patient.id);
-
-    auditLog({
-      clinicId: patient.clinicId ?? undefined,
-      actorId: req.actor!.sub,
-      actorRole: "ADMIN",
-      action: "GUEST_ACCESS_KEY_REGENERATED",
-      resourceType: "patient",
-      resourceId: patient.id,
-      metadata: { initiatedBy: "admin_direct" },
-    });
-
-    res.json({ success: true, oneTimeAccessKey: newKey });
-  } catch (e) {
-    next(e);
-  }
-});
-
 // ─── Metrics ────────────────────────────────────────────────────────────────
 
 const periodRegex = /^\d{4}-\d{2}$/;

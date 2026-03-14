@@ -34,6 +34,7 @@ import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 import CreateUserSheet from "@/components/admin/CreateUserSheet";
+import { PatientSummarySheet } from "@/components/patients/PatientSummarySheet";
 import { useQuery } from "@tanstack/react-query";
 import type { UnifiedEntity } from "@/lib/api/adminUsers";
 
@@ -85,6 +86,7 @@ export default function UsersScreen() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
+  const [patientSheetId, setPatientSheetId] = useState<string | null>(null);
 
   const selection = useSelection();
 
@@ -139,7 +141,9 @@ export default function UsersScreen() {
   const handleRowPress = useCallback((item: UnifiedEntity, compositeId: string) => {
     if (selection.selectionMode) {
       selection.toggle(compositeId);
-    } else if (item.entityType !== "PATIENT") {
+    } else if (item.entityType === "PATIENT") {
+      setPatientSheetId(item.id);
+    } else {
       router.push({ pathname: "/(admin)/users/[id]", params: { id: item.id } });
     }
   }, [selection]);
@@ -430,6 +434,12 @@ export default function UsersScreen() {
         onSelect={(v) => setStatusFilter((v || "ALL") as StatusFilter)}
         onClose={() => setPickerOpen(null)}
         allLabel="All Statuses"
+      />
+
+      <PatientSummarySheet
+        patientId={patientSheetId}
+        onClose={() => setPatientSheetId(null)}
+        onUpdated={() => invalidateUsers()}
       />
 
       <CreateUserSheet

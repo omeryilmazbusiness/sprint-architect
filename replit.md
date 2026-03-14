@@ -48,6 +48,16 @@ The `server/modules/adminDashboard/` implements a SOLID-layered dashboard aggreg
 
 The Admin Dashboard (`app/(admin)/dashboard.tsx`) uses modular components: `useAdminDashboard` hook for data fetching, `BannerCarousel` for overview slides, `KpiGrid` for pressable KPI cards, `RecentInvoicesList` for recent invoices, and `ActivityFeed` for audit events. Navigation to filtered views is handled by `services/navigation/filteredNavigation.ts`.
 
+### Admin Patients Module
+
+The `server/modules/adminPatients/` implements a SOLID-layered patient management module. It includes:
+- **Schemas** (`schemas/adminPatients.schemas.ts`): Zod param validation and DTO types for `PatientSummaryDto` and `RegenerateAccessKeyDto`.
+- **Repo** (`repos/AdminPatientsReadRepo.drizzle.ts`): Drizzle-based read repo using a manual SQL join on `clinics` (since the `patientsRelations` schema does not define a clinic relation), plus `deactivatePatient` and `regenerateAccessKey` methods.
+- **Use cases**: `GetPatientSummary`, `DeactivatePatient` (with 409 guard for already-inactive), `RegenerateAccessKey` (revokes device + all refresh tokens + generates new `GUEST-XXXX-XXXX` key).
+- **Controller** and **Routes**: `GET /v1/admin/patients/:id`, `POST /v1/admin/patients/:id/deactivate` (ADMIN+), `POST /v1/admin/patients/:id/regenerate-access-key` (SUPER_ADMIN only).
+- **Frontend**: `lib/api/adminPatients.ts` API client and `components/patients/PatientSummarySheet.tsx` — a React Native `Modal` + `Animated` slide-up sheet with: masked key (GUEST-••••-XXXX), eye toggle to reveal, copy to clipboard, clinic chip linking to clinic detail, deactivate + regenerate actions with `Alert.alert` confirmations, and a new-key banner after regeneration. Wired into `app/(admin)/users/index.tsx` via `handleRowPress` — tapping any PATIENT row opens the sheet.
+- **Duplicate removed**: `router.post("/patients/:id/regenerate-access-key", ...)` block deleted from `server/api/adminRoutes.ts`.
+
 ### Admin Users Module + Bulk Deactivation
 
 The `server/modules/adminUsers/` module provides SOLID-layered user management, including bulk deactivation. It defines DTOs for deactivation targets and results. A repository handles listing unified entities (managers, patients, admins) with search/filter, and individual deactivation. A use case manages bulk deactivation logic, preventing self-deactivation and primary manager deactivation, and adding audit logs. The API exposes `POST /v1/admin/users/bulk-deactivate`. Frontend components include `useSelection` hook, `UserListRowCard` for user display with selection, `SelectionToolbar` for bulk actions, and `BulkDeleteModal` for confirmation. The `app/(admin)/users/index.tsx` screen is fully rewritten to incorporate these features.

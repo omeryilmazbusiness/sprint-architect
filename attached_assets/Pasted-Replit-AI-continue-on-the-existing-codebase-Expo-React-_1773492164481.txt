@@ -1,0 +1,160 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+In Admin → Users list, PATIENT (Guest) items have no detail page and tapping them does nothing (or fails).
+We want a professional, production-ready solution:
+- When the admin taps a PATIENT row, open a bottom-sheet popup (slide-up) showing a summary of the patient with the most necessary information.
+- The existing User Detail page for ADMIN/MANAGER remains as-is.
+- Must be SOLID-compliant and robust.
+
+KEY UX REQUIREMENTS (PATIENT SUMMARY SHEET):
+- Bottom sheet / modal slides up from the bottom
+- Shows: full name, status, clinic, patientKey (masked + copy), contact phone/email, nationality, passportNo (if exists), arrival/departure dates, requestedService, notes (if exists)
+- Quick actions:
+  - Open Clinic (navigate to clinic detail)
+  - Regenerate Access Key (SUPER_ADMIN only, confirm modal)
+  - Deactivate patient (soft deactivate) (confirm modal)
+  - (Optional) View invoices filtered by clinic
+- Empty fields gracefully hidden
+- Loading skeleton + error + retry
+- White theme premium design
+
+NON-NEGOTIABLE:
+- SOLID backend layering (controller -> usecase -> repo; no Drizzle in controller).
+- RBAC: ADMIN only; regen access key SUPER_ADMIN only (recommended).
+- Deactivation is safe soft deactivate (status=INACTIVE), not hard delete.
+- No password exposure.
+- PatientKey should be masked by default; copy requires tap.
+
+========================================================
+A) BACKEND — ADD / VERIFY ADMIN PATIENT DETAIL ENDPOINT (SOLID)
+========================================================
+1) Add endpoint if missing:
+GET /v1/admin/patients/:id
+ADMIN only
+Returns PatientSummary DTO:
+{
+  id,
+  clinicId,
+  clinicName,
+  fullName,
+  status,
+  patientKey,
+  phoneE164?,
+  email?,
+  nationalityCode?,
+  nationality?,
+  passportNo?,
+  arrivalDate?,
+  departureDate?,
+  requestedService?,
+  notes?,
+  createdAt
+}
+- Ensure stable response even with nulls.
+- Validate params with zod.
+
+2) Use SOLID module:
+server/modules/adminPatients/
+  adminPatients.routes.ts
+  adminPatients.controller.ts
+  usecases/GetPatientSummary.ts
+  repos/AdminPatientsRepo.ts
+  repos/AdminPatientsRepo.drizzle.ts
+  schemas/adminPatients.schemas.ts
+
+3) Ensure deactivation endpoint works for patient:
+POST /v1/admin/patients/:id/deactivate
+ADMIN only
+- sets patient.status=INACTIVE + statusReason="ADMIN_DEACTIVATED"
+- audit log: ADMIN_PATIENT_DEACTIVATED
+
+4) If you already have:
+POST /v1/admin/patients/:id/regenerate-access-key
+Keep it; otherwise implement (SUPER_ADMIN only):
+- generate new patientKey
+- revoke devices binding
+- audit log event
+
+========================================================
+B) FRONTEND — USERS LIST TAP BEHAVIOR
+========================================================
+1) Update Admin Users list row handling:
+- If entityType is ADMIN/MANAGER:
+  - navigate to existing User Detail screen
+- If entityType is PATIENT:
+  - open PatientSummarySheet bottom sheet with patientId
+
+2) Implement the sheet:
+components/patients/PatientSummarySheet.tsx
+- Supports open/close
+- Fetches patient detail via API on open (React Query)
+- Renders skeleton on loading
+- Shows error with Retry
+
+Sheet layout (premium):
+- Header row: avatar initials + fullName + status pill
+- Subheader: clinicName (tap “Open clinic”)
+- Info grid/cards:
+  - PatientKey (masked) + copy button
+  - Phone/email (tap to call/email)
+  - Nationality/passport (if present)
+  - Arrival/Departure (if present)
+  - Requested service / Notes (if present)
+Actions area (bottom):
+- Deactivate (danger) + confirm
+- Regenerate key (super admin only) + confirm
+- Close
+
+3) Copy behavior:
+- patientKey displayed masked like PATI•••0001
+- “Copy” button copies the full key to clipboard and shows toast.
+
+4) Premium interaction:
+- If @gorhom/bottom-sheet exists, use it.
+- Otherwise use React Native Modal + animated slide-up.
+- Ensure keyboard-safe if any inputs appear (likely none).
+
+========================================================
+C) API CLIENT (MODULAR)
+========================================================
+Add/extend:
+services/api/adminPatients.ts
+- getPatientSummary(id)
+- deactivatePatient(id)
+- regenerateAccessKey(id) (if allowed)
+
+========================================================
+D) PERMISSIONS / SAFETY
+========================================================
+- If current admin role != SUPER_ADMIN, hide regenerate access key action.
+- Handle blocked errors with friendly toasts:
+  - FORBIDDEN -> “You don’t have permission.”
+  - NOT_FOUND -> “Patient not found.”
+- Always log audit events on backend for actions.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) New endpoints + sample curl:
+  - GET /v1/admin/patients/:id
+  - POST /v1/admin/patients/:id/deactivate
+3) Manual QA checklist:
+- Tap patient row -> summary sheet opens
+- Data loads and renders fields correctly
+- Copy patient key works
+- Deactivate works and list updates
+- Regenerate key (super admin) works and shows new key (if shown once) or copy flow
+4) Notes about SOLID module boundaries
+
+IMPLEMENTATION ORDER:
+1) Backend: patient summary endpoint + deactivate/regenerate endpoints (SOLID) + tests (basic)
+2) Frontend: PatientSummarySheet component + API client
+3) Wire Users list tap behavior to open sheet
+4) Polish UI + error handling
+5) Verify end-to-end
+
+Proceed now. Implement and verify.
+END.
