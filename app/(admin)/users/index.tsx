@@ -213,18 +213,17 @@ export default function UsersScreen() {
     }
   }
 
-  const headerLeft = selection.selectionMode ? (
+  const cancelBtn = (
     <Pressable
-      style={({ pressed }) => [styles.cancelBtn, { opacity: pressed ? 0.65 : 1 }]}
+      style={({ pressed }) => [styles.cancelIconBtn, { opacity: pressed ? 0.65 : 1 }]}
       onPress={selection.exitSelection}
       hitSlop={10}
     >
-      <Ionicons name="close" size={15} color={T.primary} />
-      <Text style={styles.cancelBtnText}>Vazgeç</Text>
+      <Ionicons name="close" size={18} color={T.primary} />
     </Pressable>
-  ) : undefined;
+  );
 
-  const headerRight = selection.selectionMode ? (
+  const selectionActions = (
     <View style={styles.headerSelectionActions}>
       <Pressable
         style={({ pressed }) => [
@@ -274,20 +273,16 @@ export default function UsersScreen() {
         />
       </Pressable>
     </View>
-  ) : (
-    <View style={styles.headerNormalActions}>
-      <Pressable
-        style={({ pressed }) => [styles.selectBtn, { opacity: pressed ? 0.7 : 1 }]}
-        onPress={() => selection.enterSelection()}
-      >
-        <Ionicons name="checkmark-circle-outline" size={15} color={T.textSec} />
-        <Text style={styles.selectBtnText}>Select</Text>
-      </Pressable>
-      <Pressable style={styles.newBtn} onPress={() => setShowCreate(true)}>
-        <Ionicons name="add" size={16} color="#fff" />
-        <Text style={styles.newBtnText}>New</Text>
-      </Pressable>
-    </View>
+  );
+
+  const addIconBtn = (
+    <Pressable
+      style={({ pressed }) => [styles.addIconBtn, { opacity: pressed ? 0.7 : 1 }]}
+      onPress={() => setShowCreate(true)}
+      hitSlop={6}
+    >
+      <Ionicons name="add" size={20} color="#fff" />
+    </Pressable>
   );
 
   const headerTitle = selection.selectionMode
@@ -298,9 +293,9 @@ export default function UsersScreen() {
     <View style={styles.root}>
       <AdminHeader
         title={headerTitle}
-        left={selection.selectionMode ? headerLeft : undefined}
-        right={selection.selectionMode ? headerRight : undefined}
-        rightExtra={!selection.selectionMode ? headerRight : undefined}
+        left={selection.selectionMode ? cancelBtn : undefined}
+        right={selection.selectionMode ? selectionActions : undefined}
+        rightExtra={!selection.selectionMode ? addIconBtn : undefined}
       />
 
       {!selection.selectionMode && (
@@ -321,6 +316,13 @@ export default function UsersScreen() {
                 <Ionicons name="close-circle" size={16} color={T.textMuted} />
               </Pressable>
             )}
+            <Pressable
+              style={({ pressed }) => [styles.selectModeBtn, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => selection.enterSelection()}
+              hitSlop={6}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color={T.textSec} />
+            </Pressable>
           </View>
 
           <View style={styles.filterRow}>
@@ -453,7 +455,6 @@ export default function UsersScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
 
-  headerNormalActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerSelectionActions: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   iconBtn: {
@@ -469,7 +470,7 @@ const styles = StyleSheet.create({
   },
 
   selectAllBtn: {
-    width: "auto",
+    width: "auto" as any,
     paddingHorizontal: 12,
   },
   selectAllText: {
@@ -478,36 +479,54 @@ const styles = StyleSheet.create({
     color: T.accent,
   },
 
-  cancelBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+  cancelIconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: T.r8,
+    backgroundColor: T.surfaceSubtle,
     borderWidth: 1,
     borderColor: T.border,
+    flexShrink: 0,
   },
-  cancelBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: T.primary,
+
+  addIconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: T.r8,
+    backgroundColor: T.primary,
+    flexShrink: 0,
+  },
+
+  selectModeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: T.r8,
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: T.border,
+    flexShrink: 0,
   },
 
   trashBtn: {
     width: 34,
     height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: T.r8,
-    backgroundColor: T.warning ?? "#d97706",
+    backgroundColor: T.warning,
     flexShrink: 0,
   },
   purgeBtn: {
     width: 34,
     height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: T.r8,
     backgroundColor: "#b91c1c",
     flexShrink: 0,
@@ -515,28 +534,6 @@ const styles = StyleSheet.create({
   actionBtnDisabled: {
     backgroundColor: T.border,
   },
-
-  selectBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: T.r8,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  selectBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
-  newBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: T.primary,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: T.r8,
-  },
-  newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
 
   filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border },
   searchRow: {

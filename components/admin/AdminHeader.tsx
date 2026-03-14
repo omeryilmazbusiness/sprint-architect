@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexShrink: 0,
+    maxWidth: 210,
   },
   extraSlot: {
     flexDirection: "row",

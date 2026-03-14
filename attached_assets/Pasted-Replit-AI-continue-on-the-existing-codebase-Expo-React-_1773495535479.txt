@@ -1,0 +1,155 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+PROBLEM:
+On Admin → Users screen, header buttons/icons overlap (stack on top of each other) and the layout breaks. I want a production-ready, premium header that NEVER breaks on any admin tab or screen size.
+
+GOALS:
+1) Diagnose the exact cause of header overlap on Users tab (what elements collide: title, search, bell, badge, profile, select/trash/cancel icons, etc.).
+2) Fix it with a robust responsive layout strategy.
+3) Ensure the header is consistent across ALL admin tabs and never breaks (Users/Clinics/Invoices/Dashboard/Notifications/Settings).
+4) Keep SOLID-friendly structure: presentational AdminHeader + hook providing data; screens only pass props.
+
+NON-NEGOTIABLE:
+- No overlapping on small screens (<360px width) and large screens.
+- Works in both normal mode and Users selection mode (cancel + delete icons).
+- Use safe-area padding.
+- Minimum touch target 44px.
+- No “absolute positioned” hacks that cause collisions.
+- Must be tested visually by forcing narrow widths and long titles.
+- Maintain premium white theme.
+
+========================================================
+PHASE 1 — ROOT CAUSE ANALYSIS (MANDATORY)
+========================================================
+1) Locate AdminHeader implementation and Users screen header config.
+2) Identify overlap triggers:
+- Is headerRight rendering too many icons without spacing?
+- Is there a search input shown + selection icons simultaneously?
+- Is title too long and not truncating?
+- Is badge absolute positioned causing collisions?
+- Are icons wrapped incorrectly (no flex row, no gap)?
+3) Confirm on:
+- Users normal mode
+- Users selection mode (selected count, cancel, trash, purge etc if present)
+- iOS and Android safe area differences
+Capture:
+- exact files and lines responsible.
+
+Do not implement until you identify the specific cause(s).
+
+========================================================
+PHASE 2 — DESIGN FIX (RESPONSIVE HEADER CONTRACT)
+========================================================
+Implement a strict AdminHeader “layout contract”:
+
+A) Header is 3 zones:
+- Left zone (fixed width): Back/cancel + optional small title
+- Center zone (flex): Title (truncated) OR Search (only when enabled)
+- Right zone (fixed width): icon cluster (bell, health, profile, action icons)
+
+B) Responsive rules:
+1) If screen width < 360:
+- Title font slightly smaller
+- Hide subtitle chips (env/tz) if shown
+- Reduce icon count via overflow menu:
+  - Move less-critical icons into a “More” (⋯) menu
+2) In Users selection mode:
+- Header center shows “Selected: N” (truncated)
+- Right zone shows ONLY two actions max:
+  - Deactivate (trash)
+  - Hard delete (x) if enabled
+- Move bell/profile into overflow menu OR hide them during selection mode to prevent collisions (professional UX: selection mode focuses on selection actions).
+3) In normal mode:
+- Right zone can show bell + profile
+- Search can be enabled, but if search is enabled, reduce right icons (use overflow).
+
+C) Icon cluster:
+- Use a single row container with:
+  - flexDirection: row
+  - alignItems: center
+  - gap or marginRight spacing
+- Badge must not change layout width unpredictably:
+  - Use a small fixed-size badge container
+
+D) Title truncation:
+- Always set numberOfLines={1} and ellipsizeMode="tail"
+- Avoid long text pushing icons.
+
+========================================================
+PHASE 3 — IMPLEMENTATION (SOLID-FRIENDLY)
+========================================================
+1) Update AdminHeader presentational component:
+components/admin/AdminHeader.tsx
+Props must support:
+- mode: "normal" | "select"
+- title
+- selectedCount? (when select)
+- enableSearch? + onSearchChange?
+- actionsRight?: array of action items OR ReactNode
+- showNotifications?: boolean
+- showProfile?: boolean
+- showHealth?: boolean
+- onOpenOverflowMenu?: function
+
+2) Add Overflow menu (professional):
+components/admin/AdminOverflowMenu.tsx
+- Shows items:
+  - Notifications
+  - Settings
+  - Logout
+  - Logout all devices
+- When in selection mode, overflow can include:
+  - Notifications (optional)
+But default: keep selection mode focused.
+
+3) Ensure Users screen controls header state cleanly:
+- When selection mode active:
+  - pass mode="select"
+  - hide notifications/profile or move to overflow automatically
+- When selection mode off:
+  - mode="normal"
+  - restore normal icons
+
+4) Do NOT sprinkle header logic across screens:
+- Each screen passes minimal props.
+- Common header data (unread count, env) comes from hook:
+hooks/useAdminHeaderData.ts
+
+========================================================
+PHASE 4 — VISUAL REGRESSION CHECK (MANDATORY)
+========================================================
+Create a quick “Header QA harness” screen (dev-only) OR add a temporary toggle to simulate:
+- narrow width layout
+- long titles
+- selection mode with big selected count (e.g., 100)
+Verify:
+- No overlap
+- Icons remain tappable
+- Search input works
+- Header height consistent
+Remove harness after verification or keep behind __DEV__.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementation, print:
+1) Root cause summary (why overlap happened)
+2) Files changed
+3) The responsive rules implemented (bullet list)
+4) Manual QA checklist across all admin tabs:
+- Dashboard
+- Clinics
+- Invoices
+- Users (normal + selection)
+- Notifications
+- Settings
+
+IMPLEMENTATION ORDER:
+1) Root cause analysis
+2) AdminHeader layout contract + truncation
+3) Selection mode behavior (reduce icons / overflow)
+4) Apply across all admin screens
+5) QA harness verification and cleanup
+
+Proceed now. Make it premium, robust, and never overlapping.
+END.
