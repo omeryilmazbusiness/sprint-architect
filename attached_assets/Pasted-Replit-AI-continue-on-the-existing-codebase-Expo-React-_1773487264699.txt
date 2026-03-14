@@ -1,0 +1,184 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+OBJECTIVE:
+Implement a professional, production-ready HARD DELETE (“Purge”) feature for users/patients:
+- Permanently delete a user from DB safely and predictably.
+- Provide a purge-impact preview.
+- Enforce strict permissions and guardrails.
+- ACID transactions, SOLID module architecture, and audit logging.
+
+NON-NEGOTIABLE SAFETY RULES:
+- Only SUPER_ADMIN can purge (hard delete).
+- Cannot purge the currently logged-in admin.
+- Cannot purge SUPER_ADMIN targets (default block) unless policy explicitly allows.
+- Cannot purge a clinic’s primary manager unless reassigned first.
+- Must require “type to confirm” in UI (e.g., PURGE user@email.com).
+- Must run in db.transaction and either fully succeed or rollback.
+- Must emit audit log event ADMIN_USER_PURGED with metadata.
+- Must NOT expose passwords or secrets anywhere.
+
+========================================================
+A) DEFINE PURGE POLICIES (CHOOSE & IMPLEMENT)
+========================================================
+Implement two purge modes (professional approach):
+1) STRICT mode (default):
+- If the user is referenced by critical records (invoices.paidByUserId, audit_logs.actorId, etc.) => BLOCK purge and return reasons.
+2) ANONYMIZE mode (optional, super-admin only):
+- Allows purge by detaching/anonymizing those references:
+  - invoices.paidByUserId -> NULL (and keep a text snapshot of who paid if needed)
+  - audit_logs.actorId -> NULL (or replace with "SYSTEM_PURGED")
+Implement STRICT mode first. Add ANONYMIZE mode behind an explicit request flag.
+
+========================================================
+B) DB & BACKEND — SOLID MODULES
+========================================================
+Create/extend module:
+server/modules/adminUsers/
+  adminUsers.routes.ts
+  adminUsers.controller.ts
+  schemas/adminUsers.schemas.ts (zod)
+  usecases/
+    GetPurgeImpact.ts
+    PurgeUser.ts
+  repos/
+    AdminUsersRepo.ts
+    AdminUsersRepo.drizzle.ts
+server/shared/
+  auth/requireRole.ts (ensure SUPER_ADMIN)
+  errors/AppError.ts + ErrorCodes.ts
+  tx/TransactionManager.ts
+  audit/AuditLogService.ts
+
+1) DB changes (if needed)
+- Ensure clinics.primaryManagerUserId exists (already in report).
+- Ensure audit_logs exists.
+- No new tables required, but you may add:
+  - user_purge_events table (optional) to track purges with who/when/why.
+
+========================================================
+C) BACKEND ENDPOINTS
+========================================================
+1) Purge impact preview (SUPER_ADMIN only)
+GET /v1/admin/users/:id/purge-impact?entityType=ADMIN|MANAGER|PATIENT
+Returns:
+{
+  canPurge: boolean,
+  blockedReasons: string[],
+  target: { id, entityType, email?, displayName, role?, clinicId? },
+  dependencies: {
+    refreshTokens: number,
+    devices: number,
+    credentialRequests: number,
+    notifications: number,
+    invoicesPaidBy: number,
+    auditLogsActor: number,
+    isPrimaryManager: boolean
+  }
+}
+Rules:
+- If self => canPurge=false with reason BLOCKED_SELF
+- If primary manager => canPurge=false with reason PRIMARY_MANAGER_DELETE_BLOCKED
+- If invoicesPaidBy/auditLogsActor > 0 => canPurge=false in STRICT mode
+
+2) Purge execution (SUPER_ADMIN only)
+DELETE /v1/admin/users/:id/purge
+Body (zod):
+{
+  entityType: "ADMIN"|"MANAGER"|"PATIENT",
+  confirmText: string,
+  mode?: "STRICT"|"ANONYMIZE"
+}
+Rules:
+- confirmText must match exactly:
+  - For ADMIN/MANAGER: "PURGE <email>"
+  - For PATIENT (no email): "PURGE <id>" or "PURGE <patientKey>"
+Return 400 with CONFIRM_TEXT_MISMATCH if not.
+Usecase:
+- Recompute purge-impact and refuse if blocked.
+- Run db.transaction:
+  - delete refresh_tokens for target
+  - delete devices for target (patients)
+  - delete credential_requests where targetUserId/targetPatientId = target
+  - delete notifications related to target (targetRole + relatedId if used)
+  - If ANONYMIZE mode:
+    - detach invoices/audit references safely
+  - finally delete from users OR patients table
+- Emit audit log:
+  action: ADMIN_USER_PURGED
+  metadata: { targetId, entityType, mode, blockedRefsCounts }
+Return:
+{ ok:true }
+
+3) Standardized error codes (must be used)
+- PURGE-001 BLOCKED_SELF
+- PURGE-002 PRIMARY_MANAGER_DELETE_BLOCKED
+- PURGE-003 BLOCKED_REFERENCES_EXIST
+- PURGE-004 CONFIRM_TEXT_MISMATCH
+- PURGE-005 FORBIDDEN_NOT_SUPER_ADMIN
+
+========================================================
+D) MOBILE UI — DANGER ZONE PURGE (SUPER_ADMIN ONLY)
+========================================================
+Where:
+- Admin User Detail screen (app/(admin)/users/[id].tsx)
+
+UI:
+1) Add a “Danger Zone” card (only visible if current user role == SUPER_ADMIN):
+- Button: “Permanently delete user”
+- On open:
+  - Call purge-impact endpoint and show summary:
+    - “This will delete: tokens (x), devices (y), requests (z) …”
+    - If blocked, show reasons and disable purge button.
+
+2) Type-to-confirm modal (required):
+- Show text explaining irreversibility
+- Input placeholder:
+  - "Type: PURGE user@email.com"
+- Confirm button disabled until exact match
+- Optional toggle for mode if you implement ANONYMIZE (default STRICT)
+
+3) After success:
+- Toast “User permanently deleted”
+- Navigate back to Users list and refetch
+
+UX polish:
+- Double confirmation: first modal “Are you sure?” then type-to-confirm
+- Loading spinners and error handling
+- Never show passwords
+
+========================================================
+E) TESTS (MANDATORY)
+========================================================
+Backend tests:
+1) SUPER_ADMIN required
+2) blocks self purge
+3) blocks primary manager purge
+4) blocks purge when invoices/audit references exist (STRICT)
+5) purge succeeds for normal manager with no critical refs
+6) confirmText mismatch blocked
+
+========================================================
+F) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) Endpoint list + sample curl:
+   - purge-impact
+   - purge
+3) Exact confirmText format rules
+4) Manual QA checklist:
+- super admin sees danger zone
+- impact loads and blocks when needed
+- type-to-confirm works
+- purge deletes user and user disappears from list
+5) Notes on strict vs anonymize policy
+
+IMPLEMENTATION ORDER:
+1) Add error codes + AppError mapping for purge
+2) Implement purge-impact usecase + endpoint
+3) Implement purge usecase + endpoint with transaction + audit log
+4) Build mobile UI danger zone + type-to-confirm
+5) Add tests + verify
+
+Proceed now. Make it SOLID, ACID-safe, and production-ready.
+END.

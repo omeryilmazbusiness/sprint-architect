@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export const PurgeImpactQuerySchema = z.object({
+  entityType: z.enum(["ADMIN", "MANAGER", "PATIENT"]),
+});
+export type PurgeImpactQuery = z.infer<typeof PurgeImpactQuerySchema>;
+
+export const PurgeSingleSchema = z.object({
+  entityType: z.enum(["ADMIN", "MANAGER", "PATIENT"]),
+  confirmText: z.string().min(1, "confirmText is required"),
+  mode: z.enum(["STRICT", "ANONYMIZE"]).default("STRICT"),
+});
+export type PurgeSingleInput = z.infer<typeof PurgeSingleSchema>;
+
 export const BulkDeactivateSchema = z.object({
   targets: z
     .array(

@@ -5,7 +5,7 @@ export interface AdminUser {
   email: string;
   fullName: string | null;
   phoneE164: string | null;
-  role: "ADMIN" | "MANAGER";
+  role: "SUPER_ADMIN" | "ADMIN" | "MANAGER";
   clinicId: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   statusReason: string | null;
@@ -180,9 +180,52 @@ export async function bulkPurge(
     targets,
     confirmText,
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? "Purge request failed");
-  }
+  return res.json();
+}
+
+export interface PurgeImpactDependencies {
+  refreshTokens: number;
+  devices: number;
+  credentialRequests: number;
+  notifications: number;
+  invoicesPaidBy: number;
+  auditLogsActor: number;
+  isPrimaryManager: boolean;
+}
+
+export interface PurgeImpactTarget {
+  id: string;
+  entityType: "ADMIN" | "MANAGER" | "PATIENT";
+  email: string | null;
+  displayName: string | null;
+  patientKey: string | null;
+  role: string | null;
+  clinicId: string | null;
+}
+
+export interface PurgeImpactResponse {
+  canPurge: boolean;
+  blockedReasons: string[];
+  target: PurgeImpactTarget | null;
+  dependencies: PurgeImpactDependencies;
+}
+
+export async function getPurgeImpact(
+  id: string,
+  entityType: "ADMIN" | "MANAGER" | "PATIENT",
+): Promise<PurgeImpactResponse> {
+  const res = await apiRequest("GET", `/v1/admin/users/${id}/purge-impact?entityType=${entityType}`);
+  return res.json();
+}
+
+export async function purgeUser(
+  id: string,
+  input: {
+    entityType: "ADMIN" | "MANAGER" | "PATIENT";
+    confirmText: string;
+    mode?: "STRICT" | "ANONYMIZE";
+  },
+): Promise<{ ok: true }> {
+  const res = await apiRequest("DELETE", `/v1/admin/users/${id}/purge`, input);
   return res.json();
 }

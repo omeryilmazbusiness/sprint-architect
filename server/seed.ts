@@ -34,7 +34,7 @@ export async function seedDatabase() {
   const managerPasswordHash = await hashPassword("Manager123!");
 
   for (const user of [
-    { id: "user-admin-001", email: "admin@demo.com", passwordHash: adminPasswordHash, role: "ADMIN" as const, clinicId: null as string | null, status: "ACTIVE" as const },
+    { id: "user-admin-001", email: "admin@demo.com", passwordHash: adminPasswordHash, role: "SUPER_ADMIN" as const, clinicId: null as string | null, status: "ACTIVE" as const },
     { id: "user-manager-001", email: "manager@demo.com", passwordHash: managerPasswordHash, role: "MANAGER" as const, clinicId: CLINIC_ID, status: "ACTIVE" as const },
   ]) {
     await db.insert(users).values(user).onConflictDoUpdate({

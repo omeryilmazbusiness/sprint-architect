@@ -36,7 +36,7 @@ const changePasswordLimiter = rateLimit({
 });
 
 const router = Router();
-router.use(authMiddleware, requireRole("ADMIN"));
+router.use(authMiddleware, requireRole("ADMIN", "SUPER_ADMIN"));
 
 // ─── Admin Security Endpoints ────────────────────────────────────────────────
 

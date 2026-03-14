@@ -31,6 +31,7 @@ export const clinicStatusEnum = pgEnum("clinic_status", [
 ]);
 
 export const userRoleEnum = pgEnum("user_role", [
+  "SUPER_ADMIN",
   "ADMIN",
   "MANAGER",
   "PATIENT",

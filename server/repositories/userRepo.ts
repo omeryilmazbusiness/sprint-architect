@@ -1,11 +1,11 @@
 import { db } from "../db";
 import { users, patients, clinics } from "@shared/schema";
-import { eq, ilike, and, or, count, sql } from "drizzle-orm";
+import { eq, ilike, and, or, count, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "../auth/password";
 import crypto from "crypto";
 
 type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
-type UserRole = "ADMIN" | "MANAGER";
+type UserRole = "SUPER_ADMIN" | "ADMIN" | "MANAGER";
 
 export function generateSecurePassword(): string {
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -76,8 +76,10 @@ export const userRepo = {
           ),
         );
       }
-      if (filters.entityType && (filters.entityType === "ADMIN" || filters.entityType === "MANAGER")) {
-        conditions.push(eq(users.role, filters.entityType));
+      if (filters.entityType === "ADMIN") {
+        conditions.push(inArray(users.role, ["ADMIN", "SUPER_ADMIN"]));
+      } else if (filters.entityType === "MANAGER") {
+        conditions.push(eq(users.role, "MANAGER"));
       }
       if (filters.status) conditions.push(eq(users.status, filters.status as UserStatus));
       if (filters.clinicId) conditions.push(eq(users.clinicId, filters.clinicId));
@@ -91,7 +93,7 @@ export const userRepo = {
       for (const u of userRows) {
         results.push({
           id: u.id,
-          entityType: u.role as "ADMIN" | "MANAGER",
+          entityType: (u.role === "SUPER_ADMIN" ? "ADMIN" : u.role) as "ADMIN" | "MANAGER",
           clinicId: u.clinicId ?? null,
           clinicName: (u as any).clinic?.name ?? null,
           displayName: u.fullName ?? u.email,

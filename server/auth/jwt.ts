@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 export interface ActorContext {
   sub: string;
-  role: "ADMIN" | "MANAGER" | "PATIENT";
+  role: "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "PATIENT";
   clinicId: string | null;
   patientId?: string;
   type: "user" | "patient";

@@ -19,6 +19,8 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusPill, LoadingState, ErrorState, Divider } from "@/components/ui";
 import { getUser, deactivateSingleUser, resetUserPasswordAuto, type AdminUser } from "@/lib/api/adminUsers";
 import { useInvalidateAdminUsers } from "@/hooks/useAdminUsersQuery";
+import { useAuth } from "@/context/AuthContext";
+import { PurgeDangerSection } from "@/components/users/PurgeDangerSection";
 
 function InfoRow({ icon, label, value, onPress }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -97,6 +99,8 @@ export default function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
   const invalidateUsers = useInvalidateAdminUsers();
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [showDeactivate, setShowDeactivate] = useState(false);
@@ -126,6 +130,12 @@ export default function UserDetailScreen() {
     } finally {
       setIsDeactivating(false);
     }
+  }
+
+  async function handlePurged() {
+    await invalidateUsers();
+    qc.removeQueries({ queryKey: ["/v1/admin/users", id] });
+    router.back();
   }
 
   async function handleResetPassword() {
@@ -292,6 +302,10 @@ export default function UserDetailScreen() {
             </>
           )}
         </SectionCard>
+
+        {isSuperAdmin && (
+          <PurgeDangerSection user={data} onPurged={handlePurged} />
+        )}
       </ScrollView>
 
       <Modal visible={showDeactivate} transparent animationType="fade">

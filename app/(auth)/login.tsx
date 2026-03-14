@@ -199,7 +199,7 @@ export default function LoginScreen() {
     try {
       const role = await login(email.trim().toLowerCase(), password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (role === "ADMIN") router.replace("/(admin)/dashboard");
+      if (role === "ADMIN" || role === "SUPER_ADMIN") router.replace("/(admin)/dashboard");
       else if (role === "MANAGER") router.replace("/(manager-tabs)/dashboard");
       else router.replace("/(tabs)");
     } catch (e: any) {

@@ -10,7 +10,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiUrl, setAuthTokens, setUnauthorizedHandler, queryClient } from "@/lib/query-client";
 
-export type UserRole = "ADMIN" | "MANAGER" | "PATIENT";
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "PATIENT";
 
 export interface AuthUser {
   id: string;

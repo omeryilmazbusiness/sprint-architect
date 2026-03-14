@@ -123,7 +123,7 @@ export default function AdminTabLayout() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) return null;
-  if (!user || user.role !== "ADMIN") return <Redirect href="/(auth)/login" />;
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return <Redirect href="/(auth)/login" />;
 
   const Layout = isLiquidGlassAvailable() ? NativeTabLayout : ClassicTabLayout;
   return (

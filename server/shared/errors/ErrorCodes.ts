@@ -23,6 +23,12 @@ export const ErrorCodes = {
 
   EXT_EMAIL_FAILED:         "EXT-EMAIL-001",
   EXT_STORAGE_FAILED:       "EXT-STORAGE-001",
+
+  PURGE_BLOCKED_SELF:              "PURGE-001",
+  PURGE_PRIMARY_MANAGER_BLOCKED:   "PURGE-002",
+  PURGE_BLOCKED_REFERENCES:        "PURGE-003",
+  PURGE_CONFIRM_MISMATCH:          "PURGE-004",
+  PURGE_FORBIDDEN_NOT_SUPER_ADMIN: "PURGE-005",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
