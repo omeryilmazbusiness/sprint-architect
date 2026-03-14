@@ -52,17 +52,17 @@ export function ManagerQuickActions() {
     },
     {
       icon: "calendar-number-outline",
-      label: "Schedule",
+      label: "New Appt",
       color: T.accent,
       bgColor: T.accent + "15",
       onPress: () => router.push("/(manager-tabs)/users"),
     },
     {
-      icon: "document-attach-outline",
-      label: "Assign Docs",
+      icon: "document-text-outline",
+      label: "Add New Doc",
       color: T.warning,
       bgColor: T.warning + "15",
-      onPress: () => router.push("/(manager-tabs)/users"),
+      onPress: () => router.push("/(manager)/document-types"),
     },
     {
       icon: "people-outline",

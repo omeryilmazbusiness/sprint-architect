@@ -1,0 +1,138 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Update Manager Dashboard UX and implement “Appointments Today” as a premium bottom-sheet popup.
+Must be SOLID-compliant and production-ready.
+
+NEW REQUIREMENTS (EXACT):
+1) Overview KPI section:
+- REMOVE: Pending Docs KPI
+- REMOVE: Missing Plan KPI
+- Keep only the most valuable KPIs for manager (propose best set, but must include Appointments Today).
+2) Quick Actions section:
+- REMOVE: Schedule quick action
+- REPLACE “Assign docs” with a button: “Add New Doc”
+  - This navigates to Services -> Document Types (create a new document type).
+3) Appointments Today behavior:
+- When user taps “Appointments Today” KPI card, open a bottom-sheet popup from bottom.
+- Popup shows today’s appointments list with:
+  - Time
+  - Patient name
+  - Doctor name (doctor is required per appointment)
+  - Procedure / appointment title/type
+  - Status pill
+- UX must be premium: skeleton loading, empty state, search/filter, sticky header, safe close.
+- Tap an appointment row navigates to the patient summary/detail screen.
+
+NON-NEGOTIABLE:
+- White theme premium.
+- No “failed data” for empty arrays; empty DB => show 0 and empty states.
+- Strict clinic scoping for manager.
+- SOLID backend layering.
+- Minimal deps: use existing bottom-sheet lib if present, otherwise build a clean modal slide-up.
+
+========================================================
+TASKS (DO IN ORDER)
+========================================================
+TASK 1 — AUDIT CURRENT MANAGER DASHBOARD
+1) Identify the actual manager dashboard route file that is rendered in UI.
+2) List current KPI cards and quick actions.
+3) Identify where “Appointments Today” KPI is defined and what it currently does.
+
+Output a short audit summary before changes.
+
+TASK 2 — UPDATE KPI & QUICK ACTIONS
+1) Update Overview KPI grid:
+- Remove pending docs and missing plan.
+- Propose and implement 4 KPIs maximum (2x2 grid) with best operational value:
+  Recommended set:
+  - Active Guests
+  - Appointments Today (click opens sheet)
+  - Arrivals This Month (or This Week)
+  - Upcoming 7 Days Appointments
+All KPI cards show 0 default and never error on empty.
+
+2) Update Quick Actions:
+- Remove Schedule action.
+- Ensure these remain (example):
+  - New Guest
+  - Create Appointment
+  - Add New Doc  (NEW) -> navigates to Document Types screen
+  - Users
+  - Services
+“Add New Doc” must route correctly to the Document Types create flow.
+
+TASK 3 — IMPLEMENT “APPOINTMENTS TODAY” BOTTOM SHEET POPUP (FRONTEND)
+1) Create component:
+components/managerDashboard/AppointmentsTodaySheet.tsx
+Features:
+- Slide-up bottom sheet/modal
+- Sticky header:
+  - Title: “Today’s Appointments”
+  - Subtitle: date (Europe/Istanbul local)
+  - Close (X)
+- Search input (case-insensitive) for patient or doctor name
+- List rows (premium):
+  - Left: time (HH:mm)
+  - Middle: patient name + procedure title
+  - Right: doctor name + status pill
+  - Tap row -> navigate to patient detail/summary
+- States:
+  - Loading skeleton
+  - Empty: “No appointments scheduled for today.”
+  - Error: friendly message + Retry
+
+2) Wire behavior:
+- Tapping KPI card “Appointments Today” opens the sheet.
+- Sheet fetches data on open (React Query) or uses cached dashboard data.
+
+TASK 4 — BACKEND: STABLE TODAY APPOINTMENTS DATA (SOLID)
+Goal: ensure frontend always has a reliable source for today appointments.
+
+Option A (preferred): Provide a clean endpoint:
+GET /v1/manager/appointments/today
+Return 200 ALWAYS:
+{
+  date: "YYYY-MM-DD",
+  items: [
+    { id, startAt, title, status, patientId, patientName, doctorName }
+  ]
+}
+No items => items: [].
+
+Option B: reuse existing /v1/manager/upcoming-appointments but ensure:
+- accepts from/to date and you call it for today only
+- returns stable DTO
+- does not throw on empty
+
+Implement SOLID module if adding endpoint:
+server/modules/managerAppointments/
+  routes/controller/usecases/repos/schemas
+Clinic scoping: manager clinicId from auth.
+
+TASK 5 — POLISH + VERIFICATION
+1) Ensure small screen layout doesn’t break:
+- buttons not overlapping
+- sheet content scrolls properly
+2) Ensure all values default to 0 (no “failed data”)
+3) Add minimal backend tests:
+- GET today appointments returns 200 and [] on empty DB
+4) Manual QA:
+- Tap KPI -> sheet opens
+- Shows correct list (time/patient/doctor/title/status)
+- Search works
+- Tap row navigates correctly
+- Empty DB shows 0 + empty sheet state
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion, print:
+1) Audit summary (Task 1)
+2) Files changed/added
+3) New endpoints + sample curl (if added)
+4) Manual QA checklist results
+5) Notes about SOLID boundaries
+
+Proceed now. Implement tasks in order. Do not guess; verify route file first.
+END.

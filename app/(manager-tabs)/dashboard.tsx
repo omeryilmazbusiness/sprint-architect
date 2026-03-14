@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { ManagerBannerCarousel } from "@/components/managerDashboard/ManagerBann
 import { ManagerKpiGrid } from "@/components/managerDashboard/ManagerKpiGrid";
 import { ManagerQuickActions } from "@/components/managerDashboard/ManagerQuickActions";
 import { ManagerTodaysAppointments } from "@/components/managerDashboard/ManagerTodaysAppointments";
+import { AppointmentsTodaySheet } from "@/components/managerDashboard/AppointmentsTodaySheet";
 import { useManagerDashboard } from "@/hooks/useManagerDashboard";
 
 interface ClinicInfo {
@@ -50,6 +51,7 @@ function SectionLabel({
 export default function ManagerDashboard() {
   const { logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: clinic } = useQuery<ClinicInfo>({
     queryKey: ["/v1/manager/clinic-info"],
@@ -87,16 +89,19 @@ export default function ManagerDashboard() {
           />
         }
       >
-        {/* Banner spans full width — no horizontal padding */}
+        {/* Banner spans full width */}
         <ManagerBannerCarousel data={data} isLoading={isLoading} />
 
-        {/* All other sections in a padded body */}
+        {/* Padded body */}
         <View style={styles.body}>
           <SectionLabel label="Overview" />
-          <ManagerKpiGrid data={data} isLoading={isLoading} />
+          <ManagerKpiGrid
+            data={data}
+            isLoading={isLoading}
+            onAppointmentsTodayPress={() => setSheetOpen(true)}
+          />
 
           <SectionLabel label="Quick Actions" />
-          {/* Quick actions scroll horizontally; left-pad from body, right-pad in component */}
           <View style={styles.quickWrap}>
             <ManagerQuickActions />
           </View>
@@ -123,6 +128,12 @@ export default function ManagerDashboard() {
           />
         </View>
       </ScrollView>
+
+      {/* Bottom sheet */}
+      <AppointmentsTodaySheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+      />
     </View>
   );
 }

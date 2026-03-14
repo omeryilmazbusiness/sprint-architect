@@ -17,26 +17,47 @@ interface KpiCardProps {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   subtitle: string;
+  highlight?: boolean;
   onPress?: () => void;
 }
 
-function KpiCard({ label, value, icon, color, subtitle, onPress }: KpiCardProps) {
+function KpiCard({
+  label,
+  value,
+  icon,
+  color,
+  subtitle,
+  highlight,
+  onPress,
+}: KpiCardProps) {
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
         cardShadow,
+        highlight && styles.cardHighlight,
         { opacity: pressed ? 0.82 : 1 },
       ]}
       onPress={onPress}
       testID={`kpi-${label}`}
     >
-      <View style={[styles.iconWrap, { backgroundColor: color + "14" }]}>
+      <View
+        style={[
+          styles.iconWrap,
+          { backgroundColor: highlight ? color + "22" : color + "14" },
+        ]}
+      >
         <Ionicons name={icon} size={18} color={color} />
       </View>
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.sub}>{subtitle}</Text>
+      {highlight && (
+        <View style={[styles.badge, { backgroundColor: color + "18" }]}>
+          <Ionicons name="chevron-forward" size={10} color={color} />
+          <Text style={[styles.badgeText, { color }]}>View</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -52,10 +73,11 @@ function KpiSkeleton() {
 interface Props {
   data: ManagerDashboardData;
   isLoading: boolean;
+  onAppointmentsTodayPress: () => void;
 }
 
-export function ManagerKpiGrid({ data, isLoading }: Props) {
-  const { kpis } = data;
+export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Props) {
+  const { kpis, upcomingNext7Days, arrivingThisMonth } = data;
 
   if (isLoading) {
     return (
@@ -82,23 +104,24 @@ export function ManagerKpiGrid({ data, isLoading }: Props) {
         value={kpis.appointmentsToday}
         icon="calendar-outline"
         color={T.accent}
-        subtitle="scheduled"
+        subtitle="tap to view list"
+        highlight
+        onPress={onAppointmentsTodayPress}
+      />
+      <KpiCard
+        label="Arrivals This Month"
+        value={arrivingThisMonth}
+        icon="airplane-outline"
+        color="#6366F1"
+        subtitle="patients arriving"
         onPress={() => router.push("/(manager-tabs)/users")}
       />
       <KpiCard
-        label="Pending Docs"
-        value={kpis.pendingDocuments}
-        icon="document-outline"
-        color={T.warning}
-        subtitle="awaiting upload"
-        onPress={() => router.push("/(manager-tabs)/users")}
-      />
-      <KpiCard
-        label="Missing Plans"
-        value={kpis.missingAssignments}
-        icon="alert-circle-outline"
-        color={T.danger}
-        subtitle="hotel / transport / doctor"
+        label="Upcoming 7 Days"
+        value={upcomingNext7Days}
+        icon="time-outline"
+        color="#2ECF8F"
+        subtitle="scheduled appointments"
         onPress={() => router.push("/(manager-tabs)/users")}
       />
     </View>
@@ -121,8 +144,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.border,
   },
+  cardHighlight: {
+    borderColor: T.accent + "40",
+    backgroundColor: T.accent + "05",
+  },
   skeleton: {
-    height: 110,
+    height: 120,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -149,5 +176,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: T.textMuted,
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 20,
+    marginTop: 4,
+  },
+  badgeText: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 10,
   },
 });

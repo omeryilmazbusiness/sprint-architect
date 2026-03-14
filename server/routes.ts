@@ -13,6 +13,7 @@ import emailStatusRoutes from "./modules/emailStatus/emailStatus.routes";
 import adminPatientsRoutes from "./modules/adminPatients/adminPatients.routes";
 import adminDiagnosticsRoutes from "./modules/adminDiagnostics/adminDiagnostics.routes";
 import managerDashboardRoutes from "./modules/managerDashboard/managerDashboard.routes";
+import managerAppointmentsRoutes from "./modules/managerAppointments/managerAppointments.routes";
 import uploadRoutes from "./api/uploadRoutes";
 import patientDashboardRoute from "./api/patientDashboardRoute";
 import { errorHandler } from "./auth/middleware";
@@ -50,6 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/v1/admin", emailStatusRoutes);
   app.use("/v1/admin", adminPatientsRoutes);
   app.use("/v1/admin", adminDiagnosticsRoutes);
+  app.use("/v1/manager/appointments/today", managerAppointmentsRoutes);
   app.use("/v1/manager/dashboard", managerDashboardRoutes);
   app.use("/v1/manager", managerRoutes);
   app.use("/v1", meRoutes);
