@@ -143,10 +143,27 @@ export default function DoctorsScreen() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
+      const res = await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
+      if (!res.ok && res.status !== 204) {
+        let body: any = {};
+        try { body = await res.json(); } catch {}
+        const err: any = new Error(body.userMessage ?? body.message ?? "Failed to delete doctor");
+        err.code = body.code;
+        throw err;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"] }),
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to delete doctor"),
+    onError: (e: any) => {
+      if (e?.code === "DOC-DEL-001") {
+        Alert.alert(
+          "Delete Blocked",
+          "This doctor has appointments. Deletion is not allowed while appointments exist.",
+          [{ text: "OK" }],
+        );
+      } else {
+        Alert.alert("Error", e.message ?? "Failed to delete doctor");
+      }
+    },
   });
 
   return (

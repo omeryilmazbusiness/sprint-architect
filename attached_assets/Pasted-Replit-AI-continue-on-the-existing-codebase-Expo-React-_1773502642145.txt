@@ -1,0 +1,188 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Implement the following Manager improvements, SOLID + production-ready, in the correct order.
+
+FEATURES:
+A) Manager → Users (Guests) list filtering:
+- Filter by: Active/Inactive status
+- Filter by: Pending Docs (only guests having at least one patient_document with status=PENDING/ASSIGNED mapping)
+- Filter by: Appointments Today (only guests having at least one appointment scheduled for today)
+- Filters must be combinable.
+- Guest cards must display the login key (patientKey) fully visible under the name (no masking).
+
+B) Manager → Doctors list improvements:
+- Trash icon must work and perform HARD DELETE from DB.
+- Add a "+" icon (header or FAB) that navigates to the Add Doctor screen (or opens the create form).
+- Doctor cards must show comprehensive info: name, specialty, phone, email, university, experienceYears, languages, diplomaUrl indicator.
+- Hard delete must be safe:
+  - If doctor is referenced by any appointments, BLOCK deletion and return a system error code (e.g., DOC-DEL-001).
+  - Never silently fail.
+
+NON-NEGOTIABLE:
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation everywhere.
+- Stable DTOs: empty DB must return 200 with empty arrays (no “failed data”).
+- Clinic scoping strict for manager.
+- Hard delete must be transaction-safe (ACID).
+- Error responses must include a stable error code (system-specific) to allow debugging.
+- Premium white theme UI; no layout breaks on small screens.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify the real routes/files:
+- Manager Users (guests list) screen file path
+- Manager Doctors list screen file path
+2) Identify the endpoints currently used for:
+- guests list
+- doctors CRUD
+3) Identify schema relationships:
+- appointments.doctorId exists? Is it required?
+- patient_documents status enum mapping (PENDING vs ASSIGNED etc.)
+Output a short audit summary:
+- Current behavior
+- What is missing
+- What will be changed
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — BACKEND (SOLID) — GUEST LIST FILTERS
+========================================================
+Update Manager guests list endpoint (or add a new one if needed):
+GET /v1/manager/patients
+Add query params (zod-validated):
+- status=ACTIVE|INACTIVE|ALL (default ALL)
+- pendingDocs=true|false (default false)
+- todayAppt=true|false (default false)
+- search, page, pageSize (keep existing)
+Rules:
+- pendingDocs=true means: exists patient_documents for patient with status = PENDING (or ASSIGNED if that’s your pending state)
+- todayAppt=true means: exists appointment with startAt within today (Europe/Istanbul) and status=SCHEDULED (or your scheduled status)
+- Combine filters with AND logic.
+Return stable DTO (200 always):
+{
+  items: [
+    { id, fullName, patientKey, status, arrivalDate?, departureDate?, phoneE164?, email?,
+      hasPendingDocs: boolean,
+      hasTodayAppointment: boolean
+    }
+  ],
+  page, pageSize, totalCount
+}
+Even if empty DB => items: [], totalCount:0
+
+Implement in SOLID module:
+server/modules/managerPatients/
+  managerPatients.routes.ts
+  managerPatients.controller.ts
+  schemas/managerPatients.schemas.ts
+  usecases/ListPatients.ts
+  repos/ManagerPatientsRepo.ts
+  repos/ManagerPatientsRepo.drizzle.ts
+
+========================================================
+PHASE 3 — FRONTEND — GUEST LIST FILTER UI + SHOW FULL KEY
+========================================================
+On Manager Users screen:
+1) Add premium filter bar:
+- Status dropdown (Active/Inactive/All)
+- Toggle chip: Pending Docs
+- Toggle chip: Appointments Today
+- Clear button when any filter active
+2) Apply filters server-side by calling /v1/manager/patients with those params.
+3) Guest list card UI:
+- Under guest name show FULL login key:
+  “KEY: PATIENT-TEST-0001”
+- Add a copy icon next to key. Copy copies full key and shows toast.
+- Show small chips based on booleans:
+  - “Docs Pending” if hasPendingDocs
+  - “Today Appt” if hasTodayAppointment
+4) Empty/loading/error states:
+- Loading skeleton
+- Empty state “No guests found” + “Clear filters”
+- Error state “Could not load, Retry”
+
+Implement modular components:
+components/managerUsers/GuestListCard.tsx
+components/filters/FilterBar.tsx / FilterPickerModal.tsx (reuse if exists)
+hooks/useManagerGuestsQuery.ts
+services/api/managerPatients.ts
+
+========================================================
+PHASE 4 — BACKEND (SOLID) — DOCTOR HARD DELETE (SAFE)
+========================================================
+Implement HARD DELETE endpoint:
+DELETE /v1/manager/doctors/:id
+Rules:
+- If doctor has ANY appointments (or any future appointments) -> BLOCK
+- Return AppError with code: DOC-DEL-001 and message:
+  “Doctor cannot be deleted because appointments exist.”
+- If allowed -> transaction delete doctor record (and any doctor profile extras if exist)
+- Audit log event: MANAGER_DOCTOR_DELETED
+Return 204 on success.
+
+Implement in SOLID module:
+server/modules/managerDoctors/
+  routes/controller/usecases/repos/schemas
+Use zod param validation.
+Use TransactionManager for delete.
+
+========================================================
+PHASE 5 — FRONTEND — DOCTORS LIST + ADD (+) + HARD DELETE
+========================================================
+On Manager Doctors screen:
+1) Add a "+" icon (headerRight) or FAB:
+- Tap -> navigate to “Add Doctor” screen or open create form sheet (choose existing UX pattern, but it must allow adding doctor).
+2) Doctor card must show comprehensive info:
+- fullName (big)
+- specialty
+- phone / email chips
+- university + experienceYears
+- languages chips (if present)
+- diploma indicator chip if diplomaUrl exists
+3) Trash icon:
+- Tap -> confirm modal (“Permanently delete doctor?”)
+- On confirm -> call DELETE endpoint
+- If error code DOC-DEL-001 -> show friendly toast:
+  “This doctor has appointments. Delete blocked.”
+4) Refresh list after success.
+
+Implement modular:
+components/managerDoctors/DoctorListCard.tsx
+hooks/useManagerDoctorsQuery.ts
+services/api/managerDoctors.ts
+
+========================================================
+PHASE 6 — TESTS + POLISH
+========================================================
+Backend tests:
+- /v1/manager/patients filters work (pendingDocs and todayAppt)
+- /v1/manager/doctors/:id hard delete blocked when appointments exist (DOC-DEL-001)
+Frontend QA:
+- Filters combine correctly
+- Key is fully visible and copy works
+- Doctors add button navigates correctly
+- Doctors delete confirm works and blocks correctly
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completing, print:
+1) Audit summary
+2) Files changed/added
+3) New/updated endpoints + sample curl
+4) Error codes added (DOC-DEL-001 etc.)
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Backend guests filters
+3) Frontend guest filters + full key display
+4) Backend doctor hard delete with safe blocking
+5) Frontend doctors list (+ add, trash hard delete)
+6) Tests + final verification
+
+Proceed now. Implement in this order and verify.
+END.

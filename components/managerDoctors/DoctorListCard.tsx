@@ -89,6 +89,8 @@ function DoctorListCard({ doctor, onEdit, onDelete }: Props) {
     chips.push({ icon: "school-outline", label: doctor.university });
   if (doctor.languages)
     chips.push({ icon: "language-outline", label: doctor.languages });
+  if (doctor.diplomaUrl)
+    chips.push({ icon: "document-text-outline", label: "Diploma ✓", accent: true });
 
   return (
     <Pressable

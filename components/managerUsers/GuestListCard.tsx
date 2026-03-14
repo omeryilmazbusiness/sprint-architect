@@ -16,17 +16,20 @@ interface Patient {
   fullName: string;
   patientKey: string;
   phone?: string;
+  phoneE164?: string;
   email?: string;
   nationalityCode?: string;
-  arrivalDate?: string;
-  departureDate?: string;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
   pendingDocCount?: number;
+  hasPendingDocs?: boolean;
+  hasTodayAppointment?: boolean;
   plan?: {
     hotelId: string | null;
     transportId: string | null;
     doctorId: string | null;
-  };
+  } | null;
 }
 
 const AVATAR_COLORS = [
@@ -78,16 +81,11 @@ function GuestListCard({ patient, onPress, flagEmoji }: Props) {
       : `✈  Arriving ${arrFmt}`
     : null;
 
-  const maskedKey = patient.patientKey.length > 8
-    ? `${patient.patientKey.slice(0, 4)}•••${patient.patientKey.slice(-4)}`
-    : patient.patientKey;
-
-  const tags: { label: string; warn: boolean }[] = [];
-  if ((patient.pendingDocCount ?? 0) > 0)
-    tags.push({
-      label: `${patient.pendingDocCount} Doc${patient.pendingDocCount === 1 ? "" : "s"} Pending`,
-      warn: true,
-    });
+  const tags: { label: string; warn: boolean; accent?: boolean }[] = [];
+  if (patient.hasPendingDocs || (patient.pendingDocCount ?? 0) > 0)
+    tags.push({ label: "Docs Pending", warn: true });
+  if (patient.hasTodayAppointment)
+    tags.push({ label: "Today Appt", warn: false, accent: true });
   if (!patient.plan?.hotelId) tags.push({ label: "No Hotel", warn: false });
   if (!patient.plan?.transportId) tags.push({ label: "No Transport", warn: false });
 
@@ -125,10 +123,10 @@ function GuestListCard({ patient, onPress, flagEmoji }: Props) {
         </View>
       </View>
 
-      {/* Row 2: Masked key + copy */}
+      {/* Row 2: Full key + copy */}
       <View style={styles.keyRow}>
         <Ionicons name="key-outline" size={13} color={T.textMuted} />
-        <Text style={styles.keyText} numberOfLines={1}>{maskedKey}</Text>
+        <Text style={styles.keyText} numberOfLines={1}>KEY: {patient.patientKey}</Text>
         <Pressable
           onPress={handleCopy}
           hitSlop={10}
@@ -153,9 +151,17 @@ function GuestListCard({ patient, onPress, flagEmoji }: Props) {
           {tags.map((t) => (
             <View
               key={t.label}
-              style={[styles.tag, t.warn ? styles.tagWarn : styles.tagNeutral]}
+              style={[
+                styles.tag,
+                t.warn ? styles.tagWarn : t.accent ? styles.tagAccent : styles.tagNeutral,
+              ]}
             >
-              <Text style={[styles.tagText, t.warn && styles.tagTextWarn]}>
+              <Text
+                style={[
+                  styles.tagText,
+                  t.warn ? styles.tagTextWarn : t.accent ? styles.tagTextAccent : undefined,
+                ]}
+              >
                 {t.label}
               </Text>
             </View>
@@ -271,6 +277,10 @@ const styles = StyleSheet.create({
     backgroundColor: T.warningBg,
     borderColor: T.warningBorder,
   },
+  tagAccent: {
+    backgroundColor: "#EFF6FF",
+    borderColor: "#BFDBFE",
+  },
   tagText: {
     fontFamily: "Inter_500Medium",
     fontSize: 11,
@@ -278,5 +288,8 @@ const styles = StyleSheet.create({
   },
   tagTextWarn: {
     color: T.warning,
+  },
+  tagTextAccent: {
+    color: T.accent,
   },
 });

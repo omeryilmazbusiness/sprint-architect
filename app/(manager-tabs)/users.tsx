@@ -33,25 +33,27 @@ interface Patient {
   fullName: string;
   patientKey: string;
   phone?: string;
-  phoneE164?: string;
-  email?: string;
+  phoneE164?: string | null;
+  email?: string | null;
   nationality?: string;
   nationalityCode?: string;
-  arrivalDate?: string;
-  departureDate?: string;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
-  createdAt: string;
+  createdAt?: string;
   pendingDocCount?: number;
+  hasPendingDocs?: boolean;
+  hasTodayAppointment?: boolean;
   plan?: {
     hotelId: string | null;
     transportId: string | null;
     doctorId: string | null;
-  };
+  } | null;
 }
 
 interface PatientListResponse {
-  rows: Patient[];
-  total: number;
+  items: Patient[];
+  totalCount: number;
   page: number;
   pageSize: number;
 }
@@ -231,7 +233,8 @@ function GuestsTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>("ALL");
-  const [missingFilter, setMissingFilter] = useState<"ALL" | "missingHotel" | "missingTransport" | "missingDoctor" | "missingDocuments">("ALL");
+  const [pendingDocsFilter, setPendingDocsFilter] = useState(false);
+  const [todayApptFilter, setTodayApptFilter] = useState(false);
   const [page] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -258,12 +261,13 @@ function GuestsTab() {
   }, [params.openCreate]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<PatientListResponse>({
-    queryKey: ["/v1/manager/patients", debouncedSearch, statusFilter, missingFilter, page],
+    queryKey: ["/v1/manager/patients", debouncedSearch, statusFilter, pendingDocsFilter, todayApptFilter, page],
     queryFn: async () => {
       const p = new URLSearchParams({ page: String(page), pageSize: "30" });
       if (debouncedSearch.trim()) p.set("search", debouncedSearch.trim());
       if (statusFilter !== "ALL") p.set("status", statusFilter);
-      if (missingFilter !== "ALL") p.set("missing", missingFilter);
+      if (pendingDocsFilter) p.set("pendingDocs", "true");
+      if (todayApptFilter) p.set("todayAppt", "true");
       const res = await apiRequest("GET", `/v1/manager/patients?${p.toString()}`);
       return res.json();
     },
@@ -338,12 +342,14 @@ function GuestsTab() {
     }
   };
 
-  const rows = data?.rows ?? [];
-  const hasActiveFilters = statusFilter !== "ALL" || missingFilter !== "ALL";
-  const missingLabels: Record<string, string> = {
-    missingHotel: "No Hotel", missingTransport: "No Transport",
-    missingDoctor: "No Doctor", missingDocuments: "Missing Docs",
-  };
+  const rows = data?.items ?? [];
+  const hasActiveFilters = statusFilter !== "ALL" || pendingDocsFilter || todayApptFilter;
+
+  function clearAllFilters() {
+    setStatusFilter("ALL");
+    setPendingDocsFilter(false);
+    setTodayApptFilter(false);
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -377,42 +383,32 @@ function GuestsTab() {
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.missingFilters}>
-          {(["ALL", "missingHotel", "missingTransport", "missingDoctor", "missingDocuments"] as const).map((m) => (
-            <Pressable
-              key={m}
-              onPress={() => setMissingFilter(m)}
-              style={[styles.filterChip, missingFilter === m && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, missingFilter === m && styles.filterChipTextActive]}>
-                {m === "ALL" ? "All Issues" : missingLabels[m]}
-              </Text>
+          <Pressable
+            onPress={() => setPendingDocsFilter((v) => !v)}
+            style={[styles.filterChip, pendingDocsFilter && styles.filterChipWarnActive]}
+          >
+            <Text style={[styles.filterChipText, pendingDocsFilter && styles.filterChipTextWarn]}>
+              Docs Pending
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setTodayApptFilter((v) => !v)}
+            style={[styles.filterChip, todayApptFilter && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterChipText, todayApptFilter && styles.filterChipTextActive]}>
+              Today Appt
+            </Text>
+          </Pressable>
+
+          {hasActiveFilters && (
+            <Pressable onPress={clearAllFilters} style={styles.clearChip}>
+              <Ionicons name="close-circle" size={13} color={T.danger} />
+              <Text style={styles.clearChipText}>Clear</Text>
             </Pressable>
-          ))}
+          )}
         </ScrollView>
-
-        {hasActiveFilters && (
-          <View style={styles.activeFiltersRow}>
-            {statusFilter !== "ALL" && (
-              <View style={styles.activeChip}>
-                <Text style={styles.activeChipText}>{statusFilter}</Text>
-                <Pressable onPress={() => setStatusFilter("ALL")}>
-                  <Ionicons name="close" size={14} color={T.primary} />
-                </Pressable>
-              </View>
-            )}
-            {missingFilter !== "ALL" && (
-              <View style={styles.activeChip}>
-                <Text style={styles.activeChipText}>{missingLabels[missingFilter]}</Text>
-                <Pressable onPress={() => setMissingFilter("ALL")}>
-                  <Ionicons name="close" size={14} color={T.primary} />
-                </Pressable>
-              </View>
-            )}
-          </View>
-        )}
       </View>
 
       {isLoading ? (
@@ -426,9 +422,9 @@ function GuestsTab() {
           contentContainerStyle={{ paddingTop: T.sp12, paddingBottom: bottomPad + 100 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
           ListHeaderComponent={
-            data?.total != null ? (
+            data?.totalCount != null ? (
               <Text style={styles.listCount}>
-                Guests ({data.total})
+                Guests ({data.totalCount})
               </Text>
             ) : null
           }
@@ -436,13 +432,18 @@ function GuestsTab() {
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={40} color={T.border} />
               <Text style={styles.emptyTitle}>
-                {search || hasActiveFilters ? "No results" : "No guests yet"}
+                {search || hasActiveFilters ? "No guests found" : "No guests yet"}
               </Text>
               <Text style={styles.emptyText}>
                 {search || hasActiveFilters
                   ? "Try adjusting your search or filters"
                   : "Tap the + button to add your first guest"}
               </Text>
+              {hasActiveFilters && (
+                <Pressable onPress={clearAllFilters} style={styles.clearFiltersBtn}>
+                  <Text style={styles.clearFiltersBtnText}>Clear filters</Text>
+                </Pressable>
+              )}
             </View>
           }
           renderItem={({ item }) => (
@@ -950,8 +951,32 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   filterChipActive: { backgroundColor: T.primary + "10", borderColor: T.primary },
+  filterChipWarnActive: { backgroundColor: T.warningBg, borderColor: T.warningBorder },
   filterChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.textSec },
   filterChipTextActive: { color: T.primary },
+  filterChipTextWarn: { color: T.warning },
+  clearChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: T.r6,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    gap: 4,
+  },
+  clearChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.danger },
+  clearFiltersBtn: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: T.r6,
+    borderWidth: 1,
+    borderColor: T.border,
+    backgroundColor: T.surface,
+  },
+  clearFiltersBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
   activeFiltersRow: {
     flexDirection: "row",
     flexWrap: "wrap",
