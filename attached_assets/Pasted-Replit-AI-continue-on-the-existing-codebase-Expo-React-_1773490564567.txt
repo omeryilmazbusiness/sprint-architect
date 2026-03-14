@@ -1,0 +1,127 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+TASK:
+Upgrade the Admin Dashboard banner carousel to a more premium design:
+- Better alignment/spacing (professional grid)
+- 3D + theme-compatible layered visuals
+- Multi-color gradient transitions using orange, blue, green, crimson
+- Must remain readable and consistent with white theme
+- Must keep “empty data shows 0” behavior (no failed data)
+
+NON-NEGOTIABLE:
+- No broken layouts on small screens.
+- Strong readability: text must always be legible over gradients (use scrim overlay).
+- Avoid heavy dependencies. Prefer Expo-supported libraries:
+  - expo-linear-gradient
+  - expo-blur (optional)
+  - react-native-svg (optional for blob shapes)
+If not installed, add only these minimal deps.
+- Keep component modular (no giant dashboard file).
+
+========================================================
+A) DESIGN SPEC — PREMIUM 3D BANNER SLIDE
+========================================================
+Create/upgrade components:
+- components/adminDashboard/BannerCarousel.tsx
+- components/adminDashboard/BannerSlide.tsx
+- components/adminDashboard/BannerBackground3D.tsx  (NEW)
+
+1) Slide layout (alignment rules)
+- Use a fixed internal grid:
+  Padding: 20–24
+  Vertical spacing: 10–12 between elements
+- Content order:
+  - Headline (bold)
+  - Subtitle (1–2 lines max)
+  - KPI chips row (2 chips)
+  - Primary CTA button aligned bottom-right (or full-width on tiny screens)
+- Add a consistent “content width” so text lines align across slides.
+
+2) 3D Background (BannerBackground3D)
+- Base: expo-linear-gradient with 4-stop gradient:
+  - Orange -> Blue -> Green -> Crimson
+  Use premium tones (not neon). Example:
+  - Orange: #FF8A3D
+  - Blue:   #2F6BFF
+  - Green:  #2ECF8F
+  - Crimson:#E3485B
+- Add 3D depth via layers:
+  Layer 1: Main gradient (full background)
+  Layer 2: Soft “blob” shapes (2–3) with partial transparency
+          - Implement with react-native-svg (radial-like circles/paths) OR simple Views with large borderRadius + opacity + blur
+  Layer 3: Glass overlay:
+          - A semi-transparent white scrim (e.g., rgba(255,255,255,0.18))
+          - Optional BlurView from expo-blur (low intensity) inside the card only
+  Layer 4: Highlight & shadow:
+          - Subtle inner highlight top-left (faint)
+          - Soft shadow under the banner card (use existing theme shadow tokens)
+
+3) Micro animation (optional but premium)
+- Add very subtle “floating” animation:
+  - Move blobs by 2–4 px (slow loop)
+  - If reanimated already exists, use it; otherwise use Animated API.
+- Must not affect performance (disable on low-end by guarding with a flag).
+
+4) Indicator dots & carousel behavior
+- Dots centered below, subtle.
+- PagingEnabled horizontal FlatList.
+- Keep banner height ~ 30–35% of screen, but clamp:
+  - minHeight: 180
+  - maxHeight: 260
+So it looks good everywhere.
+
+========================================================
+B) EMPTY DATA HANDLING (MUST KEEP)
+========================================================
+- Banner slides must render with zeros if there is no data:
+  pending/unpaid/paid counts default to 0
+- Never show “failed data” for empty arrays.
+- Only show an error state if API request truly fails.
+- Add a “Launch state” microcopy when all counts are 0:
+  “System is ready. Create your first clinic to get started.”
+  CTA -> Create Clinic
+
+========================================================
+C) CTA NAVIGATION (FILTER-AWARE)
+========================================================
+- Billing slide CTA:
+  - if unpaid>0 -> invoices?status=UNPAID
+  - else -> invoices
+- Clinics slide CTA:
+  - if suspended>0 -> clinics?status=SUSPENDED
+  - else -> clinics
+- Snapshot slide CTA:
+  -> invoices?period=currentPeriod
+- Launch state CTA -> create clinic
+
+========================================================
+D) PREMIUM TYPOGRAPHY & ACCESSIBILITY
+========================================================
+- Headline large and bold, subtitle muted.
+- Ensure contrast:
+  - Add a dark/white scrim behind text area if needed.
+  - KPI chips use semi-opaque backgrounds.
+- Touch targets: buttons/chips minimum 44px height.
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) Any new dependencies added and why
+3) Screenshot-like description of slide layout alignment rules
+4) Manual QA checklist:
+- Empty DB: banner shows 0 values + launch CTA
+- With data: gradients + chips + CTA look aligned and premium
+- Small screen: no overlap, CTA accessible
+- Scroll performance is smooth
+
+IMPLEMENTATION ORDER:
+1) Create BannerBackground3D
+2) Refactor BannerSlide to use the new background and strict layout grid
+3) Verify empty data and error handling
+4) Polish animations (optional)
+5) Final QA
+
+Proceed now. Keep it premium and theme-consistent.
+END.

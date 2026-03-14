@@ -15,7 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { Card, Divider } from "@/components/ui";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
-import { BannerCarousel } from "@/components/dashboard/BannerCarousel";
+import { BannerCarousel } from "@/components/adminDashboard/BannerCarousel";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { RecentInvoicesList } from "@/components/dashboard/RecentInvoicesList";
 
