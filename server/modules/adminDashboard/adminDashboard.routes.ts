@@ -7,7 +7,7 @@ const router = Router();
 router.get(
   "/dashboard",
   authMiddleware,
-  requireRole("ADMIN"),
+  requireRole("ADMIN", "SUPER_ADMIN"),
   getDashboardOverview,
 );
 
