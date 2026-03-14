@@ -1,0 +1,77 @@
+Replit AI — continue on the existing codebase (Express/TypeScript + PostgreSQL + Drizzle + Expo). DO NOT re-scaffold.
+
+REQUEST:
+Create ONLY ONE demo admin account so we can log in immediately.
+No clinics, no managers, no patients, no invoices. Just a single admin user.
+
+NON-NEGOTIABLE:
+- Do not hardcode secrets in code.
+- Password must be hashed with bcrypt.
+- Role must be ADMIN (or SUPER_ADMIN if your system requires it for full admin access).
+- Status ACTIVE.
+- Must work after a fresh DB reset (empty tables).
+- Provide a safe, repeatable script that is idempotent (running it twice should not create duplicates).
+
+TARGET CREDENTIALS:
+Email: admin@demo.com
+Password: Admin123!
+(If policy requires stronger, use: Admin123!Strong and update output accordingly.)
+
+========================================================
+A) BACKEND SCRIPT (IDEMPOTENT)
+========================================================
+Create:
+server/scripts/seedDemoAdminOnly.ts
+
+Behavior:
+1) Load config + DB connection (use existing server/shared/db and config).
+2) Check if user with email admin@demo.com exists:
+- If exists: ensure role and status are correct; print "already exists" and exit 0.
+- If not:
+  - bcrypt hash the password
+  - insert user:
+    - email: admin@demo.com
+    - role: SUPER_ADMIN if your admin routes require it; otherwise ADMIN
+    - clinicId: NULL
+    - fullName: "Demo Admin"
+    - status: ACTIVE
+    - mustChangePassword: false (demo)
+    - createdAt: now
+3) Print success message (never print password hash).
+
+========================================================
+B) ADD NPM SCRIPT
+========================================================
+package.json:
+- "db:seed:demo-admin": "NODE_ENV=development tsx server/scripts/seedDemoAdminOnly.ts"
+
+If your environment needs different command runner, adapt accordingly.
+
+========================================================
+C) OPTIONAL: INTEGRATE INTO RESET SCRIPT
+========================================================
+If resetLaunchDb.ts exists:
+- Add an option:
+  - If DEMO_ADMIN_ONLY="true", after wipe it runs seedDemoAdminOnly.ts
+But keep default behavior unchanged.
+
+========================================================
+D) VERIFICATION
+========================================================
+1) Run:
+npm run db:seed:demo-admin
+2) Verify user exists:
+- Can login with admin@demo.com / Admin123!
+3) Confirm there are no clinics/managers/patients/invoices seeded.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files created/changed
+2) Exact command to run
+3) Confirmed login credentials (email + password)
+4) Confirm role used (ADMIN vs SUPER_ADMIN) and why
+
+Proceed now.
+END.

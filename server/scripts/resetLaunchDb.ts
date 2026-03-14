@@ -31,6 +31,8 @@
 import { env, dbUrl } from "../config";
 import { pool } from "../db";
 import { hashPassword } from "../auth/password";
+import { execSync } from "child_process";
+import path from "path";
 
 // ─── Ordered list of tables to truncate (CASCADE handles FK constraints) ─────
 const TABLES_TO_TRUNCATE = [
@@ -109,6 +111,7 @@ function generateBootstrapId(): string {
 
   const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim() || null;
   const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim() || null;
+  const demoAdminOnly = process.env.DEMO_ADMIN_ONLY === "true";
 
   // ── Print header ───────────────────────────────────────────────────────────
   console.log("");
@@ -118,7 +121,7 @@ function generateBootstrapId(): string {
   console.log("");
   console.log(`  Database : ${dbSummary}`);
   console.log(`  Mode     : ${isDryRun ? "DRY-RUN (no changes)" : "⚠️  REAL RESET — DATA WILL BE DELETED"}`);
-  console.log(`  Bootstrap: ${bootstrapEmail ? bootstrapEmail : "(none)"}`);
+  console.log(`  Bootstrap: ${demoAdminOnly ? "demo admin (admin@demo.com)" : bootstrapEmail ? bootstrapEmail : "(none)"}`);
   console.log("");
 
   // ── DRY-RUN: count rows and print summary ──────────────────────────────────
@@ -203,6 +206,17 @@ function generateBootstrapId(): string {
       await client.query("ROLLBACK");
       console.error("  ✖ Transaction rolled back due to error.");
       throw err;
+    }
+
+    // ── Optional: seed demo admin after wipe ─────────────────────────────────
+    if (demoAdminOnly) {
+      console.log("");
+      console.log("  Running demo admin seed (DEMO_ADMIN_ONLY=true)...");
+      const seedScript = path.resolve(__dirname, "seedDemoAdminOnly.ts");
+      execSync(`npx tsx "${seedScript}"`, {
+        stdio: "inherit",
+        env: { ...process.env, NODE_ENV: env.nodeEnv },
+      });
     }
 
     // ── Post-reset row count verification ──────────────────────────────────────
