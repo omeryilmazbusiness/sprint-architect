@@ -55,6 +55,28 @@ The `server/modules/adminUsers/` module provides SOLID-layered user management, 
 
 The API includes manager routes (`/v1/manager/*`) for CRUD operations on patients, doctors, hotels, transports, patient plans, appointments, and documents, including specific endpoints for document assignment, signed URL generation, and patient details aggregation. Admin routes (`/v1/admin/*`) control clinics, users, and invoices. Patient routes support document uploads. Authentication routes handle staff and patient login, token refresh, and logout.
 
+### Shared Error Infrastructure
+
+**Error Codes** (`server/shared/errors/ErrorCodes.ts`): Central catalog of all error codes (AUTH-001..006, BILL-001, VAL-001, NOT-001, DB-001..002, SYS-001, EXT-EMAIL-001, EXT-STORAGE-001).
+
+**AppError** (`server/shared/errors/AppError.ts`): Typed application error class with `code`, `userMessage`, `statusCode`, `isOperational`, and `details` fields. `server/auth/errors.ts` re-exports it.
+
+**requestIdMiddleware** (`server/shared/middleware/requestId.ts`): Assigns a UUID v4 `requestId` to every request, echoed in `X-Request-Id` response header. Added to the Express middleware chain before body parsing.
+
+**globalErrorHandler** (`server/shared/middleware/errorHandler.ts`): Unified Express error handler converting `AppError`, `ZodError`, and PG constraint errors to structured `{code, message, requestId, details}` JSON responses. Replaces the old inline `setupErrorHandler`.
+
+### Circuit Breaker
+
+`server/shared/circuitBreaker/CircuitBreaker.ts` implements a CLOSED → OPEN → HALF_OPEN state machine (configurable `failureThreshold` / `cooldownMs`). `CircuitBreakerEmailProvider.ts` wraps all email providers; `getEmailProvider.ts` returns the circuit-breaker-wrapped instance.
+
+### System Error UI (Frontend)
+
+**SystemErrorContext** (`context/SystemErrorContext.tsx`): Global React context with `showSystemError(info)` / `dismissError()`. The `SystemErrorBridge` component in `_layout.tsx` wires `setSystemErrorHandler` from `lib/query-client.ts` to the context so any 5xx API response automatically triggers the maintenance overlay.
+
+**MaintenanceBottomSheet** (`components/system/MaintenanceBottomSheet.tsx`): Turkish-language modal shown for system-level errors. Displays `errorCode` and `requestId` for support reference.
+
+**Query client** (`lib/query-client.ts`): `handleBadResponse` parses error body from failed responses and calls `_onSystemError` when `status >= 500` or the code is in `SYSTEM_ERROR_CODES`. Exports `setSystemErrorHandler` for wiring. Also exports `ApiErrorBody` type and enriched error objects with `.code`, `.requestId`, `.status`.
+
 ## External Dependencies
 
 ### Runtime Services

@@ -18,7 +18,8 @@
     "test:watch": "NODE_ENV=test vitest",
     "db:migrate": "drizzle-kit push",
     "db:seed": "tsx server/seed.ts",
-    "test:db:reset": "NODE_ENV=test tsx server/scripts/resetTestDb.ts"
+    "test:db:reset": "NODE_ENV=test tsx server/scripts/resetTestDb.ts",
+    "test:db:minimal-reset": "NODE_ENV=test DATABASE_URL=${DATABASE_URL_TEST:-$DATABASE_URL} tsx server/scripts/resetTestDbMinimal.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1000.0",

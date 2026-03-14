@@ -3,6 +3,8 @@ import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { seedDatabase } from "./seed";
 import { startBillingScheduler } from "./billing/scheduler";
+import { requestIdMiddleware } from "./shared/middleware/requestId";
+import { globalErrorHandler } from "./shared/middleware/errorHandler";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -152,14 +154,7 @@ function configureExpoAndLanding(app: express.Application) {
 }
 
 function setupErrorHandler(app: express.Application) {
-  app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
-    const error = err as { status?: number; statusCode?: number; message?: string };
-    const status = error.status || error.statusCode || 500;
-    const message = error.message || "Internal Server Error";
-    console.error("Internal Server Error:", err);
-    if (res.headersSent) return next(err);
-    return res.status(status).json({ message });
-  });
+  app.use(globalErrorHandler);
 }
 
 (async () => {
@@ -168,6 +163,7 @@ function setupErrorHandler(app: express.Application) {
   }
 
   setupCors(app);
+  app.use(requestIdMiddleware);
   setupBodyParsing(app);
   setupRequestLogging(app);
   configureExpoAndLanding(app);

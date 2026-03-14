@@ -1,0 +1,198 @@
+REPLIT AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+GOAL:
+1) Wipe TEST database content and reseed ONLY minimal demo records (dev admin, manager, patient). Nothing else.
+2) After that, run a step-by-step ADMIN area audit/check (backend + mobile) and produce a clear report.
+3) Implement production-ready “Chaos Management”:
+   - SOLID error architecture with system-wide custom error codes
+   - Global exception handler + request correlation IDs
+   - Professional validation (Zod) with consistent error responses
+   - Circuit breaker for external dependencies (email, file storage, etc.)
+   - Mobile UX: on unexpected errors show a bottom popup: “Sistem bakım sürecindedir” + the unique error code.
+
+NON-NEGOTIABLE SAFETY:
+- TEST DB ONLY. Never touch dev/prod DB.
+- Add safety guards: NODE_ENV must be "test" AND database name must include "test" before any wipe.
+- Use ACID transactions for multi-step operations and bulk actions.
+- SOLID boundaries: controller -> usecase -> repo; DB only in repo.
+
+========================================================
+PHASE 1 — TEST DB WIPE + MINIMAL SEED (MANDATORY)
+========================================================
+A) Implement a safe script:
+- server/scripts/resetTestDbMinimal.ts
+Behavior:
+1) Assert NODE_ENV === "test" (hard fail otherwise)
+2) Inspect active db name/host:
+   - Must include "test" in DB name (e.g., heliumdb_test)
+   - Must NOT match production host patterns if any (extra guard)
+3) Wipe all tables (TRUNCATE ... CASCADE) or drop schema safely
+4) Run migrations
+5) Run minimal seed ONLY:
+   - 1 clinic (required so manager & patient can belong somewhere)
+   - 1 admin user (admin@demo.com / Admin123!)
+   - 1 manager user (manager@demo.com / Manager123!) linked to that clinic
+   - 1 patient/guest (PATIENT-TEST-0001) linked to that clinic
+   - No extra doctors/hotels/transports/invoices/notifications/audit logs unless strictly required
+
+B) Update npm scripts:
+- npm run test:db:minimal-reset  -> runs resetTestDbMinimal.ts
+- Ensure npm test always runs NODE_ENV=test and uses DATABASE_URL_TEST
+
+C) Output:
+- Print which records were seeded (ids masked ok)
+- Confirm all other tables are empty
+
+========================================================
+PHASE 2 — ADMIN AREA STEP-BY-STEP CHECK (MANDATORY)
+========================================================
+Create an “Admin Check” routine that verifies the system in order:
+
+A) Backend curl checklist (create a doc: docs/admin_checklist.md)
+1) Login admin -> /v1/auth/login
+2) GET /v1/admin/dashboard
+3) GET /v1/admin/clinics (list)
+4) POST /v1/admin/clinics (create) then GET /clinics again
+5) GET /v1/admin/users (list)
+6) POST /v1/admin/users (create manager) then GET /clinics to see primary manager updated
+7) GET /v1/admin/invoices (filters work)
+8) Notifications endpoints (unread count + list)
+9) Settings endpoints (system status endpoints you add in Phase 3 if needed)
+For each step: include expected status codes and sample payloads.
+
+B) Mobile UI checklist (in same doc):
+- Admin dashboard loads
+- Clinics list -> create clinic works (no input focus bug)
+- Clinic detail -> invoices button routes filtered correctly
+- Users list -> select/cancel/delete works
+- Notifications resolve flow works
+- Settings shows status + actions
+
+C) Replit AI must run this checklist and produce:
+- PASS/FAIL per step
+- any failing stack traces and file/line
+- recommended fixes if something fails
+
+========================================================
+PHASE 3 — PROD-READY ERROR SYSTEM (CUSTOM ERROR CODES + GLOBAL HANDLER)
+========================================================
+A) Create a central error code catalog (must be stable)
+File: server/shared/errors/ErrorCodes.ts
+Format example:
+- AUTH-001 (invalid credentials)
+- AUTH-002 (forbidden)
+- BILL-001 (clinic suspended)
+- VAL-001 (validation error)
+- DB-001 (db constraint)
+- SYS-001 (unexpected error)
+- EXT-EMAIL-001 (email send failed)
+Each code must be unique and used consistently.
+
+B) Create AppError base type
+File: server/shared/errors/AppError.ts
+Fields:
+- code (from ErrorCodes)
+- httpStatus
+- userMessage (safe)
+- isOperational (true for expected errors)
+- details (optional)
+- cause (optional)
+
+C) Request Correlation ID middleware
+File: server/shared/middleware/requestId.ts
+- Generates requestId per request (uuid)
+- Adds header: X-Request-Id
+- Include requestId in logs and error responses
+
+D) Global Exception Handler (Express)
+File: server/shared/middleware/errorHandler.ts
+Rules:
+- If AppError => return { code, message:userMessage, requestId }
+- If ZodError => map to VAL-001 and return field errors in details (safe)
+- If unknown => return SYS-001 with userMessage:
+  “Sistem şu anda bakım sürecindedir. Lütfen daha sonra tekrar deneyin.”
+  and include requestId + code
+- Always log structured JSON:
+  { requestId, code, path, method, actorId?, stack? (only server logs) }
+
+E) Ensure EVERY route uses consistent error throwing
+- Controllers should never return random error shapes
+- Usecases throw AppError with codes
+- Repos map DB errors to DB-001 etc.
+
+F) Professional validation
+- Standardize Zod schemas per module (already used): ensure all endpoints validate request body/query/params
+- Validation errors must return VAL-001 and details list.
+
+========================================================
+PHASE 4 — CIRCUIT BREAKER (PROD-READY)
+========================================================
+Implement circuit breaker ONLY where it makes sense (external dependencies):
+- EmailProvider.send()
+- Optional: StorageProvider.upload()
+Use a small library (e.g., opossum) or a lightweight custom breaker.
+Rules:
+- Fail fast after threshold (e.g., 5 failures)
+- Open for a cooldown (e.g., 30s)
+- Half-open trial requests
+When open:
+- Throw AppError EXT-EMAIL-001 (or EXT-STORAGE-001) with safe userMessage
+Also write an audit log or error log event.
+
+IMPORTANT:
+- Do not use circuit breaker for DB queries.
+
+========================================================
+PHASE 5 — MOBILE “MAINTENANCE POPUP + ERROR CODE” UX
+========================================================
+A) Build a global error presenter:
+- components/system/ErrorBottomSheet.tsx (or Modal)
+Design:
+- Bottom popup
+- Title: “Sistem bakım sürecindedir”
+- Subtitle: “Lütfen daha sonra tekrar deneyin.”
+- Show small mono text: “Hata Kodu: <CODE>”
+- Close button
+
+B) Intercept API errors globally
+Wherever API client exists:
+- If backend returns {code, message, requestId}
+- For 5xx or SYS-001 => show maintenance popup with code and requestId (optional)
+- For known business errors (AUTH/BILL/VAL) show normal friendly inline message, not maintenance
+
+C) Ensure no UI crash:
+- Even if an endpoint fails, user sees popup and can continue.
+
+========================================================
+PHASE 6 — TESTS (MANDATORY)
+========================================================
+Add tests:
+1) resetTestDbMinimal safety guards (refuses non-test)
+2) error handler returns SYS-001 for unknown errors with requestId
+3) zod validation maps to VAL-001
+4) circuit breaker opens and returns EXT-EMAIL-001 after failures
+5) a couple of integration tests for admin endpoints returning standardized errors
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, output:
+1) The exact command to wipe and seed TEST DB:
+   - npm run test:db:minimal-reset
+2) Proof that only minimal demo data exists
+3) Admin checklist PASS/FAIL report
+4) Error Code catalog (list of codes and meanings)
+5) Example error response JSON shape
+6) How mobile shows maintenance popup with error code
+7) Files changed/added summary
+
+IMPLEMENTATION ORDER (DO THIS ORDER):
+1) Phase 1: resetTestDbMinimal + scripts + verify test DB is minimal
+2) Phase 3: error system (codes + AppError + requestId + handler + validation mapping)
+3) Phase 4: circuit breaker for EmailProvider/StorageProvider
+4) Phase 5: mobile maintenance popup + global interceptor
+5) Phase 2: run admin checklist and fix any failures found
+6) Phase 6: tests
+
+Proceed now. Do not guess — implement, run, verify.
+END.

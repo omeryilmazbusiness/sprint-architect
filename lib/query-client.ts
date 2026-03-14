@@ -1,25 +1,31 @@
 import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-/**
- * Gets the base URL for the Express API server (e.g., "https://hostname.replit.dev")
- */
 export function getApiUrl(): string {
   let host = process.env.EXPO_PUBLIC_DOMAIN;
   if (!host) throw new Error("EXPO_PUBLIC_DOMAIN is not set");
   return new URL(`https://${host}`).href;
 }
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
+export interface ApiErrorBody {
+  code?: string;
+  message?: string;
+  requestId?: string;
+  details?: unknown;
+}
+
+const SYSTEM_ERROR_CODES = new Set(["SYS-001", "EXT-EMAIL-001", "EXT-STORAGE-001"]);
+
+function isSystemError(status: number, body: ApiErrorBody): boolean {
+  if (status >= 500) return true;
+  if (body.code && SYSTEM_ERROR_CODES.has(body.code)) return true;
+  return false;
 }
 
 let _accessToken: string | null = null;
 let _refreshToken: string | null = null;
 let _onUnauthorized: (() => void) | null = null;
+let _onSystemError: ((info: ApiErrorBody) => void) | null = null;
 
 export function setAuthTokens(access: string | null, refresh: string | null) {
   _accessToken = access;
@@ -28,6 +34,35 @@ export function setAuthTokens(access: string | null, refresh: string | null) {
 
 export function setUnauthorizedHandler(fn: () => void) {
   _onUnauthorized = fn;
+}
+
+export function setSystemErrorHandler(fn: (info: ApiErrorBody) => void) {
+  _onSystemError = fn;
+}
+
+async function handleBadResponse(res: Response): Promise<never> {
+  let body: ApiErrorBody = {};
+  try {
+    body = (await res.json()) as ApiErrorBody;
+  } catch {
+    body = { message: res.statusText };
+  }
+
+  if (isSystemError(res.status, body)) {
+    _onSystemError?.({
+      code: body.code ?? "SYS-001",
+      message: body.message,
+      requestId: body.requestId,
+    });
+  }
+
+  const msg = body.message ?? `${res.status} ${res.statusText}`;
+  const err = new Error(msg) as Error & { code?: string; requestId?: string; status?: number; body?: ApiErrorBody };
+  err.code = body.code;
+  err.requestId = body.requestId;
+  err.status = res.status;
+  err.body = body;
+  throw err;
 }
 
 async function tryRefreshToken(): Promise<string | null> {
@@ -83,7 +118,7 @@ export async function apiRequest(
     }
   }
 
-  await throwIfResNotOk(res);
+  if (!res.ok) await handleBadResponse(res);
   return res;
 }
 
@@ -115,7 +150,7 @@ export const getQueryFn: <T>(options: {
     }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) return null;
-    await throwIfResNotOk(res);
+    if (!res.ok) await handleBadResponse(res);
     return await res.json();
   };
 
