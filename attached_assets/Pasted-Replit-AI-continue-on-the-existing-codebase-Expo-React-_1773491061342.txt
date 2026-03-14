@@ -1,0 +1,122 @@
+Replit AI — continue on the existing codebase (Expo React Native + Express/TypeScript backend + Postgres/Drizzle). DO NOT re-scaffold.
+
+PROBLEM:
+The Admin dashboard banner area (the section directly under the AdminHeader at the very top) is NOT updated in the running app. The new banner components may exist but the actual rendered route is still using the old banner.
+You must FIRST locate the exact Admin Dashboard screen that renders in the UI, then replace ONLY that banner area with the premium 3D banner design.
+
+GOAL:
+1) Identify the REAL file/route that renders Admin Dashboard when I tap “Dashboard” in the Admin tab bar.
+2) Replace the banner area under the header with the premium 3D BannerCarousel (orange/blue/green/crimson gradient, glass, subtle blobs).
+3) Ensure empty DB shows 0 defaults and a launch CTA (no “failed data”).
+4) Keep everything SOLID-friendly:
+   - backend: stable dashboard DTO with defaults (already exists, verify)
+   - frontend: modular components + a hook (no giant dashboard file)
+
+NON-NEGOTIABLE:
+- No guessing: you must prove the route by printing the route file path and adding a temporary visible marker.
+- White theme must remain consistent.
+- No “failed data” on empty datasets.
+- Must be production-ready: loading skeleton, true error state only on network/server errors.
+- Remove all old banner implementations from the Admin dashboard route so there’s a single source of truth.
+- Keep code modular: components/adminDashboard/* and hooks/useAdminDashboard.ts
+
+========================================================
+PHASE 1 — FIND THE REAL ADMIN DASHBOARD ROUTE (MANDATORY)
+========================================================
+1) Locate Admin tab bar layout file:
+- app/(admin)/_layout.tsx OR app/(admin)/(tabs)/_layout.tsx OR similar
+2) Determine which screen is the Admin “Dashboard” tab target.
+3) Open that exact file and add a TEMP visible marker text at the top (directly under header):
+   Text: "NEW_ADMIN_BANNER_ACTIVE"
+   Style: small but visible.
+4) Run/refresh and confirm in logs that this marker is present when admin dashboard is opened.
+5) Only once confirmed, proceed to Phase 2.
+
+Output requirement for Phase 1:
+- Print the exact file path used by Admin Dashboard.
+- Show where you inserted "NEW_ADMIN_BANNER_ACTIVE".
+
+========================================================
+PHASE 2 — REPLACE THE BANNER AREA WITH PREMIUM 3D DESIGN
+========================================================
+1) Banner component structure (must be used):
+- components/adminDashboard/BannerBackground3D.tsx
+- components/adminDashboard/BannerSlide.tsx
+- components/adminDashboard/BannerCarousel.tsx
+If any are missing, create them; if they exist, use them.
+
+2) Replace ONLY the banner section under AdminHeader:
+- Insert <BannerCarousel .../> directly below header and above Overview KPI section.
+- Remove the old banner code in that route (do not leave duplicates).
+
+3) Premium 3D specs (must match):
+- Rounded card corners (r=20+)
+- Glass scrim overlay
+- Subtle animated blobs (very light movement)
+- Multi-stop gradients using orange/blue/green/crimson in a premium tone
+- Text contrast scrim at bottom
+- Height clamp 180–260
+
+4) Empty state behavior:
+- If all counts are 0:
+  - show “System Ready” launch slide
+  - CTA: “Create First Clinic”
+- Never show “failed data” just because arrays are empty.
+- Show skeleton on loading.
+- Show a proper error card only for true network/server errors.
+
+5) Keep alignment professional:
+- Use strict layout grid in BannerSlide (padding 22, gap 11)
+- Chips row with minHeight 44
+- CTA aligns right, goes full width on very small screens (<360px).
+
+========================================================
+PHASE 3 — SOLID FRONTEND STRUCTURE
+========================================================
+1) Ensure a single hook for dashboard data:
+- hooks/useAdminDashboard.ts (React Query v5)
+- Return stable defaults in UI:
+  const unpaid = data?.invoices?.unpaid ?? 0
+
+2) Ensure presentational components only render props:
+- BannerCarousel receives computed counts + callbacks for navigation
+- No API calls inside Banner components
+
+3) Navigation:
+- CTAs must route correctly with filters (route params):
+  - unpaid>0 => invoices?status=UNPAID else invoices
+  - suspended>0 => clinics?status=SUSPENDED else clinics
+  - month => invoices?period=currentPeriod
+
+========================================================
+PHASE 4 — CLEANUP & VERIFY
+========================================================
+1) Remove the temporary marker "NEW_ADMIN_BANNER_ACTIVE" after verifying the banner works.
+2) Search and remove old banner usage in Admin dashboard route only.
+3) Restart dev server if necessary (clear Metro cache) and provide exact commands used.
+
+Verification checklist:
+- Admin dashboard shows the new 3D banner under header
+- Empty DB: launch slide with 0 values, no error wording
+- Data present: 3 slides show correct counts and CTAs
+- Small screen: no overlap
+- No TypeScript errors
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+At the end, print:
+1) Confirmed Admin dashboard route file path
+2) Files changed/added
+3) Where old banner code was removed
+4) Manual QA checklist results
+5) If you needed to restart Metro cache, list exact commands
+
+IMPLEMENTATION ORDER:
+1) Phase 1 (find real route + marker proof)
+2) Phase 2 (replace banner area)
+3) Phase 3 (ensure hook + modular structure)
+4) Phase 4 (cleanup + verify)
+
+Proceed now. Do not guess — prove the route first, then implement.
+END.

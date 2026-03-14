@@ -3,9 +3,12 @@ import {
   View,
   StyleSheet,
   Animated,
+  Platform,
   useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+
+const NATIVE_DRIVER = Platform.OS !== "web";
 
 interface Props {
   colors: readonly [string, string, ...string[]];
@@ -28,12 +31,12 @@ export function BannerBackground3D({ colors, height, children }: Props) {
           Animated.timing(val, {
             toValue: delta,
             duration,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
           }),
           Animated.timing(val, {
             toValue: 0,
             duration,
-            useNativeDriver: true,
+            useNativeDriver: NATIVE_DRIVER,
           }),
         ]),
       );
