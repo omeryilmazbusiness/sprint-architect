@@ -107,7 +107,6 @@ export default function PatientDetailScreen() {
   // Sheet visibility states
   const [assignDocsVisible, setAssignDocsVisible] = useState(false);
   const [newApptVisible, setNewApptVisible] = useState(false);
-  const [changeDoctorVisible, setChangeDoctorVisible] = useState(false);
   const [changeHotelVisible, setChangeHotelVisible] = useState(false);
   const [editPatientVisible, setEditPatientVisible] = useState(false);
 
@@ -247,11 +246,6 @@ export default function PatientDetailScreen() {
             onPress={() => setNewApptVisible(true)} 
           />
           <QuickAction 
-            icon="person-outline" 
-            label="Doctor" 
-            onPress={() => setChangeDoctorVisible(true)} 
-          />
-          <QuickAction 
             icon="business-outline" 
             label="Hotel" 
             onPress={() => setChangeHotelVisible(true)} 
@@ -312,13 +306,6 @@ export default function PatientDetailScreen() {
         <Card style={styles.sectionCard}>
           <SectionHeader label="Overview" />
           
-          <OverviewRow 
-            icon="person-outline" 
-            label="Doctor" 
-            value={doctor?.fullName ?? "Not assigned"} 
-            onPress={() => setChangeDoctorVisible(true)}
-            showAction
-          />
           <OverviewRow 
             icon="business-outline" 
             label="Hotel" 
@@ -425,6 +412,9 @@ export default function PatientDetailScreen() {
                 <View style={styles.apptInfoCol}>
                   <Text style={styles.apptTime}>{new Date(appt.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                   <Text style={styles.apptTitle} numberOfLines={1}>{appt.title}</Text>
+                  {appt.doctor?.fullName ? (
+                    <Text style={styles.apptDoctor} numberOfLines={1}>{appt.doctor.fullName}</Text>
+                  ) : null}
                 </View>
                 <StatusPill status={appt.status} small />
               </View>
@@ -452,13 +442,6 @@ export default function PatientDetailScreen() {
         visible={newApptVisible} 
         onClose={() => setNewApptVisible(false)} 
         patientId={id}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-      <ChangeDoctorSheet 
-        visible={changeDoctorVisible} 
-        onClose={() => setChangeDoctorVisible(false)} 
-        patientId={id}
-        currentDoctorId={doctor?.id}
         onSuccess={() => qc.invalidateQueries({ queryKey })}
       />
       <EditPatientSheet
@@ -1338,6 +1321,12 @@ const styles = StyleSheet.create({
     color: T.text,
     fontFamily: "Inter_600SemiBold",
     marginTop: 1,
+  },
+  apptDoctor: {
+    fontSize: 12,
+    color: T.textMuted,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   viewMoreBtn: {
     alignItems: "center",

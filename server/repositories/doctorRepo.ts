@@ -7,8 +7,18 @@ export interface CreateDoctorInput {
   fullName: string;
   specialty?: string;
   phone?: string;
+  email?: string;
   photoUrl?: string;
+  university?: string;
+  graduationYear?: number | null;
+  experienceYears?: number | null;
+  bio?: string;
+  languages?: string;
+  certifications?: string;
+  diplomaUrl?: string;
 }
+
+export type UpdateDoctorInput = Partial<Omit<CreateDoctorInput, "clinicId">>;
 
 export const doctorRepo = {
   async create(input: CreateDoctorInput) {
@@ -41,7 +51,7 @@ export const doctorRepo = {
     });
   },
 
-  async update(id: string, clinicId: string, input: Partial<CreateDoctorInput>) {
+  async update(id: string, clinicId: string, input: UpdateDoctorInput) {
     const [updated] = await db
       .update(doctors)
       .set(input)

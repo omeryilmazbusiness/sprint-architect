@@ -39,6 +39,7 @@ interface Patient {
   departureDate?: string;
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
   createdAt: string;
+  pendingDocCount?: number;
   plan?: {
     hotelId: string | null;
     transportId: string | null;
@@ -96,10 +97,11 @@ function GuestRow({ patient, onPress }: { patient: Patient; onPress: () => void 
     ? `${patient.patientKey.slice(0, 4)}•••${patient.patientKey.slice(-4)}`
     : patient.patientKey;
 
-  const missingTags = [];
-  if (!patient.plan?.hotelId) missingTags.push("No Hotel");
-  if (!patient.plan?.transportId) missingTags.push("No Transport");
-  if (!patient.plan?.doctorId) missingTags.push("No Doctor");
+  const missingTags: { label: string; warn: boolean }[] = [];
+  if ((patient.pendingDocCount ?? 0) > 0)
+    missingTags.push({ label: `${patient.pendingDocCount} Doc${patient.pendingDocCount === 1 ? "" : "s"} Pending`, warn: true });
+  if (!patient.plan?.hotelId) missingTags.push({ label: "No Hotel", warn: false });
+  if (!patient.plan?.transportId) missingTags.push({ label: "No Transport", warn: false });
 
   const colors = ["#0A3D62", "#0369A1", "#059669", "#D97706", "#DC2626", "#7C3AED", "#DB2777"];
   const avatarColor = colors[patient.fullName.length % colors.length];
@@ -126,8 +128,8 @@ function GuestRow({ patient, onPress }: { patient: Patient; onPress: () => void 
         {missingTags.length > 0 && (
           <View style={styles.tagRow}>
             {missingTags.map((tag) => (
-              <View key={tag} style={styles.missingTag}>
-                <Text style={styles.missingTagText}>{tag}</Text>
+              <View key={tag.label} style={[styles.missingTag, tag.warn && styles.missingTagWarn]}>
+                <Text style={[styles.missingTagText, tag.warn && styles.missingTagTextWarn]}>{tag.label}</Text>
               </View>
             ))}
           </View>
@@ -982,14 +984,19 @@ const styles = StyleSheet.create({
   },
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   missingTag: {
-    backgroundColor: T.dangerBg,
+    backgroundColor: T.surfaceSubtle,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: T.dangerBorder,
+    borderColor: T.border,
   },
-  missingTagText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.dangerText },
+  missingTagWarn: {
+    backgroundColor: T.warningBg,
+    borderColor: T.warningBorder,
+  },
+  missingTagText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.textMuted },
+  missingTagTextWarn: { color: T.warning },
   avatar: {
     width: 48,
     height: 48,

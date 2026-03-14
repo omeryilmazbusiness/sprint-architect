@@ -1,0 +1,252 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Redesign Manager “Users” (Guests list), “Doctors” (Services), and “Guest Detail” screens to premium, modern, production-ready UX.
+Must be SOLID-friendly (modular components + hooks + stable DTOs) and clinic-scoped.
+
+SCOPE:
+1) Manager Users (Guests list) — premium list + filters + fast actions
+2) Doctors screen — premium CRUD list + detailed create/edit form
+3) Guest Detail — premium overview + documents + hotel + appointments + tracking (without messy layout)
+You MUST audit what currently exists first, then improve.
+
+NON-NEGOTIABLE:
+- White theme premium. No layout breaks on small screens.
+- Clinic scoping strict everywhere.
+- Empty DB shows elegant empty states (no “failed data”).
+- All create/edit actions open as bottom sheets (slide-up modals), not separate confusing pages.
+- Doctor is assigned PER APPOINTMENT (not per patient).
+- Documents: assigned -> PENDING, uploaded -> UPLOADED, view/download if uploaded, instructionText shown.
+- SOLID: screens thin; domain rules in use-cases; DB in repos.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify actual routes/files for:
+- Manager Users screen (Guests list)
+- Manager Doctors screen
+- Guest Detail screen
+2) For each, list:
+- what UI exists now
+- what endpoints it calls
+- UX problems (spacing, actions, missing states, wrong flows)
+3) Produce a short audit summary before implementing changes.
+
+========================================================
+PHASE 2 — MANAGER USERS (GUESTS LIST) — PREMIUM UX
+========================================================
+A) Layout
+- Header: “Users”
+- Search bar (debounced 400ms), placeholder: “Search guest or key”
+- Filter button row (icon + dropdown modals) similar to Admin:
+  - Status: ALL / PENDING / APPROVED / ENDED / INACTIVE (use your real enum)
+  - Date: Today / This Week / This Month (optional quick chips)
+  - Clear filters
+- Active filter chips displayed below
+
+B) List Row Card (modern)
+Each guest card shows:
+- Left: avatar initials
+- Middle:
+  - Name (large)
+  - Subtitle: arrival → departure (if present)
+  - Key masked (copy button)
+- Right:
+  - Status pill
+  - Chevron
+- Tags row:
+  - “Docs Pending” if any required docs are pending
+  - “Hotel Missing” if no hotel assigned (optional)
+- Tap card:
+  - opens Guest Detail
+- Long press:
+  - optional selection mode (not required unless you want bulk ops)
+
+C) Empty/Loading/Error
+- Skeleton list on loading
+- Empty state: “No guests yet” + CTA “Create Guest”
+- Error state: Retry
+
+D) Create Guest
+- FAB “New Guest” opens bottom sheet create form (already planned)
+- After create -> navigate to Guest Detail
+
+Implementation must be modular:
+- components/managerUsers/GuestRowCard.tsx
+- components/filters/FilterBar.tsx + FilterPickerModal.tsx
+- hooks/useManagerGuestsQuery.ts
+- services/api/managerGuests.ts
+
+========================================================
+PHASE 3 — DOCTORS SCREEN — PREMIUM CRUD + DETAILED PROFILE
+========================================================
+A) Doctors list UX
+- Header: “Doctors”
+- Search (name/specialty)
+- List cards:
+  - doctor name (large)
+  - specialty (subtitle)
+  - phone/email chips
+  - experienceYears chip
+- Empty state: “No doctors yet” + CTA “Add Doctor”
+- Tap -> opens edit sheet
+- Delete -> confirm modal
+
+B) Add/Edit Doctor bottom sheet (detailed)
+Fields (professional):
+- fullName (required)
+- specialty (required)
+- phone
+- email
+- university
+- graduationYear
+- experienceYears
+- languages (multi-select or comma)
+- bio/about (multiline)
+- certifications (multiline)
+- diplomaUrl (image URL) + optional upload later
+- photoUrl
+Validation:
+- required fields
+- email format
+- graduation year numeric range
+
+Endpoints:
+- GET/POST/PUT/DELETE /v1/manager/doctors (clinic scoped)
+Ensure backend supports these fields; if not, extend schema SOLID-style.
+
+Implementation modular:
+- components/doctors/DoctorFormSheet.tsx
+- hooks/useDoctorsQuery.ts
+- services/api/managerDoctors.ts
+
+========================================================
+PHASE 4 — GUEST DETAIL — PREMIUM, CLEAN, MOST IMPORTANT
+========================================================
+Guest detail must feel like an “operations cockpit”, not clutter.
+Structure as segmented tabs inside detail (top sticky segmented control):
+Tabs:
+1) Overview
+2) Documents
+3) Hotel
+4) Appointments
+5) Tracking
+
+A) Overview tab
+- Hero card: name + status pill + stay dates
+- Next appointment preview (time + doctor + title)
+- Docs summary: Pending vs Uploaded counts + quick link to Documents tab
+- Hotel summary: hotel name + room + quick link to Hotel tab
+- Quick Actions row:
+  - Add New Doc (opens Assign Document sheet)
+  - Create Appointment (opens appointment sheet)
+  - Change Hotel (opens hotel sheet)
+
+B) Documents tab
+- List assigned docs:
+  - title
+  - instructionText (small)
+  - status pill (Pending/Uploaded/Approved/Rejected if exists)
+  - If uploaded: View + Download buttons
+- Assign new document (bottom sheet):
+  - pick document type (from document_types)
+  - enter instructionText (required)
+  - submit -> creates PENDING doc
+- View:
+  - open PDF in viewer (signed url or download+open)
+- Download:
+  - expo-file-system + expo-sharing
+- Empty state: “No documents assigned.”
+
+C) Hotel tab
+- Show assigned hotel details
+- “Change hotel” bottom sheet:
+  - select from hotels list
+  - optional: stayDays, roomNo, checkIn/out
+  - submit -> updates assignment
+- Empty state: “No hotel assigned.”
+
+D) Appointments tab
+- List grouped by date
+- Create/Edit appointment bottom sheet:
+  - title/type
+  - startAt
+  - doctorId REQUIRED (selected from doctors)
+  - notes/location optional
+- Each appointment row shows doctor and status
+- Empty state: “No appointments yet.”
+
+E) Tracking tab
+- Modern stepper:
+  Pre-Arrival -> Arrival & Transfer -> Hotel -> Treatment -> Follow-up -> Departure
+- Highlight current step (computed or manager-set)
+- Timeline events list (docs assigned/uploaded, appt created, appt done)
+- Allow manager to set currentStep with dropdown (saved to backend)
+
+Rules:
+- Remove any “patient-level doctor assignment” UI (doctor per appointment only).
+- Never show “failed data” if lists are empty.
+
+Implementation modular:
+- components/guestDetail/* (separate per tab)
+- hooks/useGuestDetail.ts (single aggregate endpoint preferred)
+- services/api/managerGuestDetail.ts
+
+Backend:
+Prefer a single endpoint:
+GET /v1/manager/patients/:id/details
+Return:
+{
+  patient,
+  hotelAssignment,
+  documents[],
+  appointments[],
+  tracking
+}
+Must return 200 with defaults ([], nulls) even if empty.
+
+========================================================
+PHASE 5 — SOLID BACKEND SUPPORT (ONLY WHERE NEEDED)
+========================================================
+If fields/endpoints are missing, extend backend SOLID-style:
+- server/modules/managerPatients/
+- server/modules/managerDoctors/
+- server/modules/managerDocuments/
+- server/modules/managerAppointments/
+Use:
+controller -> usecase -> repo (drizzle)
+Zod schemas and stable DTOs.
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+Manual QA checklist:
+- Users list: search, filters, empty state, create guest opens sheet
+- Doctors: add/edit/delete works, fields saved
+- Guest detail: tabs switch smoothly, actions open bottom sheets
+- Documents: assign -> pending; uploaded shows view/download
+- Appointments: doctor required, list shows doctor/title/time
+- Hotel: change hotel works
+- Tracking: stepper shows and can update current step
+- Small screens: no overlaps
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit summary (what existed and what changed)
+2) Files changed/added
+3) Any new endpoints + sample curl
+4) Manual QA checklist results
+5) Notes on SOLID boundaries (which modules/hooks/components)
+
+IMPLEMENTATION ORDER:
+1) Audit routes and existing behavior
+2) Users list UX upgrade (fast win)
+3) Doctors UX + detailed form
+4) Guest detail restructure into tabs + bottom sheets
+5) Backend support (only missing parts)
+6) Polish + verify
+
+Proceed now. Make it premium, SOLID, production-ready.
+END.

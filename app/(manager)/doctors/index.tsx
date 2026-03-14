@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,11 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
+  Animated,
+  Dimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,6 +24,8 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 interface Doctor {
   id: string;
@@ -39,6 +45,9 @@ interface Doctor {
 }
 
 export default function DoctorsScreen() {
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Doctor | null>(null);
   const [form, setForm] = useState({
@@ -55,6 +64,14 @@ export default function DoctorsScreen() {
   });
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  useEffect(() => {
+    if (showForm) {
+      Animated.spring(slideAnim, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }).start();
+    } else {
+      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }).start();
+    }
+  }, [showForm]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Doctor[] }>({
     queryKey: ["/v1/manager/doctors"],
@@ -190,15 +207,18 @@ export default function DoctorsScreen() {
         />
       )}
 
-      <Modal visible={showForm} animationType="slide" presentationStyle="formSheet">
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingItem ? "Edit Doctor" : "Add Doctor"}</Text>
-            <Pressable onPress={() => setShowForm(false)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={T.text} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+      <Modal visible={showForm} transparent animationType="none" onRequestClose={() => setShowForm(false)}>
+        <View style={styles.sheetOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowForm(false)} />
+          <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingItem ? "Edit Doctor" : "Add Doctor"}</Text>
+              <Pressable onPress={() => setShowForm(false)} hitSlop={10} style={styles.sheetCloseBtn}>
+                <Ionicons name="close" size={24} color={T.text} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalContent}>
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Full Name *</Text>
               <TextInput
@@ -328,6 +348,7 @@ export default function DoctorsScreen() {
               }
             </Pressable>
           </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>
@@ -399,4 +420,26 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   btnPrimaryText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  sheetContainer: {
+    backgroundColor: T.bg,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
+    overflow: "hidden",
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: T.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sheetCloseBtn: { padding: 4 },
 });

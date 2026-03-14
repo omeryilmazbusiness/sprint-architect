@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { patients, patientPlans, patientDocuments } from "@shared/schema";
-import { eq, and, ilike, or, count, isNull, exists, sql } from "drizzle-orm";
+import { eq, and, ilike, or, count, isNull, exists, sql, inArray } from "drizzle-orm";
 import { generatePatientKey } from "../utils/patientKey";
 
 export interface CreatePatientInput {
@@ -105,7 +105,31 @@ export const patientRepo = {
       db.select({ count: count() }).from(patients).where(where),
     ]);
 
-    return { rows, total: Number(total[0].count), page, pageSize };
+    // Batch-fetch pending doc counts (ASSIGNED = pending upload)
+    const patientIds = rows.map((r) => r.id);
+    let pendingDocMap: Record<string, number> = {};
+    if (patientIds.length > 0) {
+      const docCounts = await db
+        .select({ patientId: patientDocuments.patientId, cnt: count() })
+        .from(patientDocuments)
+        .where(
+          and(
+            inArray(patientDocuments.patientId, patientIds),
+            eq(patientDocuments.status, "ASSIGNED"),
+          ),
+        )
+        .groupBy(patientDocuments.patientId);
+      docCounts.forEach((d) => {
+        if (d.patientId) pendingDocMap[d.patientId] = Number(d.cnt);
+      });
+    }
+
+    const enrichedRows = rows.map((r) => ({
+      ...r,
+      pendingDocCount: pendingDocMap[r.id] ?? 0,
+    }));
+
+    return { rows: enrichedRows, total: Number(total[0].count), page, pageSize };
   },
 
   async findById(id: string, clinicId: string) {
