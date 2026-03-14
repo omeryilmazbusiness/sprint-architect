@@ -170,7 +170,7 @@ export default function ClinicsScreen() {
 
   return (
     <View style={styles.root}>
-      <AdminHeader title="Clinics" userEmail={user?.email} onLogout={handleLogout} right={<NewBtn />} />
+      <AdminHeader title="Clinics" rightExtra={<NewBtn />} />
 
       <View style={styles.filterArea}>
         <View style={styles.searchBar}>

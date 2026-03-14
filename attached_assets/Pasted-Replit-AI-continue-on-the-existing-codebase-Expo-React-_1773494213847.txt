@@ -1,0 +1,139 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TS backend). DO NOT re-scaffold.
+
+OBJECTIVE:
+Redesign the AdminHeader into a premium, production-ready, comprehensive UX component with only the most necessary features:
+- Page title + context (environment/timezone)
+- Notifications bell with unread badge
+- System health indicator (OK/DEGRADED) linking to Diagnostics
+- Profile menu with essential actions (Settings, Logout, Logout all devices)
+Must be SOLID-friendly and reusable across all Admin screens.
+
+NON-NEGOTIABLE:
+- White theme premium (clean spacing, subtle borders/shadows).
+- AdminHeader must be a reusable component used across all admin screens (single source of truth).
+- Header should be “presentational”: UI logic separated from data fetching.
+- Robust: never crashes when unread count/health is missing (show safe defaults).
+- No duplicate navigation logic scattered across screens.
+
+========================================================
+A) UX SPEC — NEW ADMIN HEADER
+========================================================
+Layout:
+Left:
+- Title (page name)
+- Subtitle row (small chips):
+  - ENV chip: DEV or PROD
+  - TZ chip: Europe/Istanbul
+Optional: show clinic name only where relevant (not on admin generally).
+
+Center (optional, only on specific screens):
+- Quick search input (only on Users and Clinics screens)
+  - Use a prop to enable: enableSearch + onSearchChange
+  - Do not force it on every page
+
+Right:
+1) System Health dot + label (optional small):
+- Green “OK” or amber “DEGRADED”
+- Tap -> navigate to Settings Diagnostics section (or /settings)
+- Data source: /v1/admin/diagnostics (already exists)
+
+2) Notifications bell:
+- badge with unread count
+- tap -> navigate to /(admin)/notifications
+
+3) Profile chip/avatar:
+- shows admin initials + short email
+- tap opens menu (ActionSheet/Modal):
+  - Settings
+  - Logout
+  - Logout all devices
+  - Copy Diagnostics (optional)
+
+Behavior:
+- On small screens: keep header compact, hide subtitle chips if needed.
+- Accessibility: tap targets min 44px.
+
+========================================================
+B) FRONTEND — SOLID IMPLEMENTATION
+========================================================
+1) Create/Update component:
+components/admin/AdminHeader.tsx
+Props:
+- title: string
+- showBack?: boolean
+- onBack?: () => void
+- enableSearch?: boolean
+- searchValue?: string
+- onSearchChange?: (v:string)=>void
+- rightExtras?: ReactNode (optional)
+Component must not fetch data directly.
+
+2) Create hooks:
+hooks/useAdminHeaderData.ts
+- fetch unread notifications count
+- fetch diagnostics health (lightweight, cached)
+Return:
+{ unreadCount, healthStatus, envLabel, timezoneLabel, adminEmail, adminRole }
+
+3) Use it in all admin screens:
+- app/(admin)/dashboard.tsx
+- app/(admin)/clinics/*
+- app/(admin)/invoices/*
+- app/(admin)/users/*
+- app/(admin)/notifications.tsx
+- app/(admin)/settings/*
+Remove duplicated header implementations.
+
+4) Menu implementation:
+components/admin/AdminProfileMenu.tsx
+- uses a modal/bottom sheet
+- actions call existing endpoints:
+  - logout
+  - logout-all
+Navigation to settings
+
+5) Ensure safe defaults:
+- unreadCount default 0
+- healthStatus default “OK” if diagnostics not loaded yet (or show “—”)
+
+========================================================
+C) BACKEND (ONLY IF NEEDED)
+========================================================
+If you do not already have these endpoints, implement them SOLID-style:
+- GET /v1/admin/notifications/unread-count
+- GET /v1/admin/diagnostics (already in our plan)
+Keep payload tiny for header (fast).
+
+========================================================
+D) PREMIUM UI DETAILS
+========================================================
+- Header container: white background, bottom border 1px #eee, safe area padding.
+- Title typography: strong
+- Chips: small rounded pills with subtle border
+- Bell + badge: clean, not oversized
+- Health dot: small circle with label
+
+========================================================
+E) OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) Which admin screens were updated to use AdminHeader
+3) Any new endpoints used/added
+4) Manual QA checklist:
+- header shows correct title on each screen
+- notifications badge updates
+- tapping bell goes to notifications
+- health indicator goes to settings/diagnostics
+- profile menu actions work
+- search appears only on Users/Clinics
+
+IMPLEMENTATION ORDER:
+1) Build AdminHeader presentational component
+2) Build useAdminHeaderData hook
+3) Integrate into all admin screens
+4) Add/verify endpoints for unread count & diagnostics
+5) Polish + verify responsiveness
+
+Proceed now. Keep it premium, SOLID, production-ready.
+END.

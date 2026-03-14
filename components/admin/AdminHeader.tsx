@@ -1,16 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
+  Platform,
   Pressable,
   StyleSheet,
-  Platform,
+  Text,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useAdminHeaderData } from "@/hooks/useAdminHeaderData";
+import { AdminProfileMenu } from "./AdminProfileMenu";
 
 interface AdminHeaderProps {
   title: string;
@@ -18,22 +19,57 @@ interface AdminHeaderProps {
   onLogout?: () => void;
   left?: React.ReactNode;
   right?: React.ReactNode;
+  rightExtra?: React.ReactNode;
   backButton?: boolean;
   onBack?: () => void;
   showBell?: boolean;
 }
 
-function NotificationBell() {
-  const { data } = useQuery<{ count: number }>({
-    queryKey: ["/v1/admin/notifications/unread-count"],
-    refetchInterval: 30_000,
-    staleTime: 10_000,
-  });
-  const count = data?.count ?? 0;
+function EnvChip({ label }: { label: "DEV" | "PROD" }) {
+  const isProd = label === "PROD";
+  return (
+    <View
+      style={[
+        styles.chip,
+        isProd ? styles.chipProd : styles.chipDev,
+      ]}
+    >
+      <Text style={[styles.chipText, isProd ? styles.chipTextProd : styles.chipTextDev]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
 
+function TzChip({ label }: { label: string }) {
+  return (
+    <View style={[styles.chip, styles.chipTz]}>
+      <Ionicons name="time-outline" size={9} color={T.textMuted} style={{ marginRight: 2 }} />
+      <Text style={[styles.chipText, styles.chipTextTz]}>{label}</Text>
+    </View>
+  );
+}
+
+function HealthDot({ ok, loaded }: { ok: boolean; loaded: boolean }) {
+  const color = !loaded ? T.border : ok ? T.success : T.warning;
   return (
     <Pressable
-      style={({ pressed }) => [styles.bellBtn, { opacity: pressed ? 0.6 : 1 }]}
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+      onPress={() => router.push("/(admin)/settings")}
+      hitSlop={8}
+    >
+      <View style={[styles.healthDot, { backgroundColor: color }]} />
+      {loaded && !ok && (
+        <Text style={styles.degradedLabel}>!</Text>
+      )}
+    </Pressable>
+  );
+}
+
+function NotifBell({ count }: { count: number }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
       onPress={() => router.push("/(admin)/notifications")}
       hitSlop={8}
     >
@@ -47,84 +83,107 @@ function NotificationBell() {
   );
 }
 
+function ProfileBtn({
+  initials,
+  onPress,
+}: {
+  initials: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.profileBtn, { opacity: pressed ? 0.7 : 1 }]}
+      onPress={onPress}
+      hitSlop={4}
+    >
+      <View style={styles.avatarCircle}>
+        <Text style={styles.avatarText}>{initials}</Text>
+      </View>
+      <Ionicons name="chevron-down" size={10} color={T.textMuted} />
+    </Pressable>
+  );
+}
+
 export function AdminHeader({
   title,
   userEmail,
   onLogout,
   left,
   right,
+  rightExtra,
   backButton,
   onBack,
-  showBell = false,
+  showBell,
 }: AdminHeaderProps) {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : "AD";
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  const renderLeft = () => {
-    if (left) return left;
-    if (backButton) {
-      return (
-        <Pressable
-          style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={onBack}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={22} color={T.primary} />
-        </Pressable>
-      );
-    }
-    return (
+  const data = useAdminHeaderData();
+  const email = data.email || userEmail || "";
+  const initials = email.length >= 2 ? email.slice(0, 2).toUpperCase() : "AD";
+
+  const isBackMode = !!(backButton || left);
+
+  const leftEl = left ?? (
+    backButton ? (
+      <Pressable
+        style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+        onPress={onBack}
+        hitSlop={10}
+      >
+        <Ionicons name="arrow-back" size={20} color={T.primary} />
+      </Pressable>
+    ) : (
       <View style={styles.brandMark}>
         <Text style={styles.brandMarkText}>H</Text>
       </View>
-    );
-  };
+    )
+  );
+
+  const defaultRightEl = (
+    <View style={styles.actionsRow}>
+      {rightExtra && <View style={styles.extraSlot}>{rightExtra}</View>}
+      <HealthDot ok={data.healthOk} loaded={data.healthLoaded} />
+      <NotifBell count={data.unreadCount} />
+      <ProfileBtn initials={initials} onPress={() => setMenuVisible(true)} />
+    </View>
+  );
+
+  const rightEl = right !== undefined ? (
+    <View style={styles.actionsRow}>{right}</View>
+  ) : defaultRightEl;
 
   return (
-    <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
-      <View style={styles.row}>
-        {renderLeft()}
+    <>
+      <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
+        <View style={styles.row}>
+          {leftEl}
 
-        <View style={styles.titleBlock}>
-          {!backButton && !left && (
-            <Text style={styles.brandText}>HealthTour</Text>
-          )}
-          <Text style={styles.pageTitle} numberOfLines={1}>
-            {title}
-          </Text>
-        </View>
+          <View style={styles.titleBlock}>
+            {!isBackMode && (
+              <View style={styles.chipRow}>
+                <EnvChip label={data.envLabel} />
+                <TzChip label={data.cityLabel} />
+              </View>
+            )}
+            <Text style={styles.pageTitle} numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
 
-        <View style={styles.actions}>
-          {right ?? (
-            <>
-              {showBell && <NotificationBell />}
-              {userEmail ? (
-                <>
-                  <View style={styles.userChip}>
-                    <View style={styles.avatarDot}>
-                      <Text style={styles.avatarText}>{initials}</Text>
-                    </View>
-                    <Text style={styles.emailText} numberOfLines={1}>
-                      {userEmail.split("@")[0]}
-                    </Text>
-                  </View>
-                  {onLogout && (
-                    <Pressable
-                      style={({ pressed }) => [styles.logoutBtn, { opacity: pressed ? 0.6 : 1 }]}
-                      onPress={onLogout}
-                      hitSlop={8}
-                    >
-                      <Ionicons name="log-out-outline" size={20} color={T.textSec} />
-                    </Pressable>
-                  )}
-                </>
-              ) : null}
-            </>
-          )}
+          {rightEl}
         </View>
       </View>
-    </View>
+
+      <AdminProfileMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        email={email}
+        role={data.role}
+        initials={initials}
+      />
+    </>
   );
 }
 
@@ -142,17 +201,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: T.r8,
-    backgroundColor: T.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: T.border,
-    flexShrink: 0,
-  },
   brandMark: {
     width: 32,
     height: 32,
@@ -164,41 +212,93 @@ const styles = StyleSheet.create({
   },
   brandMarkText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 16,
+    fontSize: 15,
     color: "#fff",
   },
   titleBlock: {
     flex: 1,
-    gap: 1,
+    gap: 3,
+    minWidth: 0,
   },
-  brandText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 10,
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: T.r6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+  },
+  chipDev: {
+    backgroundColor: T.warningBg,
+    borderColor: T.warningBorder,
+  },
+  chipProd: {
+    backgroundColor: T.successBg,
+    borderColor: T.successBorder,
+  },
+  chipTz: {
+    backgroundColor: T.surfaceSubtle,
+    borderColor: T.border,
+  },
+  chipText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 9,
+    letterSpacing: 0.3,
+  },
+  chipTextDev: {
+    color: T.warningText,
+  },
+  chipTextProd: {
+    color: T.successText,
+  },
+  chipTextTz: {
     color: T.textMuted,
-    letterSpacing: 0.5,
   },
   pageTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    fontSize: 17,
     color: T.text,
   },
-  actions: {
+  actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
-    maxWidth: 200,
   },
-  bellBtn: {
+  extraSlot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  iconBtn: {
     width: 36,
     height: 36,
-    alignItems: "center",
-    justifyContent: "center",
     borderRadius: T.r8,
     backgroundColor: T.surfaceSubtle,
     borderWidth: 1,
     borderColor: T.border,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
+    flexShrink: 0,
+  },
+  healthDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  degradedLabel: {
+    position: "absolute",
+    top: 2,
+    right: 4,
+    fontFamily: "Inter_700Bold",
+    fontSize: 8,
+    color: T.warning,
   },
   badge: {
     position: "absolute",
@@ -220,23 +320,24 @@ const styles = StyleSheet.create({
     color: "#fff",
     lineHeight: 13,
   },
-  userChip: {
+  profileBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 3,
     backgroundColor: T.surfaceSubtle,
     borderWidth: 1,
     borderColor: T.border,
-    borderRadius: 20,
+    borderRadius: T.r8,
     paddingLeft: 4,
-    paddingRight: 10,
+    paddingRight: 6,
     paddingVertical: 4,
-    maxWidth: 110,
+    height: 36,
+    flexShrink: 0,
   },
-  avatarDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  avatarCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: T.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -245,14 +346,5 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 9,
     color: "#fff",
-  },
-  emailText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    color: T.text,
-    flex: 1,
-  },
-  logoutBtn: {
-    padding: 4,
   },
 });

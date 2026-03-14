@@ -298,10 +298,9 @@ export default function UsersScreen() {
     <View style={styles.root}>
       <AdminHeader
         title={headerTitle}
-        userEmail={selection.selectionMode ? undefined : user?.email}
-        onLogout={selection.selectionMode ? undefined : handleLogout}
-        left={headerLeft}
-        right={headerRight}
+        left={selection.selectionMode ? headerLeft : undefined}
+        right={selection.selectionMode ? headerRight : undefined}
+        rightExtra={!selection.selectionMode ? headerRight : undefined}
       />
 
       {!selection.selectionMode && (

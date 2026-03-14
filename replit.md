@@ -48,6 +48,26 @@ The `server/modules/adminDashboard/` implements a SOLID-layered dashboard aggreg
 
 The Admin Dashboard (`app/(admin)/dashboard.tsx`) uses modular components: `useAdminDashboard` hook for data fetching, `BannerCarousel` for overview slides, `KpiGrid` for pressable KPI cards, `RecentInvoicesList` for recent invoices, and `ActivityFeed` for audit events. Navigation to filtered views is handled by `services/navigation/filteredNavigation.ts`.
 
+### Premium AdminHeader Architecture
+
+**Files:**
+- `components/admin/AdminHeader.tsx` — single presentational component used across all admin screens; internally calls `useAdminHeaderData` for data; exposes `title`, `backButton`, `onBack`, `left`, `right`, `rightExtra` props
+- `hooks/useAdminHeaderData.ts` — fetches unread count + diagnostics health; returns `{ unreadCount, healthOk, healthLoaded, envLabel, cityLabel, email, role, initials }`
+- `components/admin/AdminProfileMenu.tsx` — Modal bottom sheet; handles logout (with inline confirmation) + logout-all + Settings navigation; calls `useAuth()` directly for `logout()`
+
+**Header layouts:**
+- **Main mode** (no `backButton`/`left`): `[H brand] [title / ENV+TZ chips] | [rightExtra?] [health dot] [bell] [profile btn]`
+- **Back mode** (`backButton=true` or `left` provided): `[← / custom left] [title] | [right?] [health dot] [bell] [profile btn]`
+- When `right` prop is provided: fully replaces the entire right actions area (used only in users/index selection mode)
+- When `rightExtra` prop is provided: inserted before the default health/bell/profile actions (used for "New" buttons)
+
+**Screen changes:** `clinics/index.tsx` changed `right={<NewBtn/>}` → `rightExtra={<NewBtn/>}`; `users/index.tsx` uses `right` only in selection mode and `rightExtra` in normal mode — all other screens need zero changes.
+
+**Health dot:** Small circle (10px), green=OK, amber=DEGRADED, grey=loading; taps → `/(admin)/settings`
+**ENV chip:** Amber "DEV" or green "PROD" derived from diagnostics `nodeEnv`
+**TZ chip:** City name extracted from diagnostics `timezone` (e.g., "Istanbul" from "Europe/Istanbul")
+**Profile button:** Initials circle + chevron → opens `AdminProfileMenu` with inline confirm flow for logout
+
 ### Admin Diagnostics Module
 
 `server/modules/adminDiagnostics/` is a SOLID-layered module providing `GET /v1/admin/diagnostics` (ADMIN + SUPER_ADMIN). It returns a stable DTO always with HTTP 200 — DB ping is wrapped in try/catch and returns `ok: false` with latency on failure rather than throwing. DTO: `{ api: {ok, latencyMs}, db: {ok, latencyMs}, env: {nodeEnv, timezone}, server: {version} }`.
