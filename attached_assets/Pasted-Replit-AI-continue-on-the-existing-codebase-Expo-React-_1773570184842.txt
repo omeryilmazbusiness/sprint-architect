@@ -1,0 +1,161 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Upgrade Manager UX:
+1) Manager → Users screen: convert filters into a modern dropdown-style filter UX using a bottom-sheet “Filter Panel”.
+2) Manager → Doctors screen: add “Add Doctor” button, open a bottom-sheet form to create doctor, show doctor cards with details and a working delete icon.
+
+Must be SOLID-friendly and production-ready.
+
+NON-NEGOTIABLE:
+- Premium white theme.
+- No “failed data” for empty arrays.
+- Strict clinic scoping.
+- Frontend modular: components + hooks + api services.
+- Backend SOLID if any endpoint changes required (controller->usecase->repo).
+- Proper validation (zod backend + client validation).
+- Confirm modal for delete.
+- No layout overlap on small screens.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify actual routes/files:
+- Manager Users screen file path
+- Manager Doctors screen file path
+2) Identify current filter implementation:
+- which filters exist today
+- how they map to API params
+3) Identify doctor CRUD endpoints currently used:
+- create doctor endpoint exists?
+- delete doctor endpoint exists? is it hard delete or soft?
+4) Output a brief audit summary with exact file paths and next steps.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — MANAGER USERS: MODERN FILTER PANEL (BOTTOM SHEET)
+========================================================
+Goal: Replace current filter UI with a professional dropdown/filter panel.
+
+1) Add a “Filter” button (sliders icon) near the search bar or in header.
+2) On tap, open a Bottom Sheet: “Filters”
+Contents:
+- Status dropdown (segmented or picker):
+  - ALL / ACTIVE / INACTIVE
+- Toggle switch: Pending Docs
+- Toggle switch: Appointments Today
+Buttons at bottom:
+- Apply (primary)
+- Clear (secondary)
+- Cancel (text)
+
+3) Active filter chips should appear under the search bar:
+- Status chip if not ALL
+- Pending Docs chip if true
+- Today Appts chip if true
+Each chip removable individually.
+
+4) Server-side filtering:
+- Ensure Users query calls /v1/manager/patients with params:
+  status, pendingDocs, todayAppt, search, page, pageSize
+- Debounce search (300–400ms).
+- Always default empty results to 0 and show empty state.
+
+Implementation structure:
+- components/filters/ManagerFilterSheet.tsx (NEW)
+- components/filters/ActiveFilterChips.tsx (NEW)
+- hooks/useManagerGuestsQuery.ts (update)
+- services/api/managerPatients.ts (ensure query builder omits empty params)
+
+========================================================
+PHASE 3 — MANAGER DOCTORS: ADD DOCTOR SHEET + DELETE ICON
+========================================================
+1) Add “+ Add Doctor” action:
+- Prefer headerRight plus icon OR FAB.
+- On tap, open bottom-sheet “Doctor Form”.
+
+2) Doctor Form bottom sheet (create + edit-ready):
+Fields (professional but not excessive):
+- fullName (required)
+- specialty (required)
+- phone (optional)
+- email (optional)
+- university (optional)
+- experienceYears (optional number)
+- languages (optional, comma list or chips)
+- bio (optional multiline)
+Validation:
+- required fields
+- email format if provided
+- experienceYears numeric >=0
+
+Submission:
+- show loading
+- show inline error
+- on success: close sheet + toast + refetch list
+
+3) Doctors list card:
+Each card shows:
+- Name (big)
+- Specialty (subtitle)
+- Meta row: phone / email
+- Meta row: university + experience years (if present)
+Right side:
+- Trash icon button
+- Tap trash -> confirm modal -> call DELETE endpoint
+Handle blocked delete (if doctor has appointments):
+- show toast with server error code (e.g., DOC-DEL-001)
+- do not crash
+
+4) Backend (only if delete/create endpoints missing/buggy):
+Ensure:
+- POST /v1/manager/doctors
+- DELETE /v1/manager/doctors/:id
+Clinic scoped.
+Return stable error response with code for blocked delete.
+
+Implementation structure:
+- components/managerDoctors/DoctorFormSheet.tsx (NEW)
+- components/managerDoctors/DoctorListCard.tsx (NEW)
+- hooks/useManagerDoctorsQuery.ts (NEW or update)
+- services/api/managerDoctors.ts (NEW or update)
+
+========================================================
+PHASE 4 — POLISH + VERIFICATION
+========================================================
+1) States:
+- Users and Doctors screens have skeleton loading
+- Empty state with CTA (Add Doctor / Create Guest)
+- Error state with retry
+
+2) Responsiveness:
+- No overlap on small screens
+- Bottom sheet content scrolls safely
+
+3) Output:
+- Print changed files list
+- Manual QA checklist:
+  - Users filter panel opens, Apply/Clear/Cancel works
+  - Active chips reflect filter state
+  - Doctors add sheet creates a doctor and refreshes list
+  - Delete icon removes doctor (or blocks with code if referenced)
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion, print:
+1) Audit summary (Phase 1) with exact file paths
+2) Files changed/added
+3) Any backend endpoints added/changed + sample curl
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Users filter panel + chips + API query wiring
+3) Doctors add sheet + list cards + delete flow
+4) Polish states + responsiveness
+5) Verify end-to-end
+
+Proceed now. Make it premium, SOLID-friendly, production-ready.
+END.

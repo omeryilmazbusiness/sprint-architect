@@ -25,6 +25,12 @@ import { useAuth } from "@/context/AuthContext";
 import { COUNTRIES, Country, getCountryByCode, detectCountryFromPhone } from "@/constants/countries";
 import GuestListCard from "@/components/managerUsers/GuestListCard";
 import DoctorListCard from "@/components/managerDoctors/DoctorListCard";
+import {
+  ManagerFilterSheet,
+  type GuestFilterState,
+  DEFAULT_GUEST_FILTERS,
+} from "@/components/filters/ManagerFilterSheet";
+import { ActiveFilterChips, type ActiveChip } from "@/components/filters/ActiveFilterChips";
 
 type TabType = "Guests" | "Doctors";
 
@@ -232,9 +238,8 @@ function GuestsTab() {
   const params = useLocalSearchParams<{ openCreate?: string }>();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilterType>("ALL");
-  const [pendingDocsFilter, setPendingDocsFilter] = useState(false);
-  const [todayApptFilter, setTodayApptFilter] = useState(false);
+  const [filters, setFilters] = useState<GuestFilterState>(DEFAULT_GUEST_FILTERS);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [page] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -261,13 +266,13 @@ function GuestsTab() {
   }, [params.openCreate]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<PatientListResponse>({
-    queryKey: ["/v1/manager/patients", debouncedSearch, statusFilter, pendingDocsFilter, todayApptFilter, page],
+    queryKey: ["/v1/manager/patients", debouncedSearch, filters.status, filters.pendingDocs, filters.todayAppt, page],
     queryFn: async () => {
       const p = new URLSearchParams({ page: String(page), pageSize: "30" });
       if (debouncedSearch.trim()) p.set("search", debouncedSearch.trim());
-      if (statusFilter !== "ALL") p.set("status", statusFilter);
-      if (pendingDocsFilter) p.set("pendingDocs", "true");
-      if (todayApptFilter) p.set("todayAppt", "true");
+      if (filters.status !== "ALL") p.set("status", filters.status);
+      if (filters.pendingDocs) p.set("pendingDocs", "true");
+      if (filters.todayAppt) p.set("todayAppt", "true");
       const res = await apiRequest("GET", `/v1/manager/patients?${p.toString()}`);
       return res.json();
     },
@@ -343,73 +348,74 @@ function GuestsTab() {
   };
 
   const rows = data?.items ?? [];
-  const hasActiveFilters = statusFilter !== "ALL" || pendingDocsFilter || todayApptFilter;
+  const hasActiveFilters =
+    filters.status !== "ALL" || filters.pendingDocs || filters.todayAppt;
 
   function clearAllFilters() {
-    setStatusFilter("ALL");
-    setPendingDocsFilter(false);
-    setTodayApptFilter(false);
+    setFilters(DEFAULT_GUEST_FILTERS);
+  }
+
+  const STATUS_CHIP_LABELS: Record<string, string> = {
+    PENDING: "Pending", APPROVED: "Approved", ACTIVE: "Active",
+    INACTIVE: "Inactive", ENDED: "Ended",
+  };
+
+  const activeChips: ActiveChip[] = [];
+  if (filters.status !== "ALL") {
+    activeChips.push({
+      key: "status",
+      label: `Status: ${STATUS_CHIP_LABELS[filters.status] ?? filters.status}`,
+      variant: "primary",
+      onRemove: () => setFilters((f) => ({ ...f, status: "ALL" })),
+    });
+  }
+  if (filters.pendingDocs) {
+    activeChips.push({
+      key: "pendingDocs",
+      label: "Docs Pending",
+      variant: "warn",
+      onRemove: () => setFilters((f) => ({ ...f, pendingDocs: false })),
+    });
+  }
+  if (filters.todayAppt) {
+    activeChips.push({
+      key: "todayAppt",
+      label: "Today Appt",
+      variant: "accent",
+      onRemove: () => setFilters((f) => ({ ...f, todayAppt: false })),
+    });
   }
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.filterBar}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search guests..."
-            placeholderTextColor={T.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={16} color={T.textMuted} />
-            </Pressable>
-          )}
+        <View style={styles.searchBarRow}>
+          <View style={[styles.searchBar, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+            <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search guests..."
+              placeholderTextColor={T.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={16} color={T.textMuted} />
+              </Pressable>
+            )}
+          </View>
+          <Pressable
+            onPress={() => setShowFilterSheet(true)}
+            style={({ pressed }) => [styles.filterIconBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Ionicons name="options-outline" size={20} color={hasActiveFilters ? T.primary : T.textSec} />
+            {hasActiveFilters && <View style={styles.filterDot} />}
+          </Pressable>
         </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusFilters}>
-          {STATUS_FILTERS.map(({ label, value }) => (
-            <Pressable
-              key={value}
-              onPress={() => setStatusFilter(value)}
-              style={[styles.filterPill, statusFilter === value && styles.filterPillActive]}
-            >
-              <Text style={[styles.filterPillText, statusFilter === value && styles.filterPillTextActive]}>
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-
-          <Pressable
-            onPress={() => setPendingDocsFilter((v) => !v)}
-            style={[styles.filterChip, pendingDocsFilter && styles.filterChipWarnActive]}
-          >
-            <Text style={[styles.filterChipText, pendingDocsFilter && styles.filterChipTextWarn]}>
-              Docs Pending
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => setTodayApptFilter((v) => !v)}
-            style={[styles.filterChip, todayApptFilter && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterChipText, todayApptFilter && styles.filterChipTextActive]}>
-              Today Appt
-            </Text>
-          </Pressable>
-
-          {hasActiveFilters && (
-            <Pressable onPress={clearAllFilters} style={styles.clearChip}>
-              <Ionicons name="close-circle" size={13} color={T.danger} />
-              <Text style={styles.clearChipText}>Clear</Text>
-            </Pressable>
-          )}
-        </ScrollView>
       </View>
+      <ActiveFilterChips chips={activeChips} onClearAll={clearAllFilters} />
 
       {isLoading ? (
         <ScrollView contentContainerStyle={{ paddingTop: T.sp16, paddingBottom: 100 }}>
@@ -751,6 +757,13 @@ function GuestsTab() {
         onConfirm={(d) => { setForm(f => ({ ...f, departureDate: d })); setShowDeparturePicker(false); }}
         onClose={() => setShowDeparturePicker(false)}
       />
+
+      <ManagerFilterSheet
+        visible={showFilterSheet}
+        current={filters}
+        onApply={(f) => setFilters(f)}
+        onClose={() => setShowFilterSheet(false)}
+      />
     </View>
   );
 }
@@ -759,6 +772,7 @@ function DoctorsTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const qc = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -781,24 +795,68 @@ function DoctorsTab() {
     return (data as DoctorListResponse).rows ?? [];
   }, [data]);
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const err: any = new Error(body.message ?? "Failed to delete doctor");
+        err.code = body.code;
+        throw err;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"] }),
+    onError: (e: any) => {
+      if (e?.code === "DOC-DEL-001") {
+        Alert.alert(
+          "Delete Blocked",
+          "This doctor has appointments. Remove the appointments first before deleting.",
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert("Error", e.message ?? "Failed to delete doctor");
+      }
+    },
+  });
+
+  function handleDelete(id: string) {
+    const doc = rows.find((d) => d.id === id);
+    Alert.alert(
+      "Remove Doctor",
+      `Remove ${doc?.fullName ?? "this doctor"} from your clinic?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => deleteMutation.mutate(id) },
+      ]
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.filterBar}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search doctors..."
-            placeholderTextColor={T.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={16} color={T.textMuted} />
-            </Pressable>
-          )}
+        <View style={styles.searchBarRow}>
+          <View style={[styles.searchBar, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+            <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search doctors..."
+              placeholderTextColor={T.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={16} color={T.textMuted} />
+              </Pressable>
+            )}
+          </View>
+          <Pressable
+            onPress={() => router.push("/(manager)/doctors")}
+            style={({ pressed }) => [styles.filterIconBtn, styles.addDoctorBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Ionicons name="add" size={22} color="#fff" />
+          </Pressable>
         </View>
       </View>
 
@@ -820,17 +878,26 @@ function DoctorsTab() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="medical-outline" size={40} color={T.border} />
-              <Text style={styles.emptyTitle}>No doctors found</Text>
+              <Text style={styles.emptyTitle}>No doctors yet</Text>
               <Text style={styles.emptyText}>
-                {debouncedSearch ? "Try a different search" : "Add your first doctor from the Doctors screen"}
+                {debouncedSearch ? "Try a different search" : "Tap + to add your first doctor"}
               </Text>
+              {!debouncedSearch && (
+                <Pressable
+                  onPress={() => router.push("/(manager)/doctors")}
+                  style={({ pressed }) => [styles.emptyAddBtn, { opacity: pressed ? 0.8 : 1 }]}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={T.primary} />
+                  <Text style={styles.emptyAddBtnText}>Add Doctor</Text>
+                </Pressable>
+              )}
             </View>
           }
           renderItem={({ item }) => (
             <DoctorListCard
               doctor={item as any}
-              onEdit={() => {}}
-              onDelete={() => {}}
+              onEdit={() => router.push("/(manager)/doctors")}
+              onDelete={handleDelete}
             />
           )}
         />
@@ -920,6 +987,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: T.text,
     height: 40,
+  },
+  searchBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: T.sp16,
+    paddingBottom: T.sp12,
+    gap: T.sp8,
+  },
+  filterIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: T.r10,
+    borderWidth: 1,
+    borderColor: T.border,
+    backgroundColor: T.surfaceSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    overflow: "hidden",
+  },
+  filterDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: T.danger,
+    borderWidth: 1.5,
+    borderColor: T.surface,
+  },
+  addDoctorBtn: {
+    backgroundColor: T.primary,
+    borderColor: T.primary,
+  },
+  emptyAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: T.sp16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: T.r10,
+    borderWidth: 1.5,
+    borderColor: T.primary,
+    backgroundColor: T.primary + "08",
+  },
+  emptyAddBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: T.primary,
   },
   statusFilters: {
     paddingHorizontal: T.sp16,

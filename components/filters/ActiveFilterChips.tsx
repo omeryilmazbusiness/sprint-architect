@@ -3,9 +3,12 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
 
+export type ChipVariant = "primary" | "warn" | "accent";
+
 export interface ActiveChip {
   key: string;
   label: string;
+  variant?: ChipVariant;
   onRemove: () => void;
 }
 
@@ -13,6 +16,15 @@ interface ActiveFilterChipsProps {
   chips: ActiveChip[];
   onClearAll?: () => void;
 }
+
+const VARIANT_STYLES: Record<
+  ChipVariant,
+  { bg: string; border: string; text: string; icon: string }
+> = {
+  primary: { bg: T.primary + "10", border: T.primary + "30", text: T.primary, icon: T.primary },
+  warn: { bg: T.warning + "12", border: T.warning + "35", text: T.warning, icon: T.warning },
+  accent: { bg: T.accent + "12", border: T.accent + "30", text: T.accent, icon: T.accent },
+};
 
 export function ActiveFilterChips({ chips, onClearAll }: ActiveFilterChipsProps) {
   if (chips.length === 0) return null;
@@ -23,16 +35,31 @@ export function ActiveFilterChips({ chips, onClearAll }: ActiveFilterChipsProps)
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.scroll}
       >
-        {chips.map((chip) => (
-          <View key={chip.key} style={s.chip}>
-            <Text style={s.chipText} numberOfLines={1}>{chip.label}</Text>
-            <Pressable onPress={chip.onRemove} hitSlop={6}>
-              <Ionicons name="close" size={13} color={T.primary} />
+        {chips.map((chip) => {
+          const v = VARIANT_STYLES[chip.variant ?? "primary"];
+          return (
+            <Pressable
+              key={chip.key}
+              onPress={chip.onRemove}
+              style={({ pressed }) => [
+                s.chip,
+                { backgroundColor: v.bg, borderColor: v.border },
+                { opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Text style={[s.chipText, { color: v.text }]} numberOfLines={1}>
+                {chip.label}
+              </Text>
+              <Ionicons name="close" size={13} color={v.icon} />
             </Pressable>
-          </View>
-        ))}
+          );
+        })}
         {onClearAll && chips.length > 1 && (
-          <Pressable style={s.clearBtn} onPress={onClearAll}>
+          <Pressable
+            style={({ pressed }) => [s.clearBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={onClearAll}
+          >
+            <Ionicons name="close-circle" size={13} color={T.danger} />
             <Text style={s.clearText}>Clear all</Text>
           </Pressable>
         )}
@@ -59,25 +86,24 @@ const s = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: T.primary + "10",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: T.primary + "30",
   },
   chipText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
-    color: T.primary,
     maxWidth: 140,
   },
   clearBtn: {
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
     paddingVertical: 5,
   },
   clearText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
-    color: T.textSec,
-    textDecorationLine: "underline",
+    color: T.danger,
   },
 });
