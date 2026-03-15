@@ -37,48 +37,58 @@ function notFound(entity: string) {
   throw new AppError("NOT_FOUND", `${entity} not found`, 404);
 }
 
+const REQUESTED_SERVICES = [
+  "Dental", "Eye Surgery", "Rhinoplasty", "Hair Transplant",
+  "Plastic Surgery", "Orthopedic", "Cardiac", "IVF / Fertility",
+  "Weight Loss Surgery", "Oncology", "Other",
+] as const;
+
 const createPatientSchema = z.object({
   fullName: z.string().min(1).max(200),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(["Male", "Female", "Other"]).optional(),
+  nationality: z.string().min(1, "Nationality is required"),
+  nationalityCode: z.string().max(2).min(2, "Nationality code required"),
+  passportNo: z.string().optional(),
+  phoneE164: z.string().min(5, "Phone is required"),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
-  nationality: z.string().optional(),
-  passportNo: z.string().optional(),
-  arrivalDate: z.string().optional(),
-  departureDate: z.string().optional(),
-  notes: z.string().optional(),
-  nationalityCode: z.string().max(2).optional(),
-  phoneE164: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  preferredLanguage: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactPhoneE164: z.string().optional(),
+  companionRelation: z.string().optional(),
+  arrivalDate: z.string().min(1, "Arrival date is required"),
+  departureDate: z.string().min(1, "Departure date is required"),
   arrivalAirport: z.string().optional(),
   flightNumber: z.string().optional(),
-  requestedService: z.string().optional(),
-}).refine(d => !d.arrivalDate || !d.departureDate || d.departureDate >= d.arrivalDate, {
+  requestedService: z.enum(REQUESTED_SERVICES, { errorMap: () => ({ message: "Please select a service" }) }),
+  notes: z.string().optional(),
+  preferredLanguage: z.string().optional(),
+}).refine(d => d.departureDate >= d.arrivalDate, {
   message: "Departure date must be on or after arrival date",
   path: ["departureDate"],
 });
 
 const updatePatientSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(["Male", "Female", "Other"]).optional(),
+  nationality: z.string().optional(),
+  nationalityCode: z.string().max(2).optional(),
+  passportNo: z.string().optional(),
+  phoneE164: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
-  nationality: z.string().optional(),
-  passportNo: z.string().optional(),
-  arrivalDate: z.string().optional(),
-  departureDate: z.string().optional(),
-  notes: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "APPROVED", "ENDED"]).optional(),
-  nationalityCode: z.string().max(2).optional(),
-  phoneE164: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  preferredLanguage: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactPhoneE164: z.string().optional(),
+  companionRelation: z.string().optional(),
+  arrivalDate: z.string().optional(),
+  departureDate: z.string().optional(),
   arrivalAirport: z.string().optional(),
   flightNumber: z.string().optional(),
   requestedService: z.string().optional(),
+  notes: z.string().optional(),
+  preferredLanguage: z.string().optional(),
+  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "APPROVED", "ENDED"]).optional(),
 });
 
 router.post("/patients", async (req, res, next) => {

@@ -1,0 +1,215 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Implement a premium “Create Guest” experience for Manager:
+- Create Guest must open as a bottom-sheet popup (slide-up modal), not a normal page.
+- Collect only the most necessary, professional patient/guest fields.
+- Include a 2nd contact (companion/escort).
+- Include requested service.
+- Include arrival & departure dates (calendar picker).
+- Include nationality/personal info.
+- Phone input must be professional: flag picker + country code + formatted number.
+- When a guest is created, the system MUST generate a unique patientKey for that patient and save it in DB (patients table / guest table).
+- Must be SOLID + production-ready.
+
+NON-NEGOTIABLE:
+- White theme premium, modern UX.
+- Strong validations (client + server).
+- Clinic scoping: manager can create guests only for their own clinic.
+- patientKey generated on backend (not from client), unique, stored in DB.
+- “Success” reveals the patientKey (full) with copy button.
+- Empty/Loading/Error states must be clean (no “failed data”).
+
+========================================================
+PHASE 1 — AUDIT CURRENT IMPLEMENTATION (MANDATORY)
+========================================================
+1) Identify current manager guest create flow:
+- Which screen/route is used now?
+- Which endpoint is called?
+- Which fields exist in DB schema (patients table columns)?
+2) Confirm how patientKey is currently generated (if at all).
+3) Output a short audit summary: what exists and what needs change.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — DATA MODEL (FIELDS) — PROFESSIONAL MINIMUM SET
+========================================================
+Create Guest fields (UI form):
+A) Guest Identity
+- fullName (required)
+- dateOfBirth (optional)
+- gender (optional)
+- nationality (required) + nationalityCode (required)
+- passportNo (optional)
+
+B) Contact
+- phoneE164 (required) using flag picker + formatting
+- email (optional)
+
+C) Companion / 2nd Contact (optional but supported)
+- companionFullName (optional)
+- companionPhoneE164 (optional, same phone component)
+- companionRelation (optional: spouse/friend/family)
+
+D) Travel & Service
+- arrivalDate (required)
+- departureDate (required, must be >= arrivalDate)
+- arrivalAirport (optional)
+- flightNumber (optional)
+- requestedService (required) (dropdown: Dental / Eye / Rhinoplasty / Hair / Plastic etc. or use your services enum)
+- notes (optional multiline)
+
+E) System-generated (not editable)
+- patientKey (generated on backend, unique)
+- status default: PENDING (or your chosen default)
+- clinicId derived from manager (not from client)
+
+Validation rules:
+- fullName min 2 words preferred (warn only)
+- nationality required
+- phone required and valid E.164
+- arrivalDate & departureDate required, departure >= arrival
+- requestedService required
+
+========================================================
+PHASE 3 — BACKEND (SOLID) — CREATE GUEST + UNIQUE KEY
+========================================================
+Endpoint (Manager only):
+POST /v1/manager/patients
+Body (zod):
+{
+  fullName,
+  dateOfBirth?,
+  gender?,
+  nationality,
+  nationalityCode,
+  passportNo?,
+  phoneE164,
+  email?,
+  companionFullName?,
+  companionPhoneE164?,
+  companionRelation?,
+  arrivalDate,
+  departureDate,
+  arrivalAirport?,
+  flightNumber?,
+  requestedService,
+  notes?
+}
+
+Rules (usecase):
+- clinicId derived from manager user record/session
+- status set to PENDING on create
+- Generate patientKey on server:
+  - Format example: GUEST-YYYY-XXXXXX or PATIENT-<8chars>
+  - Must be unique: enforce DB unique index on patientKey
+  - Use retry loop (max 5) on collision
+- Insert patient row with patientKey and all fields
+- Return created patient summary including patientKey (full)
+
+SOLID module structure:
+server/modules/managerPatients/
+  managerPatients.routes.ts
+  managerPatients.controller.ts
+  schemas/managerPatients.schemas.ts
+  usecases/CreatePatient.ts
+  repos/ManagerPatientsRepo.ts
+  repos/ManagerPatientsRepo.drizzle.ts
+server/shared/
+  errors/AppError + ErrorCodes
+  validation mapping
+Add DB constraint:
+- patients.patientKey UNIQUE
+
+Tests:
+- creating patient generates patientKey
+- uniqueness is enforced (simulate collision)
+- clinic scoping applied
+
+========================================================
+PHASE 4 — FRONTEND (MANAGER) — CREATE GUEST BOTTOM SHEET UX
+========================================================
+1) Trigger
+- On Manager Users screen, tapping “New Guest” opens CreateGuestSheet (bottom sheet).
+- Do NOT navigate away.
+
+2) Bottom sheet component
+components/managerGuests/CreateGuestSheet.tsx
+- Multi-section form with sticky header:
+  - Title: “New Guest”
+  - Close X
+- Sections:
+  - Identity
+  - Contact
+  - Companion (collapsed optional)
+  - Travel & Service
+  - Notes
+- Submit button pinned at bottom:
+  - “Create Guest”
+  - disabled until required fields valid
+
+3) Phone input (professional)
+Use existing installed libs if available:
+- react-native-country-picker-modal (flags + calling code)
+- libphonenumber-js for formatting (if already used)
+Behavior:
+- Choose country from flag list (searchable)
+- Auto format number for selected country
+- Store E.164 in state
+- Must not lose focus / no flicker
+
+4) Date picker
+- Modern date picker for arrival/departure
+- Validate departure >= arrival
+- Show inline field errors
+
+5) Requested service
+- Dropdown (bottom sheet picker)
+- Values: Dental / Eye / Rhinoplasty etc. (match backend accepted list)
+
+6) Success UX
+After successful create:
+- Close create sheet
+- Show a “Guest Created” success modal (or sheet) revealing:
+  - patientKey (full)
+  - Copy button
+  - “Open Guest” button -> navigates to guest detail
+Also update list via React Query invalidation.
+
+7) React Query wiring
+- Use mutation: createPatient
+- On success:
+  - invalidate guests list query
+  - show toast
+  - show key reveal modal
+
+Empty/error:
+- If server returns validation error => show inline
+- If server returns unknown => show maintenance popup with code (if your system has it)
+
+========================================================
+PHASE 5 — OUTPUT REQUIREMENTS
+========================================================
+After implementing print:
+1) Files changed/added
+2) Endpoint details + sample curl
+3) patientKey generation format + uniqueness logic
+4) Manual QA checklist:
+- Create sheet opens from bottom
+- Phone input flag + formatting works
+- Dates validated
+- Companion optional works
+- Guest created -> patientKey shown and copied
+- Guest appears in list
+5) Notes on SOLID boundaries
+
+IMPLEMENTATION ORDER:
+1) Audit current create flow
+2) Backend: patientKey unique constraint + CreatePatient usecase
+3) Frontend: CreateGuestSheet + validations + phone/date components
+4) Success key reveal + list invalidation
+5) Tests + verification
+
+Proceed now. Build it premium and production-ready.
+END.

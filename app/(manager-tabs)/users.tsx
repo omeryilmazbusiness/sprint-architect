@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Platform,
   Modal,
   ScrollView,
-  Alert,
   RefreshControl,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,12 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
-import { DatePickerModal } from "@/components/manager/DatePickerModal";
 import { StatusPill, Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
-import { COUNTRIES, Country, getCountryByCode, detectCountryFromPhone } from "@/constants/countries";
+import { getCountryByCode } from "@/constants/countries";
 import GuestListCard from "@/components/managerUsers/GuestListCard";
+import { CreateGuestSheet } from "@/components/managerGuests/CreateGuestSheet";
 import DoctorListCard from "@/components/managerDoctors/DoctorListCard";
 import {
   ManagerFilterSheet,
@@ -84,14 +83,6 @@ const STATUS_FILTERS: { label: string; value: StatusFilterType }[] = [
   { label: "Ended", value: "ENDED" },
 ];
 
-const LANGUAGES = [
-  { code: "EN", label: "English" },
-  { code: "TR", label: "Turkish" },
-  { code: "RU", label: "Russian" },
-  { code: "AR", label: "Arabic" },
-  { code: "DE", label: "German" },
-  { code: "FR", label: "French" },
-];
 
 function formatDate(s?: string) {
   if (!s) return "—";
@@ -131,108 +122,6 @@ const skeletonStyles = StyleSheet.create({
   line: { height: 13, backgroundColor: T.border, borderRadius: 6 },
 });
 
-function CountryPickerModal({
-  visible,
-  onSelect,
-  onClose,
-  title = "Select Country",
-}: {
-  visible: boolean;
-  onSelect: (c: Country) => void;
-  onClose: () => void;
-  title?: string;
-}) {
-  const [search, setSearch] = useState("");
-  const filtered = useMemo(() =>
-    search.trim()
-      ? COUNTRIES.filter(c =>
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          c.dialCode.includes(search) ||
-          c.code.toLowerCase().includes(search.toLowerCase()))
-      : COUNTRIES,
-  [search]);
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
-      <View style={styles.cpModal}>
-        <View style={styles.cpHeader}>
-          <Text style={styles.cpTitle}>{title}</Text>
-          <Pressable onPress={onClose} hitSlop={10}>
-            <Ionicons name="close" size={24} color={T.text} />
-          </Pressable>
-        </View>
-        <View style={styles.cpSearch}>
-          <Ionicons name="search-outline" size={16} color={T.textMuted} style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.cpSearchInput}
-            placeholder="Search country..."
-            placeholderTextColor={T.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            autoFocus
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={16} color={T.textMuted} />
-            </Pressable>
-          )}
-        </View>
-        <FlatList
-          data={filtered}
-          keyExtractor={c => c.code}
-          keyboardShouldPersistTaps="handled"
-          ItemSeparatorComponent={() => <Divider inset={16} />}
-          renderItem={({ item: c }) => (
-            <Pressable
-              style={({ pressed }) => [styles.cpRow, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => { onSelect(c); onClose(); setSearch(""); }}
-            >
-              <Text style={styles.cpFlag}>{c.flag}</Text>
-              <Text style={styles.cpName}>{c.name}</Text>
-              <Text style={styles.cpDial}>+{c.dialCode}</Text>
-            </Pressable>
-          )}
-        />
-      </View>
-    </Modal>
-  );
-}
-
-interface CreateFormState {
-  fullName: string;
-  nationalityCountry: Country | null;
-  phoneCountry: Country | null;
-  phoneLocal: string;
-  email: string;
-  passportNo: string;
-  preferredLanguage: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  arrivalDate: string;
-  departureDate: string;
-  flightNumber: string;
-  arrivalAirport: string;
-  requestedService: string;
-  notes: string;
-}
-
-const EMPTY_FORM: CreateFormState = {
-  fullName: "",
-  nationalityCountry: null,
-  phoneCountry: getCountryByCode("TR") ?? null,
-  phoneLocal: "",
-  email: "",
-  passportNo: "",
-  preferredLanguage: "",
-  emergencyContactName: "",
-  emergencyContactPhone: "",
-  arrivalDate: "",
-  departureDate: "",
-  flightNumber: "",
-  arrivalAirport: "",
-  requestedService: "",
-  notes: "",
-};
 
 function GuestsTab() {
   const params = useLocalSearchParams<{ openCreate?: string }>();
@@ -243,17 +132,7 @@ function GuestsTab() {
   const [page] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState<CreateFormState>(EMPTY_FORM);
-  const [formError, setFormError] = useState("");
 
-  const [showNationalityPicker, setShowNationalityPicker] = useState(false);
-  const [showPhoneCountryPicker, setShowPhoneCountryPicker] = useState(false);
-  const [showArrivalPicker, setShowArrivalPicker] = useState(false);
-  const [showDeparturePicker, setShowDeparturePicker] = useState(false);
-  const [showLangPicker, setShowLangPicker] = useState(false);
-
-  const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   useEffect(() => {
@@ -262,7 +141,7 @@ function GuestsTab() {
   }, [search]);
 
   useEffect(() => {
-    if (params.openCreate === "1") { setShowCreate(true); setStep(1); setForm(EMPTY_FORM); }
+    if (params.openCreate === "1") setShowCreate(true);
   }, [params.openCreate]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<PatientListResponse>({
@@ -277,75 +156,6 @@ function GuestsTab() {
       return res.json();
     },
   });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const phoneE164 = form.phoneLocal.trim()
-        ? form.phoneCountry
-          ? `+${form.phoneCountry.dialCode}${form.phoneLocal.replace(/\D/g, "")}`
-          : form.phoneLocal.trim()
-        : undefined;
-      const body = {
-        fullName: form.fullName.trim(),
-        nationalityCode: form.nationalityCountry?.code,
-        nationality: form.nationalityCountry?.name,
-        phoneE164,
-        phone: phoneE164,
-        email: form.email.trim() || undefined,
-        passportNo: form.passportNo.trim() || undefined,
-        preferredLanguage: form.preferredLanguage || undefined,
-        emergencyContactName: form.emergencyContactName.trim() || undefined,
-        emergencyContactPhoneE164: form.emergencyContactPhone.trim() || undefined,
-        arrivalDate: form.arrivalDate || undefined,
-        departureDate: form.departureDate || undefined,
-        flightNumber: form.flightNumber.trim() || undefined,
-        arrivalAirport: form.arrivalAirport.trim() || undefined,
-        requestedService: form.requestedService.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-      };
-      const res = await apiRequest("POST", "/v1/manager/patients", body);
-      return res.json();
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["/v1/manager/patients"] });
-      qc.invalidateQueries({ queryKey: ["/v1/manager/metrics"] });
-      setShowCreate(false);
-      setForm(EMPTY_FORM);
-      setStep(1);
-      if (data?.id) {
-        router.push({ pathname: "/(manager)/patients/[id]", params: { id: data.id } });
-      }
-    },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to create guest"),
-  });
-
-  const handleNext = () => {
-    setFormError("");
-    if (!form.fullName.trim()) {
-      setFormError("Full name is required.");
-      return;
-    }
-    setStep(2);
-  };
-
-  const handleCreate = () => {
-    setFormError("");
-    if (!form.arrivalDate) { setFormError("Arrival date is required."); return; }
-    if (!form.departureDate) { setFormError("Departure date is required."); return; }
-    if (form.departureDate < form.arrivalDate) {
-      setFormError("Departure must be on or after arrival.");
-      return;
-    }
-    createMutation.mutate();
-  };
-
-  const handlePhoneChange = (text: string) => {
-    setForm(f => ({ ...f, phoneLocal: text }));
-    if (text.startsWith("+")) {
-      const detected = detectCountryFromPhone(text);
-      if (detected) setForm(f => ({ ...f, phoneCountry: detected, phoneLocal: text }));
-    }
-  };
 
   const rows = data?.items ?? [];
   const hasActiveFilters =
@@ -464,299 +274,14 @@ function GuestsTab() {
 
       <Pressable
         style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1 }]}
-        onPress={() => { setShowCreate(true); setStep(1); setForm(EMPTY_FORM); setFormError(""); }}
+        onPress={() => setShowCreate(true)}
+        testID="fab-add-guest"
       >
         <Ionicons name="add" size={26} color="#fff" />
       </Pressable>
 
-      <Modal visible={showCreate} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <Pressable onPress={() => step === 2 ? setStep(1) : setShowCreate(false)} hitSlop={10}>
-              <Ionicons name={step === 2 ? "chevron-back" : "close"} size={24} color={T.text} />
-            </Pressable>
-            <Text style={styles.modalTitle}>New Guest</Text>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepText}>{step} / 2</Text>
-            </View>
-          </View>
+      <CreateGuestSheet visible={showCreate} onClose={() => setShowCreate(false)} />
 
-          <View style={styles.stepRow}>
-            <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]} />
-            <View style={[styles.stepLine, step >= 2 && styles.stepLineActive]} />
-            <View style={[styles.stepDot, step >= 2 && styles.stepDotActive]} />
-          </View>
-
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-            {step === 1 ? (
-              <>
-                <Text style={styles.stepTitle}>Identity & Contact</Text>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>FULL NAME *</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. Sarah Mitchell"
-                    placeholderTextColor={T.textMuted}
-                    value={form.fullName}
-                    onChangeText={v => setForm(f => ({ ...f, fullName: v }))}
-                    autoCapitalize="words"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>NATIONALITY</Text>
-                  <Pressable
-                    style={styles.pickerBtn}
-                    onPress={() => setShowNationalityPicker(true)}
-                  >
-                    <Text style={form.nationalityCountry ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
-                      {form.nationalityCountry
-                        ? `${form.nationalityCountry.flag}  ${form.nationalityCountry.name}`
-                        : "Select country..."}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color={T.textMuted} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>PHONE</Text>
-                  <View style={styles.phoneRow}>
-                    <Pressable style={styles.dialCodeBtn} onPress={() => setShowPhoneCountryPicker(true)}>
-                      <Text style={styles.dialCodeText}>
-                        {form.phoneCountry ? `${form.phoneCountry.flag} +${form.phoneCountry.dialCode}` : "+?"}
-                      </Text>
-                      <Ionicons name="chevron-down" size={13} color={T.textMuted} />
-                    </Pressable>
-                    <TextInput
-                      style={styles.phoneInput}
-                      placeholder="5XX XXX XX XX"
-                      placeholderTextColor={T.textMuted}
-                      value={form.phoneLocal}
-                      onChangeText={handlePhoneChange}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>EMAIL</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="guest@example.com"
-                    placeholderTextColor={T.textMuted}
-                    value={form.email}
-                    onChangeText={v => setForm(f => ({ ...f, email: v }))}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>PASSPORT NO</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. A12345678"
-                    placeholderTextColor={T.textMuted}
-                    value={form.passportNo}
-                    onChangeText={v => setForm(f => ({ ...f, passportNo: v }))}
-                    autoCapitalize="characters"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>PREFERRED LANGUAGE</Text>
-                  <Pressable style={styles.pickerBtn} onPress={() => setShowLangPicker(true)}>
-                    <Text style={form.preferredLanguage ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
-                      {form.preferredLanguage
-                        ? LANGUAGES.find(l => l.code === form.preferredLanguage)?.label ?? form.preferredLanguage
-                        : "Select language..."}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color={T.textMuted} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.sectionDivider}>
-                  <Text style={styles.sectionDividerText}>Emergency Contact (optional)</Text>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>CONTACT NAME</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. John Mitchell"
-                    placeholderTextColor={T.textMuted}
-                    value={form.emergencyContactName}
-                    onChangeText={v => setForm(f => ({ ...f, emergencyContactName: v }))}
-                    autoCapitalize="words"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>CONTACT PHONE</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="+1 555 000 0000"
-                    placeholderTextColor={T.textMuted}
-                    value={form.emergencyContactPhone}
-                    onChangeText={v => setForm(f => ({ ...f, emergencyContactPhone: v }))}
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <Text style={styles.stepTitle}>Travel & Plan</Text>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>ARRIVAL DATE *</Text>
-                  <Pressable style={styles.pickerBtn} onPress={() => setShowArrivalPicker(true)}>
-                    <Text style={form.arrivalDate ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
-                      {form.arrivalDate || "Select arrival date..."}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color={T.textMuted} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>DEPARTURE DATE *</Text>
-                  <Pressable style={styles.pickerBtn} onPress={() => setShowDeparturePicker(true)}>
-                    <Text style={form.departureDate ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
-                      {form.departureDate || "Select departure date..."}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={16} color={T.textMuted} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>FLIGHT NUMBER</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. TK 1234"
-                    placeholderTextColor={T.textMuted}
-                    value={form.flightNumber}
-                    onChangeText={v => setForm(f => ({ ...f, flightNumber: v }))}
-                    autoCapitalize="characters"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>ARRIVAL AIRPORT</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. Istanbul Sabiha Gökçen (SAW)"
-                    placeholderTextColor={T.textMuted}
-                    value={form.arrivalAirport}
-                    onChangeText={v => setForm(f => ({ ...f, arrivalAirport: v }))}
-                    autoCapitalize="words"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>REQUESTED SERVICE</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="e.g. Hair Transplant"
-                    placeholderTextColor={T.textMuted}
-                    value={form.requestedService}
-                    onChangeText={v => setForm(f => ({ ...f, requestedService: v }))}
-                    autoCapitalize="words"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>NOTES</Text>
-                  <TextInput
-                    style={[styles.fieldInput, { height: 80, textAlignVertical: "top" }]}
-                    placeholder="Any additional information..."
-                    placeholderTextColor={T.textMuted}
-                    value={form.notes}
-                    onChangeText={v => setForm(f => ({ ...f, notes: v }))}
-                    multiline
-                  />
-                </View>
-              </>
-            )}
-
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-          </ScrollView>
-
-          <View style={styles.modalActions}>
-            {step === 1 ? (
-              <Pressable style={styles.btnPrimary} onPress={handleNext}>
-                <Text style={styles.btnPrimaryText}>Next  →</Text>
-              </Pressable>
-            ) : (
-              <>
-                <Pressable style={styles.btnSecondary} onPress={() => setStep(1)}>
-                  <Text style={styles.btnSecondaryText}>← Back</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.btnPrimary, { flex: 2, opacity: createMutation.isPending ? 0.75 : 1 }]}
-                  onPress={handleCreate}
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={styles.btnPrimaryText}>Create Guest</Text>}
-                </Pressable>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      <CountryPickerModal
-        visible={showNationalityPicker}
-        onSelect={c => setForm(f => ({ ...f, nationalityCountry: c }))}
-        onClose={() => setShowNationalityPicker(false)}
-        title="Select Nationality"
-      />
-      <CountryPickerModal
-        visible={showPhoneCountryPicker}
-        onSelect={c => setForm(f => ({ ...f, phoneCountry: c }))}
-        onClose={() => setShowPhoneCountryPicker(false)}
-        title="Phone Country Code"
-      />
-
-      <Modal visible={showLangPicker} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setShowLangPicker(false)}>
-        <View style={styles.cpModal}>
-          <View style={styles.cpHeader}>
-            <Text style={styles.cpTitle}>Preferred Language</Text>
-            <Pressable onPress={() => setShowLangPicker(false)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={T.text} />
-            </Pressable>
-          </View>
-          {LANGUAGES.map((lang, i) => (
-            <React.Fragment key={lang.code}>
-              {i > 0 && <Divider inset={16} />}
-              <Pressable
-                style={({ pressed }) => [styles.cpRow, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => { setForm(f => ({ ...f, preferredLanguage: lang.code })); setShowLangPicker(false); }}
-              >
-                <Text style={styles.cpName}>{lang.label}</Text>
-                {form.preferredLanguage === lang.code && <Ionicons name="checkmark" size={18} color={T.primary} />}
-              </Pressable>
-            </React.Fragment>
-          ))}
-        </View>
-      </Modal>
-
-      <DatePickerModal
-        visible={showArrivalPicker}
-        value={form.arrivalDate}
-        title="Arrival Date"
-        onConfirm={(d) => { setForm(f => ({ ...f, arrivalDate: d })); setShowArrivalPicker(false); }}
-        onClose={() => setShowArrivalPicker(false)}
-      />
-      <DatePickerModal
-        visible={showDeparturePicker}
-        value={form.departureDate}
-        title="Departure Date"
-        minDate={form.arrivalDate || undefined}
-        onConfirm={(d) => { setForm(f => ({ ...f, departureDate: d })); setShowDeparturePicker(false); }}
-        onClose={() => setShowDeparturePicker(false)}
-      />
 
       <ManagerFilterSheet
         visible={showFilterSheet}

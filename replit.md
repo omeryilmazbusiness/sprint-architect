@@ -37,6 +37,7 @@ The application utilizes Replit's built-in PostgreSQL, managed with Drizzle ORM 
 ### API Routes
 
 The API is structured with specific routes for different user roles:
+-   **CreateGuestSheet (`components/managerGuests/CreateGuestSheet.tsx`):** Full-featured modal form for creating new patients (guests). Sections: Identity (name, DOB, gender chips, nationality picker, passport), Contact (PhonePickerInput, email), Companion (collapsible, with PhonePickerInput + relation chips), Travel & Service (service picker from 11 enum values, arrival/departure DatePickerModal, airport, flight), Notes. Post-creation shows a success/key-reveal screen with the patient key and Share/Open Guest actions. Backend schema extended: `createPatientSchema` requires `nationality`, `nationalityCode`, `phoneE164`, `arrivalDate`, `departureDate`, `requestedService` (enum); adds optional `gender` and `companionRelation`. The `users.tsx` Guests tab was refactored to use CreateGuestSheet (removed the old embedded 2-step create form).
 -   **Manager Routes (`/v1/manager/*`):** CRUD operations for patients, doctors, hotels, transports, patient plans, appointments, and documents. Includes endpoints for document assignment, signed URL generation, and aggregated patient details.
 -   **Admin Routes (`/v1/admin/*`):** Management of clinics, users, and invoices.
 -   **Patient Routes:** Support for document uploads.

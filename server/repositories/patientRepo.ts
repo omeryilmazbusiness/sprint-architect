@@ -6,43 +6,47 @@ import { generatePatientKey } from "../utils/patientKey";
 export interface CreatePatientInput {
   clinicId: string;
   fullName: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
+  nationalityCode?: string;
+  passportNo?: string;
+  phoneE164?: string;
   phone?: string;
   email?: string;
-  nationality?: string;
-  passportNo?: string;
-  arrivalDate?: string;
-  departureDate?: string;
-  notes?: string;
-  nationalityCode?: string;
-  phoneE164?: string;
-  dateOfBirth?: string;
-  preferredLanguage?: string;
   emergencyContactName?: string;
   emergencyContactPhoneE164?: string;
+  companionRelation?: string;
+  arrivalDate?: string;
+  departureDate?: string;
   arrivalAirport?: string;
   flightNumber?: string;
   requestedService?: string;
+  notes?: string;
+  preferredLanguage?: string;
 }
 
 export interface UpdatePatientInput {
   fullName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
+  nationalityCode?: string;
+  passportNo?: string;
+  phoneE164?: string;
   phone?: string;
   email?: string;
-  nationality?: string;
-  passportNo?: string;
-  arrivalDate?: string;
-  departureDate?: string;
-  status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
-  notes?: string;
-  nationalityCode?: string;
-  phoneE164?: string;
-  dateOfBirth?: string;
-  preferredLanguage?: string;
   emergencyContactName?: string;
   emergencyContactPhoneE164?: string;
+  companionRelation?: string;
+  arrivalDate?: string;
+  departureDate?: string;
   arrivalAirport?: string;
   flightNumber?: string;
   requestedService?: string;
+  notes?: string;
+  preferredLanguage?: string;
+  status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
 }
 
 export const patientRepo = {
