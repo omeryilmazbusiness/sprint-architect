@@ -1,0 +1,147 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEMS:
+1) In Manager → Doctors list, when I delete a doctor:
+   - it may delete on backend OR not,
+   - but the UI list does NOT remove the card (stale cache / wrong query invalidation / wrong endpoint).
+You must verify the behavior with evidence.
+2) I want to wipe ALL doctors data in the DB (dev environment) so we start from zero like a fresh production launch (only doctors table data should be cleared, not the whole DB).
+
+GOALS:
+A) Make doctor deletion fully correct and production-ready:
+- Delete must remove from DB AND immediately disappear from the list.
+- Must handle blocked delete properly (doctor has appointments).
+- Must show toast feedback.
+B) Provide a safe script/endpoint to wipe all doctors data (dev only), with guards.
+
+NON-NEGOTIABLE:
+- SOLID backend structure (controller -> usecase -> repo).
+- ACID: delete in transaction.
+- UI must refetch or optimistically update reliably.
+- Must not show “failed data” for empty list.
+- Wipe doctors must be SAFE:
+  - should require explicit confirmation env var
+  - should refuse on NODE_ENV=test
+  - should not run on test DB
+- Provide exact commands to run wipe.
+
+========================================================
+PHASE 1 — VERIFY DELETE (MANDATORY, NO GUESSING)
+========================================================
+1) Reproduce delete on Doctors list and capture:
+- Mobile console logs
+- Network request (DELETE URL, status code, response body)
+- Backend logs: route hit? deleted row count?
+- DB verification:
+  - query count before delete and after delete
+2) Identify the exact reason UI doesn’t remove the card:
+Common causes:
+- React Query queryKey mismatch (invalidate wrong key)
+- list uses local state that isn’t updated after mutation
+- delete mutation returns success but list isn’t refetched
+- delete endpoint is different than list endpoint (baseURL mismatch)
+- optimistic update not implemented or wrong id type
+
+Output a short root-cause report with file paths.
+
+Do not implement Phase 2 until Phase 1 report is produced.
+
+========================================================
+PHASE 2 — FIX: DELETE MUST UPDATE UI + DB (PROD-READY)
+========================================================
+Backend:
+- Confirm endpoint: DELETE /v1/manager/doctors/:id
+- It must:
+  - clinic-scope: only delete doctor belonging to manager’s clinic
+  - return 204 on success
+  - if doctor has appointments: return AppError code DOC-DEL-001
+  - run in transaction
+- Add repo method returns affected rows; if 0 => NOT_FOUND (DOC-DEL-404)
+
+Frontend (React Query v5):
+1) Ensure doctors list query uses a SINGLE stable queryKey:
+- ["manager","doctors",{search}] OR ["manager","doctors",search]
+Pick one and standardize across app.
+
+2) Ensure delete mutation:
+- onMutate: optimistic remove from cache (best UX)
+- onError: rollback cache and show toast with error code
+- onSuccess: invalidateQueries for that exact doctors queryKey (and any variants)
+Implementation pattern:
+- const qc = useQueryClient()
+- onMutate => qc.setQueryData(queryKey, old => remove doctorId)
+- onSettled => qc.invalidateQueries({ queryKey: ["manager","doctors"] , exact:false })
+
+3) Ensure DoctorListCard uses stable id:
+- keyExtractor uses doctor.id (string)
+- delete uses same id type
+
+4) After delete:
+- show toast “Doctor deleted”
+- list immediately reflects deletion (optimistic + refetch)
+
+5) Empty state:
+- if no doctors => show premium empty card “No doctors yet” + “Add Doctor” CTA
+
+========================================================
+PHASE 3 — WIPE ALL DOCTORS DATA (DEV ONLY, SAFE)
+========================================================
+Create a safe script:
+server/scripts/wipeDoctorsDev.ts
+
+Guards:
+- Must require NODE_ENV==="development" (or explicitly not production)
+- Must refuse if NODE_ENV==="test"
+- Must refuse if DB name contains "test"
+- Must require WIPE_DOCTORS_CONFIRM="YES_WIPE_DOCTORS"
+
+Action:
+- TRUNCATE doctors RESTART IDENTITY CASCADE (only doctors-related tables if exist)
+OR
+- DELETE FROM doctors WHERE 1=1 (prefer TRUNCATE)
+Also consider:
+- If appointments reference doctors, either:
+  A) Also wipe appointments in dev (if you want true clean) OR
+  B) Block wipe if appointments exist
+Choose the safer approach for consistency:
+Recommended for “start from zero”: wipe appointments too ONLY if you confirm in the script and document.
+But user requested: wipe all doctors data — do it by:
+- If foreign key exists, TRUNCATE doctors CASCADE will also delete dependent rows.
+If that is too destructive, instead:
+- refuse wipe if appointments exist and print counts.
+
+Add npm script:
+- "db:wipe:doctors": "WIPE_DOCTORS_CONFIRM='YES_WIPE_DOCTORS' NODE_ENV=development tsx server/scripts/wipeDoctorsDev.ts"
+Also add a DRY RUN:
+- "db:wipe:doctors:dry": "WIPE_DOCTORS_CONFIRM='' NODE_ENV=development tsx server/scripts/wipeDoctorsDev.ts"
+where dry-run prints doctor count and what would be wiped.
+
+========================================================
+PHASE 4 — VERIFICATION (MANDATORY)
+========================================================
+1) Run dry wipe -> show counts
+2) Run real wipe -> verify doctors count becomes 0
+3) Open Doctors list -> empty state shown (no error)
+4) Add a new doctor -> saved to DB and appears
+5) Delete it -> DB count decreases and UI removes instantly
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion print:
+1) Root cause report (why UI didn’t update)
+2) Files changed/added
+3) Exact commands:
+- npm run db:wipe:doctors:dry
+- npm run db:wipe:doctors
+4) Manual QA checklist results
+5) Any safety notes (appointments FK policy)
+
+IMPLEMENTATION ORDER:
+1) Phase 1 verify with evidence
+2) Phase 2 fix delete cache + invalidation + backend correctness
+3) Phase 3 implement safe wipe script
+4) Phase 4 verify end-to-end
+
+Proceed now. Implement and verify.
+END.

@@ -52,6 +52,8 @@ export default function DoctorsScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Doctor | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     fullName: "",
     specialty: "",
@@ -66,6 +68,11 @@ export default function DoctorsScreen() {
   });
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  function showToast(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -156,25 +163,18 @@ export default function DoctorsScreen() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
-      if (!res.ok && res.status !== 204) {
-        let body: any = {};
-        try { body = await res.json(); } catch {}
-        const err: any = new Error(body.userMessage ?? body.message ?? "Failed to delete doctor");
-        err.code = body.code;
-        throw err;
-      }
+      await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false }),
+    onSuccess: (_data, id) => {
+      setDeletedIds((prev) => new Set(prev).add(id));
+      showToast("Doctor removed");
+      qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
+    },
     onError: (e: any) => {
       if (e?.code === "DOC-DEL-001") {
-        Alert.alert(
-          "Delete Blocked",
-          "This doctor has appointments. Deletion is not allowed while appointments exist.",
-          [{ text: "OK" }],
-        );
+        showToast("Doctor has appointments — cannot delete", "error");
       } else {
-        Alert.alert("Error", e.message ?? "Failed to delete doctor");
+        showToast(e.message ?? "Failed to delete doctor", "error");
       }
     },
   });
@@ -228,7 +228,7 @@ export default function DoctorsScreen() {
         </ScrollView>
       ) : (
         <FlatList
-          data={data?.rows ?? []}
+          data={(data?.rows ?? []).filter((d) => !deletedIds.has(d.id))}
           keyExtractor={(d) => d.id}
           contentContainerStyle={{ paddingTop: 4, paddingBottom: bottomPad + 40 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
@@ -405,6 +405,30 @@ export default function DoctorsScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      <Modal
+        visible={!!toast}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.toastOverlay} pointerEvents="none" testID="doctors-screen-toast">
+          <View
+            style={[
+              styles.toastBar,
+              toast?.type === "error" ? styles.toastBarError : styles.toastBarSuccess,
+            ]}
+          >
+            <Ionicons
+              name={toast?.type === "error" ? "warning-outline" : "checkmark-circle-outline"}
+              size={16}
+              color="#fff"
+            />
+            <Text style={styles.toastText}>{toast?.msg}</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -538,4 +562,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sheetCloseBtn: { padding: 4 },
+  toastOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === "web" ? 54 : 34,
+  },
+  toastBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  toastBarSuccess: { backgroundColor: T.success },
+  toastBarError: { backgroundColor: T.danger },
+  toastText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#fff",
+  },
 });
