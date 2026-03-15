@@ -215,7 +215,9 @@ async function deleteRows(
   console.log("");
   console.log(`  Database : ${dbSummary}`);
   console.log(`  Scope    : ${scopeLabel}`);
-  console.log(`  Mode     : ${isDryRun ? "DRY-RUN (no changes will be made)" : "⚠️  REAL WIPE — DATA WILL BE DELETED"}`);
+  console.log(`  Mode     : ${isDryRun
+    ? "DRY-RUN  (no changes — set WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA for real wipe)"
+    : "⚠️  REAL WIPE — DATA WILL BE PERMANENTLY DELETED"}`);
   console.log("");
 
   const client = await pool.connect();
@@ -245,9 +247,9 @@ async function deleteRows(
       console.log("");
       console.log("  To perform the real wipe, run:");
       if (clinicId) {
-        console.log(`    WIPE_CLINIC_ID="${clinicId}" npm run db:wipe:manager`);
+        console.log(`    WIPE_CLINIC_ID="${clinicId}" WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA NODE_ENV=development tsx server/scripts/wipeManagerData.ts`);
       } else {
-        console.log("    npm run db:wipe:manager");
+        console.log("    WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA NODE_ENV=development tsx server/scripts/wipeManagerData.ts");
       }
       console.log("");
       process.exit(0);

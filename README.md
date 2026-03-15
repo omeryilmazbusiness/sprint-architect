@@ -289,6 +289,53 @@ WIPE_CLINIC_ID="<clinicId>" WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA NODE_ENV=
 
 ---
 
+## Wipe Doctors & Guests (DEV only)
+
+> **⚠️ IRREVERSIBLE — DEV ONLY. Removes doctors and patients (guests) with all their dependent rows.**
+
+Use `wipeDoctorsAndGuests.ts` when you only need a fresh doctor/patient slate — it is faster and more targeted than a full manager wipe. All other tables (clinics, user accounts, document types, hotels, transports, etc.) are untouched.
+
+### Tables wiped (FK-safe order)
+
+| Order | Table                 | Note                                      |
+|-------|-----------------------|-------------------------------------------|
+| 1     | `patient_documents`   | Uploaded documents for patients           |
+| 2     | `appointments`        | All appointments                          |
+| 3     | `patient_plans`       | Hotel / transport / doctor assignments    |
+| 4     | `credential_requests` | Patient credential requests               |
+| 5     | `refresh_tokens`      | Patient-linked tokens only                |
+| 6     | `devices`             | Patient device bindings only              |
+| 7     | `patients`            | Patient (guest) records                   |
+| 8     | `doctors`             | Doctor profiles                           |
+
+### Commands
+
+```bash
+# Dry-run — shows counts, no changes:
+NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+
+# Real wipe — all clinics:
+WIPE_CONFIRM=YES_WIPE_DOCTORS_GUESTS NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+
+# Dry-run — single clinic:
+WIPE_CLINIC_ID="<clinicId>" NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+
+# Real wipe — single clinic:
+WIPE_CLINIC_ID="<clinicId>" WIPE_CONFIRM=YES_WIPE_DOCTORS_GUESTS NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+```
+
+### Safety Guards
+
+1. `NODE_ENV === "test"` → **hard abort**
+2. Database name contains `"test"` → **hard abort**
+3. `WIPE_CONFIRM` ≠ `"YES_WIPE_DOCTORS_GUESTS"` → **dry-run only, exits 0**
+
+### What the output proves
+
+After a real wipe the script prints a post-wipe verification table — every row shows `0 rows`. It exits non-zero if any remnants are found, so CI or scripts can detect failure.
+
+---
+
 ## ⚠️ WARNING — Never Reset Prod Without Confirmation
 
 **Never run the launch reset against your production database without a deliberate `RESET_CONFIRM="YES_DELETE_ALL"` flag.** The script has safety guards but production data cannot be recovered after a reset.

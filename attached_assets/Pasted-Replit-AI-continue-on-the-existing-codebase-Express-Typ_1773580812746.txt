@@ -1,0 +1,131 @@
+Replit AI — continue on the existing codebase (Express/TypeScript + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+The wipeManagerData script reports doctors and patients counts in dry-run, but after running, doctors (and/or guests/patients) are NOT actually deleted from DB.
+We need a reliable, production-grade fix:
+- Ensure doctors and patients data are truly removed from DB when requested.
+- Identify why they were not removed (dry-run, wrong clinicId scope, transaction rollback, FK constraints, wrong WHERE clause, wrong table names).
+- Provide a dedicated safe wipe command that deletes ONLY doctors and patients (guests) with all their dependencies.
+
+GOALS:
+1) Diagnose the exact reason doctors/patients were not deleted (with evidence).
+2) Fix wipeManagerData.ts OR create a new dedicated wipe script:
+   - server/scripts/wipeDoctorsAndGuests.ts
+3) Must support:
+   - wipe for ALL clinics (dev only)
+   - wipe for a single clinicId
+4) Must be safe:
+   - refuse NODE_ENV=test
+   - refuse dbname contains "test"
+   - dry-run by default
+   - require WIPE_CONFIRM="YES_WIPE_DOCTORS_GUESTS"
+5) Must be FK-safe:
+   - delete dependent rows first OR use TRUNCATE CASCADE for full wipe mode
+6) Verify with DB counts before/after and print them.
+
+NON-NEGOTIABLE:
+- Do not guess — verify DB counts after the real wipe.
+- If a delete fails due to FK constraints, catch, print the exact FK error, and fix the delete order.
+- Use db.transaction and ensure it commits.
+
+========================================================
+PHASE 1 — VERIFY WHAT REALLY HAPPENED (MANDATORY)
+========================================================
+1) Inspect server/scripts/wipeManagerData.ts and confirm:
+- How confirm env is checked (exact string compare)
+- Whether it ever enters REAL RUN
+- Whether it prints “DRY RUN ONLY” vs “EXECUTING WIPE”
+- Whether it filters by clinicId correctly
+- Whether it uses delete/truncate and if it checks affected rows
+2) Add logging (safe, no secrets):
+- Print DB name + host (masked)
+- Print mode: DRY_RUN / REAL_RUN
+- Print clinic scope: ALL or clinicId
+- After wipe, print counts again for doctors and patients
+3) Re-run in dev and confirm if transaction commits or rolls back.
+
+Output a root-cause statement:
+- e.g., “You ran dry-run”, or “clinicId filter excluded doctors”, or “FK constraint caused rollback”, etc.
+
+========================================================
+PHASE 2 — IMPLEMENT RELIABLE WIPE: DOCTORS + GUESTS (PATIENTS)
+========================================================
+Create new script:
+server/scripts/wipeDoctorsAndGuests.ts
+
+Safety guards:
+- abort if NODE_ENV==="test"
+- abort if dbname includes "test"
+- DRY-RUN if WIPE_CONFIRM != "YES_WIPE_DOCTORS_GUESTS"
+- Accept optional WIPE_CLINIC_ID
+
+DRY-RUN:
+- Count rows that would be deleted:
+  - doctors (scoped)
+  - patients (scoped)
+  - appointments linked to those patients
+  - patient_documents linked to those patients
+  - patient_plans linked to those patients
+  - devices/refresh_tokens for those patients
+  - (any other patient/doctor dependent tables)
+- Print summary and exit 0.
+
+REAL RUN (transactional, FK-safe order):
+If WIPE_CLINIC_ID is provided:
+- Delete in strict order using WHERE clinicId = ...
+Recommended order:
+1) patient_documents (join patientId -> patients clinicId)
+2) appointments (join patientId -> patients clinicId)
+3) patient_plans (join patientId -> patients clinicId)
+4) refresh_tokens/devices that reference patientId (and/or userId if patient stored in users table)
+5) patients (where clinicId)
+6) doctors (where clinicId)
+Also delete any doctor-dependent tables if exist (e.g., doctor_profiles) before doctors.
+
+If WIPE_CLINIC_ID is NOT provided (ALL clinics dev wipe):
+- Use TRUNCATE ... CASCADE for the relevant tables for speed and FK safety:
+  TRUNCATE patient_documents, appointments, patient_plans, devices, refresh_tokens, patients, doctors RESTART IDENTITY CASCADE;
+BUT only for these tables (do NOT touch admins/managers/clinics).
+
+After commit:
+- Print counts again for doctors and patients to prove they are 0 (or 0 within clinic scope).
+
+========================================================
+PHASE 3 — OPTIONAL: FIX wipeManagerData.ts
+========================================================
+If root cause is inside wipeManagerData.ts, patch it too:
+- Ensure it prints clearly when it is REAL RUN
+- Ensure it prints post-wipe counts
+- Ensure it throws on any failed delete (do not silently continue)
+
+========================================================
+PHASE 4 — DOCUMENTATION + COMMANDS
+========================================================
+Add README section:
+“Wipe Doctors & Guests”
+Commands:
+- dry-run all:
+  NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+- real wipe all:
+  WIPE_CONFIRM=YES_WIPE_DOCTORS_GUESTS NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+- real wipe clinic:
+  WIPE_CLINIC_ID="..." WIPE_CONFIRM=YES_WIPE_DOCTORS_GUESTS NODE_ENV=development tsx server/scripts/wipeDoctorsAndGuests.ts
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, output:
+1) Root cause of why doctors weren’t deleted previously
+2) Files added/changed
+3) Dry-run counts example
+4) Post-wipe verification counts proving doctors and patients are deleted
+5) Exact commands to run
+
+IMPLEMENTATION ORDER:
+1) Phase 1 diagnose and prove
+2) Phase 2 implement wipeDoctorsAndGuests.ts
+3) Phase 3 patch wipeManagerData.ts if needed
+4) Phase 4 docs
+
+Proceed now. Implement and verify with real DB counts.
+END.
