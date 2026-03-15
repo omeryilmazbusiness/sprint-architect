@@ -1,0 +1,128 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Implement the following improvements for Manager area in a production-ready SOLID way:
+
+A) Guest Create (bottom sheet)
+1) Date of Birth must be selectable via a date picker (calendar), not typed manually.
+2) Requested Service must support MULTI-SELECT (select multiple services).
+3) Generated patientKey format must be exactly: "PT-" + 8 chars (A–Z, 0–9), e.g. PT-4S9WQ2U6
+   - Must be generated on backend
+   - Must be unique and stored in DB
+   - Must be shown to manager on success with copy button
+
+B) Notifications / Toast duration
+4) When a doctor is removed (or similar success notifications), the green notification duration must be shorter.
+   - Standardize toast durations app-wide to be short and consistent (e.g., success 1.2s, error 2.0s).
+
+NON-NEGOTIABLE:
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation on backend.
+- Client validation + premium UX (white theme).
+- Empty states must not show “failed data”.
+- patientKey collisions handled with DB unique constraint + retry.
+- Multi-select must be stored properly in DB (array or JSON), and returned consistently.
+
+========================================================
+TASK 1 — AUDIT CURRENT IMPLEMENTATION (MANDATORY)
+========================================================
+1) Locate the Manager Create Guest bottom-sheet component file path.
+2) Locate backend create patient endpoint and schema.
+3) Identify how requestedService is currently stored (string?) and where displayed.
+4) Locate toast/snackbar implementation and where “doctor removed” is triggered.
+Output a short audit report with file paths and current behaviors.
+
+Do not implement changes until audit is complete.
+
+========================================================
+TASK 2 — DATE OF BIRTH DATE PICKER (FRONTEND)
+========================================================
+1) Update CreateGuestSheet to add Date of Birth picker:
+- Field: Date of Birth (optional)
+- On tap: open a calendar/date picker modal
+- Save as ISO date (YYYY-MM-DD) in state
+- Display nicely (e.g., 12 Mar 1990)
+2) Ensure keyboard-safe and no overlap in bottom sheet.
+3) Validate:
+- must not be in the future (if chosen)
+Show inline error if invalid.
+
+Use existing date picker solution in project; if none, use Expo-friendly minimal option already present.
+
+========================================================
+TASK 3 — REQUESTED SERVICE MULTI-SELECT (FRONTEND + BACKEND)
+========================================================
+Frontend:
+1) Replace single dropdown with multi-select component:
+- Show a bottom-sheet picker list of services (Dental, Eye, Rhinoplasty, Hair, Plastic, etc.)
+- Allow selecting multiple
+- Selected values appear as removable chips in the form
+- Require at least 1 selection
+
+Backend:
+2) Update create patient schema:
+- requestedService becomes requestedServices: string[]
+3) Persist:
+- In DB store as JSON text or a string[] column depending on your schema ability.
+- Ensure stable serialization/deserialization.
+4) Update any DTOs and list/detail screens that show requested service to support multiple values.
+
+Migration:
+- If DB currently has requestedService string, migrate:
+  - requestedServices default [requestedService] for existing rows
+  - keep backward compatibility if needed (but prefer new field)
+
+========================================================
+TASK 4 — PATIENT KEY FORMAT PT-XXXXXXXX (BACKEND)
+========================================================
+1) Implement/Update patientKey generator:
+- Format: "PT-" + 8 chars from charset "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+- Example: PT-4S9WQ2U6
+2) Add/ensure DB unique constraint on patients.patientKey
+3) Implement collision-safe retry loop (max 5 tries) then throw AppError code KEY-001
+4) Return patientKey in create response, and show it in success modal on mobile.
+5) Tests:
+- patientKey matches regex /^PT-[A-Z0-9]{8}$/
+- uniqueness enforced (simulate collision)
+
+========================================================
+TASK 5 — SHORT TOAST DURATION STANDARDIZATION (FRONTEND)
+========================================================
+1) Identify the toast/snackbar component used globally.
+2) Standardize durations:
+- success: 1200ms
+- info: 1400ms
+- warning: 1600ms
+- error: 2000ms
+3) Specifically ensure “Doctor removed” success toast uses the short success duration.
+4) Make it configurable centrally:
+- services/ui/toast.ts or components/ui/ToastProvider.tsx
+No scattered durations in screens.
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit report (Task 1) with file paths
+2) Files changed/added
+3) API changes:
+- new field requestedServices
+- patientKey format and constraint
+4) Sample curl to create guest showing requestedServices[] and returned patientKey
+5) Manual QA checklist:
+- DOB picker opens and saves date
+- Multi-select services works, requires at least one
+- Created patientKey matches PT-XXXXXXXX and is shown + copy works
+- Doctor removed toast duration is short
+6) Tests added and how to run them
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) DOB picker
+3) Multi-select services front+back + migrations
+4) patientKey generator update + tests
+5) Toast duration centralization
+6) Final verification
+
+Proceed now. Implement end-to-end and verify.
+END.

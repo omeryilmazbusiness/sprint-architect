@@ -96,44 +96,68 @@ function NationalityPickerModal({ visible, onSelect, onClose }: CountryPickerPro
   );
 }
 
-type ServicePickerProps = {
+type ServicesPickerProps = {
   visible: boolean;
-  selected: string;
-  onSelect: (s: string) => void;
+  selected: string[];
+  onConfirm: (services: string[]) => void;
   onClose: () => void;
 };
 
-function ServicePickerModal({ visible, selected, onSelect, onClose }: ServicePickerProps) {
+function ServicesPickerModal({ visible, selected, onConfirm, onClose }: ServicesPickerProps) {
+  const [draft, setDraft] = useState<string[]>(selected);
+
+  React.useEffect(() => {
+    if (visible) setDraft(selected);
+  }, [visible]);
+
+  function toggle(s: string) {
+    setDraft(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  }
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="formSheet" onRequestClose={onClose}>
       <View style={pickerStyles.root}>
         <View style={pickerStyles.header}>
-          <Text style={pickerStyles.title}>Requested Service</Text>
+          <Text style={pickerStyles.title}>Requested Services</Text>
           <Pressable onPress={onClose} hitSlop={12}>
             <Ionicons name="close" size={22} color={T.text} />
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-          {SERVICES.map((s, i) => (
-            <Pressable
-              key={s}
-              style={({ pressed }) => [pickerStyles.row, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => { onSelect(s); onClose(); }}
-            >
-              <View style={[pickerStyles.serviceIcon, { backgroundColor: selected === s ? T.primary + "15" : T.surfaceSubtle }]}>
-                <Ionicons
-                  name={selected === s ? "checkmark-circle" : "medical-outline"}
-                  size={18}
-                  color={selected === s ? T.primary : T.textMuted}
-                />
-              </View>
-              <Text style={[pickerStyles.serviceLabel, selected === s && { color: T.primary, fontFamily: "Inter_600SemiBold" as any }]}>
-                {s}
-              </Text>
-              {selected === s && <Ionicons name="checkmark" size={18} color={T.primary} />}
-            </Pressable>
-          ))}
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          {SERVICES.map((s) => {
+            const active = draft.includes(s);
+            return (
+              <Pressable
+                key={s}
+                style={({ pressed }) => [pickerStyles.row, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => toggle(s)}
+              >
+                <View style={[pickerStyles.serviceIcon, { backgroundColor: active ? T.primary + "15" : T.surfaceSubtle }]}>
+                  <Ionicons
+                    name={active ? "checkmark-circle" : "medical-outline"}
+                    size={18}
+                    color={active ? T.primary : T.textMuted}
+                  />
+                </View>
+                <Text style={[pickerStyles.serviceLabel, active && { color: T.primary, fontFamily: "Inter_600SemiBold" as any }]}>
+                  {s}
+                </Text>
+                {active && <Ionicons name="checkmark" size={18} color={T.primary} />}
+              </Pressable>
+            );
+          })}
         </ScrollView>
+        <View style={pickerStyles.confirmRow}>
+          <Pressable
+            style={[pickerStyles.confirmBtn, draft.length === 0 && pickerStyles.confirmBtnDisabled]}
+            onPress={() => { onConfirm(draft); onClose(); }}
+            disabled={draft.length === 0}
+          >
+            <Text style={pickerStyles.confirmBtnText}>
+              {draft.length === 0 ? "Select at least one" : `Confirm ${draft.length} service${draft.length > 1 ? "s" : ""}`}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </Modal>
   );
@@ -158,7 +182,7 @@ interface FormState {
   departureDate: string;
   arrivalAirport: string;
   flightNumber: string;
-  requestedService: string;
+  requestedServices: string[];
   notes: string;
 }
 
@@ -179,7 +203,7 @@ const EMPTY_FORM: FormState = {
   departureDate: "",
   arrivalAirport: "",
   flightNumber: "",
-  requestedService: "",
+  requestedServices: [],
   notes: "",
 };
 
@@ -196,6 +220,7 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [companionOpen, setCompanionOpen] = useState(false);
   const [showNationality, setShowNationality] = useState(false);
+  const [showDOB, setShowDOB] = useState(false);
   const [showService, setShowService] = useState(false);
   const [showArrival, setShowArrival] = useState(false);
   const [showDeparture, setShowDeparture] = useState(false);
@@ -217,7 +242,7 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
     if (form.arrivalDate && form.departureDate && form.departureDate < form.arrivalDate) {
       errs.departureDate = "Must be on or after arrival";
     }
-    if (!form.requestedService) errs.requestedService = "Please select a service";
+    if (form.requestedServices.length === 0) errs.requestedServices = "Select at least one service";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = "Enter a valid email address";
     }
@@ -244,7 +269,7 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
         departureDate: form.departureDate,
         arrivalAirport: form.arrivalAirport.trim() || undefined,
         flightNumber: form.flightNumber.trim() || undefined,
-        requestedService: form.requestedService,
+        requestedServices: form.requestedServices,
         notes: form.notes.trim() || undefined,
       };
       const res = await apiRequest("POST", "/v1/manager/patients", body);
@@ -308,7 +333,7 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
     !!form.phone.e164 &&
     !!form.arrivalDate &&
     !!form.departureDate &&
-    !!form.requestedService;
+    form.requestedServices.length > 0;
 
   return (
     <Modal
@@ -414,15 +439,16 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
             </Field>
 
             <Field label="DATE OF BIRTH">
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={T.textMuted}
-                value={form.dateOfBirth}
-                onChangeText={v => setField("dateOfBirth", v)}
-                keyboardType="numeric"
-                testID="input-dob"
-              />
+              <Pressable
+                style={styles.pickerBtn}
+                onPress={() => setShowDOB(true)}
+                testID="btn-dob"
+              >
+                <Ionicons name="calendar-outline" size={15} color={T.textMuted} />
+                <Text style={[form.dateOfBirth ? styles.pickerBtnText : styles.pickerBtnPlaceholder, { marginLeft: 6 }]}>
+                  {form.dateOfBirth || "Select date of birth..."}
+                </Text>
+              </Pressable>
             </Field>
 
             <Field label="GENDER">
@@ -556,17 +582,34 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
             {/* ── TRAVEL & SERVICE ─────────────────────────────────────── */}
             <SectionHeader title="Travel & Service" icon="airplane-outline" />
 
-            <Field label="REQUESTED SERVICE" required error={errors.requestedService}>
+            <Field label="REQUESTED SERVICES" required error={errors.requestedServices}>
               <Pressable
-                style={[styles.pickerBtn, !!errors.requestedService && styles.inputError]}
+                style={[styles.pickerBtn, !!errors.requestedServices && styles.inputError]}
                 onPress={() => setShowService(true)}
                 testID="btn-service"
               >
-                <Text style={form.requestedService ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
-                  {form.requestedService || "Select a service..."}
+                <Text style={form.requestedServices.length > 0 ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
+                  {form.requestedServices.length > 0
+                    ? `${form.requestedServices.length} service${form.requestedServices.length > 1 ? "s" : ""} selected`
+                    : "Select services..."}
                 </Text>
                 <Ionicons name="chevron-down" size={15} color={T.textMuted} />
               </Pressable>
+              {form.requestedServices.length > 0 && (
+                <View style={styles.serviceChipRow}>
+                  {form.requestedServices.map(s => (
+                    <View key={s} style={styles.serviceChip}>
+                      <Text style={styles.serviceChipText}>{s}</Text>
+                      <Pressable
+                        onPress={() => setField("requestedServices", form.requestedServices.filter(x => x !== s))}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="close-circle" size={14} color={T.primary} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
             </Field>
 
             <View style={styles.dateRow}>
@@ -685,10 +728,19 @@ export function CreateGuestSheet({ visible, onClose }: CreateGuestSheetProps) {
         onClose={() => setShowNationality(false)}
       />
 
-      <ServicePickerModal
+      <DatePickerModal
+        visible={showDOB}
+        value={form.dateOfBirth}
+        title="Date of Birth"
+        maxDate={new Date().toISOString().split("T")[0]}
+        onConfirm={d => { setField("dateOfBirth", d); setShowDOB(false); }}
+        onClose={() => setShowDOB(false)}
+      />
+
+      <ServicesPickerModal
         visible={showService}
-        selected={form.requestedService}
-        onSelect={v => setField("requestedService", v)}
+        selected={form.requestedServices}
+        onConfirm={v => setField("requestedServices", v)}
         onClose={() => setShowService(false)}
       />
 
@@ -843,6 +895,29 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: T.primary + "15", borderColor: T.primary },
   chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.text },
   chipTextActive: { color: T.primary },
+
+  serviceChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  serviceChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: T.primary + "12",
+    borderWidth: 1,
+    borderColor: T.primary + "30",
+  },
+  serviceChipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: T.primary,
+  },
 
   companionToggle: {
     flexDirection: "row",
@@ -1085,4 +1160,28 @@ const pickerStyles = StyleSheet.create({
     justifyContent: "center",
   },
   serviceLabel: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  confirmRow: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    paddingBottom: Platform.OS === "web" ? 34 : 28,
+    backgroundColor: T.surface,
+    borderTopWidth: 1,
+    borderTopColor: T.border,
+  },
+  confirmBtn: {
+    backgroundColor: T.primary,
+    borderRadius: 12,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmBtnDisabled: { backgroundColor: T.border },
+  confirmBtnText: {
+    fontFamily: "Inter_700Bold" as any,
+    fontSize: 16,
+    color: "#fff",
+  },
 });

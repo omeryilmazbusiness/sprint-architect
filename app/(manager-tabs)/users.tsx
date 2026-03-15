@@ -308,7 +308,7 @@ function DoctorsTab() {
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 5000);
+    setTimeout(() => setToast(null), type === "error" ? 2000 : 1200);
   }
 
   const { data, isLoading, refetch, isRefetching } = useQuery<DoctorListResponse | Doctor[]>({

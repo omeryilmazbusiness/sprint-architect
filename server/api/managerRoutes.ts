@@ -60,7 +60,7 @@ const createPatientSchema = z.object({
   departureDate: z.string().min(1, "Departure date is required"),
   arrivalAirport: z.string().optional(),
   flightNumber: z.string().optional(),
-  requestedService: z.enum(REQUESTED_SERVICES, { errorMap: () => ({ message: "Please select a service" }) }),
+  requestedServices: z.array(z.enum(REQUESTED_SERVICES)).min(1, "Select at least one service"),
   notes: z.string().optional(),
   preferredLanguage: z.string().optional(),
 }).refine(d => d.departureDate >= d.arrivalDate, {
@@ -85,6 +85,7 @@ const updatePatientSchema = z.object({
   departureDate: z.string().optional(),
   arrivalAirport: z.string().optional(),
   flightNumber: z.string().optional(),
+  requestedServices: z.array(z.enum(REQUESTED_SERVICES)).optional(),
   requestedService: z.string().optional(),
   notes: z.string().optional(),
   preferredLanguage: z.string().optional(),

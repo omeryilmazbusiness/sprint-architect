@@ -137,6 +137,7 @@ export const patients = pgTable("patients", {
   arrivalAirport: text("arrival_airport"),
   flightNumber: text("flight_number"),
   requestedService: text("requested_service"),
+  requestedServices: text("requested_services"),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

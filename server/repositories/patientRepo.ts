@@ -1,7 +1,20 @@
 import { db } from "../db";
 import { patients, patientPlans, patientDocuments } from "@shared/schema";
 import { eq, and, ilike, or, count, isNull, exists, sql, inArray } from "drizzle-orm";
-import { generatePatientKey } from "../utils/patientKey";
+import { generatePatientKey, MAX_KEY_ATTEMPTS } from "../utils/patientKey";
+
+function serializeServices(services: string[] | undefined): string | null {
+  if (!services || services.length === 0) return null;
+  return JSON.stringify(services);
+}
+
+function parseServices(raw: string | null | undefined, legacySingle: string | null | undefined): string[] {
+  if (raw) {
+    try { return JSON.parse(raw) as string[]; } catch { return [raw]; }
+  }
+  if (legacySingle) return [legacySingle];
+  return [];
+}
 
 export interface CreatePatientInput {
   clinicId: string;
@@ -21,6 +34,7 @@ export interface CreatePatientInput {
   departureDate?: string;
   arrivalAirport?: string;
   flightNumber?: string;
+  requestedServices?: string[];
   requestedService?: string;
   notes?: string;
   preferredLanguage?: string;
@@ -43,10 +57,18 @@ export interface UpdatePatientInput {
   departureDate?: string;
   arrivalAirport?: string;
   flightNumber?: string;
+  requestedServices?: string[];
   requestedService?: string;
   notes?: string;
   preferredLanguage?: string;
   status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
+}
+
+function enrichPatient<T extends { requestedServices: string | null; requestedService: string | null }>(row: T) {
+  return {
+    ...row,
+    requestedServices: parseServices(row.requestedServices, row.requestedService),
+  };
 }
 
 export const patientRepo = {
@@ -59,14 +81,19 @@ export const patientRepo = {
         where: eq(patients.patientKey, patientKey),
       });
       if (!existing) break;
-      if (++attempts > 10) throw new Error("Failed to generate unique patient key");
+      if (++attempts >= MAX_KEY_ATTEMPTS) throw new Error("Failed to generate unique patient key after max attempts");
     }
 
+    const { requestedServices: servicesArr, ...rest } = input;
     const [patient] = await db
       .insert(patients)
-      .values({ ...input, patientKey })
+      .values({
+        ...rest,
+        patientKey,
+        requestedServices: serializeServices(servicesArr),
+      } as any)
       .returning();
-    return patient;
+    return enrichPatient(patient);
   },
 
   async list(clinicId: string, search?: string, page = 1, pageSize = 20, status?: string, missing?: string) {
@@ -109,7 +136,6 @@ export const patientRepo = {
       db.select({ count: count() }).from(patients).where(where),
     ]);
 
-    // Batch-fetch pending doc counts (ASSIGNED = pending upload)
     const patientIds = rows.map((r) => r.id);
     let pendingDocMap: Record<string, number> = {};
     if (patientIds.length > 0) {
@@ -129,7 +155,7 @@ export const patientRepo = {
     }
 
     const enrichedRows = rows.map((r) => ({
-      ...r,
+      ...enrichPatient(r),
       pendingDocCount: pendingDocMap[r.id] ?? 0,
     }));
 
@@ -137,24 +163,33 @@ export const patientRepo = {
   },
 
   async findById(id: string, clinicId: string) {
-    return db.query.patients.findFirst({
+    const row = await db.query.patients.findFirst({
       where: and(eq(patients.id, id), eq(patients.clinicId, clinicId)),
     });
+    if (!row) return null;
+    return enrichPatient(row);
   },
 
   async findByKey(patientKey: string) {
-    return db.query.patients.findFirst({
+    const row = await db.query.patients.findFirst({
       where: eq(patients.patientKey, patientKey),
     });
+    if (!row) return null;
+    return enrichPatient(row);
   },
 
   async update(id: string, clinicId: string, input: UpdatePatientInput) {
+    const { requestedServices: servicesArr, ...rest } = input;
+    const setData: any = { ...rest };
+    if (servicesArr !== undefined) {
+      setData.requestedServices = serializeServices(servicesArr);
+    }
     const [updated] = await db
       .update(patients)
-      .set(input)
+      .set(setData)
       .where(and(eq(patients.id, id), eq(patients.clinicId, clinicId)))
       .returning();
-    return updated;
+    return enrichPatient(updated);
   },
 
   async softDelete(id: string, clinicId: string) {
@@ -163,6 +198,6 @@ export const patientRepo = {
       .set({ status: "INACTIVE" })
       .where(and(eq(patients.id, id), eq(patients.clinicId, clinicId)))
       .returning();
-    return updated;
+    return enrichPatient(updated);
   },
 };

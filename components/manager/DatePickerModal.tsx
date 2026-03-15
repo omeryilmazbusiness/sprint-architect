@@ -30,11 +30,12 @@ interface DatePickerModalProps {
   value: string;
   title?: string;
   minDate?: string;
+  maxDate?: string;
   onConfirm: (date: string) => void;
   onClose: () => void;
 }
 
-export function DatePickerModal({ visible, value, title = "Select Date", minDate, onConfirm, onClose }: DatePickerModalProps) {
+export function DatePickerModal({ visible, value, title = "Select Date", minDate, maxDate, onConfirm, onClose }: DatePickerModalProps) {
   const initialDate = value ? parseISO(value) : new Date();
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [selected, setSelected] = useState<Date | null>(value ? parseISO(value) : null);
@@ -45,12 +46,19 @@ export function DatePickerModal({ visible, value, title = "Select Date", minDate
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = useMemo(() => eachDayOfInterval({ start: calendarStart, end: calendarEnd }), [calendarStart, calendarEnd]);
   const minDateParsed = minDate ? parseISO(minDate) : null;
+  const maxDateParsed = maxDate ? parseISO(maxDate) : null;
 
   const isDisabled = (day: Date) => {
-    if (!minDateParsed) return false;
     const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
-    const minStart = new Date(minDateParsed.getFullYear(), minDateParsed.getMonth(), minDateParsed.getDate());
-    return isBefore(dayStart, minStart);
+    if (minDateParsed) {
+      const minStart = new Date(minDateParsed.getFullYear(), minDateParsed.getMonth(), minDateParsed.getDate());
+      if (isBefore(dayStart, minStart)) return true;
+    }
+    if (maxDateParsed) {
+      const maxStart = new Date(maxDateParsed.getFullYear(), maxDateParsed.getMonth(), maxDateParsed.getDate());
+      if (!isBefore(dayStart, maxStart) && !isSameDay(dayStart, maxStart)) return true;
+    }
+    return false;
   };
 
   const handleConfirm = () => {
