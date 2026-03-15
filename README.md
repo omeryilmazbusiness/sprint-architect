@@ -228,6 +228,67 @@ Provide both `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` to create an
 
 ---
 
+## Wipe Manager Data (DEV only)
+
+> **⚠️ IRREVERSIBLE — DEV ONLY. Removes clinic-scoped patient data. There is no undo.**
+
+Use `wipeManagerData.ts` to clear all manager-operated data (patients, doctors, document types, appointments, plans, hotels, transports, etc.) without touching clinics, user accounts, or schema.
+
+This is useful when you want a clean slate for testing manager workflows without doing a full database reset.
+
+### Tables wiped (FK-safe order)
+
+| Order | Table                 | Note                                          |
+|-------|-----------------------|-----------------------------------------------|
+| 1     | `patient_documents`   | Document uploads assigned to patients         |
+| 2     | `appointments`        | All scheduled appointments                    |
+| 3     | `patient_plans`       | Hotel / transport / doctor assignments        |
+| 4     | `credential_requests` | Patient login credential requests             |
+| 5     | `notifications`       | Clinic-scoped push notifications              |
+| 6     | `audit_logs`          | Clinic-scoped audit entries                   |
+| 7     | `invoices`            | Patient invoices                              |
+| 8     | `refresh_tokens`      | Patient-linked tokens only (managers kept)    |
+| 9     | `devices`             | Patient device bindings only                  |
+| 10    | `patients`            | Patient records                               |
+| 11    | `document_types`      | Document type definitions per clinic          |
+| 12    | `doctors`             | Doctor profiles                               |
+| 13    | `hotels`              | Hotel records                                 |
+| 14    | `transports`          | Transport / driver records                    |
+
+Clinics, user accounts (managers / admins), schema, and job infrastructure are **never touched**.
+
+### Commands
+
+```bash
+# Dry-run — shows row counts for what WOULD be deleted (no changes):
+NODE_ENV=development tsx server/scripts/wipeManagerData.ts
+
+# Real wipe — ALL clinic-scoped data:
+WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA NODE_ENV=development tsx server/scripts/wipeManagerData.ts
+
+# Dry-run — single clinic only:
+WIPE_CLINIC_ID="<clinicId>" NODE_ENV=development tsx server/scripts/wipeManagerData.ts
+
+# Real wipe — single clinic only:
+WIPE_CLINIC_ID="<clinicId>" WIPE_MANAGER_CONFIRM=YES_WIPE_MANAGER_DATA NODE_ENV=development tsx server/scripts/wipeManagerData.ts
+```
+
+### Safety Guards (will refuse and abort if any check fails)
+
+1. `NODE_ENV` must NOT be `"test"` — prevents accidental test-DB wipe
+2. Database name must NOT contain `"test"` — double-checks `DATABASE_URL` target
+3. `WIPE_MANAGER_CONFIRM` must equal `"YES_WIPE_MANAGER_DATA"` — if missing or wrong, **DRY-RUN only**
+
+### Scope Modes
+
+| Mode        | How to activate                          | What is deleted                        |
+|-------------|------------------------------------------|----------------------------------------|
+| Dry-run     | Omit `WIPE_MANAGER_CONFIRM` (default)   | Nothing — counts only                  |
+| Full wipe   | No `WIPE_CLINIC_ID`                      | All clinic-scoped data across all clinics |
+| Clinic wipe | Set `WIPE_CLINIC_ID="<id>"`             | Only that clinic's data                |
+
+---
+
 ## ⚠️ WARNING — Never Reset Prod Without Confirmation
 
 **Never run the launch reset against your production database without a deliberate `RESET_CONFIRM="YES_DELETE_ALL"` flag.** The script has safety guards but production data cannot be recovered after a reset.

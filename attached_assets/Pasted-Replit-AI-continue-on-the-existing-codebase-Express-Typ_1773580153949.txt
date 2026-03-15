@@ -1,0 +1,124 @@
+Replit AI — continue on the existing codebase (Express/TypeScript backend + PostgreSQL + Drizzle ORM + Expo). DO NOT re-scaffold.
+
+REQUEST:
+Wipe all Manager-scoped data:
+- patients
+- doctors
+- document_types
+- patient_documents
+- appointments
+- patient_plans
+- hotels
+- transports
+- (and any other clinic-scoped tables used by manager workflows)
+
+IMPORTANT:
+This must be safe and explicit:
+- Must NEVER wipe TEST DB by accident.
+- Must NEVER run without confirmation env var.
+- Must support two modes:
+  MODE 1) wipe only a specific clinicId (recommended)
+  MODE 2) wipe all clinic-scoped data in dev (full manager data reset)
+
+NON-NEGOTIABLE SAFETY GUARDS:
+1) Refuse if NODE_ENV === "test"
+2) Refuse if database name contains "test"
+3) Require WIPE_MANAGER_CONFIRM="YES_WIPE_MANAGER_DATA"
+4) Default is DRY-RUN if confirm var is missing:
+   - print counts per table + what would be deleted
+5) If WIPE_CLINIC_ID is provided, delete only that clinic’s data.
+   If not provided, wipe ALL clinic-scoped data (dev only).
+
+========================================================
+A) IMPLEMENT SAFE WIPE SCRIPT
+========================================================
+Create:
+server/scripts/wipeManagerData.ts
+
+Behavior:
+1) Load config and parse active DATABASE_URL safely.
+2) Guards:
+- if NODE_ENV==="test" => throw
+- if dbname includes "test" => throw
+- if WIPE_MANAGER_CONFIRM !== "YES_WIPE_MANAGER_DATA" => DRY-RUN mode only
+3) Determine scope:
+- const clinicId = process.env.WIPE_CLINIC_ID || null
+4) DRY-RUN:
+- Count rows in each manager-scoped table (optionally filtered by clinicId)
+- Print a table summary: tableName -> count
+- Print what will be deleted in real run.
+5) REAL RUN (only if confirmed):
+- Use db.transaction (ACID).
+- Delete in correct order to satisfy foreign keys:
+  Suggested order:
+  - patient_documents
+  - appointments
+  - patient_plans
+  - patients
+  - document_types
+  - doctors
+  - hotels
+  - transports
+  - (any other clinic-scoped tables)
+If clinicId is set:
+- delete WHERE clinicId = <clinicId>
+If clinicId not set:
+- TRUNCATE these tables RESTART IDENTITY CASCADE (dev full wipe) OR delete all rows.
+Choose:
+- For full wipe: TRUNCATE ... CASCADE is best
+- For clinic scoped wipe: DELETE WHERE clinicId=... is best
+6) Print success summary:
+- deleted row counts per table
+
+========================================================
+B) ADD NPM SCRIPTS
+========================================================
+package.json scripts:
+- "db:wipe:manager:dry": "WIPE_MANAGER_CONFIRM='' NODE_ENV=development tsx server/scripts/wipeManagerData.ts"
+- "db:wipe:manager": "WIPE_MANAGER_CONFIRM='YES_WIPE_MANAGER_DATA' NODE_ENV=development tsx server/scripts/wipeManagerData.ts"
+
+Also document clinic scoped usage:
+- WIPE_CLINIC_ID="..." npm run db:wipe:manager:dry
+- WIPE_CLINIC_ID="..." npm run db:wipe:manager
+
+========================================================
+C) README UPDATE (MANDATORY)
+========================================================
+Add a section:
+“Wipe Manager Data (DEV only)”
+Include:
+- Dry run command
+- Real wipe command
+- Clinic-only wipe example
+- Safety warnings
+
+========================================================
+D) VERIFICATION CHECKLIST
+========================================================
+1) Run dry-run and show counts.
+2) Run real wipe and confirm counts become 0 (for scope selected).
+3) Open Manager app:
+- Users list empty
+- Doctors list empty
+- Document types empty
+- Appointments empty
+No “failed data” — only empty states.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files added/changed
+2) Exact commands to run (dry + real)
+3) Example with WIPE_CLINIC_ID
+4) Safety guard summary
+5) What tables are wiped and in which order
+
+IMPLEMENTATION ORDER:
+1) Create wipeManagerData.ts with guards + dry-run
+2) Add npm scripts
+3) Update README
+4) Verify by running dry-run (no real wipe unless confirm is provided)
+
+Proceed now. Implement safely.
+END.
