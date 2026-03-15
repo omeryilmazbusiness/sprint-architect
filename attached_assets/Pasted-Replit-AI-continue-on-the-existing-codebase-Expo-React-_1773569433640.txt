@@ -1,0 +1,136 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TS). DO NOT re-scaffold.
+
+PROBLEM:
+I’m getting a runtime error that includes minified FontFaceObserver code and:
+"ms timeout exceeded"
+This indicates a web-font load timeout and it is likely unhandled, causing UI break / “failed data”.
+
+GOALS:
+1) Locate EXACTLY where FontFaceObserver is being called and which font family it is trying to load.
+2) Fix it in a production-ready way:
+   - Never crash the app if a font fails to load.
+   - On web: use graceful fallback (system font) and continue.
+   - On native: do not run FontFaceObserver at all.
+   - No unhandled promise rejections.
+3) Keep SOLID structure:
+   - Create a FontLoader service/hook.
+   - UI components do not manage font loading directly.
+
+NON-NEGOTIABLE:
+- You MUST reproduce the error and show the file path + line where the load() Promise is triggered.
+- Do not “increase timeout and hope”. Implement fallback + catch.
+- Do not introduce heavy dependencies. Prefer Expo-native font loading (expo-font) and safe web fallbacks.
+- Must work when network is slow / fonts blocked / offline.
+- Must not break admin/manager dashboards.
+
+========================================================
+PHASE 1 — PINPOINT ROOT CAUSE (MANDATORY)
+========================================================
+1) Search the repo for:
+- "FontFaceObserver"
+- ".load("
+- "ms timeout exceeded"
+2) Identify:
+- The file that calls new FontFaceObserver(...).load(...)
+- The font family string (e.g., "Inter", "Roboto", custom)
+- Whether it runs on:
+  - Platform.OS === "web" only
+  - or accidentally runs on native too
+3) Confirm if the error occurs on:
+- Expo Web preview
+- or inside a WebView/PDF viewer
+4) Print a short root-cause report:
+- Which font fails
+- Where it’s requested from (URL or @font-face)
+- Why it times out (missing asset, blocked request, wrong path, CORS, offline)
+
+Do NOT proceed until you have this file/line evidence.
+
+========================================================
+PHASE 2 — IMPLEMENT A SAFE FONT LOADER (SOLID)
+========================================================
+Create a small module:
+- src/shared/fonts/FontLoader.ts (or app/shared/fonts/FontLoader.ts)
+Responsibilities:
+- On native: load fonts via expo-font (if you use custom fonts)
+- On web: do NOT use FontFaceObserver directly unless necessary; if it exists, wrap it safely.
+
+API:
+- async ensureAppFonts(): Promise<{ ok: boolean; failed?: string[] }>
+
+Rules:
+- Always resolves (never throws). Never crash UI.
+- If font load fails: return ok=false and list failed fonts; app continues with system fonts.
+
+Implementation:
+A) Native (iOS/Android):
+- Use expo-font useFonts() pattern (or existing setup)
+- If already using @expo-google-fonts, keep it and ensure errors are caught.
+
+B) Web:
+- If FontFaceObserver is used:
+  - Wrap in try/catch and Promise.catch
+  - Increase timeout only moderately (e.g., 8000ms) BUT crucially: catch and continue.
+  - If load fails: log a DEV-only warning and fall back.
+- If fonts are supposed to be local:
+  - Ensure @font-face is correctly included and files exist.
+- If fonts are remote:
+  - Ensure links are correct and not blocked; but still fallback if unreachable.
+
+========================================================
+PHASE 3 — PREVENT UNHANDLED PROMISE REJECTIONS
+========================================================
+1) Wherever FontFaceObserver.load() is called:
+- Replace with:
+  await fontLoader.ensureAppFonts()
+- Ensure errors are handled and do not bubble.
+
+2) Add a small global guard (web only) to prevent app crash:
+- window.addEventListener("unhandledrejection", ...) in DEV to log.
+(Do not swallow silently in production; just ensure your own font promises are caught.)
+
+========================================================
+PHASE 4 — UI INTEGRATION (CLEAN)
+========================================================
+1) In the root layout (app/_layout.tsx or equivalent):
+- Call ensureAppFonts() once on app start.
+- Do NOT block the entire app indefinitely.
+Strategy:
+- Show splash/loading skeleton briefly, then proceed even if fonts failed.
+
+2) Ensure components do not depend on fonts being loaded:
+- Use default system fonts as fallback in styles.
+- Do not hard-require Inter for layout measurement.
+
+========================================================
+PHASE 5 — VERIFY & REGRESSION CHECK
+========================================================
+1) Verify on web:
+- Simulate slow network/offline => app must still load without crashing.
+- Confirm no “ms timeout exceeded” bubbles to UI.
+2) Verify on native:
+- Ensure no FontFaceObserver executed.
+3) Ensure dashboards (admin/manager) render normally.
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, output:
+1) Root cause report (file/line + font family)
+2) Files changed/added
+3) How FontLoader works (native vs web)
+4) Proof that timeout no longer crashes:
+   - show that errors are caught and UI continues
+5) Manual QA checklist:
+- Web slow network
+- Web offline
+- Native normal run
+
+IMPLEMENTATION ORDER:
+1) Pinpoint caller + font name (Phase 1)
+2) Build FontLoader with fallback (Phase 2)
+3) Replace direct calls to FontFaceObserver with FontLoader (Phase 3/4)
+4) Verify across platforms (Phase 5)
+
+Proceed now. Do not guess — locate the exact caller first and then implement safe fallback.
+END.

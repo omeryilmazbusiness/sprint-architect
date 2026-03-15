@@ -9,13 +9,7 @@ import { queryClient, setSystemErrorHandler } from "@/lib/query-client";
 import { AuthProvider } from "@/context/AuthContext";
 import { SystemErrorProvider, useSystemError } from "@/context/SystemErrorContext";
 import { MaintenanceBottomSheet } from "@/components/system/MaintenanceBottomSheet";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from "@expo-google-fonts/inter";
+import { useAppFonts } from "@/lib/fonts/FontLoader";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,12 +22,7 @@ function SystemErrorBridge() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
+  const [fontsLoaded, fontError] = useAppFonts();
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
