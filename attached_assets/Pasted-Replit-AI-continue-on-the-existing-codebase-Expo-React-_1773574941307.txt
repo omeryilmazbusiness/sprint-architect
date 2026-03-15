@@ -1,0 +1,204 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+Manager → Doctors:
+- List cards are not premium/professional enough.
+- “Add Doctor” does not fully work (not saving to DB / not reflected in list).
+- Delete must work reliably.
+We need a production-ready SOLID implementation end-to-end.
+
+GOALS:
+1) Diagnose why Doctor create is not saved to DB (or not shown).
+2) Fix backend + frontend so Create Doctor reliably persists and refreshes the list.
+3) Implement premium Doctor list cards (modern white theme).
+4) Ensure delete works with confirmation and correct error handling.
+5) Must be clinic-scoped, stable DTOs, and never show “failed data” for empty lists.
+
+NON-NEGOTIABLE:
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation on create/update requests.
+- ACID-safe delete (transaction), and safe blocking if doctor has appointments (if your schema links appointments.doctorId).
+- Frontend: bottom-sheet form for add/edit, proper loading, errors, success toast, list invalidation.
+- Empty state shows “No doctors yet” + CTA “Add doctor”.
+
+========================================================
+PHASE 1 — AUDIT & ROOT CAUSE (MANDATORY)
+========================================================
+1) Identify the real Doctors screen route file path under app/(manager)/...
+2) Identify API client functions used for doctors:
+- services/api/... (exact file paths)
+3) Identify backend endpoints:
+- GET/POST/PUT/DELETE /v1/manager/doctors
+Confirm they are mounted and protected by manager auth + clinic scope.
+4) Reproduce “doctor add not saved” with evidence:
+- capture request URL, payload, status code, response
+- backend logs: did route hit? did it throw validation error? DB error?
+- DB check: did row insert happen?
+5) Output a short root cause report:
+- exact failure cause (wrong endpoint, wrong payload fields, missing clinicId scoping, db constraint, cache not invalidated, etc.)
+
+Do not implement fixes until this report is produced.
+
+========================================================
+PHASE 2 — BACKEND FIX (SOLID, PROD-READY)
+========================================================
+If backend is missing/buggy, fix with SOLID module structure:
+
+server/modules/managerDoctors/
+  managerDoctors.routes.ts
+  managerDoctors.controller.ts
+  schemas/managerDoctors.schemas.ts (zod)
+  usecases/
+    ListDoctors.ts
+    CreateDoctor.ts
+    UpdateDoctor.ts
+    DeleteDoctor.ts
+  repos/
+    ManagerDoctorsRepo.ts
+    ManagerDoctorsRepo.drizzle.ts
+server/shared/
+  auth/requireRole("MANAGER")
+  clinicScope (derive manager clinicId)
+  errors/AppError + ErrorCodes
+  tx/TransactionManager
+
+1) Create doctor endpoint:
+POST /v1/manager/doctors
+Body (zod):
+{
+  fullName: string (required),
+  specialty: string (required),
+  phone?: string,
+  email?: string,
+  university?: string,
+  graduationYear?: number,
+  experienceYears?: number,
+  languages?: string[] (or comma string),
+  bio?: string,
+  certifications?: string,
+  diplomaUrl?: string,
+  photoUrl?: string
+}
+Rules:
+- Insert doctor with clinicId from manager session (NOT from client).
+- Return created doctor DTO.
+- Return 200/201 always with JSON.
+- On validation error return system code VAL-XXX (existing scheme).
+
+2) List doctors:
+GET /v1/manager/doctors?search=
+- Search should be case-insensitive.
+- Return [] if none.
+
+3) Delete doctor:
+DELETE /v1/manager/doctors/:id
+- Transactional
+- If appointments table references doctorId:
+  - block deletion if any appointments exist:
+    return error code DOC-DEL-001 with safe message.
+- Otherwise delete row from DB and return 204.
+- Audit log event.
+
+Add backend tests:
+- create doctor persists
+- list returns it
+- delete removes it
+- delete blocked when appointments exist (if applicable)
+
+========================================================
+PHASE 3 — FRONTEND FIX (ADD/EDIT SHEET + CORRECT PERSISTENCE)
+========================================================
+1) API client correctness:
+- Ensure base URL correct and Authorization header present.
+- Ensure body fields match backend schema exactly.
+- Ensure create returns doctor object and screen uses it.
+
+2) React Query:
+- hooks/useManagerDoctorsQuery.ts uses queryKey ["manager","doctors",search]
+- on create success:
+  - invalidateQueries(["manager","doctors"])
+  - show toast “Doctor created”
+  - close sheet
+- on delete success:
+  - invalidateQueries(["manager","doctors"])
+  - show toast
+
+3) Doctor form bottom sheet (production-ready):
+components/managerDoctors/DoctorFormSheet.tsx
+- Create and Edit modes
+- Validation inline
+- Loading state
+- Cancel closes without changes
+- Submit persists then closes
+- If server validation fails, show server message + code
+
+4) Ensure the “Add Doctor” button is present:
+- Header plus icon OR FAB
+- Opens DoctorFormSheet in create mode
+
+========================================================
+PHASE 4 — PREMIUM DOCTOR LIST CARDS (MODERN UX)
+========================================================
+Create:
+components/managerDoctors/DoctorListCard.tsx
+
+Card content (professional, info-rich, but clean):
+Top row:
+- Left: avatar circle (initials) OR photo if photoUrl exists
+- Middle:
+  - fullName (bold, large)
+  - specialty (muted)
+- Right:
+  - trash icon (delete)
+  - optional chevron/edit icon
+
+Second row (chips):
+- phone chip (tap to call)
+- email chip (tap mail)
+- experienceYears chip (e.g., “8 yrs”) if exists
+- university chip (truncate) if exists
+- languages chips (max 2 + “+N”) if exists
+
+Delete UX:
+- trash -> confirm modal
+- If blocked DOC-DEL-001 -> show toast: “Doctor has appointments — delete blocked.”
+
+Empty/loading/error:
+- Skeleton list while loading
+- Empty state with CTA “Add doctor”
+- Error with Retry
+
+Performance:
+- React.memo row
+- stable keyExtractor = doctor.id
+- avoid inline functions inside renderItem (use useCallback)
+
+========================================================
+PHASE 5 — FINAL VERIFICATION
+========================================================
+Manual QA checklist:
+- Add doctor -> appears immediately in list after close
+- Refresh app -> doctor still exists (DB persisted)
+- Delete doctor -> disappears from list; DB row removed
+- Search works (case-insensitive)
+- Empty DB shows clean empty state
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion print:
+1) Root cause report (why create didn’t save)
+2) Files changed/added
+3) Endpoint list + sample curl for create/list/delete
+4) Manual QA checklist results
+5) Notes on SOLID boundaries
+
+IMPLEMENTATION ORDER:
+1) Audit + reproduce + root cause report
+2) Backend fixes + tests
+3) Frontend API + React Query invalidation + DoctorFormSheet
+4) Premium DoctorListCard UI
+5) Verification
+
+Proceed now. Do not guess — identify exact root cause first, then fix.
+END.

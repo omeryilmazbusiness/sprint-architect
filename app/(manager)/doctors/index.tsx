@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -48,6 +48,8 @@ export default function DoctorsScreen() {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Doctor | null>(null);
   const [form, setForm] = useState({
@@ -66,6 +68,11 @@ export default function DoctorsScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
     if (showForm) {
       Animated.spring(slideAnim, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }).start();
     } else {
@@ -73,8 +80,14 @@ export default function DoctorsScreen() {
     }
   }, [showForm]);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Doctor[] }>({
-    queryKey: ["/v1/manager/doctors"],
+  const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Doctor[]; total: number }>({
+    queryKey: ["/v1/manager/doctors", debouncedSearch],
+    queryFn: async () => {
+      const p = new URLSearchParams();
+      if (debouncedSearch) p.set("search", debouncedSearch);
+      const res = await apiRequest("GET", `/v1/manager/doctors${p.toString() ? `?${p}` : ""}`);
+      return res.json();
+    },
   });
 
   const mutation = useMutation({
@@ -85,7 +98,7 @@ export default function DoctorsScreen() {
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"] });
+      qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
       setShowForm(false);
       setEditingItem(null);
       resetForm();
@@ -152,7 +165,7 @@ export default function DoctorsScreen() {
         throw err;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false }),
     onError: (e: any) => {
       if (e?.code === "DOC-DEL-001") {
         Alert.alert(
@@ -182,8 +195,21 @@ export default function DoctorsScreen() {
         }
       />
 
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={16} color={T.textMuted} style={{ marginRight: 6 }} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search doctors..."
+          placeholderTextColor={T.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+      </View>
+
       {isLoading ? (
-        <ScrollView contentContainerStyle={{ paddingTop: T.sp16, paddingBottom: bottomPad + 40 }}>
+        <ScrollView contentContainerStyle={{ paddingTop: 4, paddingBottom: bottomPad + 40 }}>
           {[1, 2, 3, 4].map((k) => (
             <View key={k} style={styles.skeletonCard}>
               <View style={styles.skeletonRow}>
@@ -204,18 +230,25 @@ export default function DoctorsScreen() {
         <FlatList
           data={data?.rows ?? []}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingTop: T.sp12, paddingBottom: bottomPad + 40 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: bottomPad + 40 }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
           ListHeaderComponent={
-            (data?.rows?.length ?? 0) > 0 ? (
-              <Text style={styles.listCount}>Doctors ({data!.rows.length})</Text>
+            (data?.total ?? 0) > 0 ? (
+              <Text style={styles.listCount}>
+                {data!.total} {data!.total === 1 ? "Doctor" : "Doctors"}
+                {debouncedSearch ? ` matching "${debouncedSearch}"` : ""}
+              </Text>
             ) : null
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="medkit-outline" size={40} color={T.border} />
-              <Text style={styles.emptyTitle}>No doctors yet</Text>
-              <Text style={styles.emptyText}>Tap + to add your first doctor</Text>
+              <Text style={styles.emptyTitle}>
+                {debouncedSearch ? "No results found" : "No doctors yet"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {debouncedSearch ? "Try a different search" : "Tap + to add your first doctor"}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -380,6 +413,26 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
   addBtn: { padding: 6 },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: T.sp16,
+    marginTop: T.sp12,
+    marginBottom: T.sp8,
+    backgroundColor: T.surface,
+    borderRadius: T.r10,
+    paddingHorizontal: T.sp12,
+    borderWidth: 1,
+    borderColor: T.border,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: T.text,
+    height: 42,
+  },
   card: {
     backgroundColor: T.surface,
     borderRadius: T.r12,

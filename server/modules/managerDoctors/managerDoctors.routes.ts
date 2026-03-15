@@ -5,7 +5,12 @@ import {
   clinicScopeMiddleware,
   requireActiveClinic,
 } from "../../auth/middleware";
-import { handleDeleteDoctor } from "./managerDoctors.controller";
+import {
+  handleListDoctors,
+  handleCreateDoctor,
+  handleUpdateDoctor,
+  handleDeleteDoctor,
+} from "./managerDoctors.controller";
 
 const router = Router();
 
@@ -16,6 +21,9 @@ router.use(
   clinicScopeMiddleware,
 );
 
+router.get("/doctors", handleListDoctors);
+router.post("/doctors", handleCreateDoctor);
+router.put("/doctors/:id", handleUpdateDoctor);
 router.delete("/doctors/:id", handleDeleteDoctor);
 
 export default router;
