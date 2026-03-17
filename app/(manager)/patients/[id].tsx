@@ -28,6 +28,7 @@ import { ErrorView } from "@/components/ErrorView";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import * as WebBrowser from "expo-web-browser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { VehicleBrandLogo } from "@/components/brands/VehicleBrandLogo";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -72,7 +73,15 @@ interface AggregateData {
   plan: any;
   doctor: { id: string; fullName: string; specialty?: string } | null;
   hotel: { id: string; name: string } | null;
-  transport: { id: string; name: string } | null;
+  transport: {
+    id: string;
+    name: string;
+    vehicleBrand?: string | null;
+    vehicleModel?: string | null;
+    licensePlate?: string | null;
+    driverFullName?: string | null;
+    driverPhoneE164?: string | null;
+  } | null;
   documents: Document[];
   requiredDocuments?: RequiredDoc[];
   appointments: Appointment[];
@@ -108,6 +117,7 @@ export default function PatientDetailScreen() {
   const [assignDocsVisible, setAssignDocsVisible] = useState(false);
   const [newApptVisible, setNewApptVisible] = useState(false);
   const [changeHotelVisible, setChangeHotelVisible] = useState(false);
+  const [changeTransportVisible, setChangeTransportVisible] = useState(false);
   const [editPatientVisible, setEditPatientVisible] = useState(false);
 
   const queryKey = [`/v1/manager/patients/${id}/details`];
@@ -364,7 +374,9 @@ export default function PatientDetailScreen() {
           <OverviewRow 
             icon="car-outline" 
             label="Transport" 
-            value={transport?.name ?? "Not assigned"} 
+            value={transport?.name ?? "Not assigned"}
+            onPress={() => setChangeTransportVisible(true)}
+            showAction
           />
 
           <View style={styles.divider} />
@@ -503,6 +515,13 @@ export default function PatientDetailScreen() {
         onClose={() => setChangeHotelVisible(false)}
         patientId={id}
         currentHotelId={hotel?.id}
+        onSuccess={() => qc.invalidateQueries({ queryKey })}
+      />
+      <ChangeTransportSheet
+        visible={changeTransportVisible}
+        onClose={() => setChangeTransportVisible(false)}
+        patientId={id}
+        currentTransportId={transport?.id}
         onSuccess={() => qc.invalidateQueries({ queryKey })}
       />
 
@@ -678,10 +697,11 @@ function AssignDocumentsSheet({ visible, onClose, patientId, onSuccess }: any) {
   const [selectedDocItems, setSelectedDocItems] = useState<{docTypeId: string; instruction: string}[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { data: docTypes } = useQuery<any[]>({
+  const { data: docTypesResp } = useQuery<{ items: any[] }>({
     queryKey: ["/v1/manager/document-types"],
     enabled: visible,
   });
+  const docTypes = docTypesResp?.items ?? [];
 
   const toggleDocType = (dtId: string) => {
     setSelectedDocItems(prev => 
@@ -718,7 +738,7 @@ function AssignDocumentsSheet({ visible, onClose, patientId, onSuccess }: any) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Assign Documents">
       <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
-        {docTypes?.map((dt) => {
+        {docTypes.map((dt) => {
           const isSelected = selectedDocItems.some(x => x.docTypeId === dt.id);
           const item = selectedDocItems.find(x => x.docTypeId === dt.id);
           return (
@@ -1069,6 +1089,93 @@ function ChangeHotelSheet({ visible, onClose, patientId, currentHotelId, onSucce
           disabled={saving}
         >
           {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.sheetBtnText}>Assign Hotel</Text>}
+        </Pressable>
+      </View>
+    </BottomSheet>
+  );
+}
+
+function ChangeTransportSheet({ visible, onClose, patientId, currentTransportId, onSuccess }: any) {
+  const [selectedId, setSelectedId] = useState<string | null>(currentTransportId ?? null);
+  const [saving, setSaving] = useState(false);
+
+  const { data, isLoading } = useQuery<{ rows: any[] }>({
+    queryKey: ["/v1/manager/transports"],
+    enabled: visible,
+  });
+
+  const handleSave = async () => {
+    if (!selectedId) { Alert.alert("Select a transport first"); return; }
+    setSaving(true);
+    try {
+      await apiRequest("PUT", `/v1/manager/patients/${patientId}/assign-transport`, {
+        transportId: selectedId,
+      });
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "Failed to assign transport");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const transports = data?.rows ?? [];
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose} title="Assign Transport">
+      {isLoading ? (
+        <ActivityIndicator style={{ margin: 40 }} color={T.primary} />
+      ) : (
+        <FlatList
+          data={transports}
+          keyExtractor={item => item.id}
+          style={{ maxHeight: 340 }}
+          renderItem={({ item }) => {
+            const isSelected = selectedId === item.id;
+            const brandName = [item.vehicleBrand, item.vehicleModel].filter(Boolean).join(" ") || "Unknown Vehicle";
+            return (
+              <Pressable
+                style={[
+                  styles.transportRow,
+                  isSelected && styles.selectedTransportRow,
+                ]}
+                onPress={() => setSelectedId(item.id)}
+              >
+                <VehicleBrandLogo brand={item.vehicleBrand} size={36} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.transportBrandText}>{brandName}</Text>
+                  {item.licensePlate ? (
+                    <Text style={styles.transportPlateText}>{item.licensePlate}</Text>
+                  ) : null}
+                  {item.driverFullName ? (
+                    <Text style={styles.transportDriverText}>{item.driverFullName}</Text>
+                  ) : null}
+                </View>
+                {isSelected && (
+                  <Ionicons name="checkmark-circle" size={22} color={T.primary} />
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={[styles.hotelRowText, { padding: 16, color: T.textMuted }]}>
+              No transports found. Add one from the Transports screen.
+            </Text>
+          }
+        />
+      )}
+      <View style={{ padding: 16, paddingTop: 12 }}>
+        <Pressable
+          style={[styles.sheetBtn, saving && { opacity: 0.6 }]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.sheetBtnText}>Assign Transport</Text>
+          )}
         </Pressable>
       </View>
     </BottomSheet>
@@ -1549,6 +1656,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: T.text,
     fontFamily: "Inter_500Medium",
+  },
+  transportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+  },
+  selectedTransportRow: {
+    backgroundColor: T.primary + "08",
+  },
+  transportBrandText: {
+    fontSize: 15,
+    color: T.text,
+    fontFamily: "Inter_600SemiBold",
+  },
+  transportPlateText: {
+    fontSize: 12,
+    color: T.textMuted,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  transportDriverText: {
+    fontSize: 12,
+    color: T.accent,
+    fontFamily: "Inter_500Medium",
+    marginTop: 2,
   },
   sheetInput: {
     backgroundColor: T.bg,

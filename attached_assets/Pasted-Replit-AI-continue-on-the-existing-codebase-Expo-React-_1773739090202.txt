@@ -1,0 +1,249 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+CONTEXT / PROBLEMS (ALL MUST BE FIXED):
+1) Manager → Doctors: “Add Doctor” does not work — the form/sheet does not open at all.
+2) Wipe all existing data for Transports and Document Types (dev reset) — clean slate.
+3) Guest Detail screen crashes on Expo Go with: docTypes?.map is undefined (cannot read .map). Must be fixed.
+4) Redesign Guest Detail screen from scratch with premium, modern, production-ready UX:
+   - Show guest info + status
+   - Show tracking flow steps:
+     “Arrived airport” → “Picked up (vehicle)” → “Arrived hotel” → “Attended appointment” → “Back to airport” → “Arrived home”
+   - Below tracking:
+     A) Assigned Transport card (brand logo + brand/model large + plate + driver info)
+     B) Assigned Document Types summary cards (pending vs uploaded counts, list)
+     C) Assigned Hotel card
+   - For each (Transport/Docs/Hotel) if missing: show “No transport / No hotel / No documents” with a “+” button.
+     Pressing “+” opens a bottom-sheet selector list to assign.
+   - All assignment actions must be clinic-scoped and saved in DB.
+
+NON-NEGOTIABLE:
+- White theme premium.
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation for every endpoint.
+- Stable DTOs: never crash on empty/undefined; return [] not undefined.
+- No “failed data” for empty states.
+- Expo Go mobile must not crash (fix undefined map).
+- Bottom sheets for forms and selectors (slide up).
+- Minimal dependencies; reuse existing bottom sheet and brand logo components if present.
+- Audit FIRST, then implement.
+
+========================================================
+TASK 1 — AUDIT & ROOT CAUSE (MANDATORY)
+========================================================
+A) Doctors Add not opening:
+1) Identify Doctors screen route file path.
+2) Identify Add button code (headerRight/FAB) and the intended sheet component.
+3) Find why it doesn’t open:
+- missing state hook?
+- wrong import path?
+- sheet component not mounted?
+- navigation to a non-existing route?
+- z-index/modal not visible?
+Provide file paths + exact bug cause.
+
+B) Guest detail docTypes?.map crash:
+1) Identify Guest Detail screen route file path.
+2) Locate the code that calls docTypes?.map and why docTypes is undefined.
+3) Identify which API response field is expected (documentTypes? document_types?).
+Provide root cause and exact fix approach (safe defaults + stable DTO).
+
+C) Data wipe targets:
+- Confirm DB tables for transports and document_types and their clinic scoping.
+
+Output a short audit report before any changes.
+
+========================================================
+TASK 2 — FIX DOCTORS “ADD” UX (PREMIUM, WORKING)
+========================================================
+Goal: Add Doctor must reliably open a bottom-sheet form and persist to DB.
+
+Frontend:
+1) Add a "+" button in Doctors screen headerRight (or FAB) that opens DoctorFormSheet.
+2) Implement/repair:
+components/managerDoctors/DoctorFormSheet.tsx
+- bottom sheet
+- required fields: fullName, specialty
+- optional: phoneE164, email, university, experienceYears, languages, bio, diplomaUrl, photoUrl
+- client validation
+- submit loading + success toast
+- on success: close sheet + invalidate doctors list query
+
+Backend:
+3) Verify POST /v1/manager/doctors exists and works.
+If missing/buggy: implement SOLID module (controller/usecase/repo) with zod schema.
+Return created doctor.
+
+Verification:
+- Add doctor -> appears in list immediately
+- Restart app -> still exists
+
+========================================================
+TASK 3 — WIPE ALL TRANSPORTS + DOCUMENT TYPES (DEV RESET, SAFE)
+========================================================
+Implement a safe dev-only script:
+server/scripts/wipeTransportsAndDocTypes.ts
+
+Guards:
+- refuse NODE_ENV==="test"
+- refuse DB name contains "test"
+- dry-run by default
+- require WIPE_CONFIRM="YES_WIPE_TRN_DOC"
+
+Actions:
+- delete/truncate (FK-safe order):
+  - patient_documents (if tied to document types) (optional: block if you want)
+  - document_types
+  - transports
+If foreign keys exist and cascade is safe, TRUNCATE CASCADE may be used only for these tables.
+Print before/after counts.
+
+Commands to run:
+- DRY: NODE_ENV=development tsx server/scripts/wipeTransportsAndDocTypes.ts
+- REAL: WIPE_CONFIRM=YES_WIPE_TRN_DOC NODE_ENV=development tsx server/scripts/wipeTransportsAndDocTypes.ts
+
+========================================================
+TASK 4 — GUEST DETAIL SCREEN: REBUILD PREMIUM UX (NO CRASH)
+========================================================
+A) Backend: provide a single stable guest detail endpoint (recommended)
+GET /v1/manager/patients/:id/details
+Return 200 ALWAYS with defaults:
+{
+  patient: {...},
+  tracking: { currentStep: string, steps: [...] } or currentStep only,
+  transport: null | { id, vehicleBrand, vehicleModel, licensePlate, driverFullName, driverPhoneE164 },
+  hotel: null | { id, name, address?, phone? , website? },
+  documentTypes: [],          // all clinic doc types or only assigned types depending on design
+  assignedDocuments: [        // patient_documents list
+    { id, typeId, typeName, instructionText, status } 
+  ],
+  docSummary: { pending: 0, uploaded: 0 }
+}
+CRITICAL:
+- documentTypes must be [] not undefined (fix docTypes?.map crash).
+- transport/hotel must be null not undefined.
+
+If such endpoint already exists:
+- fix it to return stable defaults.
+- ensure property names match frontend usage exactly.
+
+B) Tracking flow steps (UX)
+Steps exactly:
+1) Arrived airport
+2) Picked up (vehicle)
+3) Arrived hotel
+4) Attended appointment
+5) Back to airport
+6) Arrived home
+Implement:
+- tracking.currentStep stored per patient (db column patient.currentStep or patient_tracking table)
+- Manager can update currentStep from guest detail (dropdown or tap step)
+- Save to DB (PUT /v1/manager/patients/:id/tracking)
+
+C) Guest detail UI layout (premium)
+Screen sections:
+1) Hero:
+- Guest name
+- Status pill (WAITING_APPROVAL/APPROVED/ENDED etc.)
+- Dates: arrival -> departure
+
+2) Tracking flow (stepper):
+- horizontal or vertical stepper with 6 steps
+- current step highlighted (green)
+- completed steps light green
+- future steps gray
+- small “Update step” control
+
+3) Cards area:
+A) Transport Card
+- If assigned:
+  - brand logo (use VehicleBrandLogo)
+  - brand+model big
+  - plate
+  - driver name + phone chip
+- If not assigned:
+  - “No transport assigned” + "+" button
+  - "+" opens bottom sheet selector list of transports in clinic
+  - select one -> assign to patient
+
+B) Documents Card
+- Shows summary: Pending X / Uploaded Y
+- Shows list of assigned docs (typeName + status pill)
+- If none assigned:
+  - “No documents assigned” + "+" button to assign document type
+- "+" opens bottom sheet:
+  - select document type from clinic list
+  - enter instructionText (required)
+  - assign => creates patient_document status=PENDING
+- View/download only when UPLOADED (future)
+
+C) Hotel Card
+- If assigned:
+  - hotel name big + address/phone
+- If not:
+  - “No hotel assigned” + "+" button
+- "+" opens bottom sheet selector list of hotels
+- select -> assign hotel to patient
+
+D) Bottom sheets (selectors)
+Implement:
+components/guestDetail/AssignTransportSheet.tsx
+components/guestDetail/AssignHotelSheet.tsx
+components/guestDetail/AssignDocTypeSheet.tsx
+All:
+- searchable list
+- confirm selection
+- mutation calls backend
+- invalidate guest detail query
+
+D) Fix docTypes crash immediately
+- In UI: always do (docTypes ?? []).map(...)
+- But ALSO fix API to always return arrays.
+
+========================================================
+TASK 5 — BACKEND ASSIGNMENT ENDPOINTS (SOLID)
+========================================================
+Ensure endpoints exist and work clinic-scoped:
+- PUT /v1/manager/patients/:id/assign-transport { transportId }
+- PUT /v1/manager/patients/:id/assign-hotel { hotelId }
+- POST /v1/manager/patients/:id/assign-documents { typeId, instructionText }
+- PUT /v1/manager/patients/:id/tracking { currentStep }
+All must:
+- validate with zod
+- verify patient belongs to manager clinic
+- update patient_plan or relevant tables
+- return updated detail or 204
+- audit log event
+
+========================================================
+TASK 6 — QA / VERIFICATION (MANDATORY)
+========================================================
+1) Doctor add opens bottom sheet and saves to DB.
+2) wipeTransportsAndDocTypes works:
+- before/after counts printed
+- transports and document_types become 0
+3) Guest detail no longer crashes in Expo Go.
+4) Guest detail shows:
+- tracking stepper works and can update
+- assign transport/hotel/doc types via "+" sheets works
+- empty states show “No transport/hotel/docs” properly
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion print:
+1) Audit root cause report (Doctors add + docTypes crash)
+2) Files changed/added
+3) New endpoints + sample curl
+4) Commands to wipe transports & doc types
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Task 1 audit
+2) Task 2 fix Doctors add (UI + backend)
+3) Task 3 wipe script
+4) Task 4 guest detail rebuild + crash fix
+5) Task 5 ensure assignment endpoints
+6) Task 6 verification
+
+Proceed now. Implement end-to-end and verify on Expo Go.
+END.

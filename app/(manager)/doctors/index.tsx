@@ -102,6 +102,10 @@ export default function DoctorsScreen() {
       const method = editingItem ? "PUT" : "POST";
       const path = editingItem ? `/v1/manager/doctors/${editingItem.id}` : "/v1/manager/doctors";
       const res = await apiRequest(method, path, body);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Request failed" }));
+        throw new Error((err as any).message ?? "Failed to save doctor");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -109,8 +113,9 @@ export default function DoctorsScreen() {
       setShowForm(false);
       setEditingItem(null);
       resetForm();
+      showToast(editingItem ? "Doctor updated" : "Doctor added");
     },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to save doctor"),
+    onError: (e: any) => showToast(e.message ?? "Failed to save doctor", "error"),
   });
 
   const resetForm = () => {

@@ -234,7 +234,16 @@ router.get("/patients/:id/details", async (req, res, next) => {
       } : null,
       transport: patient.plan?.transport ? {
         id: patient.plan.transport.id,
-        name: patient.plan.transport.vehicleInfo || patient.plan.transport.driverName || "Transport assigned",
+        vehicleBrand: patient.plan.transport.vehicleBrand ?? null,
+        vehicleModel: patient.plan.transport.vehicleModel ?? null,
+        licensePlate: patient.plan.transport.vehiclePlate ?? null,
+        driverFullName: patient.plan.transport.driverName ?? null,
+        driverPhoneE164: patient.plan.transport.driverPhone ?? null,
+        name: [patient.plan.transport.vehicleBrand, patient.plan.transport.vehicleModel]
+          .filter(Boolean).join(" ") ||
+          patient.plan.transport.vehicleInfo ||
+          patient.plan.transport.driverName ||
+          "Transport assigned",
       } : null,
       documents: documents.map(d => ({
         id: d.id,
