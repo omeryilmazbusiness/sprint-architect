@@ -1,0 +1,150 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+PROBLEM:
+Vehicle brand logos are not showing in the Manager → Transports UI (brand selector list and transport cards).
+We need a production-ready, SOLID-friendly fix:
+- logos must render reliably on iOS/Android and Expo Web
+- use static asset mapping (no dynamic require)
+- provide fallback icon when logo missing
+- keep code clean and modular
+
+NON-NEGOTIABLE:
+- Do not guess. Identify the exact reason logos are not showing (path, dynamic require, svg misuse, missing files, style zero size).
+- Use static `require()` mapping per brand.
+- One shared component for brand logo rendering with fallback.
+- Premium UX: consistent sizing, crisp logos, no layout shifts.
+- No heavy deps added. Prefer PNG/WebP. If SVG is used, handle it correctly (only if already installed).
+
+========================================================
+PHASE 1 — AUDIT & ROOT CAUSE (MANDATORY)
+========================================================
+1) Locate where brand logos are defined and used:
+- constants/vehicleBrands.ts (or equivalent)
+- TransportFormSheet brand selector component
+- TransportListCard component
+2) Check how logos are referenced:
+- Are you doing dynamic require like require(logoPathString)? (This often fails.)
+- Are you using SVG with <Image>? (Won’t render.)
+- Are the asset files actually present in repo?
+3) Confirm image styles:
+- Do logos have explicit width/height? If not, they may render at 0.
+4) Confirm platform:
+- Does it fail on native only, web only, or both?
+5) Print a short root cause report:
+- exact file/line that causes failure and why.
+
+Do not implement until this report is done.
+
+========================================================
+PHASE 2 — PROFESSIONAL ASSET STRATEGY (STATIC MAPPING)
+========================================================
+1) Create/ensure assets folder:
+assets/brands/
+  mercedes.png
+  lexus.png
+  volkswagen.png
+  bmw.png
+  audi.png
+  toyota.png
+  ford.png
+
+Rules:
+- Prefer PNG or WebP with transparent background.
+- Keep consistent sizes (e.g., 256x256).
+- Filenames lowercase.
+
+2) Create a single source-of-truth brand registry:
+src/constants/vehicleBrands.ts (or equivalent)
+
+Example structure:
+export type VehicleBrandKey =
+  | "MERCEDES"
+  | "LEXUS"
+  | "VOLKSWAGEN"
+  | "BMW"
+  | "AUDI"
+  | "TOYOTA"
+  | "FORD";
+
+export const VEHICLE_BRANDS: Record<VehicleBrandKey, {
+  key: VehicleBrandKey;
+  label: string;
+  logo: any; // ImageSourcePropType with static require
+}> = {
+  MERCEDES: { key:"MERCEDES", label:"Mercedes", logo: require("../../assets/brands/mercedes.png") },
+  ...
+};
+
+IMPORTANT:
+- Use ONLY static require() calls in this file.
+- Do not store string paths.
+
+========================================================
+PHASE 3 — BUILD A REUSABLE LOGO COMPONENT (SOLID FRONTEND)
+========================================================
+Create:
+components/brands/VehicleBrandLogo.tsx
+
+Props:
+- brand: VehicleBrandKey | string | null
+- size?: number (default 36)
+- rounded?: boolean (default true)
+Behavior:
+- If brand exists in registry => render <Image source={logo} />
+- If missing/unknown => render fallback:
+  - a small “car” icon (from existing icon set) or a placeholder circle with initials
+- Must always have width/height to prevent 0-size render.
+
+Add:
+- imageStyle: resizeMode="contain"
+- containerStyle: subtle border, white background, padding
+
+========================================================
+PHASE 4 — INTEGRATE EVERYWHERE (SELECTOR + LIST CARDS)
+========================================================
+1) TransportFormSheet brand selector:
+- Replace any inline Image logic with <VehicleBrandLogo brand={key} size={40} />
+- Show brand label next to logo
+- Ensure selection highlight works
+
+2) TransportListCard:
+- Replace logo with <VehicleBrandLogo brand={transport.vehicleBrand} size={40} />
+- Ensure card layout: logo left, brand+model big, plate, driver
+
+3) Ensure transport DTO stores vehicleBrand as the brand key (e.g., "MERCEDES"), not label text.
+- If currently storing label, map label -> key in backend or on submit.
+
+========================================================
+PHASE 5 — VERIFY ON WEB + NATIVE
+========================================================
+1) Add a tiny debug screen (DEV only) or a test row:
+- Render all brand logos in a grid to verify mapping.
+2) Verify:
+- Brand selector shows logos
+- List cards show correct logo
+- Unknown brand shows fallback
+- No errors in console
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Root cause report (why logos didn’t show)
+2) Files changed/added
+3) Brand registry mapping example (one snippet)
+4) Manual QA checklist:
+- selector shows logos
+- list cards show logos
+- fallback works
+- web + native verified
+
+IMPLEMENTATION ORDER:
+1) Audit + root cause
+2) Add/verify assets
+3) Create vehicleBrands registry with static requires
+4) Create VehicleBrandLogo component
+5) Integrate into selector + list cards
+6) Verify platforms
+
+Proceed now. Implement and verify.
+END.

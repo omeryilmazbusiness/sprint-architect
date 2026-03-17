@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
-import { BrandBadge } from "./BrandBadge";
+import { VehicleBrandLogo } from "@/components/brands/VehicleBrandLogo";
 import { getBrand } from "@/constants/vehicleBrands";
 
 export interface TransportItem {
@@ -50,7 +50,7 @@ export function TransportListCard({ item, onEdit, onDelete }: TransportListCardP
       onPress={() => onEdit(item)}
     >
       <View style={styles.topRow}>
-        <BrandBadge brand={item.vehicleBrand} size={48} />
+        <VehicleBrandLogo brand={item.vehicleBrand} size={48} />
 
         <View style={styles.info}>
           <Text style={styles.brandModel} numberOfLines={1}>

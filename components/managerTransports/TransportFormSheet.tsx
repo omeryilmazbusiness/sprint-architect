@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
 import { VEHICLE_BRANDS, type VehicleBrandKey } from "@/constants/vehicleBrands";
-import { BrandBadge } from "./BrandBadge";
+import { VehicleBrandLogo } from "@/components/brands/VehicleBrandLogo";
 import { PhonePickerInput, type PhonePickerValue } from "@/components/forms/PhonePickerInput";
 
 const EMPTY_PHONE: PhonePickerValue = { raw: "", e164: null, countryCode: "TR" };
@@ -186,7 +186,7 @@ export function TransportFormSheet({ visible, onClose, onSubmit, isLoading, edit
                         style={[styles.brandOption, selected && styles.brandOptionSelected]}
                         testID={`brand-${b.key}`}
                       >
-                        <BrandBadge brand={b.key} size={38} />
+                        <VehicleBrandLogo brand={b.key} size={38} />
                         <Text style={[styles.brandLabel, selected && styles.brandLabelSelected]}>
                           {b.label}
                         </Text>
