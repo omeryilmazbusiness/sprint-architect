@@ -698,61 +698,6 @@ router.delete("/hotels/:id", async (req, res, next) => {
 });
 
 
-router.get("/document-types", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const types = await documentRepo.listDocumentTypes(clinicId);
-    res.json({ rows: types });
-  } catch (e) { next(e); }
-});
-
-const createDocTypeSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  isRequired: z.boolean().optional(),
-});
-
-router.put("/document-types/:id", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const { id } = req.params;
-    const body = validateBody(z.object({
-      name: z.string().min(1).optional(),
-      description: z.string().optional(),
-      isRequired: z.boolean().optional(),
-    }), req.body);
-
-    const existing = await db.query.documentTypes.findFirst({
-      where: and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)),
-    });
-    if (!existing) notFound("Document type");
-
-    const [updated] = await db.update(documentTypes)
-      .set({ ...body, updatedAt: new Date() } as any)
-      .where(and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)))
-      .returning();
-    res.json(updated);
-  } catch (e) { next(e); }
-});
-
-router.post("/document-types", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const body = validateBody(createDocTypeSchema, req.body);
-    const dt = await documentRepo.createDocumentType({ clinicId, ...body });
-    res.status(201).json(dt);
-  } catch (e) { next(e); }
-});
-
-router.delete("/document-types/:id", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const dt = await documentRepo.deleteDocumentType(req.params.id, clinicId);
-    if (!dt) notFound("Document type");
-    res.json({ success: true });
-  } catch (e) { next(e); }
-});
-
 router.get("/patients/:id/documents", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);

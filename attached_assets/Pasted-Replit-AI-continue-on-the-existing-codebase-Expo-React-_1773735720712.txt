@@ -1,0 +1,161 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Implement Manager → Services → Document Types as a fully working, production-ready feature:
+- Manager can open “Document Types”
+- See a list of document types belonging ONLY to their clinic
+- Tap “Add Document” to create a new document type (name + note/description)
+- The document type remains stored in DB and is clinic-specific (each clinic has its own types)
+- For now, ONLY implement document types (assignment to guests will come later)
+
+UX REQUIREMENTS (premium):
+- White theme, modern cards
+- Document type list cards:
+  - Title: document name (big)
+  - Subtitle: short note/description (muted, 1–2 lines)
+- Add Document opens as a bottom-sheet popup:
+  - Fields: Name (required), Note/Description (optional but recommended)
+  - Validation inline
+  - Submit shows loading
+  - On success: close sheet, toast success, list refresh
+- Empty state: “No document types yet” + CTA “Add Document”
+- Error state with Retry
+
+SOLID / PROD-READY REQUIREMENTS:
+- Backend must be SOLID layered: controller -> usecase -> repo; DB only in repo
+- Strict clinic scoping derived from manager auth (never from client input)
+- Zod validation for request body and query
+- Stable DTO: empty DB returns 200 with []
+- Uniqueness rule (recommended):
+  - document type name unique per clinic (case-insensitive)
+  - return a clean error code like DOC-TYPE-001 if duplicate
+- Audit log events for create/delete (if audit exists)
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate current “Services → Document Types” screen route file path.
+2) Check if any document_types endpoints exist already.
+3) Confirm DB table document_types columns and clinicId.
+4) Output audit summary: what exists vs what is missing.
+
+Do not implement changes until audit is complete.
+
+========================================================
+PHASE 2 — BACKEND IMPLEMENTATION (SOLID)
+========================================================
+Implement or fix these endpoints (Manager only):
+
+1) List document types:
+GET /v1/manager/document-types
+Query:
+- search? (optional)
+Return:
+{ items: [{ id, name, note, createdAt }], totalCount }
+
+2) Create document type:
+POST /v1/manager/document-types
+Body (zod):
+{
+  name: string (min 2, max 60),
+  note?: string (max 240)
+}
+Rules:
+- clinicId derived from manager session
+- Normalize name (trim, collapse spaces)
+- Enforce unique per clinic (case-insensitive):
+  - if duplicate => AppError code DOC-TYPE-001 with userMessage “This document type already exists.”
+Return created DTO.
+
+3) (Optional but professional) Delete:
+DELETE /v1/manager/document-types/:id
+- only if not used in assignments (for later). For now, allow delete freely OR hide delete until assignment exists.
+
+SOLID module:
+server/modules/managerDocumentTypes/
+  managerDocumentTypes.routes.ts
+  managerDocumentTypes.controller.ts
+  schemas/managerDocumentTypes.schemas.ts
+  usecases/ListDocumentTypes.ts
+  usecases/CreateDocumentType.ts
+  usecases/DeleteDocumentType.ts (optional)
+  repos/ManagerDocumentTypesRepo.drizzle.ts
+
+========================================================
+PHASE 3 — FRONTEND UI (PREMIUM)
+========================================================
+1) Screen:
+app/(manager)/services/document-types/index.tsx (or your existing path)
+Layout:
+- Header: “Document Types”
+- Search bar (optional)
+- "+" or “Add Document” button (headerRight or FAB)
+- FlatList of DocumentTypeCard
+
+2) DocumentTypeCard component:
+components/documentTypes/DocumentTypeCard.tsx
+- Title (name)
+- Subtitle (note, truncated)
+- (optional) small “Created” date
+- (optional) delete icon (if you implement delete)
+
+3) Add Document bottom sheet:
+components/documentTypes/DocumentTypeFormSheet.tsx
+Fields:
+- Name (required)
+- Note / Description (optional)
+Actions:
+- Cancel
+- Save
+Behavior:
+- Validate required
+- On save:
+  - call POST endpoint
+  - toast success
+  - close sheet
+  - refetch list
+
+4) Data fetching:
+hooks/useManagerDocumentTypesQuery.ts (React Query)
+services/api/managerDocumentTypes.ts
+- listDocumentTypes()
+- createDocumentType()
+- deleteDocumentType() optional
+
+States:
+- Loading skeleton
+- Empty state with CTA
+- Error state with Retry
+
+========================================================
+PHASE 4 — VERIFICATION
+========================================================
+Manual QA checklist:
+- Open Document Types -> list loads
+- Add Document -> saved to DB, appears in list immediately
+- Restart app -> type still exists
+- Duplicate name in same clinic blocked with clean message (DOC-TYPE-001)
+- Empty DB shows clean empty state (no error text)
+
+Backend tests (minimum):
+- create + list works and clinic scoping enforced
+- duplicate blocked (DOC-TYPE-001)
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit summary with file paths
+2) Files changed/added
+3) Endpoints + sample curl for create/list
+4) Error codes added (DOC-TYPE-001)
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Backend endpoints + validation + unique rule
+3) Frontend list + add sheet + React Query invalidation
+4) Tests + final verification
+
+Proceed now. Make it SOLID, premium UX, production-ready.
+END.

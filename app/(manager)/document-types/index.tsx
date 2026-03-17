@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,86 +9,97 @@ import {
   ActivityIndicator,
   Platform,
   Modal,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
   ScrollView,
   Alert,
   RefreshControl,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
-import { Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
 
-import { Switch } from "react-native";
+const SCREEN_H = Dimensions.get("window").height;
+const QK = ["/v1/manager/document-types"] as const;
 
-interface DocumentType {
+interface DocumentTypeItem {
   id: string;
   name: string;
-  description?: string;
-  isRequired: boolean;
+  note: string | null;
+  createdAt: string;
+}
+
+interface ListResponse {
+  items: DocumentTypeItem[];
+  totalCount: number;
 }
 
 export default function DocumentTypesScreen() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<DocumentType | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", isRequired: false });
+  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const [showForm, setShowForm] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: DocumentType[] }>({
-    queryKey: ["/v1/manager/document-types"],
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery<ListResponse>({
+    queryKey: QK,
   });
 
-  const mutation = useMutation({
-    mutationFn: async (body: any) => {
-      const method = editingItem ? "PUT" : "POST";
-      const path = editingItem ? `/v1/manager/document-types/${editingItem.id}` : "/v1/manager/document-types";
-      const res = await apiRequest(method, path, body);
+  const createMutation = useMutation({
+    mutationFn: async (body: { name: string; note?: string }) => {
+      const res = await apiRequest("POST", "/v1/manager/document-types", body);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.code === "DOC-TYPE-001") throw new Error("This document type already exists.");
+        throw new Error(j?.message ?? "Failed to create document type");
+      }
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/v1/manager/document-types"] });
+      qc.invalidateQueries({ queryKey: QK });
       setShowForm(false);
-      setEditingItem(null);
-      resetForm();
+      setFormError(null);
+      showToast("Document type created", "success");
     },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to save document type"),
+    onError: (e: any) => {
+      setFormError(e.message ?? "Something went wrong");
+    },
   });
-
-  const resetForm = () => {
-    setForm({ name: "", description: "", isRequired: false });
-  };
-
-  const handleEdit = (item: DocumentType) => {
-    setEditingItem(item);
-    setForm({
-      name: item.name || "",
-      description: item.description || "",
-      isRequired: !!item.isRequired,
-    });
-    setShowForm(true);
-  };
-
-  const handleCreate = () => {
-    setEditingItem(null);
-    resetForm();
-    setShowForm(true);
-  };
-
-  const handleSubmit = () => {
-    if (!form.name.trim()) return;
-    mutation.mutate(form);
-  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/v1/manager/document-types/${id}`);
+      const res = await apiRequest("DELETE", `/v1/manager/document-types/${id}`);
+      if (!res.ok) throw new Error("Failed to delete");
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/v1/manager/document-types"] }),
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to delete document type"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK });
+      showToast("Document type removed", "success");
+    },
+    onError: () => showToast("Failed to delete document type", "error"),
   });
+
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), type === "error" ? 2200 : 1400);
+  };
+
+  const handleDelete = (item: DocumentTypeItem) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Remove "${item.name}"?`)) deleteMutation.mutate(item.id);
+    } else {
+      Alert.alert("Remove Document Type", `Remove "${item.name}"?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+      ]);
+    }
+  };
+
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   return (
     <View style={styles.root}>
@@ -99,181 +110,268 @@ export default function DocumentTypesScreen() {
         right={
           <Pressable
             style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={handleCreate}
+            onPress={() => { setFormError(null); setShowForm(true); }}
+            testID="btn-add-document-type"
           >
-            <Ionicons name="add" size={20} color={T.primary} />
+            <Ionicons name="add" size={22} color={T.primary} />
           </Pressable>
         }
       />
 
       {isLoading ? (
-        <View style={styles.loader}><ActivityIndicator color={T.accent} size="large" /></View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={T.accent} />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={40} color={T.textMuted} />
+          <Text style={styles.errorText}>Could not load document types</Text>
+          <Pressable style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        </View>
       ) : (
-        <FlatList
-          data={data?.rows ?? []}
+        <FlatList<DocumentTypeItem>
+          data={data?.items ?? []}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingBottom: bottomPad + 40, paddingHorizontal: T.sp16, paddingTop: T.sp16 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomPad + 40 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="document-attach-outline" size={36} color={T.textMuted} />
-              <Text style={styles.emptyText}>No document types yet. Add your first type.</Text>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="document-attach-outline" size={32} color={T.accent} />
+              </View>
+              <Text style={styles.emptyTitle}>No document types yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Create document types for your clinic. They will be used to track guest documentation.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { setFormError(null); setShowForm(true); }}
+              >
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.emptyBtnText}>Add Document Type</Text>
+              </Pressable>
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable onPress={() => handleEdit(item)} style={[styles.card, cardShadow]}>
-              <View style={styles.row}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name="document-attach-outline" size={20} color={T.warning} />
-                </View>
-                <View style={styles.info}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    {item.isRequired && (
-                      <View style={styles.requiredBadge}>
-                        <Text style={styles.requiredText}>Required</Text>
-                      </View>
-                    )}
-                  </View>
-                  {item.description && <Text style={styles.meta} numberOfLines={2}>{item.description}</Text>}
-                </View>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => Alert.alert("Delete Type", `Remove "${item.name}"?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-                  ])}
-                >
-                  <Ionicons name="trash-outline" size={18} color={T.danger} />
-                </Pressable>
-              </View>
-            </Pressable>
+            <DocumentTypeCard item={item} onDelete={() => handleDelete(item)} />
           )}
         />
       )}
 
-      <Modal visible={showForm} animationType="slide" presentationStyle="formSheet">
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingItem ? "Edit Document Type" : "Add Document Type"}</Text>
-            <Pressable onPress={() => setShowForm(false)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={T.text} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Name *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="e.g. Medical History Report"
-                placeholderTextColor={T.textMuted}
-                value={form.name}
-                onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
-              />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Description</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.textArea]}
-                placeholder="Describe what this document is for…"
-                placeholderTextColor={T.textMuted}
-                value={form.description}
-                onChangeText={(v) => setForm((f) => ({ ...f, description: v }))}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-            <View style={[styles.field, styles.toggleField]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Required</Text>
-                <Text style={styles.fieldHint}>Patients must upload this document</Text>
-              </View>
-              <Switch
-                value={form.isRequired}
-                onValueChange={(v) => setForm((f) => ({ ...f, isRequired: v }))}
-                trackColor={{ false: T.border, true: T.primary }}
-              />
-            </View>
-          </ScrollView>
-          <View style={styles.modalActions}>
-            <Pressable style={styles.btnSecondary} onPress={() => setShowForm(false)}>
-              <Text style={styles.btnSecondaryText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.btnPrimary, { opacity: !form.name.trim() || mutation.isPending ? 0.6 : 1 }]}
-              onPress={handleSubmit}
-              disabled={!form.name.trim() || mutation.isPending}
-            >
-              {mutation.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.btnPrimaryText}>{editingItem ? "Save Changes" : "Create Type"}</Text>
-              }
-            </Pressable>
-          </View>
+      <DocumentTypeFormSheet
+        visible={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(d) => createMutation.mutate(d)}
+        isLoading={createMutation.isPending}
+        errorMessage={formError}
+      />
+
+      {toast && <Toast message={toast.msg} type={toast.type} />}
+    </View>
+  );
+}
+
+function DocumentTypeCard({ item, onDelete }: { item: DocumentTypeItem; onDelete: () => void }) {
+  const created = new Date(item.createdAt).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+  return (
+    <View style={[styles.card, cardShadow]}>
+      <View style={styles.cardLeft}>
+        <View style={styles.cardIcon}>
+          <Ionicons name="document-text-outline" size={18} color={T.accent} />
         </View>
-      </Modal>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+          {item.note ? (
+            <Text style={styles.cardNote} numberOfLines={2}>{item.note}</Text>
+          ) : (
+            <Text style={styles.cardNotePlaceholder}>No description</Text>
+          )}
+          <Text style={styles.cardDate}>Added {created}</Text>
+        </View>
+      </View>
+      <Pressable onPress={onDelete} hitSlop={10} style={styles.deleteBtn} testID={`delete-doc-type-${item.id}`}>
+        <Ionicons name="trash-outline" size={16} color={T.danger} />
+      </Pressable>
+    </View>
+  );
+}
+
+interface FormSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (data: { name: string; note?: string }) => void;
+  isLoading: boolean;
+  errorMessage?: string | null;
+}
+
+function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMessage }: FormSheetProps) {
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+  const [nameError, setNameError] = useState("");
+
+  useEffect(() => {
+    if (visible) {
+      setName(""); setNote(""); setNameError("");
+      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
+    } else {
+      Animated.timing(slideAnim, { toValue: SCREEN_H, duration: 220, useNativeDriver: true }).start();
+    }
+  }, [visible]);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length < 2) { setNameError("Name must be at least 2 characters"); return; }
+    if (trimmed.length > 60) { setNameError("Name must be at most 60 characters"); return; }
+    setNameError("");
+    onSubmit({ name: trimmed, note: note.trim() || undefined });
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }, { transform: [{ translateY: slideAnim }] }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Add Document Type</Text>
+              <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={T.text} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {!!errorMessage && (
+                <View style={styles.errorBanner}>
+                  <Ionicons name="warning-outline" size={16} color={T.danger} style={{ marginRight: 6 }} />
+                  <Text style={styles.errorBannerText}>{errorMessage}</Text>
+                </View>
+              )}
+              <View style={styles.field}>
+                <Text style={[styles.label, !!nameError && { color: T.danger }]}>
+                  Name {nameError ? `— ${nameError}` : ""}
+                  {!nameError && <Text style={styles.required}> *</Text>}
+                </Text>
+                <TextInput
+                  style={[styles.input, !!nameError && styles.inputError]}
+                  placeholder="e.g. Passport Copy, Medical Report"
+                  placeholderTextColor={T.textMuted}
+                  value={name}
+                  onChangeText={(v) => { setName(v); if (nameError) setNameError(""); }}
+                  returnKeyType="next"
+                  testID="input-doc-type-name"
+                  maxLength={60}
+                />
+              </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Description <Text style={styles.optional}>(optional)</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Brief description of what this document is for"
+                  placeholderTextColor={T.textMuted}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                  numberOfLines={3}
+                  returnKeyType="done"
+                  testID="input-doc-type-note"
+                  maxLength={240}
+                />
+                <Text style={styles.charCount}>{note.length}/240</Text>
+              </View>
+            </ScrollView>
+            <View style={styles.sheetActions}>
+              <Pressable style={({ pressed }) => [styles.btnSecondary, { opacity: pressed ? 0.7 : 1 }]} onPress={onClose}>
+                <Text style={styles.btnSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.btnPrimary, { opacity: pressed || isLoading ? 0.75 : 1 }]}
+                onPress={handleSubmit}
+                disabled={isLoading}
+                testID="btn-save-doc-type"
+              >
+                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>Save</Text>}
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function Toast({ message, type }: { message: string; type: "success" | "error" }) {
+  const insets = useSafeAreaInsets();
+  const top = Platform.OS === "web" ? 67 : insets.top + 8;
+  return (
+    <View
+      style={[styles.toast, type === "error" ? styles.toastError : styles.toastSuccess, { top }]}
+      pointerEvents="none"
+    >
+      <Ionicons
+        name={type === "error" ? "alert-circle-outline" : "checkmark-circle-outline"}
+        size={16} color="#fff" style={{ marginRight: 6 }}
+      />
+      <Text style={styles.toastText}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
-  addBtn: { padding: 6 },
-  card: {
-    backgroundColor: T.surface,
-    borderRadius: T.r12,
-    padding: T.sp16,
-    marginBottom: T.sp12,
-  },
-  row: {
-    flexDirection: "row", alignItems: "center", gap: T.sp12,
-  },
-  iconWrap: {
-    width: 38, height: 38, borderRadius: T.r10, backgroundColor: "#D9770618",
-    alignItems: "center", justifyContent: "center",
-  },
-  info: { flex: 1 },
-  name: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: T.text },
-  requiredBadge: {
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
-    backgroundColor: T.dangerBg, borderWidth: 0.5, borderColor: T.dangerBorder,
-  },
-  requiredText: { fontSize: 10, color: T.danger, fontFamily: "Inter_600SemiBold" as any },
-  meta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
-  empty: { paddingTop: 80, alignItems: "center", gap: T.sp12, paddingHorizontal: T.sp32 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
-  modal: { flex: 1, backgroundColor: T.bg },
-  modalHeader: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: T.sp20, paddingTop: T.sp24, paddingBottom: T.sp16,
-    backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border,
-  },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  modalContent: { padding: T.sp20, gap: T.sp20, paddingBottom: 40 },
-  field: { gap: T.sp4 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
-  fieldHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
-  fieldInput: {
-    backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: T.r10,
-    paddingHorizontal: 14, paddingVertical: T.sp12,
-    fontFamily: "Inter_400Regular", fontSize: 15, color: T.text,
-  },
-  textArea: { height: 80, textAlignVertical: "top" },
-  toggleField: { flexDirection: "row", alignItems: "center", gap: T.sp12 },
-  modalActions: {
-    flexDirection: "row", padding: T.sp20, gap: T.sp12,
-    borderTopWidth: 1, borderTopColor: T.border, backgroundColor: T.surface,
-    ...(Platform.OS === "web" ? { paddingBottom: 34 } : {}),
-  },
-  btnSecondary: {
-    flex: 1, height: 46, borderRadius: T.r10, borderWidth: 1, borderColor: T.border,
-    alignItems: "center", justifyContent: "center", backgroundColor: T.surface,
-  },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  errorText: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted, textAlign: "center" },
+  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8, backgroundColor: T.accent },
+  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  addBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  card: { backgroundColor: T.surface, borderRadius: 14, borderWidth: 1, borderColor: "#E8ECF0", marginBottom: 12, padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  cardLeft: { flex: 1, flexDirection: "row", gap: 12, alignItems: "flex-start" },
+  cardIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  cardInfo: { flex: 1, gap: 2 },
+  cardName: { fontFamily: "Inter_700Bold", fontSize: 16, color: T.text, letterSpacing: -0.2 },
+  cardNote: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, lineHeight: 18, marginTop: 2 },
+  cardNotePlaceholder: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, fontStyle: "italic", marginTop: 2 },
+  cardDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 6 },
+  deleteBtn: { padding: 4, marginTop: 2 },
+  empty: { paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32 },
+  emptyIconWrap: { width: 64, height: 64, borderRadius: 18, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text, textAlign: "center" },
+  emptySubtitle: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center", lineHeight: 20 },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: T.accent, marginTop: 8 },
+  emptyBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden" },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F0F2F5" },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  closeBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "#F4F6F9", alignItems: "center", justifyContent: "center" },
+  sheetBody: { padding: 20, gap: 20 },
+  field: { gap: 6 },
+  label: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec },
+  required: { color: T.danger },
+  optional: { fontFamily: "Inter_400Regular", color: T.textMuted },
+  input: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  inputError: { borderColor: T.danger },
+  textArea: { minHeight: 80, textAlignVertical: "top" },
+  charCount: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, textAlign: "right", marginTop: 2 },
+  errorBanner: { flexDirection: "row", alignItems: "center", backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA", borderRadius: 10, padding: 12 },
+  errorBannerText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.danger, flex: 1 },
+  sheetActions: { flexDirection: "row", paddingHorizontal: 20, paddingTop: 12, gap: 12, borderTopWidth: 1, borderTopColor: "#F0F2F5" },
+  btnSecondary: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center", backgroundColor: T.surface },
   btnSecondaryText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
-  btnPrimary: {
-    flex: 2, height: 46, borderRadius: T.r10, backgroundColor: T.primary,
-    alignItems: "center", justifyContent: "center",
-  },
-  btnPrimaryText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
+  btnPrimary: { flex: 2, height: 48, borderRadius: 12, backgroundColor: T.accent, alignItems: "center", justifyContent: "center" },
+  btnPrimaryText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  toast: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, zIndex: 999 },
+  toastSuccess: { backgroundColor: T.success },
+  toastError: { backgroundColor: T.danger },
+  toastText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", flex: 1 },
 });
