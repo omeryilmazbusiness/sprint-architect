@@ -697,62 +697,6 @@ router.delete("/hotels/:id", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-const createTransportSchema = z.object({
-  driverName: z.string().optional(),
-  driverPhone: z.string().min(1),
-  vehicleInfo: z.string().optional(),
-  vehiclePlate: z.string().optional(),
-  vehicleModel: z.string().optional(),
-  vehicleBrand: z.string().optional(),
-  meetingPointText: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-});
-
-router.post("/transports", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const body = validateBody(createTransportSchema, req.body);
-    const transport = await transportRepo.create({ clinicId, ...body });
-    res.status(201).json(transport);
-  } catch (e) { next(e); }
-});
-
-router.get("/transports", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const transports = await transportRepo.list(clinicId);
-    res.json(transports);
-  } catch (e) { next(e); }
-});
-
-router.get("/transports/:id", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const transport = await transportRepo.findById(req.params.id, clinicId);
-    if (!transport) notFound("Transport");
-    res.json(transport);
-  } catch (e) { next(e); }
-});
-
-router.put("/transports/:id", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const body = validateBody(createTransportSchema.partial(), req.body);
-    const transport = await transportRepo.update(req.params.id, clinicId, body);
-    if (!transport) notFound("Transport");
-    res.json(transport);
-  } catch (e) { next(e); }
-});
-
-router.delete("/transports/:id", async (req, res, next) => {
-  try {
-    const clinicId = getClinicId(req);
-    const transport = await transportRepo.delete(req.params.id, clinicId);
-    if (!transport) notFound("Transport");
-    res.json({ success: true });
-  } catch (e) { next(e); }
-});
 
 router.get("/document-types", async (req, res, next) => {
   try {

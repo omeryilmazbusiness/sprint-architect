@@ -1,0 +1,199 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Upgrade Manager → Services → Transports to premium, production-ready UX and SOLID backend.
+- “Add Transport” must be a short, essential, professional form in a bottom-sheet popup.
+- Do NOT include “meeting point note” or similar free-text meeting-point fields.
+- Save only essential driver + vehicle info.
+- Provide a vehicle brand/logo selector list (Mercedes, Lexus, Volkswagen etc.).
+- Allow custom model name input (we choose brand from list + we type model name).
+- After adding, Transports list cards must show:
+  - Brand logo
+  - Driver full name
+  - Plate number
+  - Brand + Model large and prominent
+
+NON-NEGOTIABLE:
+- White theme premium.
+- SOLID backend modules (controller -> usecase -> repo).
+- Zod validation (server) + client validation.
+- Clinic-scoped (manager only sees own clinic transports).
+- Empty states / loading states must be premium, no “failed data”.
+- No new heavy dependencies. For logos, use local assets in repo (png/svg) and simple Image component.
+- If delete exists, keep it working (confirm modal).
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate current Transports screen route and current “Add transport” UI.
+2) Locate backend endpoints for transports:
+- GET/POST/PUT/DELETE /v1/manager/transports (or current paths)
+3) Identify current transport DB schema fields (driverName, phone, licensePlate, vehicleType, etc.)
+4) Confirm there is an unwanted “meeting point note” field and where it’s used.
+Output a short audit report with file paths and fields.
+
+Do not implement changes until audit is complete.
+
+========================================================
+PHASE 2 — DATA MODEL (ESSENTIAL FIELDS ONLY)
+========================================================
+Transport entity should store:
+- driverFullName (required)
+- driverPhoneE164 (required)
+- vehicleBrand (required)  // e.g., MERCEDES, LEXUS, VOLKSWAGEN
+- vehicleModel (required)  // free text entered by manager, e.g., “Vito 2020”
+- licensePlate (required)
+Optional (only if you already store it):
+- vehicleColor (optional)
+- vehicleYear (optional)
+REMOVE / STOP USING:
+- meetingPointNote (must not exist in form or API; if exists in DB keep column but do not use)
+
+Brand list:
+- MERCEDES
+- LEXUS
+- VOLKSWAGEN
+- BMW
+- AUDI
+- TOYOTA
+- FORD
+(Keep list editable in a constant file.)
+
+========================================================
+PHASE 3 — BACKEND (SOLID) TRANSPORT CREATE/UPDATE
+========================================================
+Ensure endpoints are clinic-scoped and accept the new structure:
+
+POST /v1/manager/transports
+Body (zod):
+{
+  driverFullName: string (min 2),
+  driverPhoneE164: string (E.164),
+  vehicleBrand: enum,
+  vehicleModel: string (min 1),
+  licensePlate: string (min 3, uppercase normalize),
+  vehicleColor?: string,
+  vehicleYear?: number
+}
+Rules:
+- clinicId derived from manager auth, not from client
+- normalize plate (trim, uppercase)
+Return created transport DTO.
+
+PUT /v1/manager/transports/:id
+- same schema partial update allowed
+
+GET /v1/manager/transports
+- returns list including vehicleBrand + vehicleModel + licensePlate + driverFullName
+
+SOLID module:
+server/modules/managerTransports/
+  managerTransports.routes.ts
+  managerTransports.controller.ts
+  schemas/managerTransports.schemas.ts
+  usecases/{ListTransports,CreateTransport,UpdateTransport,DeleteTransport}.ts
+  repos/ManagerTransportsRepo.drizzle.ts
+
+Error codes:
+- TRN-VAL-001 validation
+- TRN-NOT-404 not found
+- TRN-FORB-403 cross-clinic access blocked
+
+========================================================
+PHASE 4 — FRONTEND (PREMIUM UX) ADD TRANSPORT BOTTOM SHEET
+========================================================
+1) Add Transport trigger:
+- In Transports list, add "+" (headerRight) or FAB “Add Transport”.
+- On tap opens bottom-sheet popup (slide up): TransportFormSheet
+
+2) TransportFormSheet (short & pro)
+Sections:
+A) Driver
+- Full name
+- Phone input (flag picker optional; at minimum E.164 input + formatting if you already have phone component)
+B) Vehicle
+- Brand selector (logo list)
+- Model input (text)
+- License plate input
+
+Brand selector UX:
+- Horizontal/vertical list with brand logo + name
+- Tap selects and highlights
+- Selected brand name stored in state as vehicleBrand
+
+Logos:
+- Add local assets:
+  assets/brands/mercedes.png
+  assets/brands/lexus.png
+  assets/brands/volkswagen.png
+  ...
+Create mapping:
+- constants/vehicleBrands.ts:
+  { key:"MERCEDES", label:"Mercedes", logo: require(...) }
+
+Validation (client):
+- Required fields must be filled
+- Plate format simple check
+- Phone required
+
+Submit:
+- Loading state
+- Success toast short
+- Close sheet
+- Refetch transports list
+
+========================================================
+PHASE 5 — TRANSPORTS LIST CARDS (PREMIUM)
+========================================================
+Create:
+components/managerTransports/TransportListCard.tsx
+
+Card layout:
+Top row:
+- Left: Brand logo (36–44px)
+- Middle:
+  - Brand + Model (BIG, bold) e.g., “Mercedes Vito”
+  - Plate number (medium, monospace style) e.g., “34 ABC 123”
+- Right:
+  - Driver full name (small line) + phone chip (optional)
+Second row:
+- Driver full name (if not on right) + phone (tap to call)
+Optional:
+- Delete icon with confirm (if delete supported)
+
+Must look premium white theme:
+- rounded corners
+- subtle border/shadow
+- clear typography hierarchy
+- no clutter
+
+Empty state:
+- “No transports yet” + CTA “Add Transport”
+
+========================================================
+PHASE 6 — VERIFICATION + OUTPUT
+========================================================
+Manual QA checklist:
+- Add transport: brand selection sets vehicleBrand and shows logo selected
+- Model typed manually saved
+- After save: card appears, shows logo + big brand/model + plate + driver name
+- Delete (if exists) removes from list and DB
+- Empty DB shows clean empty state
+
+OUTPUT REQUIREMENTS:
+After implementation print:
+1) Audit summary and removed “meeting point note” usage locations
+2) Files changed/added (including assets list)
+3) Endpoint payload examples
+4) Manual QA results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Backend schema validation and DTO alignment
+3) Add brand constants + logo assets
+4) Build TransportFormSheet (bottom sheet)
+5) Build TransportListCard and wire list
+6) Verify + polish
+
+Proceed now. Make it premium, SOLID, production-ready.
+END.
