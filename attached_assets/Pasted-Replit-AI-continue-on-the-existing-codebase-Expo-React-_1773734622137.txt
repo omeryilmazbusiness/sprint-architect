@@ -1,0 +1,156 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+CONTEXT:
+I pasted the vehicle brand logo images into this chat. Use THESE exact images as the brand logos in the app.
+
+GOAL:
+1) Save the pasted images into the repo as static assets under assets/brands/.
+2) Wire them into a SOLID, production-ready brand registry with static require mapping (NO dynamic require).
+3) Ensure logos render correctly in:
+   - Manager → Services → Add Transport brand selector
+   - Manager → Services → Transports list cards
+4) Ensure fallback logo appears if brand is unknown.
+5) Verify on iOS/Android AND Expo Web.
+
+NON-NEGOTIABLE:
+- MUST use static require() mapping (Expo cannot reliably handle dynamic require for assets).
+- No heavy dependencies.
+- Premium white theme: logos crisp, consistent sizing, no layout shift.
+- SOLID: one source of truth registry + one reusable logo component.
+- Provide clear verification steps and list of files changed.
+
+========================================================
+TASK 1 — AUDIT WHY LOGOS ARE NOT SHOWING (MANDATORY)
+========================================================
+1) Find current brand logo usage points:
+- Transport brand selector UI
+- Transport list card UI
+2) Identify the reason logos do not show:
+- missing assets?
+- dynamic require(stringPath)?
+- svg used with <Image>?
+- no width/height -> 0 size?
+3) Write a short root-cause note (file paths + cause).
+Do NOT proceed until this is written.
+
+========================================================
+TASK 2 — ADD THE PASTED LOGOS AS REPO ASSETS (PROD READY)
+========================================================
+1) Create folder:
+assets/brands/
+
+2) Save each pasted image to a correct file:
+- assets/brands/mercedes.png
+- assets/brands/lexus.png
+- assets/brands/volkswagen.png
+- assets/brands/bmw.png
+- assets/brands/audi.png
+- assets/brands/toyota.png
+- assets/brands/ford.png
+(Only save the ones I pasted; if fewer, save only those. Do not create placeholders.)
+
+3) Normalize images:
+- Ensure transparent background if the logo supports it
+- Ensure square canvas (e.g., 256x256) with padding so it looks centered
+- Keep file size reasonable (optimize without losing quality)
+NOTE: Do not add new tooling dependencies; if you must, do minimal processing or keep as-is.
+
+========================================================
+TASK 3 — STATIC BRAND REGISTRY (SINGLE SOURCE OF TRUTH)
+========================================================
+Create/Update:
+src/constants/vehicleBrands.ts (or app/constants/vehicleBrands.ts — follow project conventions)
+
+Define:
+export type VehicleBrandKey =
+  | "MERCEDES"
+  | "LEXUS"
+  | "VOLKSWAGEN"
+  | "BMW"
+  | "AUDI"
+  | "TOYOTA"
+  | "FORD";
+
+export const VEHICLE_BRANDS: Record<VehicleBrandKey, {
+  key: VehicleBrandKey;
+  label: string;
+  logo: any; // ImageSourcePropType
+}> = {
+  MERCEDES: { key:"MERCEDES", label:"Mercedes", logo: require("../../assets/brands/mercedes.png") },
+  LEXUS: { key:"LEXUS", label:"Lexus", logo: require("../../assets/brands/lexus.png") },
+  ...
+};
+
+RULE:
+- The registry MUST use static require() only.
+- Do NOT store string paths.
+- Do NOT use dynamic require.
+
+========================================================
+TASK 4 — REUSABLE LOGO COMPONENT (SOLID)
+========================================================
+Create:
+components/brands/VehicleBrandLogo.tsx
+
+Props:
+- brand: VehicleBrandKey | string | null
+- size?: number (default 40)
+- variant?: "circle" | "rounded" (default "circle")
+
+Behavior:
+- If brand exists in VEHICLE_BRANDS => render Image with resizeMode="contain"
+- If missing => render fallback:
+  - a neutral circle with a car icon OR initials
+- MUST have explicit width/height always
+
+Style:
+- white background container
+- subtle border
+- small inner padding so logos don’t touch edges
+
+========================================================
+TASK 5 — INTEGRATE INTO TRANSPORT UI (SELECTOR + LIST CARD)
+========================================================
+1) Transport Add form (brand selector):
+- Replace any current Image logic with <VehicleBrandLogo brand={brandKey} size={44} />
+- Show label next to it
+- selection state: highlight selected row/card (border + light background)
+
+2) Transport list card:
+- Show brand logo on left using VehicleBrandLogo
+- “Brand + Model” must be big and prominent (e.g., “Mercedes Vito”)
+- Plate number visible
+- Driver full name visible
+- Ensure layout doesn’t break on small screens
+
+3) Data integrity:
+- Ensure transport.vehicleBrand stored in DB is the brand KEY (e.g., "MERCEDES"), not label.
+- On submit:
+  - send vehicleBrand: "MERCEDES"
+  - send vehicleModel: typed string
+
+========================================================
+TASK 6 — VERIFY (MANDATORY)
+========================================================
+1) Add a DEV-only quick verifier:
+- A small component that renders all logos in a grid using VehicleBrandLogo
+OR a console verification step.
+
+2) Manual checks:
+- Brand selector shows all pasted logos
+- After adding transport, list card shows correct logo
+- Unknown brand shows fallback
+- Works on Expo Web + iOS/Android
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After completion print:
+1) Root cause report (Task 1)
+2) Exactly which logo files were saved under assets/brands/
+3) Files changed/added list
+4) Confirmation that transport DB uses brand key values
+5) Manual QA checklist results
+
+Proceed now and implement. Do not guess; use the pasted images.
+END.
