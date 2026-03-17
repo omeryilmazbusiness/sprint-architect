@@ -79,6 +79,12 @@ function pillColors(status: StatusValue): { bg: string; border: string; text: st
     case "PENDING":
     case "INACTIVE":
       return { bg: T.warningBg, border: T.warningBorder, text: T.warningText };
+    case "WAITING_APPROVAL":
+      return { bg: "#FEF3C7", border: "#F59E0B", text: "#92400E" };
+    case "APPROVED":
+      return { bg: T.successBg, border: T.successBorder, text: T.successText };
+    case "ENDED":
+      return { bg: T.inactiveBg, border: T.inactiveBorder, text: T.inactiveText };
     case "ADMIN":
       return { bg: "#EFF6FF", border: "#BFDBFE", text: "#1E40AF" };
     case "MANAGER":
@@ -88,8 +94,23 @@ function pillColors(status: StatusValue): { bg: string; border: string; text: st
   }
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  WAITING_APPROVAL: "Waiting Approval",
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  ENDED: "Ended",
+  SUSPENDED: "Suspended",
+  UNPAID: "Unpaid",
+  PAID: "Paid",
+  ADMIN: "Admin",
+  MANAGER: "Manager",
+};
+
 export function StatusPill({ status, small }: { status: StatusValue; small?: boolean }) {
   const c = pillColors(status);
+  const label = STATUS_LABELS[status] ?? status;
   return (
     <View
       style={[
@@ -108,7 +129,7 @@ export function StatusPill({ status, small }: { status: StatusValue; small?: boo
           { color: c.text, fontSize: small ? 10 : 12 },
         ]}
       >
-        {status}
+        {label}
       </Text>
     </View>
   );

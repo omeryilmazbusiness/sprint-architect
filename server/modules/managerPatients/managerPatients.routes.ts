@@ -5,7 +5,7 @@ import {
   clinicScopeMiddleware,
   requireActiveClinic,
 } from "../../auth/middleware";
-import { handleListPatients } from "./managerPatients.controller";
+import { handleListPatients, handleApprovePatient } from "./managerPatients.controller";
 
 const router = Router();
 
@@ -17,5 +17,6 @@ router.use(
 );
 
 router.get("/patients", handleListPatients);
+router.post("/patients/:id/approve", handleApprovePatient);
 
 export default router;

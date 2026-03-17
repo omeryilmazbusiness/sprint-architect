@@ -1,0 +1,167 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Implement a production-ready approval workflow for newly created guests:
+1) New guests created by Manager must default to status: WAITING_APPROVAL.
+2) Manager must open Guest Detail screen and manually approve the guest.
+3) The moment the guest is approved, they become billable for the current period and must be included in the clinic’s invoice calculation for that month.
+4) Redesign Guest Detail screen with premium modern UX, including a clear approval banner and approve action.
+
+NON-NEGOTIABLE:
+- SOLID backend (controller -> usecase -> repo; DB only in repo).
+- ACID: approval + billing inclusion must be transactional and idempotent.
+- No “failed data” for empty states.
+- Strict clinic scoping: manager can only approve guests in their clinic.
+- Approval must be performed from Guest Detail (not from list).
+- Billing inclusion must be deterministic and auditable.
+
+========================================================
+TASK 1 — AUDIT (MANDATORY, NO GUESSING)
+========================================================
+1) Confirm current patient status enum values and mapping.
+2) Locate:
+- Create Guest endpoint (manager)
+- Guest Detail screen route file path
+- Current invoice calculation logic and where patient counts come from
+3) Output an audit report:
+- exact file paths
+- current statuses
+- current billing method
+Do not implement until audit is complete.
+
+========================================================
+TASK 2 — DEFAULT STATUS: WAITING_APPROVAL
+========================================================
+Backend:
+1) Update DB enum or mapping:
+- If enum supports it, add WAITING_APPROVAL.
+- If you already have PENDING and prefer not to migrate enum, keep DB as PENDING but map UI label to “Waiting Approval”.
+Preferred: real enum WAITING_APPROVAL for clarity.
+2) Create Guest usecase must set status = WAITING_APPROVAL by default.
+3) Add approvedAt column to patients if not present:
+- approvedAt timestamp nullable
+
+Frontend:
+- Guests list should show status pill “Waiting Approval” for this status.
+
+========================================================
+TASK 3 — MANAGER APPROVE ENDPOINT (SOLID + ACID + IDEMPOTENT)
+========================================================
+Add endpoint:
+POST /v1/manager/patients/:id/approve
+Manager only.
+
+Behavior (transaction):
+1) Load patient by id and verify clinicId matches manager’s clinicId.
+2) If patient.status already APPROVED:
+- return 200 with current patient (idempotent, no error).
+3) Set:
+- status = APPROVED
+- approvedAt = now
+4) Billing inclusion:
+Implement a billable linkage that guarantees inclusion:
+Option A (recommended): Create billing_events table:
+- billing_events: id, clinicId, period(YYYY-MM), patientId, createdAt
+- Unique constraint (clinicId, period, patientId) to avoid duplicates
+On approval:
+- insert billing_events row for current period (Europe/Istanbul)
+5) If an invoice already exists for that clinic & period AND invoice.status == PENDING:
+- recompute patientCount from billing_events for that period
+- amount = patientCount * billingUnitPrice snapshot (use clinic.billingUnitPrice)
+- update invoice.amount (+ optionally store patientCount field if you have it)
+6) Write audit log: PATIENT_APPROVED + metadata (patientId, period)
+
+Return:
+{ patient, billablePeriod }
+
+SOLID module:
+server/modules/managerPatients/
+  managerPatients.routes.ts
+  managerPatients.controller.ts
+  schemas/managerPatients.schemas.ts
+  usecases/ApprovePatient.ts
+  repos/ManagerPatientsRepo.drizzle.ts
+
+Billing events module (if new):
+server/modules/billingEvents/
+  repos/BillingEventsRepo.drizzle.ts
+
+========================================================
+TASK 4 — GUEST DETAIL PAGE: PREMIUM UX + APPROVE BANNER
+========================================================
+1) Audit existing Guest Detail screen and redesign it cleanly:
+- Top hero card:
+  - Avatar initials
+  - Full name
+  - Status pill
+  - Arrival → departure summary
+- If status WAITING_APPROVAL:
+  - Show prominent approval banner (soft warning background):
+    Title: “Waiting Approval”
+    Subtitle: “Approve this guest to start tracking and billing.”
+    Primary CTA: “Approve Guest”
+    Secondary: “Cancel”
+- Approve CTA:
+  - Confirm modal (“Approve this guest?”)
+  - Call approve endpoint
+  - On success:
+    - status becomes APPROVED immediately
+    - show success toast (short duration)
+    - invalidate guest detail + guests list query
+
+2) Keep the rest of guest detail organized (tabs or sections):
+- Overview
+- Documents
+- Hotel
+- Appointments
+- Tracking
+But approval banner must be visible at the top when waiting.
+
+3) Ensure the manager cannot accidentally skip approval:
+- If WAITING_APPROVAL, show “Approve to continue” hint.
+- But still allow viewing details.
+
+========================================================
+TASK 5 — INVOICE INTEGRATION (BILLING MUST INCLUDE APPROVED GUESTS)
+========================================================
+1) Update invoice generation logic:
+- When creating monthly invoices, use billing_events count (clinicId + period)
+- amount = count * billingUnitPrice
+2) Ensure idempotency:
+- If invoice exists for period, do not duplicate.
+3) Ensure “approve” updates invoice if invoice already exists and is PENDING.
+
+========================================================
+TASK 6 — TESTS + QA
+========================================================
+Backend tests:
+- create patient -> status WAITING_APPROVAL
+- approve -> status APPROVED, approvedAt set, billing_events inserted
+- approve again -> idempotent (no duplicates)
+- if invoice PENDING exists -> amount updated
+Frontend QA:
+- new guest shows Waiting Approval
+- open guest detail -> banner visible -> approve works -> status updates
+- after approve, guest appears in billing events for current period
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After completion print:
+1) Audit report summary
+2) Files changed/added
+3) DB migrations (enum/status + approvedAt + billing_events)
+4) Endpoints added + sample curl for approve
+5) Manual QA checklist results
+6) Notes on SOLID boundaries and idempotency strategy
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Default status + DB migration (approvedAt)
+3) Approve endpoint + billing_events + transaction
+4) Guest detail UX redesign + approve banner
+5) Invoice generation update to use billing_events
+6) Tests + final verification
+
+Proceed now. Implement end-to-end and verify.
+END.

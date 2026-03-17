@@ -28,6 +28,20 @@ export interface ListPatientsFilter {
   todayAppt?: boolean;
 }
 
+export interface ApprovePatientInput {
+  patientId: string;
+  clinicId: string;
+  actorId: string;
+  actorRole: string;
+}
+
+export interface ApprovePatientResult {
+  alreadyApproved: boolean;
+  approvedAt: Date;
+  billingPeriod: string;
+}
+
 export interface IManagerPatientsRepo {
   listPatients(filter: ListPatientsFilter): Promise<PatientListResult>;
+  approvePatient(input: ApprovePatientInput): Promise<ApprovePatientResult>;
 }

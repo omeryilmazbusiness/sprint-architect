@@ -21,7 +21,7 @@ interface Patient {
   nationalityCode?: string;
   arrivalDate?: string | null;
   departureDate?: string | null;
-  status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED" | "WAITING_APPROVAL";
   pendingDocCount?: number;
   hasPendingDocs?: boolean;
   hasTodayAppointment?: boolean;

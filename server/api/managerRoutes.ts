@@ -89,7 +89,7 @@ const updatePatientSchema = z.object({
   requestedService: z.string().optional(),
   notes: z.string().optional(),
   preferredLanguage: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "APPROVED", "ENDED"]).optional(),
+  status: z.enum(["ACTIVE", "INACTIVE", "PENDING", "APPROVED", "ENDED", "WAITING_APPROVAL"]).optional(),
 });
 
 router.post("/patients", async (req, res, next) => {
@@ -318,7 +318,7 @@ router.put("/patients/:id/status", async (req, res, next) => {
     const clinicId = getClinicId(req);
     const { id } = req.params;
     const { status } = validateBody(z.object({
-      status: z.enum(["PENDING", "APPROVED", "ENDED"]),
+      status: z.enum(["PENDING", "APPROVED", "ENDED", "WAITING_APPROVAL"]),
     }), req.body);
 
     const existing = await patientRepo.findById(id, clinicId);

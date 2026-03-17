@@ -49,6 +49,7 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "PENDING",
   "APPROVED",
   "ENDED",
+  "WAITING_APPROVAL",
 ]);
 
 export const appointmentStatusEnum = pgEnum("appointment_status", [
@@ -125,7 +126,7 @@ export const patients = pgTable("patients", {
   passportNo: text("passport_no"),
   arrivalDate: text("arrival_date"),
   departureDate: text("departure_date"),
-  status: patientStatusEnum("status").notNull().default("PENDING"),
+  status: patientStatusEnum("status").notNull().default("WAITING_APPROVAL"),
   nationalityCode: text("nationality_code"),
   phoneE164: text("phone_e164"),
   dateOfBirth: text("date_of_birth"),
@@ -139,8 +140,33 @@ export const patients = pgTable("patients", {
   requestedService: text("requested_service"),
   requestedServices: text("requested_services"),
   notes: text("notes"),
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const billingEvents = pgTable(
+  "billing_events",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    clinicId: varchar("clinic_id")
+      .notNull()
+      .references(() => clinics.id),
+    patientId: varchar("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    period: text("period").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("billing_events_clinic_period_patient_idx").on(
+      t.clinicId,
+      t.period,
+      t.patientId
+    ),
+  ]
+);
 
 export const doctors = pgTable("doctors", {
   id: varchar("id")
@@ -432,12 +458,19 @@ export type CredentialRequest = typeof credentialRequests.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type JobRun = typeof jobRuns.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
+export type BillingEvent = typeof billingEvents.$inferSelect;
 
 export const patientsRelations = relations(patients, ({ one, many }) => ({
   plan: one(patientPlans, { fields: [patients.id], references: [patientPlans.patientId] }),
   appointments: many(appointments),
   documents: many(patientDocuments),
   devices: many(devices),
+  billingEvents: many(billingEvents),
+}));
+
+export const billingEventsRelations = relations(billingEvents, ({ one }) => ({
+  clinic: one(clinics, { fields: [billingEvents.clinicId], references: [clinics.id] }),
+  patient: one(patients, { fields: [billingEvents.patientId], references: [patients.id] }),
 }));
 
 export const patientPlansRelations = relations(patientPlans, ({ one }) => ({

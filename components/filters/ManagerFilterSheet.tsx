@@ -17,6 +17,7 @@ import { T } from "@/constants/adminTheme";
 
 export type GuestStatusFilter =
   | "ALL"
+  | "WAITING_APPROVAL"
   | "PENDING"
   | "APPROVED"
   | "ACTIVE"
@@ -37,6 +38,7 @@ export const DEFAULT_GUEST_FILTERS: GuestFilterState = {
 
 const STATUS_OPTIONS: { label: string; value: GuestStatusFilter }[] = [
   { label: "All", value: "ALL" },
+  { label: "Waiting Approval", value: "WAITING_APPROVAL" },
   { label: "Pending", value: "PENDING" },
   { label: "Approved", value: "APPROVED" },
   { label: "Active", value: "ACTIVE" },

@@ -44,7 +44,7 @@ interface Patient {
   nationalityCode?: string;
   arrivalDate?: string | null;
   departureDate?: string | null;
-  status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED" | "WAITING_APPROVAL";
   createdAt?: string;
   pendingDocCount?: number;
   hasPendingDocs?: boolean;
@@ -74,10 +74,11 @@ interface DoctorListResponse {
   rows: Doctor[];
 }
 
-type StatusFilterType = "ALL" | "PENDING" | "APPROVED" | "ENDED" | "ACTIVE" | "INACTIVE";
+type StatusFilterType = "ALL" | "WAITING_APPROVAL" | "PENDING" | "APPROVED" | "ENDED" | "ACTIVE" | "INACTIVE";
 
 const STATUS_FILTERS: { label: string; value: StatusFilterType }[] = [
   { label: "All", value: "ALL" },
+  { label: "Waiting", value: "WAITING_APPROVAL" },
   { label: "Pending", value: "PENDING" },
   { label: "Approved", value: "APPROVED" },
   { label: "Ended", value: "ENDED" },
@@ -166,8 +167,8 @@ function GuestsTab() {
   }
 
   const STATUS_CHIP_LABELS: Record<string, string> = {
-    PENDING: "Pending", APPROVED: "Approved", ACTIVE: "Active",
-    INACTIVE: "Inactive", ENDED: "Ended",
+    WAITING_APPROVAL: "Waiting Approval", PENDING: "Pending", APPROVED: "Approved",
+    ACTIVE: "Active", INACTIVE: "Inactive", ENDED: "Ended",
   };
 
   const activeChips: ActiveChip[] = [];

@@ -61,7 +61,7 @@ export interface UpdatePatientInput {
   requestedService?: string;
   notes?: string;
   preferredLanguage?: string;
-  status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED";
+  status?: "ACTIVE" | "INACTIVE" | "PENDING" | "APPROVED" | "ENDED" | "WAITING_APPROVAL";
 }
 
 function enrichPatient<T extends { requestedServices: string | null; requestedService: string | null }>(row: T) {

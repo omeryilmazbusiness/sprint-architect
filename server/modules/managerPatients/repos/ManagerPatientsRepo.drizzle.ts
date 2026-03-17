@@ -5,7 +5,10 @@ import type {
   IManagerPatientsRepo,
   ListPatientsFilter,
   PatientListResult,
+  ApprovePatientInput,
+  ApprovePatientResult,
 } from "./ManagerPatientsRepo";
+import { AppError } from "../../../auth/errors";
 
 export const managerPatientsRepo: IManagerPatientsRepo = {
   async listPatients(filter): Promise<PatientListResult> {
@@ -123,5 +126,34 @@ export const managerPatientsRepo: IManagerPatientsRepo = {
       pageSize,
       totalCount: Number(totalRows[0]?.count ?? 0),
     };
+  },
+
+  async approvePatient({ patientId, clinicId }: ApprovePatientInput): Promise<ApprovePatientResult> {
+    const patient = await db.query.patients.findFirst({
+      where: and(eq(patients.id, patientId), eq(patients.clinicId, clinicId)),
+    });
+
+    if (!patient) {
+      throw new AppError("NOT_FOUND", "Patient not found", 404);
+    }
+
+    if (patient.status === "APPROVED") {
+      const period = patient.arrivalDate
+        ? patient.arrivalDate.slice(0, 7)
+        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      return { alreadyApproved: true, approvedAt: patient.approvedAt ?? new Date(), billingPeriod: period };
+    }
+
+    const now = new Date();
+    const period = patient.arrivalDate
+      ? patient.arrivalDate.slice(0, 7)
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    await db
+      .update(patients)
+      .set({ status: "APPROVED", approvedAt: now } as any)
+      .where(eq(patients.id, patientId));
+
+    return { alreadyApproved: false, approvedAt: now, billingPeriod: period };
   },
 };

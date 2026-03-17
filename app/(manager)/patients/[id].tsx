@@ -116,7 +116,7 @@ export default function PatientDetailScreen() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async (status: "PENDING" | "APPROVED" | "ENDED") => {
+    mutationFn: async (status: "PENDING" | "APPROVED" | "ENDED" | "WAITING_APPROVAL") => {
       const res = await apiRequest("PUT", `/v1/manager/patients/${id}/status`, { status });
       return res.json();
     },
@@ -127,6 +127,36 @@ export default function PatientDetailScreen() {
     },
     onError: (e: any) => Alert.alert("Error", e.message ?? "Status update failed"),
   });
+
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/v1/manager/patients/${id}/approve`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["/v1/manager/patients"] });
+      qc.invalidateQueries({ queryKey: ["/v1/manager/metrics"] });
+    },
+    onError: (e: any) => Alert.alert("Error", e.message ?? "Approval failed"),
+  });
+
+  const handleApprove = () => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Approve this guest? They will be registered for billing.")) {
+        approveMutation.mutate();
+      }
+      return;
+    }
+    Alert.alert(
+      "Approve Guest",
+      "This will approve the guest and register them for billing. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Approve", onPress: () => approveMutation.mutate() },
+      ]
+    );
+  };
 
   const handleStatusChange = (newStatus: "APPROVED" | "ENDED") => {
     const labels: Record<string, string> = { APPROVED: "Approve", ENDED: "End" };
@@ -253,6 +283,24 @@ export default function PatientDetailScreen() {
         </View>
       </View>
 
+      {patient.status === "WAITING_APPROVAL" && (
+        <View style={[styles.statusBanner, { backgroundColor: "#FFFBEB", borderColor: "#F59E0B", borderWidth: 1 }]}>
+          <View style={styles.statusBannerInfo}>
+            <Ionicons name="hourglass-outline" size={18} color="#92400E" />
+            <Text style={[styles.statusBannerText, { color: "#92400E" }]}>Waiting for approval</Text>
+          </View>
+          <Pressable
+            style={[styles.statusBannerBtn, { backgroundColor: T.success }]}
+            onPress={handleApprove}
+            disabled={approveMutation.isPending}
+          >
+            {approveMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.statusBannerBtnText}>Approve</Text>}
+          </Pressable>
+        </View>
+      )}
+
       {patient.status === "PENDING" && (
         <View style={styles.statusBanner}>
           <View style={styles.statusBannerInfo}>
@@ -261,10 +309,10 @@ export default function PatientDetailScreen() {
           </View>
           <Pressable
             style={[styles.statusBannerBtn, { backgroundColor: T.success }]}
-            onPress={() => handleStatusChange("APPROVED")}
-            disabled={statusMutation.isPending}
+            onPress={handleApprove}
+            disabled={approveMutation.isPending}
           >
-            {statusMutation.isPending
+            {approveMutation.isPending
               ? <ActivityIndicator size="small" color="#fff" />
               : <Text style={styles.statusBannerBtnText}>Approve Guest</Text>}
           </Pressable>
