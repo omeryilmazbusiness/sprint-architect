@@ -1,1712 +1,466 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
-  FlatList,
-  Modal,
-  TextInput,
   ActivityIndicator,
-  Alert,
+  Pressable,
   Platform,
-  RefreshControl,
-  Animated,
-  Dimensions,
-  Linking,
-  TouchableOpacity,
+  Alert,
+  ToastAndroid,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
-import { T, cardShadow, softShadow } from "@/constants/adminTheme";
-import { StatusPill, Card, SectionHeader, ListRow, PrimaryButton, TextField, SecondaryButton } from "@/components/ui";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
-import { apiRequest, getApiUrl } from "@/lib/query-client";
-import * as WebBrowser from "expo-web-browser";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { VehicleBrandLogo } from "@/components/brands/VehicleBrandLogo";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { T, cardShadow } from "@/constants/adminTheme";
+import { apiRequest } from "@/lib/query-client";
+import { GuestHeroCard } from "@/components/guestDetail/GuestHeroCard";
+import { GuestTrackingStepper } from "@/components/guestDetail/GuestTrackingStepper";
+import { TransportAssignmentCard } from "@/components/guestDetail/TransportAssignmentCard";
+import { HotelAssignmentCard } from "@/components/guestDetail/HotelAssignmentCard";
+import { DocumentsAssignmentCard } from "@/components/guestDetail/DocumentsAssignmentCard";
+import { AssignTransportSheet } from "@/components/guestDetail/AssignTransportSheet";
+import { AssignHotelSheet } from "@/components/guestDetail/AssignHotelSheet";
+import { AssignDocTypeSheet } from "@/components/guestDetail/AssignDocTypeSheet";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-interface Patient {
-  id: string;
-  fullName: string;
-  patientKey: string;
-  phone?: string;
-  email?: string;
-  nationality?: string;
-  arrivalDate?: string;
-  departureDate?: string;
-  status: string;
-  notes?: string;
-}
-
-interface Appointment {
-  id: string;
-  title: string;
-  startAt: string;
-  status: string;
-  doctor?: { fullName: string };
-}
-
-interface Document {
-  id: string;
-  status: "ASSIGNED" | "UPLOADED" | "APPROVED" | "REJECTED";
-  fileUrl?: string;
-  documentType?: { id: string; name: string; code: string; isRequired: boolean };
-}
-
-interface RequiredDoc {
-  code: string;
-  name: string;
-  status: string | null;
-  fileUrl?: string | null;
-  documentId?: string | null;
-}
-
-interface AggregateData {
-  patient: Patient;
-  plan: any;
-  doctor: { id: string; fullName: string; specialty?: string } | null;
-  hotel: { id: string; name: string } | null;
-  transport: {
+interface GuestDetail {
+  patient: {
     id: string;
-    name: string;
-    vehicleBrand?: string | null;
-    vehicleModel?: string | null;
-    licensePlate?: string | null;
-    driverFullName?: string | null;
-    driverPhoneE164?: string | null;
-  } | null;
-  documents: Document[];
-  requiredDocuments?: RequiredDoc[];
-  appointments: Appointment[];
-  nextAppointment: Appointment | null;
+    clinicId: string;
+    fullName: string;
+    status: string;
+    patientKey: string;
+    phoneE164: string | null;
+    email: string | null;
+    nationality: string | null;
+    passportNo: string | null;
+    arrivalDate: string | null;
+    departureDate: string | null;
+    notes: string | null;
+  };
   tracking: { currentStep: string | null };
+  assignments: {
+    transport: {
+      id: string;
+      vehicleBrand: string | null;
+      vehicleModel: string | null;
+      licensePlate: string | null;
+      driverFullName: string | null;
+      driverPhoneE164: string | null;
+    } | null;
+    hotel: {
+      id: string;
+      name: string;
+      address: string | null;
+      phone: string | null;
+      website: string | null;
+    } | null;
+  };
+  documents: {
+    assigned: Array<{
+      id: string;
+      typeId: string;
+      typeName: string;
+      instructionText: string | null;
+      status: string;
+    }>;
+    summary: { pending: number; uploaded: number };
+  };
+  nextAppointment: {
+    id: string;
+    title: string | null;
+    startAt: string;
+    doctor: { fullName: string } | null;
+  } | null;
 }
 
-const STEP_LABELS: Record<string, string> = {
-  PRE_ARRIVAL: "Pre-Arrival",
-  ARRIVAL_TRANSFER: "Arrival & Transfer",
-  HOTEL_CHECKIN: "Hotel Check-in",
-  TREATMENT: "Treatment",
-  FOLLOWUP: "Follow-up",
-  DEPARTURE: "Departure",
-};
+function showToast(msg: string) {
+  if (Platform.OS === "android") {
+    ToastAndroid.show(msg, ToastAndroid.SHORT);
+  } else if (Platform.OS !== "web") {
+    Alert.alert("", msg, [{ text: "OK" }], { cancelable: true });
+  }
+}
 
-const TRACKING_STEPS = [
-  { key: "PRE_ARRIVAL", icon: "airplane-outline" as const },
-  { key: "ARRIVAL_TRANSFER", icon: "car-outline" as const },
-  { key: "HOTEL_CHECKIN", icon: "business-outline" as const },
-  { key: "TREATMENT", icon: "medical-outline" as const },
-  { key: "FOLLOWUP", icon: "calendar-outline" as const },
-  { key: "DEPARTURE", icon: "airplane" as const },
-];
+function fmtTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
-export default function PatientDetailScreen() {
+export default function GuestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const qc = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Sheet visibility states
-  const [assignDocsVisible, setAssignDocsVisible] = useState(false);
-  const [newApptVisible, setNewApptVisible] = useState(false);
-  const [changeHotelVisible, setChangeHotelVisible] = useState(false);
-  const [changeTransportVisible, setChangeTransportVisible] = useState(false);
-  const [editPatientVisible, setEditPatientVisible] = useState(false);
+  const [showTransportSheet, setShowTransportSheet] = useState(false);
+  const [showHotelSheet, setShowHotelSheet] = useState(false);
+  const [showDocSheet, setShowDocSheet] = useState(false);
 
-  const queryKey = [`/v1/manager/patients/${id}/details`];
-  const { data, isLoading, error, refetch } = useQuery<AggregateData>({
-    queryKey,
+  const detailKey = [`/v1/manager/patients/${id}/details`];
+
+  const { data, isLoading, isError, refetch } = useQuery<GuestDetail>({
+    queryKey: detailKey,
+    enabled: !!id,
+    retry: 1,
   });
 
-  const statusMutation = useMutation({
-    mutationFn: async (status: "PENDING" | "APPROVED" | "ENDED" | "WAITING_APPROVAL") => {
-      const res = await apiRequest("PUT", `/v1/manager/patients/${id}/status`, { status });
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
-      qc.invalidateQueries({ queryKey: ["/v1/manager/patients"] });
-      qc.invalidateQueries({ queryKey: ["/v1/manager/metrics"] });
-    },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Status update failed"),
-  });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: detailKey });
 
   const approveMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", `/v1/manager/patients/${id}/approve`, {});
-      return res.json();
-    },
+    mutationFn: () =>
+      apiRequest("POST", `/v1/manager/patients/${id}/approve`, {}),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
-      qc.invalidateQueries({ queryKey: ["/v1/manager/patients"] });
-      qc.invalidateQueries({ queryKey: ["/v1/manager/metrics"] });
+      invalidate();
+      showToast("Guest approved ✓");
     },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Approval failed"),
+    onError: () => showToast("Approval failed"),
   });
 
-  const handleApprove = () => {
+  const trackingMutation = useMutation({
+    mutationFn: (step: string) =>
+      apiRequest("PUT", `/v1/manager/patients/${id}/tracking`, {
+        currentStep: step,
+      }),
+    onSuccess: () => {
+      invalidate();
+      showToast("Step updated ✓");
+    },
+    onError: () => showToast("Failed to update step"),
+  });
+
+  const assignTransportMutation = useMutation({
+    mutationFn: (transportId: string) =>
+      apiRequest("PUT", `/v1/manager/patients/${id}/assign-transport`, {
+        transportId,
+      }),
+    onSuccess: () => {
+      setShowTransportSheet(false);
+      invalidate();
+      showToast("Transport assigned ✓");
+    },
+    onError: () => showToast("Failed to assign transport"),
+  });
+
+  const assignHotelMutation = useMutation({
+    mutationFn: (hotelId: string) =>
+      apiRequest("PUT", `/v1/manager/patients/${id}/assign-hotel`, {
+        hotelId,
+      }),
+    onSuccess: () => {
+      setShowHotelSheet(false);
+      invalidate();
+      showToast("Hotel assigned ✓");
+    },
+    onError: () => showToast("Failed to assign hotel"),
+  });
+
+  const assignDocMutation = useMutation({
+    mutationFn: ({
+      typeId,
+      instructionText,
+    }: {
+      typeId: string;
+      instructionText: string;
+    }) =>
+      apiRequest("POST", `/v1/manager/patients/${id}/assign-documents`, {
+        typeId,
+        instructionText: instructionText || null,
+      }),
+    onSuccess: () => {
+      setShowDocSheet(false);
+      invalidate();
+      showToast("Document assigned ✓");
+    },
+    onError: () => showToast("Failed to assign document"),
+  });
+
+  const topPad =
+    Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+
+  if (isLoading) {
+    return (
+      <View style={[styles.centerBox, { paddingTop: topPad }]}>
+        <ActivityIndicator size="large" color={T.accent} />
+        <Text style={styles.loadingText}>Loading guest…</Text>
+      </View>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <View style={[styles.centerBox, { paddingTop: topPad }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
+        <Text style={styles.errorTitle}>Couldn't load guest</Text>
+        <Text style={styles.errorSub}>Check connection and try again</Text>
+        <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+          <Text style={styles.retryText}>Try Again</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const { patient, tracking, assignments, documents, nextAppointment } = data;
+
+  function handleApprove() {
     if (Platform.OS === "web") {
-      if (window.confirm("Approve this guest? They will be registered for billing.")) {
+      if (
+        typeof window !== "undefined" &&
+        window.confirm(`Approve ${patient.fullName}?`)
+      ) {
         approveMutation.mutate();
       }
-      return;
+    } else {
+      Alert.alert(
+        "Approve Guest",
+        `Approve ${patient.fullName} and begin their journey?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Approve",
+            style: "default",
+            onPress: () => approveMutation.mutate(),
+          },
+        ]
+      );
     }
-    Alert.alert(
-      "Approve Guest",
-      "This will approve the guest and register them for billing. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Approve", onPress: () => approveMutation.mutate() },
-      ]
-    );
-  };
-
-  const handleStatusChange = (newStatus: "APPROVED" | "ENDED") => {
-    const labels: Record<string, string> = { APPROVED: "Approve", ENDED: "End" };
-    const messages: Record<string, string> = {
-      APPROVED: "This will mark the guest as Approved and notify the team.",
-      ENDED: "This will mark the guest as Ended. This cannot be undone easily.",
-    };
-    Alert.alert(
-      `${labels[newStatus]} Guest`,
-      messages[newStatus],
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: labels[newStatus], style: newStatus === "ENDED" ? "destructive" : "default", onPress: () => statusMutation.mutate(newStatus) },
-      ]
-    );
-  };
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
-
-  if (isLoading) return <LoadingView />;
-  if (error || !data) return <ErrorView message="Failed to load patient details" onRetry={refetch} />;
-
-  const { patient, doctor, hotel, transport, requiredDocuments, appointments, nextAppointment, tracking } = data;
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-
-  const formatDateRange = (start?: string, end?: string) => {
-    if (!start && !end) return "Dates not set";
-    const s = start ? new Date(start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "?";
-    const e = end ? new Date(end).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : "?";
-    return `${s} → ${e}`;
-  };
-
-  const currentStepLabel = tracking?.currentStep ? STEP_LABELS[tracking.currentStep] : null;
-
-  const handleViewDoc = async (docId: string) => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      const apiBase = getApiUrl();
-      const res = await fetch(new URL(`/v1/documents/${docId}/signed-url`, apiBase).href, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Cannot get signed URL");
-      const { url } = await res.json();
-      const fullUrl = new URL(url, apiBase).href;
-      await WebBrowser.openBrowserAsync(fullUrl);
-    } catch {
-      Alert.alert("Error", "Cannot open document");
-    }
-  };
-
-  const handleDownloadDoc = async (docId: string) => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      const apiBase = getApiUrl();
-      const downloadRes = await fetch(new URL(`/v1/documents/${docId}/signed-url`, apiBase).href, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!downloadRes.ok) throw new Error("Cannot get signed URL");
-      const { url } = await downloadRes.json();
-      const fullUrl = new URL(url, apiBase).href;
-
-      if (Platform.OS === 'web') {
-        const link = document.createElement('a');
-        link.href = fullUrl;
-        link.download = `document_${docId}.pdf`;
-        link.click();
-      } else {
-        await WebBrowser.openBrowserAsync(fullUrl);
-      }
-    } catch {
-      Alert.alert("Error", "Cannot download document");
-    }
-  };
-
-  return (
-    <View style={{ flex: 1, backgroundColor: T.bg }}>
-      {/* Sticky Hero Header */}
-      <View style={[styles.heroHeader, { paddingTop: topPad + 12, backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border }]}>
-        <View style={styles.headerTop}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={T.text} />
-          </Pressable>
-          <View style={styles.headerInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.patientName}>{patient.fullName}</Text>
-              <StatusPill status={patient.status} small />
-            </View>
-            <Text style={styles.dateRange}>{formatDateRange(patient.arrivalDate, patient.departureDate)}</Text>
-          </View>
-          <Pressable onPress={() => setEditPatientVisible(true)} style={styles.editBtn}>
-            <Feather name="edit-3" size={20} color={T.primary} />
-          </Pressable>
-        </View>
-
-        {currentStepLabel && (
-          <View style={styles.trackingPillContainer}>
-            <View style={[styles.trackingPill, { backgroundColor: T.primary + "10" }]}>
-              <Ionicons name="location" size={14} color={T.primary} />
-              <Text style={styles.trackingPillText}>{currentStepLabel}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.quickActions}>
-          <QuickAction 
-            icon="document-attach-outline" 
-            label="Assign Docs" 
-            onPress={() => setAssignDocsVisible(true)} 
-          />
-          <QuickAction 
-            icon="calendar-outline" 
-            label="New Appt" 
-            onPress={() => setNewApptVisible(true)} 
-          />
-          <QuickAction 
-            icon="business-outline" 
-            label="Hotel" 
-            onPress={() => setChangeHotelVisible(true)} 
-          />
-        </View>
-      </View>
-
-      {patient.status === "WAITING_APPROVAL" && (
-        <View style={[styles.statusBanner, { backgroundColor: "#FFFBEB", borderColor: "#F59E0B", borderWidth: 1 }]}>
-          <View style={styles.statusBannerInfo}>
-            <Ionicons name="hourglass-outline" size={18} color="#92400E" />
-            <Text style={[styles.statusBannerText, { color: "#92400E" }]}>Waiting for approval</Text>
-          </View>
-          <Pressable
-            style={[styles.statusBannerBtn, { backgroundColor: T.success }]}
-            onPress={handleApprove}
-            disabled={approveMutation.isPending}
-          >
-            {approveMutation.isPending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.statusBannerBtnText}>Approve</Text>}
-          </Pressable>
-        </View>
-      )}
-
-      {patient.status === "PENDING" && (
-        <View style={styles.statusBanner}>
-          <View style={styles.statusBannerInfo}>
-            <Ionicons name="time-outline" size={18} color={T.warning} />
-            <Text style={styles.statusBannerText}>Awaiting approval</Text>
-          </View>
-          <Pressable
-            style={[styles.statusBannerBtn, { backgroundColor: T.success }]}
-            onPress={handleApprove}
-            disabled={approveMutation.isPending}
-          >
-            {approveMutation.isPending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.statusBannerBtnText}>Approve Guest</Text>}
-          </Pressable>
-        </View>
-      )}
-
-      {patient.status === "APPROVED" && (
-        <View style={[styles.statusBanner, { backgroundColor: T.successBg }]}>
-          <View style={styles.statusBannerInfo}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={T.success} />
-            <Text style={[styles.statusBannerText, { color: T.successText }]}>Active guest</Text>
-          </View>
-          <Pressable
-            style={[styles.statusBannerBtn, { backgroundColor: T.danger }]}
-            onPress={() => handleStatusChange("ENDED")}
-            disabled={statusMutation.isPending}
-          >
-            {statusMutation.isPending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.statusBannerBtnText}>End Guest</Text>}
-          </Pressable>
-        </View>
-      )}
-
-      {patient.status === "ENDED" && (
-        <View style={[styles.statusBanner, { backgroundColor: T.surfaceSubtle }]}>
-          <View style={styles.statusBannerInfo}>
-            <Ionicons name="flag-outline" size={18} color={T.textMuted} />
-            <Text style={[styles.statusBannerText, { color: T.textMuted }]}>Guest stay has ended</Text>
-          </View>
-        </View>
-      )}
-
-      <ScrollView 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.primary} />}
-      >
-        {/* Overview Card */}
-        <Card style={styles.sectionCard}>
-          <SectionHeader label="Overview" />
-          
-          <OverviewRow 
-            icon="business-outline" 
-            label="Hotel" 
-            value={hotel?.name ?? "Not assigned"} 
-            onPress={() => setChangeHotelVisible(true)}
-            showAction
-          />
-          <OverviewRow 
-            icon="car-outline" 
-            label="Transport" 
-            value={transport?.name ?? "Not assigned"}
-            onPress={() => setChangeTransportVisible(true)}
-            showAction
-          />
-
-          <View style={styles.divider} />
-          
-          <Text style={styles.subHeader}>REQUIRED DOCUMENTS</Text>
-          {(requiredDocuments ?? [
-            { code: "PASSPORT_COPY", name: "Passport Photocopy", status: null },
-            { code: "VISA", name: "Visa", status: null }
-          ]).map((doc) => (
-            <DocStatusRow key={doc.code} doc={doc} onView={() => doc.documentId && handleViewDoc(doc.documentId)} onDownload={() => doc.documentId && handleDownloadDoc(doc.documentId)} />
-          ))}
-
-          <View style={styles.divider} />
-
-          <View style={styles.rowBetween}>
-            <Text style={styles.subHeader}>ASSIGNED DOCUMENTS</Text>
-            <Pressable onPress={() => setAssignDocsVisible(true)}>
-              <Ionicons name="add-circle-outline" size={20} color={T.primary} />
-            </Pressable>
-          </View>
-          {data.documents && data.documents.length > 0 ? (
-            data.documents.map((doc) => (
-              <DocStatusRow 
-                key={doc.id} 
-                doc={{
-                  code: doc.documentType?.code || "",
-                  name: doc.documentType?.name || "Unknown Document",
-                  status: doc.status,
-                  documentId: doc.id
-                }} 
-                instructionText={(doc as any).instructionText}
-                onView={() => handleViewDoc(doc.id)} 
-                onDownload={() => handleDownloadDoc(doc.id)} 
-              />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No documents assigned</Text>
-          )}
-
-          <View style={styles.divider} />
-
-          <Text style={styles.subHeader}>NEXT APPOINTMENT</Text>
-          {nextAppointment ? (
-            <View style={styles.nextApptContainer}>
-              <Text style={styles.nextApptTime}>
-                {new Date(nextAppointment.startAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-              </Text>
-              <Text style={styles.nextApptTitle}>{nextAppointment.title}</Text>
-              {nextAppointment.doctor && (
-                <Text style={styles.nextApptDoctor}>with {nextAppointment.doctor.fullName}</Text>
-              )}
-            </View>
-          ) : (
-            <Text style={styles.emptyText}>No upcoming appointments</Text>
-          )}
-        </Card>
-
-        {/* Tracking Card */}
-        <Card style={styles.sectionCard}>
-          <SectionHeader label="Tracking" />
-          <View style={styles.stepperContainer}>
-            {TRACKING_STEPS.map((step, index) => (
-              <TrackingStep 
-                key={step.key}
-                step={step}
-                isLast={index === TRACKING_STEPS.length - 1}
-                currentStep={tracking?.currentStep}
-                onPress={() => {
-                  apiRequest("PUT", `/v1/manager/patients/${id}/tracking`, { currentStep: step.key })
-                    .then(() => qc.invalidateQueries({ queryKey }));
-                }}
-              />
-            ))}
-          </View>
-        </Card>
-
-        {/* Appointments Card */}
-        <Card style={styles.sectionCard}>
-          <View style={styles.rowBetween}>
-            <SectionHeader label="Upcoming Appointments" />
-            <Pressable onPress={() => setNewApptVisible(true)}>
-              <Ionicons name="add-circle-outline" size={24} color={T.primary} />
-            </Pressable>
-          </View>
-          
-          {appointments.length > 0 ? (
-            appointments.slice(0, 5).map((appt, i) => (
-              <View key={appt.id} style={[styles.apptRow, i === 0 && { borderTopWidth: 0 }]}>
-                <View style={styles.apptDateCol}>
-                  <Text style={styles.apptDay}>{new Date(appt.startAt).getDate()}</Text>
-                  <Text style={styles.apptMonth}>{new Date(appt.startAt).toLocaleString('default', { month: 'short' })}</Text>
-                </View>
-                <View style={styles.apptInfoCol}>
-                  <Text style={styles.apptTime}>{new Date(appt.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                  <Text style={styles.apptTitle} numberOfLines={1}>{appt.title}</Text>
-                  {appt.doctor?.fullName ? (
-                    <Text style={styles.apptDoctor} numberOfLines={1}>{appt.doctor.fullName}</Text>
-                  ) : null}
-                </View>
-                <StatusPill status={appt.status} small />
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No appointments scheduled</Text>
-          )}
-
-          {appointments.length > 5 && (
-            <TouchableOpacity style={styles.viewMoreBtn}>
-              <Text style={styles.viewMoreText}>View all appointments</Text>
-            </TouchableOpacity>
-          )}
-        </Card>
-      </ScrollView>
-
-      {/* Bottom Sheets */}
-      <AssignDocumentsSheet 
-        visible={assignDocsVisible} 
-        onClose={() => setAssignDocsVisible(false)} 
-        patientId={id}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-      <CreateAppointmentSheet 
-        visible={newApptVisible} 
-        onClose={() => setNewApptVisible(false)} 
-        patientId={id}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-      <EditPatientSheet
-        visible={editPatientVisible}
-        onClose={() => setEditPatientVisible(false)}
-        patient={patient}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-      <ChangeHotelSheet
-        visible={changeHotelVisible}
-        onClose={() => setChangeHotelVisible(false)}
-        patientId={id}
-        currentHotelId={hotel?.id}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-      <ChangeTransportSheet
-        visible={changeTransportVisible}
-        onClose={() => setChangeTransportVisible(false)}
-        patientId={id}
-        currentTransportId={transport?.id}
-        onSuccess={() => qc.invalidateQueries({ queryKey })}
-      />
-
-    </View>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function QuickAction({ icon, label, onPress }: { icon: any, label: string, onPress: () => void }) {
-  return (
-    <Pressable style={styles.quickAction} onPress={onPress}>
-      <View style={[styles.qaIconWrap, { backgroundColor: T.primary + "08" }]}>
-        <Ionicons name={icon} size={20} color={T.primary} />
-      </View>
-      <Text style={styles.qaLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function OverviewRow({ icon, label, value, onPress, showAction }: any) {
-  return (
-    <View style={styles.overviewRow}>
-      <Ionicons name={icon} size={18} color={T.textMuted} style={styles.rowIcon} />
-      <View style={styles.rowMain}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowValue}>{value}</Text>
-      </View>
-      {showAction && (
-        <Pressable onPress={onPress}>
-          <Text style={styles.rowActionText}>Change</Text>
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
-function DocStatusRow({ doc, instructionText, onView, onDownload }: { doc: RequiredDoc; instructionText?: string; onView?: () => void; onDownload?: () => void }) {
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case "APPROVED": return T.success;
-      case "UPLOADED": return T.accent;
-      case "ASSIGNED": return T.warning;
-      case "REJECTED": return T.danger;
-      default: return T.textMuted;
-    }
-  };
-
-  const getStatusLabel = (status: string | null) => {
-    if (!status) return "Not assigned";
-    return status.charAt(0) + status.slice(1).toLowerCase();
-  };
-
-  const color = getStatusColor(doc.status);
-
-  return (
-    <View style={styles.docContainer}>
-      <View style={styles.docRow}>
-        <Ionicons name="document-text-outline" size={18} color={T.textMuted} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.docName}>{doc.name}</Text>
-          {instructionText ? (
-            <Text style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{instructionText}</Text>
-          ) : null}
-        </View>
-        <View style={[styles.docStatusBadge, { backgroundColor: color + "10" }]}>
-          <Text style={[styles.docStatusText, { color }]}>{getStatusLabel(doc.status)}</Text>
-        </View>
-      </View>
-      {(doc.status === "UPLOADED" || doc.status === "APPROVED") && doc.documentId && (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 4, marginLeft: 26 }}>
-          <Pressable onPress={onView} style={styles.viewBtnStyle}>
-            <Ionicons name="eye-outline" size={14} color={T.primary} />
-            <Text style={{ color: T.primary, fontSize: 12, marginLeft: 4 }}>View</Text>
-          </Pressable>
-          <Pressable onPress={onDownload} style={styles.viewBtnStyle}>
-            <Ionicons name="download-outline" size={14} color={T.textMuted} />
-            <Text style={{ color: T.textMuted, fontSize: 12, marginLeft: 4 }}>Download</Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  );
-}
-
-function TrackingStep({ step, isLast, currentStep, onPress }: any) {
-  const isCompleted = TRACKING_STEPS.findIndex(s => s.key === currentStep) > TRACKING_STEPS.findIndex(s => s.key === step.key);
-  const isCurrent = currentStep === step.key;
-  const label = STEP_LABELS[step.key];
-
-  let circleColor: string = T.border;
-  let textColor: string = T.textMuted;
-  let iconColor: string = T.textMuted;
-
-  if (isCurrent) {
-    circleColor = T.success;
-    textColor = T.success;
-    iconColor = T.success;
-  } else if (isCompleted) {
-    circleColor = T.textMuted;
-    textColor = T.text;
-    iconColor = T.textMuted;
   }
 
   return (
-    <View style={styles.stepRow}>
-      <View style={styles.stepLeft}>
-        <View style={[styles.stepCircle, { borderColor: circleColor, backgroundColor: isCurrent || isCompleted ? circleColor : "transparent" }]}>
-          {isCompleted ? (
-            <Ionicons name="checkmark" size={14} color="#fff" />
-          ) : (
-            <Ionicons name={step.icon} size={14} color={isCurrent ? "#fff" : iconColor} />
-          )}
-        </View>
-        {!isLast && <View style={[styles.stepLine, { backgroundColor: isCompleted ? T.textMuted : T.border }]} />}
+    <View style={styles.root}>
+      <View
+        style={[styles.navBar, { paddingTop: topPad, height: topPad + 52 }]}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
+          <Ionicons name="arrow-back" size={22} color={T.text} />
+        </Pressable>
+        <Text style={styles.navTitle} numberOfLines={1}>
+          {patient.fullName}
+        </Text>
+        <View style={styles.navRight} />
       </View>
-      <View style={styles.stepRight}>
-        <Text style={[styles.stepLabel, { color: textColor, fontWeight: isCurrent ? "700" : "500" }]}>{label}</Text>
-        {!isCurrent && (
-          <Pressable onPress={onPress} style={styles.stepAction}>
-            <Text style={styles.stepActionText}>Set as current</Text>
-          </Pressable>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom:
+              (Platform.OS === "web" ? 34 : insets.bottom) + 32,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <GuestHeroCard
+          patient={patient}
+          onApprove={handleApprove}
+          approving={approveMutation.isPending}
+        />
+
+        {nextAppointment && (
+          <View style={[styles.apptCard, cardShadow]}>
+            <View style={styles.apptHeaderRow}>
+              <Ionicons name="today-outline" size={14} color={T.success} />
+              <Text style={styles.apptBadge}>Today</Text>
+            </View>
+            <Text style={styles.apptTitle}>
+              {nextAppointment.title ?? "Appointment"}
+            </Text>
+            <Text style={styles.apptMeta}>
+              {fmtTime(nextAppointment.startAt)}
+              {nextAppointment.doctor
+                ? `  ·  Dr. ${nextAppointment.doctor.fullName}`
+                : ""}
+            </Text>
+          </View>
         )}
-      </View>
+
+        <GuestTrackingStepper
+          currentStep={tracking.currentStep}
+          onUpdateStep={(step) => trackingMutation.mutate(step)}
+          updating={trackingMutation.isPending}
+        />
+
+        <Text style={styles.sectionLabel}>Assignments</Text>
+
+        <TransportAssignmentCard
+          transport={assignments.transport}
+          onAssign={() => setShowTransportSheet(true)}
+        />
+
+        <HotelAssignmentCard
+          hotel={assignments.hotel}
+          onAssign={() => setShowHotelSheet(true)}
+        />
+
+        <DocumentsAssignmentCard
+          docs={documents.assigned ?? []}
+          summary={documents.summary ?? { pending: 0, uploaded: 0 }}
+          onAssign={() => setShowDocSheet(true)}
+        />
+      </ScrollView>
+
+      <AssignTransportSheet
+        visible={showTransportSheet}
+        onClose={() => setShowTransportSheet(false)}
+        onSelect={(tId) => assignTransportMutation.mutate(tId)}
+        assigning={assignTransportMutation.isPending}
+      />
+
+      <AssignHotelSheet
+        visible={showHotelSheet}
+        onClose={() => setShowHotelSheet(false)}
+        onSelect={(hId) => assignHotelMutation.mutate(hId)}
+        assigning={assignHotelMutation.isPending}
+      />
+
+      <AssignDocTypeSheet
+        visible={showDocSheet}
+        onClose={() => setShowDocSheet(false)}
+        onAssign={(typeId, instructionText) =>
+          assignDocMutation.mutate({ typeId, instructionText })
+        }
+        assigning={assignDocMutation.isPending}
+      />
     </View>
   );
 }
 
-// ─── Sheets ──────────────────────────────────────────────────────────────────
-
-function BottomSheet({ visible, onClose, title, children }: { visible: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
-  const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(slideAnim, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }).start();
-    }
-  }, [visible]);
-
-  if (!visible) return null;
-
-  return (
-    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-      <View style={styles.sheetOverlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View style={[
-          styles.sheetContainer, 
-          { 
-            transform: [{ translateY: slideAnim }],
-            paddingBottom: insets.bottom + 20
-          }
-        ]}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            <Pressable onPress={onClose} style={styles.sheetCloseBtn}>
-              <Ionicons name="close" size={24} color={T.text} />
-            </Pressable>
-          </View>
-          <View style={styles.sheetContent}>
-            {children}
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-function AssignDocumentsSheet({ visible, onClose, patientId, onSuccess }: any) {
-  const [selectedDocItems, setSelectedDocItems] = useState<{docTypeId: string; instruction: string}[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const { data: docTypesResp } = useQuery<{ items: any[] }>({
-    queryKey: ["/v1/manager/document-types"],
-    enabled: visible,
-  });
-  const docTypes = docTypesResp?.items ?? [];
-
-  const toggleDocType = (dtId: string) => {
-    setSelectedDocItems(prev => 
-      prev.some(x => x.docTypeId === dtId) 
-        ? prev.filter(x => x.docTypeId !== dtId)
-        : [...prev, { docTypeId: dtId, instruction: "" }]
-    );
-  };
-
-  const updateInstruction = (dtId: string, text: string) => {
-    setSelectedDocItems(prev => prev.map(x => x.docTypeId === dtId ? { ...x, instruction: text } : x));
-  };
-
-  const handleAssign = async () => {
-    if (selectedDocItems.length === 0) return;
-    setLoading(true);
-    try {
-      const payload = {
-        items: selectedDocItems.map(x => ({
-          documentTypeId: x.docTypeId,
-          instructionText: x.instruction || undefined,
-        })),
-      };
-      await apiRequest("POST", `/v1/manager/patients/${patientId}/assign-documents`, payload);
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="Assign Documents">
-      <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
-        {docTypes.map((dt) => {
-          const isSelected = selectedDocItems.some(x => x.docTypeId === dt.id);
-          const item = selectedDocItems.find(x => x.docTypeId === dt.id);
-          return (
-            <View key={dt.id} style={styles.assignDocItem}>
-              <Pressable style={styles.checkRow} onPress={() => toggleDocType(dt.id)}>
-                <Text style={styles.checkLabel}>{dt.name}</Text>
-                <Ionicons 
-                  name={isSelected ? "checkbox" : "square-outline"} 
-                  size={24} 
-                  color={isSelected ? T.primary : T.textMuted} 
-                />
-              </Pressable>
-              {isSelected && (
-                <TextField
-                  placeholder="Instruction (optional)"
-                  value={item?.instruction}
-                  onChangeText={(text) => updateInstruction(dt.id, text)}
-                  style={styles.instructionInput}
-                />
-              )}
-            </View>
-          );
-        })}
-        
-        <PrimaryButton 
-          label="Assign Selected Documents" 
-          onPress={handleAssign} 
-          loading={loading}
-          style={{ marginTop: 24 }}
-        />
-      </ScrollView>
-    </BottomSheet>
-  );
-}
-
-function DocCheckRow({ label, selected, onPress }: any) {
-  return (
-    <Pressable style={styles.checkRow} onPress={onPress}>
-      <Text style={styles.checkLabel}>{label}</Text>
-      <Ionicons 
-        name={selected ? "checkbox" : "square-outline"} 
-        size={24} 
-        color={selected ? T.primary : T.textMuted} 
-      />
-    </Pressable>
-  );
-}
-
-function CreateAppointmentSheet({ visible, onClose, patientId, onSuccess }: any) {
-  const [form, setForm] = useState({ title: "", startAt: "", notes: "", doctorId: "" });
-  const [apptError, setApptError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const { data: doctorsData } = useQuery<{ rows: any[] }>({
-    queryKey: ["/v1/manager/doctors"],
-    enabled: visible,
-  });
-
-  const handleCreate = async () => {
-    setApptError("");
-    if (!form.title || !form.startAt) {
-      Alert.alert("Missing Information", "Please provide a title and date.");
-      return;
-    }
-    if (!form.doctorId) {
-      setApptError("Please select a doctor");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      let isoDate = "";
-      try {
-        isoDate = new Date(form.startAt).toISOString();
-      } catch (e) {
-        Alert.alert("Invalid Date", "Please use YYYY-MM-DDTHH:MM format");
-        setLoading(false);
-        return;
-      }
-
-      await apiRequest("POST", `/v1/manager/patients/${patientId}/appointments`, {
-        ...form,
-        startAt: isoDate,
-        type: "Consultation" // default type
-      });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="New Appointment">
-      <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
-        <TextField 
-          label="Title" 
-          placeholder="e.g. Initial Consultation" 
-          value={form.title} 
-          onChangeText={v => setForm(f => ({...f, title: v}))}
-        />
-        <View style={{ height: 16 }} />
-        <TextField 
-          label="Date & Time" 
-          placeholder="2026-03-20T10:00" 
-          value={form.startAt} 
-          onChangeText={v => setForm(f => ({...f, startAt: v}))}
-        />
-        <View style={{ height: 16 }} />
-        <Text style={styles.fieldLabel}>DOCTOR</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.doctorPicker}>
-          {doctorsData?.rows.map(doc => (
-            <Pressable 
-              key={doc.id}
-              style={[styles.docChip, form.doctorId === doc.id && { borderColor: T.primary, backgroundColor: T.primary + "08" }]}
-              onPress={() => {
-                setForm(f => ({...f, doctorId: doc.id}));
-                setApptError("");
-              }}
-            >
-              <Text style={[styles.docChipText, form.doctorId === doc.id && { color: T.primary }]}>{doc.fullName}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-        {apptError ? <Text style={styles.errorText}>{apptError}</Text> : null}
-        <View style={{ height: 16 }} />
-        <TextField 
-          label="Notes" 
-          placeholder="Additional details..." 
-          multiline 
-          style={{ height: 80 }}
-          value={form.notes} 
-          onChangeText={v => setForm(f => ({...f, notes: v}))}
-        />
-        
-        <PrimaryButton 
-          label="Create Appointment" 
-          onPress={handleCreate} 
-          loading={loading}
-          style={{ marginTop: 24 }}
-        />
-      </ScrollView>
-    </BottomSheet>
-  );
-}
-
-function ChangeDoctorSheet({ visible, onClose, patientId, currentDoctorId, onSuccess }: any) {
-  const [search, setSearch] = useState("");
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  const { data, isLoading } = useQuery<{ rows: any[] }>({
-    queryKey: ["/v1/manager/doctors"],
-    enabled: visible,
-  });
-
-  const handleSelect = async (doctorId: string) => {
-    setLoadingId(doctorId);
-    try {
-      await apiRequest("PUT", `/v1/manager/patients/${patientId}/assign-doctor`, { doctorId });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const filtered = data?.rows.filter(d => d.fullName.toLowerCase().includes(search.toLowerCase())) ?? [];
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="Change Doctor">
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color={T.textMuted} />
-        <TextInput 
-          placeholder="Search doctors..." 
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
-      {isLoading ? (
-        <ActivityIndicator style={{ margin: 40 }} />
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={item => item.id}
-          style={{ maxHeight: 400 }}
-          renderItem={({ item }) => (
-            <Pressable style={styles.doctorRow} onPress={() => handleSelect(item.id)}>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>{item.fullName}</Text>
-                <Text style={styles.doctorSpecialty}>{item.specialty || "General Practitioner"}</Text>
-              </View>
-              {loadingId === item.id ? (
-                <ActivityIndicator size="small" color={T.primary} />
-              ) : currentDoctorId === item.id ? (
-                <Ionicons name="checkmark-circle" size={24} color={T.success} />
-              ) : null}
-            </Pressable>
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No doctors found</Text>}
-        />
-      )}
-    </BottomSheet>
-  );
-}
-
-function EditPatientSheet({ visible, onClose, patient, onSuccess }: any) {
-  const [form, setForm] = useState(patient);
-  const [loading, setLoading] = useState(false);
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await apiRequest("PUT", `/v1/manager/patients/${patient.id}`, form);
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="Edit Patient Info">
-      <ScrollView style={styles.sheetScroll}>
-        <TextField label="Full Name" value={form.fullName} onChangeText={v => setForm((f: any) => ({...f, fullName: v}))} />
-        <View style={{ height: 16 }} />
-        <TextField label="Phone" value={form.phone || ""} onChangeText={v => setForm((f: any) => ({...f, phone: v}))} keyboardType="phone-pad" />
-        <View style={{ height: 16 }} />
-        <TextField label="Email" value={form.email || ""} onChangeText={v => setForm((f: any) => ({...f, email: v}))} keyboardType="email-address" autoCapitalize="none" />
-        <View style={{ height: 16 }} />
-        <TextField label="Nationality" value={form.nationality || ""} onChangeText={v => setForm((f: any) => ({...f, nationality: v}))} />
-        <View style={{ height: 16 }} />
-        <TextField label="Arrival Date (YYYY-MM-DD)" value={form.arrivalDate || ""} onChangeText={v => setForm((f: any) => ({...f, arrivalDate: v}))} />
-        <View style={{ height: 16 }} />
-        <TextField label="Departure Date (YYYY-MM-DD)" value={form.departureDate || ""} onChangeText={v => setForm((f: any) => ({...f, departureDate: v}))} />
-        
-        <PrimaryButton 
-          label="Save Changes" 
-          onPress={handleSave} 
-          loading={loading}
-          style={{ marginTop: 24 }}
-        />
-      </ScrollView>
-    </BottomSheet>
-  );
-}
-
-function ChangeHotelSheet({ visible, onClose, patientId, currentHotelId, onSuccess }: any) {
-  const [selectedId, setSelectedId] = useState<string | null>(currentHotelId ?? null);
-  const [stayDays, setStayDays] = useState("");
-  const [roomNo, setRoomNo] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const { data, isLoading } = useQuery<{ rows: any[] }>({
-    queryKey: ["/v1/manager/hotels"],
-    enabled: visible,
-  });
-
-  const handleSave = async () => {
-    if (!selectedId) { Alert.alert("Select a hotel first"); return; }
-    setSaving(true);
-    try {
-      await apiRequest("PUT", `/v1/manager/patients/${patientId}/assign-hotel`, {
-        hotelId: selectedId,
-        stayDays: stayDays ? parseInt(stayDays) : undefined,
-        roomNo: roomNo || undefined,
-        checkInDate: checkIn || undefined,
-        checkOutDate: checkOut || undefined,
-      });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="Change Hotel">
-      {isLoading ? (
-        <ActivityIndicator style={{ margin: 40 }} />
-      ) : (
-        <FlatList
-          data={data?.rows ?? []}
-          keyExtractor={item => item.id}
-          style={{ maxHeight: 300 }}
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.hotelRow, selectedId === item.id && styles.selectedHotelRow]}
-              onPress={() => setSelectedId(item.id)}
-            >
-              <Text style={styles.hotelRowText}>{item.name}</Text>
-              {selectedId === item.id && (
-                <Ionicons name="checkmark-circle" size={22} color={T.primary} />
-              )}
-            </Pressable>
-          )}
-          ListEmptyComponent={<Text style={[styles.hotelRowText, { padding: 16, color: T.textMuted }]}>No hotels found</Text>}
-        />
-      )}
-      <View style={{ padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: T.border }}>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <TextInput
-            style={[styles.sheetInput, { flex: 1 }]}
-            placeholder="Stay Days"
-            placeholderTextColor={T.textMuted}
-            keyboardType="numeric"
-            value={stayDays}
-            onChangeText={setStayDays}
-          />
-          <TextInput
-            style={[styles.sheetInput, { flex: 1 }]}
-            placeholder="Room No"
-            placeholderTextColor={T.textMuted}
-            value={roomNo}
-            onChangeText={setRoomNo}
-          />
-        </View>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <TextInput
-            style={[styles.sheetInput, { flex: 1 }]}
-            placeholder="Check-in (YYYY-MM-DD)"
-            placeholderTextColor={T.textMuted}
-            value={checkIn}
-            onChangeText={setCheckIn}
-          />
-          <TextInput
-            style={[styles.sheetInput, { flex: 1 }]}
-            placeholder="Check-out (YYYY-MM-DD)"
-            placeholderTextColor={T.textMuted}
-            value={checkOut}
-            onChangeText={setCheckOut}
-          />
-        </View>
-        <Pressable
-          style={[styles.sheetBtn, saving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.sheetBtnText}>Assign Hotel</Text>}
-        </Pressable>
-      </View>
-    </BottomSheet>
-  );
-}
-
-function ChangeTransportSheet({ visible, onClose, patientId, currentTransportId, onSuccess }: any) {
-  const [selectedId, setSelectedId] = useState<string | null>(currentTransportId ?? null);
-  const [saving, setSaving] = useState(false);
-
-  const { data, isLoading } = useQuery<{ rows: any[] }>({
-    queryKey: ["/v1/manager/transports"],
-    enabled: visible,
-  });
-
-  const handleSave = async () => {
-    if (!selectedId) { Alert.alert("Select a transport first"); return; }
-    setSaving(true);
-    try {
-      await apiRequest("PUT", `/v1/manager/patients/${patientId}/assign-transport`, {
-        transportId: selectedId,
-      });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Failed to assign transport");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const transports = data?.rows ?? [];
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title="Assign Transport">
-      {isLoading ? (
-        <ActivityIndicator style={{ margin: 40 }} color={T.primary} />
-      ) : (
-        <FlatList
-          data={transports}
-          keyExtractor={item => item.id}
-          style={{ maxHeight: 340 }}
-          renderItem={({ item }) => {
-            const isSelected = selectedId === item.id;
-            const brandName = [item.vehicleBrand, item.vehicleModel].filter(Boolean).join(" ") || "Unknown Vehicle";
-            return (
-              <Pressable
-                style={[
-                  styles.transportRow,
-                  isSelected && styles.selectedTransportRow,
-                ]}
-                onPress={() => setSelectedId(item.id)}
-              >
-                <VehicleBrandLogo brand={item.vehicleBrand} size={36} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.transportBrandText}>{brandName}</Text>
-                  {item.licensePlate ? (
-                    <Text style={styles.transportPlateText}>{item.licensePlate}</Text>
-                  ) : null}
-                  {item.driverFullName ? (
-                    <Text style={styles.transportDriverText}>{item.driverFullName}</Text>
-                  ) : null}
-                </View>
-                {isSelected && (
-                  <Ionicons name="checkmark-circle" size={22} color={T.primary} />
-                )}
-              </Pressable>
-            );
-          }}
-          ListEmptyComponent={
-            <Text style={[styles.hotelRowText, { padding: 16, color: T.textMuted }]}>
-              No transports found. Add one from the Transports screen.
-            </Text>
-          }
-        />
-      )}
-      <View style={{ padding: 16, paddingTop: 12 }}>
-        <Pressable
-          style={[styles.sheetBtn, saving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.sheetBtnText}>Assign Transport</Text>
-          )}
-        </Pressable>
-      </View>
-    </BottomSheet>
-  );
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  heroHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    zIndex: 10,
+  root: {
+    flex: 1,
+    backgroundColor: T.bg,
   },
-  headerTop: {
+  navBar: {
+    backgroundColor: T.surface,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: T.sp16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
   },
   backBtn: {
-    padding: 4,
-    marginRight: 12,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  patientName: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: T.text,
-  },
-  dateRange: {
-    fontSize: 13,
-    color: T.textMuted,
-    fontFamily: "Inter_500Medium",
-    marginTop: 2,
-  },
-  editBtn: {
-    padding: 8,
-  },
-  trackingPillContainer: {
-    marginTop: 12,
-    flexDirection: "row",
-  },
-  trackingPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  trackingPillText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: T.primary,
-  },
-  quickActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 20,
-  },
-  statusBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp12,
-    backgroundColor: T.warningBg,
-    borderBottomWidth: 1,
-    borderBottomColor: T.warningBorder,
-  },
-  statusBannerInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: T.sp8,
-  },
-  statusBannerText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: T.warningText,
-  },
-  statusBannerBtn: {
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp8,
-    borderRadius: T.r8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  statusBannerBtnText: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 13,
-    color: "#fff",
-  },
-  quickAction: {
+  navTitle: {
     flex: 1,
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    color: T.text,
+    textAlign: "center",
+    marginHorizontal: 4,
+  },
+  navRight: {
+    width: 36,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    padding: T.sp16,
+  },
+  sectionLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: T.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: T.sp12,
+    marginTop: 4,
+  },
+  apptCard: {
     backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    gap: 4,
+    borderRadius: T.r16,
+    padding: T.sp16,
+    marginBottom: T.sp12,
+    borderLeftWidth: 3,
+    borderLeftColor: T.success,
   },
-  qaIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  qaLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: T.text,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  sectionCard: {
-    marginBottom: 16,
-  },
-  overviewRow: {
+  apptHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    gap: 5,
+    marginBottom: 5,
   },
-  rowIcon: {
-    width: 24,
-    textAlign: "center",
-    marginRight: 12,
-  },
-  rowMain: {
-    flex: 1,
-  },
-  rowLabel: {
-    fontSize: 11,
-    color: T.textMuted,
+  apptBadge: {
     fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: T.success,
     textTransform: "uppercase",
-  },
-  rowValue: {
-    fontSize: 15,
-    color: T.text,
-    fontFamily: "Inter_500Medium",
-    marginTop: 2,
-  },
-  rowActionText: {
-    fontSize: 13,
-    color: T.primary,
-    fontFamily: "Inter_600SemiBold",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: T.border,
-    marginVertical: 16,
-  },
-  subHeader: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: T.textMuted,
-    marginBottom: 12,
-  },
-  docRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    gap: 12,
-  },
-  docName: {
-    flex: 1,
-    fontSize: 14,
-    color: T.text,
-    fontFamily: "Inter_500Medium",
-  },
-  docStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  docStatusText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-  },
-  nextApptContainer: {
-    backgroundColor: T.surfaceSubtle,
-    padding: 12,
-    borderRadius: 10,
-  },
-  nextApptTime: {
-    fontSize: 12,
-    color: T.accent,
-    fontFamily: "Inter_600SemiBold",
-  },
-  nextApptTitle: {
-    fontSize: 16,
-    color: T.text,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 4,
-  },
-  nextApptDoctor: {
-    fontSize: 13,
-    color: T.textMuted,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  emptyText: {
-    textAlign: "center",
-    color: T.textMuted,
-    fontSize: 14,
-    marginVertical: 12,
-  },
-  stepperContainer: {
-    paddingTop: 8,
-  },
-  stepRow: {
-    flexDirection: "row",
-    minHeight: 60,
-  },
-  stepLeft: {
-    alignItems: "center",
-    width: 30,
-    marginRight: 16,
-  },
-  stepCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  stepLine: {
-    width: 2,
-    flex: 1,
-    marginVertical: 4,
-  },
-  stepRight: {
-    flex: 1,
-    paddingBottom: 20,
-  },
-  stepLabel: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-  },
-  stepAction: {
-    marginTop: 4,
-  },
-  stepActionText: {
-    fontSize: 12,
-    color: T.primary,
-    fontFamily: "Inter_600SemiBold",
-  },
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  apptRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-  },
-  apptDateCol: {
-    width: 45,
-    alignItems: "center",
-  },
-  apptDay: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: T.text,
-  },
-  apptMonth: {
-    fontSize: 11,
-    color: T.textMuted,
-    textTransform: "uppercase",
-    fontFamily: "Inter_600SemiBold",
-  },
-  apptInfoCol: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  apptTime: {
-    fontSize: 12,
-    color: T.textMuted,
-    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.5,
   },
   apptTitle: {
-    fontSize: 15,
-    color: T.text,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 1,
-  },
-  apptDoctor: {
-    fontSize: 12,
-    color: T.textMuted,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  viewMoreBtn: {
-    alignItems: "center",
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-  },
-  viewMoreText: {
-    fontSize: 13,
-    color: T.primary,
-    fontFamily: "Inter_600SemiBold",
-  },
-
-  // Sheet Styles
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  sheetContainer: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: T.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  sheetTitle: {
-    fontSize: 18,
     fontFamily: "Inter_700Bold",
-    color: T.text,
-  },
-  sheetCloseBtn: {
-    padding: 4,
-  },
-  sheetContent: {
-    padding: 20,
-  },
-  sheetBody: {
-    gap: 12,
-  },
-  checkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  checkLabel: {
     fontSize: 16,
-    fontFamily: "Inter_500Medium",
     color: T.text,
+    marginBottom: 3,
   },
-  sheetScroll: {
-    maxHeight: 500,
+  apptMeta: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textSec,
   },
-  fieldLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: T.textMuted,
-    marginBottom: 8,
-  },
-  doctorPicker: {
-    flexDirection: "row",
-  },
-  docChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: T.border,
-    marginRight: 8,
-    backgroundColor: T.surface,
-  },
-  docChipText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: T.text,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: T.bg,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    gap: 8,
-  },
-  searchInput: {
+  centerBox: {
     flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-  },
-  doctorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  doctorInfo: {
-    flex: 1,
-  },
-  doctorName: {
-    fontSize: 15,
-    color: T.text,
-    fontFamily: "Inter_600SemiBold",
-  },
-  doctorSpecialty: {
-    fontSize: 12,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  errorText: {
-    color: T.danger,
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: "Inter_500Medium",
-  },
-  assignDocItem: {
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-    paddingBottom: 8,
-  },
-  instructionInput: {
-    marginTop: 8,
-    height: 40,
-  },
-  docContainer: {
-    marginBottom: 12,
-  },
-  viewBtnStyle: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    backgroundColor: T.bg,
-  },
-  hotelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  selectedHotelRow: {
-    backgroundColor: T.primary + "08",
-    borderColor: T.primary,
-  },
-  hotelRowText: {
-    fontSize: 15,
-    color: T.text,
-    fontFamily: "Inter_500Medium",
-  },
-  transportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  selectedTransportRow: {
-    backgroundColor: T.primary + "08",
-  },
-  transportBrandText: {
-    fontSize: 15,
-    color: T.text,
-    fontFamily: "Inter_600SemiBold",
-  },
-  transportPlateText: {
-    fontSize: 12,
-    color: T.textMuted,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  },
-  transportDriverText: {
-    fontSize: 12,
-    color: T.accent,
-    fontFamily: "Inter_500Medium",
-    marginTop: 2,
-  },
-  sheetInput: {
-    backgroundColor: T.bg,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.r8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: T.text,
-    fontFamily: "Inter_400Regular",
-  },
-  sheetBtn: {
-    height: 46,
-    borderRadius: T.r12,
-    backgroundColor: T.primary,
     alignItems: "center",
     justifyContent: "center",
+    padding: T.sp32,
+    backgroundColor: T.bg,
   },
-  sheetBtnText: {
-    fontSize: 15,
-    color: "#fff",
+  loadingText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: T.textMuted,
+    marginTop: 12,
+  },
+  errorTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    color: T.text,
+    marginTop: 12,
+  },
+  errorSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: T.textMuted,
+  },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: T.sp24,
+    paddingVertical: 12,
+    borderRadius: T.r10,
+    backgroundColor: T.accent,
+  },
+  retryText: {
     fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#fff",
   },
 });

@@ -1,0 +1,207 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Rebuild the Manager → Guest Detail screen from scratch with the MOST modern, professional UX, including all the features I described.
+When I tap a guest card in Manager → Users tab, it must open this new Guest Detail screen reliably.
+
+NON-NEGOTIABLE:
+- White theme premium; no layout breaks on small screens.
+- SOLID backend (controller -> usecase -> repo; DB only in repo).
+- Stable DTOs: never crash (no undefined.map). Always return [] or null.
+- Clinic scoping strict for manager.
+- Empty states must be beautiful, never “failed data”.
+- Use bottom sheets (slide-up popups) for assignments and forms.
+- Must work on Expo Go (iOS/Android).
+
+========================================================
+PHASE 1 — AUDIT + ROUTE CONFIRMATION (MANDATORY)
+========================================================
+1) Confirm the real Manager Users screen route file and guest card component.
+2) Confirm what happens on guest card tap today (navigation path or nothing).
+3) Identify current Guest Detail route file (if exists) and why it’s broken.
+4) Add a temporary visible marker on the destination screen ("NEW_GUEST_DETAIL_ACTIVE") to confirm correct routing.
+5) Output the exact file paths for:
+- Users screen
+- Guest card component
+- Guest detail screen file that is actually rendered
+
+Do not proceed until routing is confirmed.
+
+========================================================
+PHASE 2 — DEFINE THE NEW GUEST DETAIL UX (BUILD EXACTLY)
+========================================================
+Guest Detail must look like an “Operations Cockpit” with the following sections (in order):
+
+A) HERO HEADER (top card)
+- Guest full name (large)
+- Status pill (WAITING_APPROVAL / APPROVED / ENDED / INACTIVE etc.)
+- Arrival → Departure dates (if present)
+- Patient key (PT-XXXXXXXX) fully visible + copy button
+- Quick actions row (icon buttons):
+  - Approve (only if WAITING_APPROVAL)
+  - Edit guest (optional)
+  - Call (if phone exists)
+
+B) TRACKING FLOW (stepper)
+A modern stepper with 6 steps:
+1) Arrived airport
+2) Picked up (vehicle)
+3) Arrived hotel
+4) Attended appointment
+5) Back to airport
+6) Arrived home
+Rules:
+- Current step highlighted (green)
+- Completed steps light green
+- Future steps gray
+Interaction:
+- Manager can change current step (tap step or “Update step” button)
+- Saves to backend (clinic scoped)
+- Shows success toast (short duration)
+
+C) ASSIGNMENTS SECTION (3 premium cards stacked)
+1) Transport card
+- If assigned: show brand logo + brand/model BIG + plate + driver name + phone chip
+- If not assigned: show “No transport assigned” with a + button
+- + opens AssignTransportSheet (bottom sheet) to pick from transports list and assign
+
+2) Documents card
+- Summary chips: Pending X / Uploaded Y
+- List of assigned documents (typeName + status pill)
+- If none: “No documents assigned” + + button
+- + opens AssignDocTypeSheet:
+  - select document type from clinic’s document_types list
+  - enter instruction/information note (required)
+  - assign -> creates patient_document with status=PENDING
+- Must never crash even if arrays empty
+
+3) Hotel card
+- If assigned: hotel name + short address/phone
+- If not assigned: “No hotel assigned” + + button
+- + opens AssignHotelSheet to pick hotel and assign
+
+D) OPTIONAL “TODAY” PREVIEW (small card)
+- If guest has appointments today: show next appointment summary (time, doctor, title)
+
+========================================================
+PHASE 3 — BACKEND: STABLE GUEST DETAIL DTO (SOLID, REQUIRED)
+========================================================
+Implement (or fix) one stable endpoint used by the new screen:
+
+GET /v1/manager/patients/:id/details
+Return 200 ALWAYS with defaults:
+{
+  patient: {
+    id, clinicId, fullName, status, patientKey,
+    phoneE164?, email?, nationality?, passportNo?,
+    arrivalDate?, departureDate?
+  },
+  tracking: { currentStep: string },
+  assignments: {
+    transport: null | { id, vehicleBrand, vehicleModel, licensePlate, driverFullName, driverPhoneE164 },
+    hotel: null | { id, name, address?, phone?, website? }
+  },
+  documents: {
+    assigned: [
+      { id, typeId, typeName, instructionText, status }  // status: PENDING/UPLOADED/APPROVED/REJECTED
+    ],
+    summary: { pending: 0, uploaded: 0 }
+  }
+}
+
+ABSOLUTE RULES:
+- assigned must always be an array ([])
+- transport/hotel must be null if missing (not undefined)
+- summary values must be numbers default 0
+- Must be clinic scoped (manager cannot access other clinic patient)
+
+SOLID module:
+server/modules/managerGuestDetail/
+  routes/controller/usecases/repos/schemas
+Use zod for params.
+Repo must join necessary tables safely.
+
+========================================================
+PHASE 4 — BACKEND: ASSIGNMENT & TRACKING ENDPOINTS (SOLID)
+========================================================
+Implement or verify these endpoints (clinic scoped, zod validated):
+1) PUT /v1/manager/patients/:id/assign-transport { transportId }
+2) PUT /v1/manager/patients/:id/assign-hotel { hotelId }
+3) POST /v1/manager/patients/:id/assign-documents { typeId, instructionText }
+   - sets patient_document.status = PENDING immediately
+4) PUT /v1/manager/patients/:id/tracking { currentStep }
+5) POST /v1/manager/patients/:id/approve
+   - status WAITING_APPROVAL -> APPROVED
+   - triggers billing inclusion if your billing_events logic exists
+
+All should:
+- return stable responses
+- write audit logs (if audit system exists)
+- use transactions where needed
+
+========================================================
+PHASE 5 — FRONTEND IMPLEMENTATION (MODULAR, PREMIUM)
+========================================================
+1) Create a new guest detail screen:
+app/(manager)/users/guests/[id].tsx (or match your routing conventions)
+and ensure guest card tap navigates here.
+
+2) Hooks:
+hooks/useManagerGuestDetail.ts (React Query)
+- returns safe defaults
+- caches by guestId
+Mutations:
+- useAssignTransport
+- useAssignHotel
+- useAssignDocType
+- useUpdateTracking
+- useApproveGuest
+All invalidate guest detail query on success.
+
+3) Components:
+components/guestDetail/
+- GuestHeroCard.tsx
+- GuestTrackingStepper.tsx
+- TransportAssignmentCard.tsx
+- DocumentsAssignmentCard.tsx
+- HotelAssignmentCard.tsx
+- AssignTransportSheet.tsx
+- AssignHotelSheet.tsx
+- AssignDocTypeSheet.tsx
+Use VehicleBrandLogo component for transport brand logo.
+
+4) Error handling:
+- Loading: skeleton cards
+- Error: premium retry card
+- Empty: “No transport/hotel/docs” with + actions
+- Never show “failed data” text
+
+========================================================
+PHASE 6 — QA / VERIFICATION (MANDATORY)
+========================================================
+1) Tap guest card -> always opens new guest detail (marker confirms)
+2) No crashes on Expo Go (no undefined.map)
+3) Tracking stepper updates and persists
+4) Assign transport/hotel/doc types via + sheets works and updates UI immediately
+5) Approve button (if waiting) works and status changes
+6) Small screen layout: no overlaps, buttons tappable
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Confirmed routes used (users list and guest detail)
+2) Files changed/added
+3) Endpoint(s) added/changed + sample curl for /details
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Phase 1 route confirmation + marker
+2) Backend stable /details endpoint and assignments
+3) Frontend guest detail rebuild (components + sheets)
+4) Wire guest card navigation
+5) Remove marker and finalize polish
+6) Verify on Expo Go
+
+Proceed now. Do not guess — confirm routes first, then rebuild.
+END.

@@ -18,6 +18,7 @@ import managerPatientsRoutes from "./modules/managerPatients/managerPatients.rou
 import managerDoctorsRoutes from "./modules/managerDoctors/managerDoctors.routes";
 import managerTransportsRoutes from "./modules/managerTransports/managerTransports.routes";
 import { managerDocumentTypesRouter } from "./modules/managerDocumentTypes/managerDocumentTypes.routes";
+import managerGuestDetailRoutes from "./modules/managerGuestDetail/guestDetail.routes";
 import uploadRoutes from "./api/uploadRoutes";
 import patientDashboardRoute from "./api/patientDashboardRoute";
 import { errorHandler } from "./auth/middleware";
@@ -61,6 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/v1/manager", managerDoctorsRoutes);
   app.use("/v1/manager", managerTransportsRoutes);
   app.use("/v1/manager/document-types", managerDocumentTypesRouter);
+  app.use("/v1/manager", managerGuestDetailRoutes);
   app.use("/v1/manager", managerRoutes);
   app.use("/v1", meRoutes);
   app.use("/v1", uploadRoutes);
