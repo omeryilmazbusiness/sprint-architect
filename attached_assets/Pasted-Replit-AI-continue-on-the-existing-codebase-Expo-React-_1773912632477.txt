@@ -1,0 +1,209 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Fix and complete the Guest Documents system (Manager + Guest Detail) in a production-ready way:
+
+1) Assigned documents are not visible in Guest Detail even after assignment.
+   - Must show assigned docs as modern cards.
+   - Each doc must have status: PENDING or UPLOADED (at minimum).
+2) Implement PDF upload for assigned documents (ONLY PDF).
+   - Guest (patient) must be able to upload a PDF for each assigned doc.
+   - After upload, status becomes UPLOADED and fileUrl is saved.
+3) In Guest Detail, if a doc is UPLOADED:
+   - Tapping the doc card should open the PDF automatically on device.
+4) Must be SOLID + production-ready:
+   - stable DTOs, no undefined arrays
+   - strong validations + file type checks
+   - secure storage strategy
+   - robust error handling (with system error codes)
+
+NON-NEGOTIABLE:
+- PDF only. Reject any non-pdf with clear error code.
+- Clinic scoping enforced for Manager endpoints.
+- Guest can only upload for their own patientId.
+- Must work in Expo Go on real phone.
+- Use bottom sheets for actions.
+- White theme premium UI.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify current document-related DB tables/columns:
+- document_types
+- patient_documents: status, instructionText, fileUrl? uploadedAt?
+2) Identify existing endpoints:
+- assign documents to patient
+- list patient documents
+- update document status
+3) Identify why assigned docs are not visible:
+- guest detail endpoint not returning assigned docs?
+- field name mismatch? documents vs patient_documents?
+- UI not rendering list? docTypes?.map bug?
+Provide a root-cause report with file paths and exact mismatch.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — DATA MODEL (DB) — ENSURE PDF SUPPORT
+========================================================
+Update patient_documents table if needed:
+- status enum must include at least: PENDING, UPLOADED
+  (map existing ASSIGNED->PENDING if currently used)
+- fileUrl text nullable
+- fileName text nullable
+- fileMime text nullable (must be "application/pdf")
+- fileSize integer nullable
+- uploadedAt timestamp nullable
+
+Ensure:
+- patient_documents always created on assign with status=PENDING and instructionText saved.
+
+========================================================
+PHASE 3 — STORAGE STRATEGY (PROD-READY)
+========================================================
+Implement storage in a way that works on Replit + Expo Go:
+
+Option A (recommended for now): Store PDFs on server filesystem + serve securely
+- Upload endpoint stores file under:
+  server/uploads/patient-documents/<patientId>/<docId>.pdf
+- Save fileUrl as a signed/secure route:
+  /v1/patient/documents/:id/file (or /v1/manager/documents/:id/file)
+- Serve file with proper Content-Type application/pdf
+- Add auth checks before serving.
+
+Option B (future): S3/Supabase Storage
+For now implement Option A for speed unless project already has S3.
+
+Must add:
+- file size limit (e.g., 10MB)
+- allow only .pdf and application/pdf
+- antivirus is out-of-scope but add basic checks
+
+========================================================
+PHASE 4 — BACKEND ENDPOINTS (SOLID, WITH VALIDATION)
+========================================================
+Implement SOLID modules:
+
+server/modules/patientDocuments/
+  routes/controller/usecases/repos/schemas
+server/shared/uploads/
+  fileValidation.ts
+  storage.ts
+
+Endpoints:
+
+A) Manager assigns doc type (already exists)
+POST /v1/manager/patients/:id/assign-documents
+Body:
+{ typeId, instructionText }
+Creates patient_document:
+- status=PENDING
+- instructionText saved
+Return created doc DTO.
+
+B) Patient uploads PDF for an assigned document (Patient role)
+POST /v1/patient/documents/:id/upload
+- multipart/form-data with field "file"
+Rules:
+- Validate patient owns this document (via patientId from auth)
+- Validate file is PDF:
+  - mime === application/pdf AND extension .pdf
+- Validate size <= 10MB
+- Save file to storage path (Option A)
+- Update patient_documents:
+  - status=UPLOADED
+  - fileUrl set to secure download endpoint
+  - fileName, fileMime, fileSize, uploadedAt
+Return updated doc DTO.
+
+C) Download/view file (Patient + Manager)
+GET /v1/patient/documents/:id/file   (patient only) OR
+GET /v1/manager/documents/:id/file   (manager only)
+Rules:
+- auth required
+- patient can only access their own
+- manager can only access within clinic
+Response:
+- streams pdf with Content-Type: application/pdf
+- add Content-Disposition inline; filename="...pdf"
+
+D) Guest detail endpoint must return assigned docs reliably
+GET /v1/manager/patients/:id/details
+documents.assigned must include:
+- id, typeName, instructionText, status, fileUrl (if uploaded), uploadedAt
+
+Error codes:
+- DOC-UP-001 INVALID_FILE_TYPE
+- DOC-UP-002 FILE_TOO_LARGE
+- DOC-UP-003 NOT_OWNER
+- DOC-UP-404 NOT_FOUND
+
+========================================================
+PHASE 5 — FRONTEND UI (MANAGER + PATIENT)
+========================================================
+A) Manager Guest Detail documents card (must show assigned docs)
+- Render assigned docs as cards:
+  - Title: typeName
+  - Subtitle: instructionText
+  - Status pill: Pending/Uploaded
+  - If Uploaded:
+    - “Open PDF” button (tap opens pdf)
+- If Pending:
+  - show “Waiting upload” hint
+- Empty state if none.
+
+When “Open PDF”:
+- open fileUrl using Linking.openURL(...) OR use expo-file-system to download then open.
+- Must work on Expo Go:
+  - Use expo-file-system + expo-sharing or Linking to open in system viewer.
+
+B) Patient (Guest) dashboard/documents upload UI
+Add a “Documents” section for patient:
+- list assigned docs with status
+- for PENDING:
+  - “Upload PDF” button
+  - opens document picker (expo-document-picker) restricted to PDF
+  - uploads via POST /v1/patient/documents/:id/upload
+- for UPLOADED:
+  - “Open PDF” + “Replace PDF” (optional)
+Validation:
+- Only PDF selectable. Show friendly message otherwise.
+
+C) Fix any undefined map crash
+- In UI always use (docs ?? []) not docs?.map.
+But also fix backend to always return arrays.
+
+========================================================
+PHASE 6 — QA / TESTS (MANDATORY)
+========================================================
+Backend tests:
+- assign creates PENDING doc with instructionText
+- upload rejects non-pdf (DOC-UP-001)
+- upload stores file and sets status=UPLOADED
+- file endpoint streams pdf and checks auth scope
+
+Manual QA:
+1) Manager assigns a doc type -> doc appears in guest detail as PENDING card
+2) Patient uploads a PDF -> status becomes UPLOADED
+3) Manager sees uploaded doc and can open PDF
+4) Patient can open their own uploaded PDF
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit root cause report (why docs weren’t visible)
+2) Files changed/added
+3) Endpoints + sample curl (assign, upload, file)
+4) Storage path strategy and limits
+5) Manual QA checklist
+
+IMPLEMENTATION ORDER:
+1) Audit and root-cause
+2) Fix guest detail DTO to always return assigned docs
+3) Implement upload storage + endpoints (SOLID)
+4) Build patient upload UI + manager open pdf
+5) Tests + verification on Expo Go
+
+Proceed now. Implement end-to-end and verify.
+END.

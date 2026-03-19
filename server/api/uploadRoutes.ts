@@ -2,55 +2,74 @@ import { Router } from "express";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authMiddleware, requireRole } from "../auth/middleware";
 import { getStorageProvider } from "../storage/getStorageProvider";
 import { documentRepo } from "../repositories/documentRepo";
-import { Errors, AppError } from "../auth/errors";
+import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
 import { patientDocuments } from "@shared/schema";
 
 const router = Router();
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
+  limits: { fileSize: MAX_FILE_SIZE },
+}).single("file");
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many uploads, please try again later." },
 });
+
+function multerUpload(req: any, res: any): Promise<void> {
+  return new Promise((resolve, reject) => {
+    upload(req, res, (err) => {
+      if (!err) return resolve();
+      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        return reject(new AppError("DOC-UP-002", "File exceeds the 10 MB limit", 413));
+      }
+      reject(err);
+    });
+  });
+}
 
 router.post(
   "/patient/documents/:id/upload",
   authMiddleware,
   requireRole("PATIENT"),
   uploadLimiter,
-  upload.single("file"),
   async (req, res, next) => {
     try {
+      await multerUpload(req, res);
+
       if (!req.file) {
-        throw Errors.VALIDATION_ERROR("No file uploaded");
+        throw new AppError("DOC-UP-001", "No file received", 400);
       }
 
-      if (req.file.mimetype !== "application/pdf") {
-        throw new AppError("FILE_TYPE_INVALID", "Only PDF files are allowed", 422);
+      const mime = req.file.mimetype;
+      const originalName = req.file.originalname ?? "";
+      const ext = originalName.split(".").pop()?.toLowerCase() ?? "";
+
+      if (mime !== "application/pdf" || ext !== "pdf") {
+        throw new AppError("DOC-UP-001", "Only PDF files are accepted (application/pdf, .pdf extension)", 422);
       }
 
       const docId = req.params.id as string;
       const doc = await documentRepo.findById(docId);
 
       if (!doc) {
-        throw Errors.NOT_FOUND("Document not found");
+        throw new AppError("DOC-UP-404", "Document assignment not found", 404);
       }
 
       if (doc.patientId !== req.actor!.sub) {
-        throw Errors.FORBIDDEN("You do not have permission to upload this document");
+        throw new AppError("DOC-UP-003", "You are not the owner of this document", 403);
       }
 
       const storageProvider = getStorageProvider();
@@ -62,15 +81,16 @@ router.post(
         mimetype: req.file.mimetype,
       });
 
+      const now = new Date();
       const updated = await documentRepo.updateDocument(docId, doc.clinicId, {
         fileUrl: storageKey,
+        fileName: originalName,
+        fileMime: mime,
+        fileSize: req.file.size,
         status: "UPLOADED",
+        uploadedAt: now,
         rejectionReason: null,
       });
-
-      await db.update(patientDocuments)
-        .set({ uploadedAt: new Date() })
-        .where(eq(patientDocuments.id, docId));
 
       auditLog({
         clinicId: doc.clinicId,
@@ -81,7 +101,14 @@ router.post(
         resourceId: docId,
       });
 
-      res.json(updated);
+      res.json({
+        id: updated.id,
+        status: updated.status,
+        fileName: updated.fileName,
+        fileMime: updated.fileMime,
+        fileSize: updated.fileSize,
+        uploadedAt: updated.uploadedAt,
+      });
     } catch (error) {
       next(error);
     }
@@ -96,7 +123,9 @@ router.get(
       const docId = req.params.id as string;
       const doc = await documentRepo.findById(docId);
 
-      if (!doc || !doc.fileUrl) throw Errors.NOT_FOUND("Document or file not found");
+      if (!doc || !doc.fileUrl) {
+        throw new AppError("DOC-UP-404", "Document or file not found", 404);
+      }
 
       const actor = req.actor!;
       let allowed = false;
@@ -104,14 +133,21 @@ router.get(
       else if (actor.role === "MANAGER") allowed = actor.clinicId === doc.clinicId;
       else if (actor.role === "PATIENT") allowed = actor.sub === doc.patientId;
 
-      if (!allowed) throw Errors.FORBIDDEN();
+      if (!allowed) throw new AppError("DOC-UP-003", "Access denied", 403);
 
       const secret = process.env.SESSION_SECRET || "dev-secret";
-      const token = jwt.sign({ sub: actor.sub, docId, purpose: "download" }, secret, { expiresIn: "10m" });
+      const token = jwt.sign(
+        { sub: actor.sub, docId, purpose: "download" },
+        secret,
+        { expiresIn: "15m" }
+      );
 
-      // Return a URL that uses ?token= query param (download endpoint already supports this)
       const downloadUrl = `/v1/documents/${docId}/download?token=${token}`;
-      res.json({ url: downloadUrl, expiresIn: 600 });
+      res.json({
+        url: downloadUrl,
+        fileName: doc.fileName ?? `document.pdf`,
+        expiresIn: 900,
+      });
     } catch (error) {
       next(error);
     }
@@ -134,7 +170,7 @@ router.get(
       const doc = await documentRepo.findById(docId);
 
       if (!doc || !doc.fileUrl) {
-        throw Errors.NOT_FOUND("Document or file not found");
+        throw new AppError("DOC-UP-404", "Document or file not found", 404);
       }
 
       const actor = req.actor!;
@@ -148,15 +184,20 @@ router.get(
       }
 
       if (!allowed) {
-        throw Errors.FORBIDDEN();
+        throw new AppError("DOC-UP-003", "Access denied", 403);
       }
 
-      const safeName = doc.documentType
+      const safeName = doc.fileName
+        ? doc.fileName.replace(/[^a-zA-Z0-9_\-\.]/g, "_")
+        : doc.documentType
         ? `${doc.documentType.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`
         : "document.pdf";
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
+      if (doc.fileSize) {
+        res.setHeader("Content-Length", doc.fileSize);
+      }
 
       const storageProvider = getStorageProvider();
       const stream = await storageProvider.getReadStream(doc.fileUrl);

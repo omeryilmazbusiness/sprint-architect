@@ -49,6 +49,8 @@ export interface GuestDetailDTO {
       instructionText: string | null;
       status: string;
       fileUrl: string | null;
+      fileName: string | null;
+      fileSize: number | null;
       uploadedAt: string | null;
     }>;
     summary: { pending: number; uploaded: number };
@@ -124,6 +126,8 @@ export async function fetchGuestDetail(
     instructionText: d.instructionText ?? null,
     status: d.status,
     fileUrl: d.fileUrl ?? null,
+    fileName: d.fileName ?? null,
+    fileSize: d.fileSize ?? null,
     uploadedAt: d.uploadedAt ? d.uploadedAt.toISOString() : null,
   }));
 

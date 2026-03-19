@@ -71,10 +71,22 @@ export const documentRepo = {
     });
   },
 
-  async updateDocument(id: string, clinicId: string, data: { status?: "ASSIGNED" | "UPLOADED" | "APPROVED" | "REJECTED"; notes?: string; fileUrl?: string; rejectionReason?: string | null }) {
+  async updateDocument(
+    id: string,
+    clinicId: string,
+    data: {
+      status?: "ASSIGNED" | "UPLOADED" | "APPROVED" | "REJECTED";
+      fileUrl?: string | null;
+      fileName?: string | null;
+      fileMime?: string | null;
+      fileSize?: number | null;
+      uploadedAt?: Date | null;
+      rejectionReason?: string | null;
+    }
+  ) {
     const [updated] = await db
       .update(patientDocuments)
-      .set(data)
+      .set({ ...data, updatedAt: new Date() })
       .where(and(eq(patientDocuments.id, id), eq(patientDocuments.clinicId, clinicId)))
       .returning();
     return updated;

@@ -10,6 +10,8 @@ export interface AssignedDoc {
   instructionText: string | null;
   status: string;
   fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
   uploadedAt: string | null;
 }
 
@@ -17,7 +19,7 @@ interface Props {
   docs: AssignedDoc[];
   summary: { pending: number; uploaded: number };
   onAssign: () => void;
-  onViewPdf?: (docId: string) => void;
+  onViewPdf?: (docId: string, fileName?: string | null) => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -110,12 +112,12 @@ export function DocumentsAssignmentCard({ docs, summary, onAssign, onViewPdf }: 
                 <View style={styles.docActions}>
                   {doc.fileUrl && onViewPdf && (
                     <Pressable
-                      onPress={() => onViewPdf(doc.id)}
+                      onPress={() => onViewPdf(doc.id, doc.fileName)}
                       style={styles.viewBtn}
                       hitSlop={8}
                     >
-                      <Ionicons name="eye-outline" size={15} color={T.accent} />
-                      <Text style={styles.viewBtnText}>View</Text>
+                      <Ionicons name="document-outline" size={14} color={T.accent} />
+                      <Text style={styles.viewBtnText}>Open PDF</Text>
                     </Pressable>
                   )}
                   <DocStatusPill status={doc.status} />

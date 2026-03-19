@@ -15,6 +15,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
@@ -75,6 +77,8 @@ interface GuestDetail {
       instructionText: string | null;
       status: string;
       fileUrl: string | null;
+      fileName: string | null;
+      fileSize: number | null;
       uploadedAt: string | null;
     }>;
     summary: { pending: number; uploaded: number };
@@ -197,18 +201,44 @@ export default function GuestDetailScreen() {
     onError: () => showToast("Failed to assign document"),
   });
 
-  const handleViewPdf = async (docId: string) => {
+  const handleViewPdf = async (docId: string, fileName?: string | null) => {
     try {
       const baseUrl = getApiUrl();
       const resp = await fetch(`${baseUrl}v1/documents/${docId}/signed-url`, {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
       if (!resp.ok) throw new Error("Failed to get download link");
-      const { url } = await resp.json() as { url: string };
-      const fullUrl = url.startsWith("http") ? url : `${baseUrl.replace(/\/$/, "")}${url}`;
-      await Linking.openURL(fullUrl);
+      const body = await resp.json() as { url: string; fileName?: string };
+      const fullUrl = body.url.startsWith("http")
+        ? body.url
+        : `${baseUrl.replace(/\/$/, "")}${body.url}`;
+
+      if (Platform.OS === "web") {
+        await Linking.openURL(fullUrl);
+        return;
+      }
+
+      const safeFileName = (fileName ?? body.fileName ?? "document.pdf")
+        .replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+      const localUri = `${FileSystem.cacheDirectory}${safeFileName}`;
+
+      showToast("Downloading…");
+      const dl = await FileSystem.downloadAsync(fullUrl, localUri);
+
+      if (dl.status !== 200) throw new Error("Download failed");
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dl.uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Open PDF",
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Linking.openURL(dl.uri);
+      }
     } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Could not open document");
+      Alert.alert("Could not open PDF", e.message ?? "An unexpected error occurred");
     }
   };
 

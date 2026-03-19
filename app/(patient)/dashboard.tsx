@@ -10,11 +10,14 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/context/AuthContext";
 import { getApiUrl } from "@/lib/query-client";
@@ -71,6 +74,47 @@ function DocumentCard({ doc, colors, accessToken, onUploadSuccess }: {
   onUploadSuccess: () => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
+
+  const handleOpenPdf = async () => {
+    if (!accessToken) return;
+    try {
+      setIsOpeningPdf(true);
+      const resp = await fetch(`${getApiUrl()}v1/documents/${doc.id}/signed-url`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!resp.ok) throw new Error("Failed to get download link");
+      const body = await resp.json() as { url: string; fileName?: string };
+      const fullUrl = body.url.startsWith("http")
+        ? body.url
+        : `${getApiUrl().replace(/\/$/, "")}${body.url}`;
+
+      if (Platform.OS === "web") {
+        await Linking.openURL(fullUrl);
+        return;
+      }
+
+      const safeFileName = (body.fileName ?? "document.pdf").replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+      const localUri = `${FileSystem.cacheDirectory}${safeFileName}`;
+      const dl = await FileSystem.downloadAsync(fullUrl, localUri);
+      if (dl.status !== 200) throw new Error("Download failed");
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dl.uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Open PDF",
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Linking.openURL(dl.uri);
+      }
+    } catch (e: any) {
+      Alert.alert("Could not open PDF", e.message ?? "An unexpected error occurred");
+    } finally {
+      setIsOpeningPdf(false);
+    }
+  };
 
   const handleUpload = async () => {
     try {
@@ -156,16 +200,32 @@ function DocumentCard({ doc, colors, accessToken, onUploadSuccess }: {
       )}
 
       {doc.status === "UPLOADED" && (
-        <View style={styles.statusInfo}>
-          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-          <Text style={[styles.statusInfoText, { color: colors.textSecondary }]}>Waiting for review</Text>
+        <View style={styles.uploadedActions}>
+          <View style={styles.statusInfo}>
+            <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
+            <Text style={[styles.statusInfoText, { color: colors.textSecondary }]}>Waiting for review</Text>
+          </View>
+          <Pressable onPress={handleOpenPdf} disabled={isOpeningPdf} style={styles.openPdfBtn} hitSlop={6}>
+            {isOpeningPdf
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <><Ionicons name="document-outline" size={15} color={colors.primary} /><Text style={[styles.openPdfBtnText, { color: colors.primary }]}>Open PDF</Text></>
+            }
+          </Pressable>
         </View>
       )}
 
       {doc.status === "APPROVED" && (
-        <View style={styles.statusInfo}>
-          <Ionicons name="checkmark-circle-outline" size={16} color={Colors.light.success} />
-          <Text style={[styles.statusInfoText, { color: Colors.light.success }]}>Document approved</Text>
+        <View style={styles.uploadedActions}>
+          <View style={styles.statusInfo}>
+            <Ionicons name="checkmark-circle-outline" size={15} color={Colors.light.success} />
+            <Text style={[styles.statusInfoText, { color: Colors.light.success }]}>Approved</Text>
+          </View>
+          <Pressable onPress={handleOpenPdf} disabled={isOpeningPdf} style={styles.openPdfBtn} hitSlop={6}>
+            {isOpeningPdf
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <><Ionicons name="document-outline" size={15} color={colors.primary} /><Text style={[styles.openPdfBtnText, { color: colors.primary }]}>Open PDF</Text></>
+            }
+          </Pressable>
         </View>
       )}
     </View>
@@ -356,11 +416,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
   },
+  uploadedActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  openPdfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  openPdfBtnText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
   statusInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
   },
   statusInfoText: {
     fontSize: 13,
