@@ -1,0 +1,154 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Add a premium “Create Appointment” feature inside Manager → Guest Detail screen:
+- A “+ Create Appointment” action must open a bottom-sheet popup (slide-up).
+- Manager selects:
+  1) Date (date picker)
+  2) Time (time picker)
+  3) Doctor (from clinic doctors list)
+  4) Procedure/Title (short text or dropdown)
+- On submit, appointment is created in DB (clinic-scoped).
+- After creation, show a summary card in Guest Detail and the appointment appears in the guest’s schedule list.
+
+NON-NEGOTIABLE:
+- White theme premium UX.
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation.
+- Strict clinic scoping: manager can only create appointments for guests in their clinic.
+- Doctor selection required (doctor per appointment).
+- Stable DTOs: empty data returns [], no crashes.
+- Keyboard and bottom sheet must not clip content.
+- Must work on Expo Go.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate Guest Detail route file path and where to place “Create Appointment” action.
+2) Confirm existing appointments endpoints:
+- GET/POST /v1/manager/patients/:id/appointments OR /v1/manager/appointments
+3) Confirm appointment DB fields:
+- patientId, clinicId, doctorId, startAt, title, status
+4) Confirm how doctor list is fetched in manager area.
+Output a brief audit summary and exact file paths.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — BACKEND (SOLID) APPOINTMENT CREATE (IF NEEDED)
+========================================================
+If endpoint is missing or not suitable, implement:
+POST /v1/manager/patients/:id/appointments
+Body (zod):
+{
+  date: "YYYY-MM-DD",
+  time: "HH:mm",
+  doctorId: string (required),
+  title: string (required, 2..60),
+  notes?: string
+}
+Rules:
+- Combine date+time into startAt in Europe/Istanbul timezone.
+- Verify patient belongs to manager’s clinic.
+- Verify doctor belongs to same clinic.
+- Set appointment status default: SCHEDULED.
+Return created appointment DTO:
+{ id, patientId, doctorId, doctorName, startAt, title, status }
+
+Also ensure Guest Detail endpoint includes upcoming appointments or at least today/next appointment preview.
+
+SOLID module:
+server/modules/managerAppointments/
+  routes/controller/usecases/repos/schemas
+
+========================================================
+PHASE 3 — FRONTEND: CREATE APPOINTMENT BOTTOM SHEET (PREMIUM)
+========================================================
+1) Add button on Guest Detail:
+- “Create Appointment” (primary or + icon) in the quick actions row.
+
+2) Implement bottom sheet:
+components/guestDetail/CreateAppointmentSheet.tsx
+
+UX layout:
+- Header: “New Appointment” + close X
+- Field 1: Date picker (calendar)
+- Field 2: Time picker (time select; 15-min increments optional)
+- Field 3: Doctor picker:
+  - searchable list
+  - shows doctor name + specialty
+- Field 4: Procedure/Title:
+  - short input OR dropdown if you have predefined procedures
+- Preview (summary card inside sheet before submit):
+  - Date + time
+  - Doctor name
+  - Title
+- Submit button pinned at bottom: “Create”
+Validation:
+- date required
+- time required
+- doctor required
+- title required
+- prevent past date/time (optional but professional)
+- show inline errors
+
+3) Data:
+- Use React Query:
+  - fetch doctors list (cached)
+  - mutation create appointment
+- On success:
+  - close sheet
+  - toast success (short duration)
+  - invalidate guest detail query + appointments queries
+  - Guest detail shows new “Next Appointment” summary card immediately
+
+4) Avoid clipping:
+- Use SafeArea padding + contentContainerStyle paddingBottom
+- If using keyboard input, wrap with KeyboardAvoidingView
+
+========================================================
+PHASE 4 — GUEST DETAIL APPOINTMENTS DISPLAY (SUMMARY CARD)
+========================================================
+1) Add a “Next Appointment” summary card on Guest Detail Overview:
+- Shows the next upcoming appointment:
+  - date/time
+  - doctor
+  - title
+- If none: “No upcoming appointments” with CTA “Create Appointment”
+
+2) Add a compact “Appointments” list section (optional):
+- shows upcoming appointments list (max 3)
+- “View all” navigates to schedule
+
+========================================================
+PHASE 5 — QA / VERIFICATION
+========================================================
+Manual QA:
+- Open guest detail -> tap Create Appointment -> sheet opens
+- Pick date/time/doctor/title -> preview updates
+- Create -> saved to DB, visible after refresh
+- Next Appointment card updates immediately
+- Small screen: sheet not clipped
+Backend tests (minimum):
+- create appointment clinic scoping enforced
+- doctor must belong to clinic
+- returns created DTO
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit summary + file paths
+2) Files changed/added
+3) Endpoint details + sample curl
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Backend endpoint if needed
+3) CreateAppointmentSheet UI + doctor picker
+4) Guest detail summary card update
+5) Tests + verification
+
+Proceed now. Make it premium, SOLID, production-ready.
+END.

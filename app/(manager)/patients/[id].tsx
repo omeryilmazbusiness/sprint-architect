@@ -29,6 +29,7 @@ import { DocumentsAssignmentCard } from "@/components/guestDetail/DocumentsAssig
 import { AssignTransportSheet } from "@/components/guestDetail/AssignTransportSheet";
 import { AssignHotelSheet } from "@/components/guestDetail/AssignHotelSheet";
 import { AssignDocTypeSheet } from "@/components/guestDetail/AssignDocTypeSheet";
+import { CreateAppointmentSheet } from "@/components/guestDetail/CreateAppointmentSheet";
 
 interface GuestDetail {
   patient: {
@@ -123,6 +124,7 @@ export default function GuestDetailScreen() {
   const [showTransportSheet, setShowTransportSheet] = useState(false);
   const [showHotelSheet, setShowHotelSheet] = useState(false);
   const [showDocSheet, setShowDocSheet] = useState(false);
+  const [showApptSheet, setShowApptSheet] = useState(false);
 
   const detailKey = [`/v1/manager/patients/${id}/details`];
 
@@ -346,11 +348,18 @@ export default function GuestDetailScreen() {
           }}
         />
 
-        {nextAppointment && (
+        {nextAppointment ? (
           <View style={[styles.apptCard, cardShadow]}>
             <View style={styles.apptHeaderRow}>
               <Ionicons name="calendar-outline" size={14} color={T.success} />
               <Text style={styles.apptBadge}>Next Appointment</Text>
+              <Pressable
+                onPress={() => setShowApptSheet(true)}
+                style={styles.apptAddBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={T.accent} />
+              </Pressable>
             </View>
             <Text style={styles.apptTitle}>
               {nextAppointment.title ?? "Appointment"}
@@ -361,6 +370,24 @@ export default function GuestDetailScreen() {
                 ? `  ·  Dr. ${nextAppointment.doctor.fullName}`
                 : ""}
             </Text>
+          </View>
+        ) : (
+          <View style={[styles.apptEmptyCard, cardShadow]}>
+            <View style={styles.apptEmptyLeft}>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={T.textMuted}
+              />
+              <Text style={styles.apptEmptyText}>No upcoming appointments</Text>
+            </View>
+            <Pressable
+              onPress={() => setShowApptSheet(true)}
+              style={styles.apptCreateBtn}
+            >
+              <Ionicons name="add" size={14} color="#fff" />
+              <Text style={styles.apptCreateBtnText}>Schedule</Text>
+            </Pressable>
           </View>
         )}
 
@@ -411,6 +438,16 @@ export default function GuestDetailScreen() {
           assignDocMutation.mutate({ typeId, instructionText })
         }
         assigning={assignDocMutation.isPending}
+      />
+
+      <CreateAppointmentSheet
+        visible={showApptSheet}
+        patientId={id ?? ""}
+        onClose={() => setShowApptSheet(false)}
+        onCreated={() => {
+          invalidate();
+          showToast("Appointment created ✓");
+        }}
       />
     </View>
   );
@@ -493,6 +530,48 @@ const styles = StyleSheet.create({
     color: T.success,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    flex: 1,
+  },
+  apptAddBtn: {
+    padding: 2,
+  },
+  apptEmptyCard: {
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    paddingHorizontal: T.sp16,
+    paddingVertical: 14,
+    marginBottom: T.sp12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: T.border,
+    borderStyle: "dashed",
+  },
+  apptEmptyLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  apptEmptyText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: T.textMuted,
+  },
+  apptCreateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: T.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: T.r8,
+  },
+  apptCreateBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: "#fff",
   },
   apptTitle: {
     fontFamily: "Inter_700Bold",
