@@ -9,13 +9,15 @@ import {
   Platform,
   Alert,
   ToastAndroid,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { T, cardShadow } from "@/constants/adminTheme";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { useAuth } from "@/context/AuthContext";
 import { GuestHeroCard } from "@/components/guestDetail/GuestHeroCard";
 import { GuestInfoCard } from "@/components/guestDetail/GuestInfoCard";
 import { GuestTrackingStepper } from "@/components/guestDetail/GuestTrackingStepper";
@@ -72,6 +74,8 @@ interface GuestDetail {
       typeName: string;
       instructionText: string | null;
       status: string;
+      fileUrl: string | null;
+      uploadedAt: string | null;
     }>;
     summary: { pending: number; uploaded: number };
   };
@@ -110,6 +114,7 @@ export default function GuestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { accessToken } = useAuth();
 
   const [showTransportSheet, setShowTransportSheet] = useState(false);
   const [showHotelSheet, setShowHotelSheet] = useState(false);
@@ -182,8 +187,7 @@ export default function GuestDetailScreen() {
       instructionText: string;
     }) =>
       apiRequest("POST", `/v1/manager/patients/${id}/assign-documents`, {
-        typeId,
-        instructionText: instructionText || null,
+        items: [{ documentTypeId: typeId, instructionText: instructionText || null }],
       }),
     onSuccess: () => {
       setShowDocSheet(false);
@@ -192,6 +196,21 @@ export default function GuestDetailScreen() {
     },
     onError: () => showToast("Failed to assign document"),
   });
+
+  const handleViewPdf = async (docId: string) => {
+    try {
+      const baseUrl = getApiUrl();
+      const resp = await fetch(`${baseUrl}v1/documents/${docId}/signed-url`, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (!resp.ok) throw new Error("Failed to get download link");
+      const { url } = await resp.json() as { url: string };
+      const fullUrl = url.startsWith("http") ? url : `${baseUrl.replace(/\/$/, "")}${url}`;
+      await Linking.openURL(fullUrl);
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "Could not open document");
+    }
+  };
 
   const topPad =
     Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -337,6 +356,7 @@ export default function GuestDetailScreen() {
           docs={documents.assigned ?? []}
           summary={documents.summary ?? { pending: 0, uploaded: 0 }}
           onAssign={() => setShowDocSheet(true)}
+          onViewPdf={handleViewPdf}
         />
       </ScrollView>
 

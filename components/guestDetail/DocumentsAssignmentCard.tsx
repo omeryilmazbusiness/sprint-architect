@@ -9,12 +9,15 @@ export interface AssignedDoc {
   typeName: string;
   instructionText: string | null;
   status: string;
+  fileUrl: string | null;
+  uploadedAt: string | null;
 }
 
 interface Props {
   docs: AssignedDoc[];
   summary: { pending: number; uploaded: number };
   onAssign: () => void;
+  onViewPdf?: (docId: string) => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -40,7 +43,7 @@ function DocStatusPill({ status }: { status: string }) {
   );
 }
 
-export function DocumentsAssignmentCard({ docs, summary, onAssign }: Props) {
+export function DocumentsAssignmentCard({ docs, summary, onAssign, onViewPdf }: Props) {
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.headerRow}>
@@ -98,8 +101,25 @@ export function DocumentsAssignmentCard({ docs, summary, onAssign }: Props) {
                       {doc.instructionText}
                     </Text>
                   ) : null}
+                  {doc.uploadedAt ? (
+                    <Text style={styles.docUploaded}>
+                      Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
+                    </Text>
+                  ) : null}
                 </View>
-                <DocStatusPill status={doc.status} />
+                <View style={styles.docActions}>
+                  {doc.fileUrl && onViewPdf && (
+                    <Pressable
+                      onPress={() => onViewPdf(doc.id)}
+                      style={styles.viewBtn}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="eye-outline" size={15} color={T.accent} />
+                      <Text style={styles.viewBtnText}>View</Text>
+                    </Pressable>
+                  )}
+                  <DocStatusPill status={doc.status} />
+                </View>
               </View>
             ))}
           </View>
@@ -181,6 +201,34 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     backgroundColor: T.surface,
+  },
+  docActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  viewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: T.r8,
+    borderWidth: 1,
+    borderColor: T.accent,
+    backgroundColor: "#EFF6FF",
+  },
+  viewBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: T.accent,
+  },
+  docUploaded: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: T.success,
+    marginTop: 2,
   },
   docRowBorder: {
     borderBottomWidth: 1,

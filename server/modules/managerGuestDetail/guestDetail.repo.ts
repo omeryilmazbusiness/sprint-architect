@@ -48,6 +48,8 @@ export interface GuestDetailDTO {
       typeName: string;
       instructionText: string | null;
       status: string;
+      fileUrl: string | null;
+      uploadedAt: string | null;
     }>;
     summary: { pending: number; uploaded: number };
   };
@@ -121,6 +123,8 @@ export async function fetchGuestDetail(
     typeName: d.documentType?.name ?? "Document",
     instructionText: d.instructionText ?? null,
     status: d.status,
+    fileUrl: d.fileUrl ?? null,
+    uploadedAt: d.uploadedAt ? d.uploadedAt.toISOString() : null,
   }));
 
   const pending = assigned.filter((d) => d.status === "ASSIGNED").length;

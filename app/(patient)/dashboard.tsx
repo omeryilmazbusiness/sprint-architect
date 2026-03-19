@@ -42,6 +42,7 @@ interface PatientDashboardData {
     id: string;
     status: string;
     rejectionReason?: string;
+    instructionText?: string | null;
     documentType: {
       name: string;
     };
@@ -121,6 +122,11 @@ function DocumentCard({ doc, colors, accessToken, onUploadSuccess }: {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={styles.cardMain}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>{doc.documentType.name}</Text>
+          {doc.instructionText ? (
+            <Text style={[styles.cardSub, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={2}>
+              {doc.instructionText}
+            </Text>
+          ) : null}
         </View>
         <StatusBadge status={doc.status as any} small />
       </View>
