@@ -11,10 +11,13 @@ import {
   Platform,
   ScrollView,
   KeyboardAvoidingView,
+  Dimensions,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 interface DocType {
   id: string;
@@ -76,138 +79,151 @@ export function AssignDocTypeSheet({
       transparent
       animationType="slide"
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
-      <Pressable style={styles.overlay} onPress={handleClose} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.kavWrapper}
-      >
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.sheetHeader}>
-            {step === "instruct" && (
-              <Pressable onPress={handleBack} hitSlop={10} style={styles.backBtn}>
-                <Ionicons name="arrow-back" size={20} color={T.accent} />
-              </Pressable>
-            )}
-            <Text style={styles.sheetTitle}>
-              {step === "pick" ? "Select Document Type" : selectedType?.name ?? "Add Note"}
-            </Text>
-            <Pressable onPress={handleClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={T.textMuted} />
-            </Pressable>
-          </View>
-
-          {step === "pick" ? (
-            isLoading ? (
-              <View style={styles.loadingBox}>
-                <ActivityIndicator color={T.accent} />
-              </View>
-            ) : docTypes.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Ionicons name="document-outline" size={36} color={T.textMuted} />
-                <Text style={styles.emptyText}>No document types defined</Text>
-                <Text style={styles.emptyHint}>
-                  Add document types in Document Types settings first
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={docTypes}
-                keyExtractor={(d) => d.id}
-                contentContainerStyle={styles.list}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => handlePickType(item)}
-                    style={({ pressed }) => [
-                      styles.item,
-                      pressed && styles.itemPressed,
-                    ]}
-                  >
-                    <View style={styles.docIcon}>
-                      <Ionicons
-                        name="document-text-outline"
-                        size={20}
-                        color={T.accent}
-                      />
-                    </View>
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemName}>{item.name}</Text>
-                      {item.note ? (
-                        <Text style={styles.itemNote} numberOfLines={1}>
-                          {item.note}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
-                  </Pressable>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.sep} />}
-              />
-            )
-          ) : (
-            <ScrollView
-              contentContainerStyle={styles.instructionContent}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.selectedDocBadge}>
-                <Ionicons name="document-text" size={18} color={T.accent} />
-                <Text style={styles.selectedDocName}>
-                  {selectedType?.name}
-                </Text>
-              </View>
-
-              <Text style={styles.label}>
-                Instruction / Note
+      <View style={styles.root}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.kavWrapper}
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              {step === "instruct" && (
+                <Pressable onPress={handleBack} hitSlop={10} style={styles.backBtn}>
+                  <Ionicons name="arrow-back" size={20} color={T.accent} />
+                </Pressable>
+              )}
+              <Text style={styles.sheetTitle}>
+                {step === "pick"
+                  ? "Select Document Type"
+                  : selectedType?.name ?? "Add Note"}
               </Text>
-              <TextInput
-                style={styles.input}
-                value={instruction}
-                onChangeText={setInstruction}
-                placeholder="Enter instructions for the guest (optional)"
-                placeholderTextColor={T.textMuted}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                autoFocus
-              />
-
-              <Pressable
-                onPress={handleAssign}
-                disabled={assigning}
-                style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
-              >
-                {assigning ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                    <Text style={styles.assignBtnText}>Assign Document</Text>
-                  </>
-                )}
+              <Pressable onPress={handleClose} hitSlop={10}>
+                <Ionicons name="close" size={22} color={T.textMuted} />
               </Pressable>
-            </ScrollView>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+            </View>
+
+            {step === "pick" ? (
+              isLoading ? (
+                <View style={styles.loadingBox}>
+                  <ActivityIndicator color={T.accent} />
+                </View>
+              ) : docTypes.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Ionicons name="document-outline" size={36} color={T.textMuted} />
+                  <Text style={styles.emptyText}>No document types defined</Text>
+                  <Text style={styles.emptyHint}>
+                    Add document types in Document Types settings first
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={docTypes}
+                  keyExtractor={(d) => d.id}
+                  contentContainerStyle={styles.list}
+                  style={styles.flatList}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() => handlePickType(item)}
+                      style={({ pressed }) => [
+                        styles.item,
+                        pressed && styles.itemPressed,
+                      ]}
+                    >
+                      <View style={styles.docIcon}>
+                        <Ionicons
+                          name="document-text-outline"
+                          size={20}
+                          color={T.accent}
+                        />
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        {item.note ? (
+                          <Text style={styles.itemNote} numberOfLines={1}>
+                            {item.note}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
+                    </Pressable>
+                  )}
+                  ItemSeparatorComponent={() => <View style={styles.sep} />}
+                />
+              )
+            ) : (
+              <ScrollView
+                contentContainerStyle={styles.instructionContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.selectedDocBadge}>
+                  <Ionicons name="document-text" size={18} color={T.accent} />
+                  <Text style={styles.selectedDocName}>
+                    {selectedType?.name}
+                  </Text>
+                </View>
+
+                {selectedType?.note ? (
+                  <Text style={styles.docTypeHint}>{selectedType.note}</Text>
+                ) : null}
+
+                <Text style={styles.label}>Instruction / Note for Guest</Text>
+                <TextInput
+                  style={styles.input}
+                  value={instruction}
+                  onChangeText={setInstruction}
+                  placeholder="e.g. Please scan and upload your passport"
+                  placeholderTextColor={T.textMuted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  autoFocus
+                />
+
+                <Pressable
+                  onPress={handleAssign}
+                  disabled={assigning}
+                  style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
+                >
+                  {assigning ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.assignBtnText}>Assign Document</Text>
+                    </>
+                  )}
+                </Pressable>
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  root: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
   },
   kavWrapper: {
-    justifyContent: "flex-end",
+    width: "100%",
   },
   sheet: {
     backgroundColor: T.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "78%",
-    paddingBottom: Platform.OS === "web" ? 34 : 48,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: SCREEN_HEIGHT * 0.78,
+    paddingBottom: Platform.OS === "ios" ? 34 : Platform.OS === "web" ? 34 : 16,
   },
   handle: {
     width: 36,
@@ -241,7 +257,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyBox: {
-    padding: 48,
+    padding: 40,
     alignItems: "center",
     gap: 10,
   },
@@ -256,8 +272,12 @@ const styles = StyleSheet.create({
     color: T.textMuted,
     textAlign: "center",
   },
+  flatList: {
+    flex: 1,
+  },
   list: {
     padding: T.sp16,
+    paddingBottom: T.sp24,
   },
   item: {
     flexDirection: "row",
@@ -298,7 +318,8 @@ const styles = StyleSheet.create({
   },
   instructionContent: {
     padding: T.sp20,
-    gap: T.sp16,
+    gap: T.sp12,
+    paddingBottom: T.sp32,
   },
   selectedDocBadge: {
     flexDirection: "row",
@@ -313,6 +334,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: T.accent,
+    flex: 1,
+  },
+  docTypeHint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textSec,
+    paddingLeft: 2,
   },
   label: {
     fontFamily: "Inter_600SemiBold",

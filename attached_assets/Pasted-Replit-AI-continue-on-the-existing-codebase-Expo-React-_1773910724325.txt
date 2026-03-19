@@ -1,0 +1,199 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+REQUEST:
+Improve Manager → Guest Detail screen with the following requirements (premium UX, SOLID, prod-ready):
+
+1) Guest information section must be richer and more professional:
+- Show the most necessary guest details (contact + identity + travel/service)
+- Show nationality flag icon based on nationalityCode
+- Show contact actions (call, email, copy key)
+
+2) Transport assignment display must be premium and complete:
+- When a transport is assigned, show a transport card with:
+  - vehicle brand logo
+  - brand + model (big)
+  - license plate
+  - driver full name
+  - driver phone (tap-to-call)
+- Must render correctly immediately after assignment (invalidate query, no stale UI)
+
+3) Document assignment UX issues:
+- The document type selection list in the bottom sheet is cut off / hidden under the bottom.
+- After assigning a document, the assigned document row does NOT show:
+  - the manager’s instruction/description text
+  - the assigned document info
+Fix both issues with a professional UX and correct data flow.
+
+4) Tracking card:
+- Each step must have a grey check icon by default.
+- When a step is completed (<= currentStep), the check becomes green.
+- When manager taps a step to set currentStep, UI updates immediately + persists.
+- Must be modern stepper with clear feedback.
+
+NON-NEGOTIABLE:
+- First: analyze the current implementation and identify root causes.
+- SOLID backend (controller -> usecase -> repo) and stable DTOs (no undefined arrays).
+- White theme premium. No layout break on small screens.
+- Bottom sheets must be keyboard-safe (content never hidden).
+- Never show “failed data” for empty states.
+- Everything must work in Expo Go on real phone.
+
+========================================================
+PHASE 1 — AUDIT & ROOT CAUSE REPORT (MANDATORY)
+========================================================
+1) Confirm actual Guest Detail route file and components used (file paths).
+2) Identify where guest info is currently displayed and what fields are missing.
+3) For nationality flag:
+- confirm where nationalityCode is stored (patients.nationalityCode)
+- confirm how to map to a flag icon (emoji or asset mapping)
+4) Transport card:
+- confirm transport DTO fields available (vehicleBrand, vehicleModel, licensePlate, driverFullName, driverPhoneE164)
+- confirm why it doesn’t display all info now (missing DTO mapping? UI not using fields?)
+5) Documents assignment list cut off:
+- identify which bottom sheet component is used
+- find why list is clipped (height, safe area, keyboard avoiding view, FlatList inside sheet)
+6) Assigned document not showing instruction text:
+- confirm backend stores instructionText on patient_documents
+- confirm detail endpoint returns instructionText
+- find UI component not rendering it
+7) Tracking check icon behavior:
+- identify current stepper implementation and how currentStep is stored
+
+Output a short root-cause report:
+- “What exists”
+- “What is broken and why”
+- “What we will change”
+Do not implement until this report is written.
+
+========================================================
+PHASE 2 — GUEST INFO SECTION (PREMIUM)
+========================================================
+Implement a top “Guest Info” card under the hero:
+A) Identity row:
+- Nationality flag (based on nationalityCode) + nationality name
+- Passport number (if exists)
+- Date of birth (if exists)
+B) Contact row:
+- Phone (tap to call)
+- Email (tap mail)
+- Secondary contact (companion) if exists (name + phone)
+C) Travel & Service row:
+- Arrival date / departure date
+- Requested services (chips)
+- Notes (collapsed/expand)
+
+Flag implementation (no heavy deps):
+Option A (recommended): use emoji flags derived from ISO country code.
+- Convert TR -> 🇹🇷 etc.
+Option B: asset flags mapping if needed.
+
+All fields must be optional-safe and hide gracefully if missing.
+
+========================================================
+PHASE 3 — TRANSPORT CARD (ASSIGNED STATE)
+========================================================
+Update TransportAssignmentCard to show:
+- Brand logo (use VehicleBrandLogo component)
+- Brand + Model big typography
+- Plate number (monospace)
+- Driver name and phone chip (tap call)
+- “Change” button opens AssignTransportSheet
+If no transport:
+- Empty card “No transport assigned” + "+" button
+
+Ensure assignment mutation invalidates guest detail query so UI updates immediately.
+
+========================================================
+PHASE 4 — DOCUMENT ASSIGNMENT UX FIX (SHEET + DISPLAY)
+========================================================
+A) Fix bottom sheet list being cut off:
+- Ensure bottom sheet uses:
+  - SafeArea padding bottom
+  - Proper snap points
+  - FlatList with contentContainerStyle paddingBottom
+  - KeyboardAvoidingView if instruction input is inside sheet
+- If using Modal-based sheet:
+  - ensure height is calculated and scroll works
+- Add a sticky bottom action row if needed (Cancel/Assign)
+
+B) Make assignment show instruction text
+Backend:
+- Ensure patient_documents has instructionText saved and returned in:
+  GET /v1/manager/patients/:id/details
+Frontend:
+- In DocumentsAssignmentCard list rows show:
+  - Document type name (title)
+  - instructionText (subtitle, 1–2 lines, expandable)
+  - status pill (Pending/Uploaded/Approved/Rejected)
+  - If uploaded: View/Download buttons (optional if already available)
+
+C) Assign flow:
+- "+" opens AssignDocTypeSheet:
+  - Select document type (searchable list)
+  - Enter instructionText (required)
+  - Assign
+- On success:
+  - close sheet
+  - toast
+  - invalidate guest detail query
+
+========================================================
+PHASE 5 — TRACKING CARD WITH CHECK ICONS
+========================================================
+Implement TrackingStepper component rules:
+- Each step row shows:
+  - left: check icon
+    - grey if stepIndex > currentStepIndex
+    - green if stepIndex <= currentStepIndex
+  - center: step label
+  - right: subtle chevron or “Set” indicator
+Interaction:
+- Tap any step:
+  - update currentStep locally immediately (optimistic)
+  - call PUT /v1/manager/patients/:id/tracking
+  - on error: rollback and show error toast
+Design:
+- Modern spacing, vertical stepper look
+- Highlight current step row background subtly
+
+========================================================
+PHASE 6 — BACKEND DTO STABILITY + CONSISTENCY (SOLID)
+========================================================
+Ensure guest detail endpoint ALWAYS returns:
+- documents.assigned as []
+- documents.summary with 0 defaults
+- transport/hotel as null if missing
+- patient.requestedServices as [] if missing
+No undefined anywhere.
+
+========================================================
+PHASE 7 — QA / VERIFICATION
+========================================================
+Manual QA checklist:
+1) Guest detail shows guest info + nationality flag
+2) Transport assigned shows logo + brand/model big + plate + driver name/phone
+3) Document assign sheet list is not clipped; instruction input visible with keyboard
+4) After assign, document row shows instructionText and status
+5) Tracking check icons grey->green, and persists correctly
+6) No crashes on Expo Go
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Root cause report (Phase 1)
+2) Files changed/added
+3) Any endpoint changes + sample responses
+4) Manual QA checklist results
+5) Notes on SOLID boundaries and default handling
+
+IMPLEMENTATION ORDER:
+1) Phase 1 audit
+2) Guest info card + nationality flag
+3) Transport card improvements
+4) Document sheet clipping fix + instruction display fix
+5) Tracking stepper check icon logic + optimistic update
+6) DTO stability review + final QA
+
+Proceed now. Implement and verify.
+END.

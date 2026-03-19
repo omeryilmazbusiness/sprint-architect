@@ -20,21 +20,9 @@ interface HeroData {
     patientKey: string;
     phoneE164: string | null;
     email: string | null;
-    arrivalDate: string | null;
-    departureDate: string | null;
-    nationality: string | null;
   };
   onApprove?: () => void;
   approving?: boolean;
-}
-
-function fmtDate(s: string | null | undefined) {
-  if (!s) return null;
-  return new Date(s).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 const AVATAR_COLORS = [
@@ -66,8 +54,6 @@ function copyText(text: string) {
 export function GuestHeroCard({ patient, onApprove, approving }: HeroData) {
   const color = avatarColor(patient.fullName);
   const inits = initials(patient.fullName);
-  const arrFmt = fmtDate(patient.arrivalDate);
-  const depFmt = fmtDate(patient.departureDate);
   const isWaiting = patient.status === "WAITING_APPROVAL";
 
   function handleCall() {
@@ -89,17 +75,6 @@ export function GuestHeroCard({ patient, onApprove, approving }: HeroData) {
           <StatusPill status={patient.status as any} />
         </View>
       </View>
-
-      {(arrFmt || depFmt) && (
-        <View style={styles.dateRow}>
-          <Ionicons name="calendar-outline" size={14} color={T.textMuted} />
-          <Text style={styles.dateText}>
-            {arrFmt ?? "–"}
-            {"  →  "}
-            {depFmt ?? "–"}
-          </Text>
-        </View>
-      )}
 
       <View style={styles.keyRow}>
         <Ionicons name="key-outline" size={14} color={T.textMuted} />
@@ -124,13 +99,13 @@ export function GuestHeroCard({ patient, onApprove, approving }: HeroData) {
           >
             <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
             <Text style={styles.approveBtnText}>
-              {approving ? "Approving…" : "Approve"}
+              {approving ? "Approving…" : "Approve Guest"}
             </Text>
           </Pressable>
         )}
 
         {patient.phoneE164 && (
-          <Pressable onPress={handleCall} style={[styles.iconBtn]}>
+          <Pressable onPress={handleCall} style={styles.iconBtn}>
             <Ionicons name="call-outline" size={18} color={T.accent} />
           </Pressable>
         )}
@@ -138,7 +113,7 @@ export function GuestHeroCard({ patient, onApprove, approving }: HeroData) {
         {patient.email ? (
           <Pressable
             onPress={() => Linking.openURL(`mailto:${patient.email}`).catch(() => null)}
-            style={[styles.iconBtn]}
+            style={styles.iconBtn}
           >
             <Ionicons name="mail-outline" size={18} color={T.accent} />
           </Pressable>
@@ -175,23 +150,13 @@ const styles = StyleSheet.create({
   nameBlock: {
     flex: 1,
     gap: 6,
+    paddingTop: 2,
   },
   name: {
     fontFamily: "Inter_700Bold",
     fontSize: 22,
     color: T.text,
     lineHeight: 28,
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  dateText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: T.textSec,
   },
   keyRow: {
     flexDirection: "row",
@@ -238,8 +203,8 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: T.r10,
     borderWidth: 1,
     borderColor: T.border,

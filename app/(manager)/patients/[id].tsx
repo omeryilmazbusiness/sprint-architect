@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
 import { GuestHeroCard } from "@/components/guestDetail/GuestHeroCard";
+import { GuestInfoCard } from "@/components/guestDetail/GuestInfoCard";
 import { GuestTrackingStepper } from "@/components/guestDetail/GuestTrackingStepper";
 import { TransportAssignmentCard } from "@/components/guestDetail/TransportAssignmentCard";
 import { HotelAssignmentCard } from "@/components/guestDetail/HotelAssignmentCard";
@@ -35,10 +36,16 @@ interface GuestDetail {
     phoneE164: string | null;
     email: string | null;
     nationality: string | null;
+    nationalityCode: string | null;
     passportNo: string | null;
+    dateOfBirth: string | null;
     arrivalDate: string | null;
     departureDate: string | null;
     notes: string | null;
+    requestedServices: string[];
+    companionRelation: string | null;
+    emergencyContactName: string | null;
+    emergencyContactPhoneE164: string | null;
   };
   tracking: { currentStep: string | null };
   assignments: {
@@ -84,9 +91,13 @@ function showToast(msg: string) {
   }
 }
 
-function fmtTime(iso: string) {
+function fmtDateTime(iso: string) {
   try {
-    return new Date(iso).toLocaleTimeString("en-US", {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }) + " · " + d.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
     });
@@ -132,7 +143,6 @@ export default function GuestDetailScreen() {
       }),
     onSuccess: () => {
       invalidate();
-      showToast("Step updated ✓");
     },
     onError: () => showToast("Failed to update step"),
   });
@@ -269,17 +279,35 @@ export default function GuestDetailScreen() {
           approving={approveMutation.isPending}
         />
 
+        <GuestInfoCard
+          info={{
+            phoneE164: patient.phoneE164,
+            email: patient.email,
+            nationality: patient.nationality,
+            nationalityCode: patient.nationalityCode,
+            passportNo: patient.passportNo,
+            dateOfBirth: patient.dateOfBirth,
+            arrivalDate: patient.arrivalDate,
+            departureDate: patient.departureDate,
+            notes: patient.notes,
+            requestedServices: patient.requestedServices ?? [],
+            companionRelation: patient.companionRelation,
+            emergencyContactName: patient.emergencyContactName,
+            emergencyContactPhoneE164: patient.emergencyContactPhoneE164,
+          }}
+        />
+
         {nextAppointment && (
           <View style={[styles.apptCard, cardShadow]}>
             <View style={styles.apptHeaderRow}>
-              <Ionicons name="today-outline" size={14} color={T.success} />
-              <Text style={styles.apptBadge}>Today</Text>
+              <Ionicons name="calendar-outline" size={14} color={T.success} />
+              <Text style={styles.apptBadge}>Next Appointment</Text>
             </View>
             <Text style={styles.apptTitle}>
               {nextAppointment.title ?? "Appointment"}
             </Text>
             <Text style={styles.apptMeta}>
-              {fmtTime(nextAppointment.startAt)}
+              {fmtDateTime(nextAppointment.startAt)}
               {nextAppointment.doctor
                 ? `  ·  Dr. ${nextAppointment.doctor.fullName}`
                 : ""}

@@ -12,10 +12,16 @@ export interface GuestDetailDTO {
     phoneE164: string | null;
     email: string | null;
     nationality: string | null;
+    nationalityCode: string | null;
     passportNo: string | null;
+    dateOfBirth: string | null;
     arrivalDate: string | null;
     departureDate: string | null;
     notes: string | null;
+    requestedServices: string[];
+    companionRelation: string | null;
+    emergencyContactName: string | null;
+    emergencyContactPhoneE164: string | null;
   };
   tracking: { currentStep: string | null };
   assignments: {
@@ -51,6 +57,20 @@ export interface GuestDetailDTO {
     startAt: string;
     doctor: { fullName: string } | null;
   } | null;
+}
+
+function parseRequestedServices(
+  raw: string | null | undefined,
+  fallback: string | null | undefined
+): string[] {
+  try {
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  if (fallback) return [fallback];
+  return [];
 }
 
 export async function fetchGuestDetail(
@@ -118,10 +138,19 @@ export async function fetchGuestDetail(
       phoneE164: patient.phoneE164 ?? null,
       email: patient.email ?? null,
       nationality: patient.nationality ?? null,
+      nationalityCode: patient.nationalityCode ?? null,
       passportNo: patient.passportNo ?? null,
+      dateOfBirth: patient.dateOfBirth ?? null,
       arrivalDate: patient.arrivalDate ?? null,
       departureDate: patient.departureDate ?? null,
       notes: patient.notes ?? null,
+      requestedServices: parseRequestedServices(
+        patient.requestedServices,
+        patient.requestedService
+      ),
+      companionRelation: patient.companionRelation ?? null,
+      emergencyContactName: patient.emergencyContactName ?? null,
+      emergencyContactPhoneE164: patient.emergencyContactPhoneE164 ?? null,
     },
     tracking: {
       currentStep: patient.plan?.currentStep ?? null,
