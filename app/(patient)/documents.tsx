@@ -6,17 +6,13 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
-  Platform,
   Alert,
   ActivityIndicator,
-  Linking,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
+import { openPdf } from "@/services/files/FileService";
 import { useAuth } from "@/context/AuthContext";
 import { getApiUrl, queryClient as qc } from "@/lib/query-client";
 import { GuestHeader } from "@/components/guest/GuestHeader";
@@ -113,28 +109,7 @@ function DocCard({
       const fullUrl = body.url.startsWith("http")
         ? body.url
         : `${getApiUrl().replace(/\/$/, "")}${body.url}`;
-
-      if (Platform.OS === "web") {
-        await Linking.openURL(fullUrl);
-        return;
-      }
-      const safeFileName = (body.fileName ?? "document.pdf").replace(
-        /[^a-zA-Z0-9_\-.]/g,
-        "_"
-      );
-      const localUri = `${FileSystem.cacheDirectory}${safeFileName}`;
-      const dl = await FileSystem.downloadAsync(fullUrl, localUri);
-      if (dl.status !== 200) throw new Error("Download failed");
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(dl.uri, {
-          mimeType: "application/pdf",
-          dialogTitle: "Open PDF",
-          UTI: "com.adobe.pdf",
-        });
-      } else {
-        await Linking.openURL(dl.uri);
-      }
+      await openPdf(fullUrl, body.fileName ?? "document.pdf");
     } catch (e: any) {
       Alert.alert("Could not open PDF", e.message ?? "Unexpected error");
     } finally {

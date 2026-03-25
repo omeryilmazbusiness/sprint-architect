@@ -1,0 +1,190 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+PROBLEMS:
+1) Guest screens: when tapping “Open PDF”, console shows:
+   "downloadAsync imported from expo-file-system is deprecated..."
+   Must remove this warning and keep behavior correct (prod-ready).
+2) Documents section UX must be premium and robust (light theme, cards, statuses, open/upload flows).
+3) Guest screens: tapping Profile tab causes an error (crash). Must diagnose and fix.
+4) Add a new footer tab for Guest: “Explore” and design a useful premium UX for it.
+
+NON-NEGOTIABLE:
+- First: audit and identify exact file paths and root causes.
+- Keep SOLID structure: shared file handling in a dedicated service module; screens thin.
+- No “failed data” on empty states; handle loading/error gracefully.
+- Must work on Expo Go (iOS/Android) and Expo Web if enabled.
+- No breaking changes to existing backend; add only if needed.
+- Implement in correct order and verify.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+A) Find deprecated usage
+1) Search for "downloadAsync" and "expo-file-system" usage in repo.
+2) Identify exact file(s) where Open PDF is implemented:
+- which screen/component calls downloadAsync?
+- how it opens the file afterwards (Linking, Sharing, WebView, etc.)
+3) Confirm platform-specific behavior (Android vs iOS).
+
+B) Profile tab crash
+1) Find guest tabs layout and the Profile tab route file path.
+2) Reproduce the crash and capture:
+- stack trace
+- which component/hook fails (undefined access, missing route, missing provider, bad import)
+3) Root cause report: exact line(s) and why.
+
+C) Current guest docs UX
+1) Identify guest Documents screen route file and how docs are fetched.
+2) Confirm current doc item shape: { status, fileUrl, instructionText, typeName } and what’s missing.
+
+Output an audit report:
+- File paths
+- Root causes (downloadAsync warning location, profile crash reason)
+Do not implement until audit report is done.
+
+========================================================
+PHASE 2 — FIX THE DEPRECATED FILESYSTEM API (PROD-READY)
+========================================================
+Goal: remove deprecated warning WITHOUT breaking functionality.
+
+Option A (recommended now, safest): use legacy API import
+- Replace:
+  import * as FileSystem from "expo-file-system"
+  FileSystem.downloadAsync(...)
+- With:
+  import * as FileSystemLegacy from "expo-file-system/legacy"
+  FileSystemLegacy.downloadAsync(...)
+This removes the warning immediately while keeping behavior identical.
+
+Option B (optional later): migrate to new File/Directory API
+- Not required now.
+
+Implement SOLID wrapper service:
+Create:
+src/services/files/FileService.ts (or app/services/files/FileService.ts)
+
+Expose:
+- downloadPdfToCache(url: string, filenameHint?: string): Promise<{ uri: string }>
+- openPdf(uriOrUrl: string): Promise<void>
+Rules:
+- Use FileSystemLegacy.downloadAsync internally (Option A).
+- Save to cache directory with safe filename.
+- Then open the file:
+  - iOS: Linking.openURL(fileUri)
+  - Android: use Linking or expo-intent-launcher if required (only if already installed; otherwise try Linking first)
+- Always catch errors and return user-friendly toast:
+  “Could not open PDF. Please try again.”
+  Include internal error code in dev logs.
+
+Remove direct filesystem calls from UI components; they call FileService only.
+
+========================================================
+PHASE 3 — GUEST DOCUMENTS UX (PREMIUM)
+========================================================
+Redesign Guest Documents screen + document cards:
+
+A) Screen layout (light theme premium)
+- Header: “Documents”
+- Small summary row:
+  - Pending count / Uploaded count
+- List of Document cards (FlatList)
+
+B) Document card design
+Each assigned doc shows:
+- Title: typeName
+- Subtitle: instructionText (1–2 lines, expandable)
+- Status pill: PENDING or UPLOADED
+Actions:
+- If PENDING: “Upload PDF”
+- If UPLOADED: “Open PDF” + optional “Replace PDF”
+- If UPLOADED and fileUrl exists: Open triggers FileService.openPdf(fileUrl)
+
+C) Upload flow (PDF only)
+- Use expo-document-picker to pick only PDF (or validate MIME/ext strictly).
+- Upload endpoint already exists or implement if missing:
+  POST /v1/patient/documents/:id/upload multipart form-data
+- Show upload progress state (at least a spinner + disabled button).
+- After success: invalidate docs query.
+
+D) Robust states
+- Loading skeleton
+- Empty state: “No documents assigned”
+- Error state: Retry
+No “failed data”.
+
+========================================================
+PHASE 4 — FIX GUEST PROFILE TAB CRASH
+========================================================
+1) Fix the crash root cause found in Phase 1.
+Common causes to check and fix:
+- missing route file: app/(guest)/(tabs)/profile.tsx not present
+- profile screen uses a hook expecting user data but hook returns undefined
+- auth provider not available in guest route group
+- missing null checks (e.g., user.email)
+2) Make Profile screen production-grade:
+- Show guest name + patientKey
+- Show clinic info if available
+- Show actions:
+  - Logout
+  - (optional) Language
+- Always safe defaults, no undefined access.
+
+Add error boundary / safe UI:
+- If profile data missing, show placeholders and “Refresh” button.
+
+========================================================
+PHASE 5 — ADD NEW GUEST TAB: EXPLORE
+========================================================
+1) Update guest tabs layout to include a new tab:
+- Name: Explore
+- Route: app/(guest)/(tabs)/explore.tsx
+
+2) Explore UX (premium and useful)
+Design as card grid:
+- “Your Plan” (quick summary of transport/hotel/next appointment)
+- “FAQ” (static helpful content)
+- “Contact Clinic” (call button if phone exists)
+- “Translate” (placeholder card if not implemented yet)
+Keep it minimal but polished.
+
+3) Ensure footer tab remains professional:
+- no overlaps
+- icons consistent
+- labels readable
+- safe area correct
+
+========================================================
+PHASE 6 — VERIFICATION (MANDATORY)
+========================================================
+1) Confirm the warning is gone:
+- No deprecated message for downloadAsync when opening PDF
+2) Documents:
+- PENDING shows Upload
+- UPLOADED shows Open PDF and opens successfully
+3) Profile tab:
+- No crash; loads safely even with missing data
+4) Explore tab:
+- Appears in footer and renders premium layout
+5) Small screen:
+- no broken layout on iPhone SE / small Android
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit report (file paths + root causes)
+2) Files changed/added
+3) Explain which filesystem fix used (legacy import) and where
+4) Manual QA checklist results
+5) If any endpoints were added/changed, provide sample curl
+
+IMPLEMENTATION ORDER:
+1) Audit and root cause report
+2) FileService refactor + legacy import fix
+3) Documents UX rebuild using FileService
+4) Profile crash fix
+5) Add Explore tab + UX
+6) Final QA
+
+Proceed now. Implement and verify.
+END.
