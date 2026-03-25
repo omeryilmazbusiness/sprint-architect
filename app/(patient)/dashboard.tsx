@@ -1,342 +1,130 @@
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Pressable,
-  useColorScheme,
   Platform,
-  Alert,
-  ActivityIndicator,
-  Linking,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/context/AuthContext";
-import { getApiUrl } from "@/lib/query-client";
-import Colors from "@/constants/colors";
-import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingView } from "@/components/LoadingView";
 import { ErrorView } from "@/components/ErrorView";
-import { EmptyState } from "@/components/EmptyState";
+import { T } from "@/constants/adminTheme";
+import { useGuestDashboard } from "@/hooks/guest/useGuestDashboard";
+import { useGuestAgenda } from "@/hooks/guest/useGuestAgenda";
+import { GuestBannerCarousel } from "@/components/guestDashboard/GuestBannerCarousel";
+import { TransportCard } from "@/components/guestDashboard/TransportCard";
+import { HotelCard } from "@/components/guestDashboard/HotelCard";
+import { TodayAppointmentCard } from "@/components/guestDashboard/TodayAppointmentCard";
+import { DocumentsCard } from "@/components/guestDashboard/DocumentsCard";
+import { AppointmentsCalendar } from "@/components/guestDashboard/AppointmentsCalendar";
+import { AgendaTabs } from "@/components/guestDashboard/AgendaTabs";
 
-interface PatientDashboardData {
-  patient: {
-    id: string;
-    fullName: string;
-    patientKey: string;
-    status: string;
-  };
-  appointments: Array<{
-    id: string;
-    title: string;
-    type: string;
-    status: string;
-    startAt: string;
-  }>;
-  documents: Array<{
-    id: string;
-    status: string;
-    rejectionReason?: string;
-    instructionText?: string | null;
-    documentType: {
-      name: string;
-    };
-  }>;
-  doctors: Array<{
-    id: string;
-    name: string;
-    specialty: string;
-  }>;
-  plan: {
-    doctor?: {
-      name: string;
-      specialty: string;
-    };
-    hotel?: {
-      name: string;
-      address: string;
-    };
-  };
-}
-
-function DocumentCard({ doc, colors, accessToken, onUploadSuccess }: { 
-  doc: PatientDashboardData["documents"][0]; 
-  colors: any; 
-  accessToken: string | null;
-  onUploadSuccess: () => void;
-}) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
-
-  const handleOpenPdf = async () => {
-    if (!accessToken) return;
-    try {
-      setIsOpeningPdf(true);
-      const resp = await fetch(`${getApiUrl()}v1/documents/${doc.id}/signed-url`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!resp.ok) throw new Error("Failed to get download link");
-      const body = await resp.json() as { url: string; fileName?: string };
-      const fullUrl = body.url.startsWith("http")
-        ? body.url
-        : `${getApiUrl().replace(/\/$/, "")}${body.url}`;
-
-      if (Platform.OS === "web") {
-        await Linking.openURL(fullUrl);
-        return;
-      }
-
-      const safeFileName = (body.fileName ?? "document.pdf").replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-      const localUri = `${FileSystem.cacheDirectory}${safeFileName}`;
-      const dl = await FileSystem.downloadAsync(fullUrl, localUri);
-      if (dl.status !== 200) throw new Error("Download failed");
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(dl.uri, {
-          mimeType: "application/pdf",
-          dialogTitle: "Open PDF",
-          UTI: "com.adobe.pdf",
-        });
-      } else {
-        await Linking.openURL(dl.uri);
-      }
-    } catch (e: any) {
-      Alert.alert("Could not open PDF", e.message ?? "An unexpected error occurred");
-    } finally {
-      setIsOpeningPdf(false);
-    }
-  };
-
-  const handleUpload = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/pdf",
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) return;
-
-      setIsUploading(true);
-      const file = result.assets[0];
-      
-      const formData = new FormData();
-      // @ts-ignore - React Native FormData expects this structure for files
-      formData.append("file", {
-        uri: file.uri,
-        name: file.name || "document.pdf",
-        type: "application/pdf",
-      });
-
-      const uploadUrl = `${getApiUrl()}v1/patient/documents/${doc.id}/upload`;
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Do not set Content-Type header when using FormData in RN
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Upload failed");
-      }
-
-      onUploadSuccess();
-      Alert.alert("Success", "Document uploaded successfully");
-    } catch (error: any) {
-      console.error("[Upload Error]", error);
-      Alert.alert("Upload Failed", error.message || "An unexpected error occurred");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
+function isSameDay(a: Date, b: Date) {
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={styles.cardMain}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{doc.documentType.name}</Text>
-          {doc.instructionText ? (
-            <Text style={[styles.cardSub, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={2}>
-              {doc.instructionText}
-            </Text>
-          ) : null}
-        </View>
-        <StatusBadge status={doc.status as any} small />
-      </View>
-
-      {doc.status === "REJECTED" && doc.rejectionReason && (
-        <View style={styles.rejectionContainer}>
-          <Text style={styles.rejectionLabel}>Reason for rejection:</Text>
-          <Text style={styles.rejectionText}>{doc.rejectionReason}</Text>
-        </View>
-      )}
-
-      {(doc.status === "ASSIGNED" || doc.status === "REJECTED") && (
-        <Pressable 
-          onPress={handleUpload} 
-          disabled={isUploading}
-          style={[styles.uploadBtn, { backgroundColor: colors.primary }]}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-              <Text style={styles.uploadBtnText}>Upload PDF</Text>
-            </>
-          )}
-        </Pressable>
-      )}
-
-      {doc.status === "UPLOADED" && (
-        <View style={styles.uploadedActions}>
-          <View style={styles.statusInfo}>
-            <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-            <Text style={[styles.statusInfoText, { color: colors.textSecondary }]}>Waiting for review</Text>
-          </View>
-          <Pressable onPress={handleOpenPdf} disabled={isOpeningPdf} style={styles.openPdfBtn} hitSlop={6}>
-            {isOpeningPdf
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <><Ionicons name="document-outline" size={15} color={colors.primary} /><Text style={[styles.openPdfBtnText, { color: colors.primary }]}>Open PDF</Text></>
-            }
-          </Pressable>
-        </View>
-      )}
-
-      {doc.status === "APPROVED" && (
-        <View style={styles.uploadedActions}>
-          <View style={styles.statusInfo}>
-            <Ionicons name="checkmark-circle-outline" size={15} color={Colors.light.success} />
-            <Text style={[styles.statusInfoText, { color: Colors.light.success }]}>Approved</Text>
-          </View>
-          <Pressable onPress={handleOpenPdf} disabled={isOpeningPdf} style={styles.openPdfBtn} hitSlop={6}>
-            {isOpeningPdf
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <><Ionicons name="document-outline" size={15} color={colors.primary} /><Text style={[styles.openPdfBtnText, { color: colors.primary }]}>Open PDF</Text></>
-            }
-          </Pressable>
-        </View>
-      )}
-    </View>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
 }
 
 export default function PatientDashboard() {
-  const { logout, user, accessToken } = useAuth();
-  const isDark = useColorScheme() === "dark";
-  const colors = isDark ? Colors.dark : Colors.light;
+  const { logout } = useAuth();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
-  const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery<PatientDashboardData>({
-    queryKey: ["/v1/patient/dashboard"],
-  });
+  const { isLoading, isError, isRefetching, refetch, patient, transport, hotel, appointments, documents } =
+    useGuestDashboard();
+
+  const agenda = useGuestAgenda(appointments);
+
+  const todayAppointment = useMemo(() => {
+    const today = new Date();
+    return (
+      appointments.find(
+        (a) => isSameDay(new Date(a.startAt), today) && a.status !== "CANCELLED"
+      ) ?? null
+    );
+  }, [appointments]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = tabBarHeight + 24;
 
   if (isLoading) return <LoadingView />;
-  if (isError || !data) return <ErrorView onRetry={refetch} />;
-
-  const { patient, appointments, documents, plan = {} } = data;
+  if (isError) return <ErrorView onRetry={refetch} />;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={styles.root}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: bottomPad }}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={T.accent}
+          />
         }
       >
-        <LinearGradient
-          colors={[colors.primary, isDark ? "#00B4D8" : "#1A5276"]}
-          style={[styles.hero, { paddingTop: topPad + 20 }]}
-        >
-          <View style={styles.heroHeader}>
-            <View>
-              <Text style={styles.heroName}>{patient.fullName}</Text>
-              <View style={styles.heroRow}>
-                <StatusBadge status={patient.status as any} small />
-                <Text style={styles.heroKey}>ID: {patient.patientKey}</Text>
-              </View>
-            </View>
-            <Pressable onPress={logout} style={styles.logoutBtn}>
-              <Ionicons name="log-out-outline" size={24} color="#fff" />
-            </Pressable>
+        {/* ── HEADER ── */}
+        <View style={[styles.header, { paddingTop: topPad + 12 }]}>
+          <View>
+            <Text style={styles.greeting}>Welcome back 👋</Text>
+            <Text style={styles.patientName} numberOfLines={1}>
+              {patient?.fullName ?? ""}
+            </Text>
           </View>
-        </LinearGradient>
+          <Pressable onPress={logout} style={styles.logoutBtn} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={22} color={T.textSec} />
+          </Pressable>
+        </View>
 
-        <View style={styles.content}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>My Appointments</Text>
-          {appointments.length === 0 ? (
-            <EmptyState title="No upcoming appointments" icon="calendar-outline" />
-          ) : (
-            appointments.map((apt) => (
-              <View key={apt.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.cardMain}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{apt.title}</Text>
-                  <Text style={[styles.cardSub, { color: colors.textSecondary }]}>
-                    {apt.type} · {new Date(apt.startAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                  </Text>
-                </View>
-                <StatusBadge status={apt.status as any} small />
-              </View>
-            ))
-          )}
+        {/* ── BANNER CAROUSEL ── */}
+        <GuestBannerCarousel />
 
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>My Documents</Text>
-          {documents.length === 0 ? (
-            <EmptyState title="No documents found" />
-          ) : (
-            documents.map((doc) => (
-              <DocumentCard 
-                key={doc.id} 
-                doc={doc} 
-                colors={colors} 
-                accessToken={accessToken}
-                onUploadSuccess={() => queryClient.invalidateQueries({ queryKey: ["/v1/patient/dashboard"] })}
-              />
-            ))
-          )}
+        {/* ── OVERVIEW CARDS ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Overview</Text>
+          <TransportCard transport={transport} />
+          <HotelCard hotel={hotel} />
+          <TodayAppointmentCard appointment={todayAppointment} />
+          <DocumentsCard documents={documents} />
+        </View>
 
-          {plan.doctor && (
-            <>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>My Care Team</Text>
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Ionicons name="person-circle-outline" size={40} color={colors.accent} />
-                <View style={styles.cardMain}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{plan.doctor.name}</Text>
-                  <Text style={[styles.cardSub, { color: colors.textSecondary }]}>{plan.doctor.specialty}</Text>
-                </View>
-              </View>
-            </>
-          )}
+        {/* ── CALENDAR ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appointments</Text>
+          <AppointmentsCalendar
+            days={agenda.calendarDays}
+            monthLabel={agenda.monthLabel}
+            selectedDate={agenda.selectedDate}
+            onSelectDay={agenda.setSelectedDate}
+            onPrev={agenda.prevMonth}
+            onNext={agenda.nextMonth}
+          />
 
-          {plan.hotel && (
-            <>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>My Hotel</Text>
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Ionicons name="bed-outline" size={40} color={colors.accent} />
-                <View style={styles.cardMain}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{plan.hotel.name}</Text>
-                  <Text style={[styles.cardSub, { color: colors.textSecondary }]}>{plan.hotel.address}</Text>
-                </View>
-              </View>
-            </>
-          )}
+          {/* ── AGENDA TABS ── */}
+          <AgendaTabs
+            todayList={agenda.todayList}
+            upcomingList={agenda.upcomingList}
+            completedList={agenda.completedList}
+          />
+        </View>
+
+        {/* ── SUPPORT CARD ── */}
+        <View style={styles.section}>
+          <View style={styles.supportCard}>
+            <Ionicons name="headset-outline" size={22} color={T.accent} />
+            <View style={styles.supportText}>
+              <Text style={styles.supportTitle}>Need help?</Text>
+              <Text style={styles.supportSub}>Contact your clinic coordinator for any questions.</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -344,127 +132,83 @@ export default function PatientDashboard() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  hero: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  heroHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  heroName: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
-  heroRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
-  },
-  heroKey: {
-    color: "rgba(255,255,255,0.8)",
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-  },
-  logoutBtn: {
-    padding: 8,
-  },
-  content: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 12,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 12,
-    gap: 12,
-  },
-  cardMain: {
+  root: {
     flex: 1,
+    backgroundColor: T.bg,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: T.sp20,
+    paddingBottom: T.sp16,
+    backgroundColor: T.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+    marginBottom: T.sp16,
+    ...(Platform.OS === "web"
+      ? {}
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.04,
+          shadowRadius: 4,
+        }),
   },
-  cardSub: {
-    fontSize: 13,
+  greeting: {
     fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  uploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  uploadBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  uploadedActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  openPdfBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  openPdfBtnText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  statusInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusInfoText: {
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-  },
-  rejectionContainer: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#D32F2F',
-  },
-  rejectionLabel: {
-    fontSize: 12,
-    color: '#D32F2F',
-    fontFamily: 'Inter_700Bold',
+    color: T.textSec,
     marginBottom: 2,
   },
-  rejectionText: {
+  patientName: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 22,
+    color: T.text,
+    maxWidth: 250,
+  },
+  logoutBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: T.surfaceSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: T.border,
+  },
+  section: {
+    paddingHorizontal: T.sp16,
+    marginBottom: T.sp8,
+  },
+  sectionTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    color: T.text,
+    marginBottom: T.sp12,
+  },
+  supportCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.sp12,
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: T.sp16,
+    marginBottom: T.sp12,
+  },
+  supportText: { flex: 1 },
+  supportTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: T.text,
+    marginBottom: 2,
+  },
+  supportSub: {
+    fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: '#B71C1C',
-    fontFamily: 'Inter_400Regular',
+    color: T.textSec,
+    lineHeight: 18,
   },
 });

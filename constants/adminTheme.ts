@@ -36,6 +36,7 @@ export const T = {
 
   sp4: 4,
   sp8: 8,
+  sp10: 10,
   sp12: 12,
   sp16: 16,
   sp20: 20,

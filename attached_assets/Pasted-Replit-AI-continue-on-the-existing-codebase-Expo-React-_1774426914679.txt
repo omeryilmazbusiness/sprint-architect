@@ -1,0 +1,205 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Build a premium Guest (Patient) Dashboard screen with modern light theme UX.
+It must feel as professional as the Manager dashboard.
+Use header + a top 1/3 slider banner, then card-based overview, then calendar + today agenda tabs.
+
+CRITICAL REQUIREMENTS (EXACT):
+A) Header (premium)
+- Title: “Dashboard”
+- Right: small profile icon or logout (optional)
+- Must use safe area and never overlap
+
+B) Banner (top ~1/3)
+- Carousel slider under header
+- Insert the images I provide (the banner images I pasted/shared)
+- Modern rounded corners + subtle shadow
+- Dots indicator
+- Must render even with empty data (no “failed data”)
+
+C) Overview cards section (under banner)
+Cards must be in this order:
+1) Assigned Transport card (same style as manager):
+- vehicle brand logo
+- brand + model big
+- plate
+- driver name + phone
+If no transport: show a default blank card (“No transport assigned”)
+
+2) Hotel card:
+- hotel name + address/phone
+If no hotel: show default blank card (“No hotel assigned”)
+
+3) Today’s Appointment card:
+- if there is an appointment today: time + doctor + procedure/title + status
+If none: default blank (“No appointment today”)
+
+4) Compulsory Documents card:
+- show pending / uploaded counts
+- show list (max 2) with status pill
+If none: default blank (“No documents assigned”)
+
+D) Calendar section
+- Monthly calendar showing ALL appointments (past/future)
+- Past appointment days: gray highlight
+- Future appointment days: green highlight
+- Today highlighted
+- Selecting a day shows day agenda list below.
+
+E) Today agenda list (tabs)
+Below calendar, show 3 tabs (segmented control):
+- Upcoming
+- Today
+- Completed
+Each tab shows list items (time, title, doctor, status).
+(If you prefer: Today + Upcoming + Completed; but must be 3 tabs.)
+No data -> clean empty state.
+
+F) Add “other professional areas” if needed (ANALYZE)
+- Add only if truly valuable for guest experience:
+  - “Next step in tracking flow” (small card) OR
+  - “Support / Contact clinic” button (call/whatsapp) if available
+Keep it minimal and premium.
+
+NON-NEGOTIABLE:
+- White theme premium, consistent spacing, no layout breaks on small screens.
+- Must be robust: empty data shows defaults and 0 counts, not errors.
+- Must use stable API data (existing /v1/patient/dashboard preferred).
+- SOLID frontend: modular components + hooks; screen is thin.
+- Must work on Expo Go phone.
+- Banner images must be added as local assets and referenced with static require mapping (no dynamic require).
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify current guest/patient dashboard route file path.
+2) Confirm what API exists for guest dashboard:
+- GET /v1/patient/dashboard (or similar)
+3) Identify what fields are available:
+- transport, hotel, appointments, documents
+4) Confirm where banner images are stored today (if not, we’ll add them).
+Output short audit summary + file paths.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — ADD BANNER IMAGE ASSETS (STATIC)
+========================================================
+1) Save provided banner images into repo:
+assets/banners/
+  guest_banner_1.jpg (or .png)
+  guest_banner_2.jpg
+  guest_banner_3.jpg
+2) Create a static registry:
+src/constants/guestBanners.ts
+export const GUEST_BANNERS = [
+  require("../../assets/banners/guest_banner_1.jpg"),
+  require("../../assets/banners/guest_banner_2.jpg"),
+  ...
+];
+No dynamic require.
+
+========================================================
+PHASE 3 — DATA HOOKS (SOLID)
+========================================================
+Create:
+hooks/guest/useGuestDashboard.ts
+- calls /v1/patient/dashboard
+- returns safe defaults:
+{
+  transport: null,
+  hotel: null,
+  todayAppointment: null,
+  documents: { pending:0, uploaded:0, items:[] },
+  appointments: []  // all appts (for calendar)
+}
+No undefined arrays.
+
+Also add helper hook:
+hooks/guest/useGuestAgenda.ts
+- derives:
+  - month markers (past/future/today)
+  - selectedDay agenda list
+  - upcoming/today/completed lists
+Memoize derived data.
+
+========================================================
+PHASE 4 — UI COMPONENTS (MODULAR, PREMIUM)
+========================================================
+Create components under:
+components/guestDashboard/
+
+1) GuestHeader.tsx (or reuse existing GuestHeader)
+2) GuestBannerCarousel.tsx
+- uses GUEST_BANNERS registry
+- rounded card, shadow, indicators
+
+3) Overview cards:
+- AssignedTransportCard.tsx (reuses VehicleBrandLogo)
+- HotelCard.tsx
+- TodayAppointmentCard.tsx
+- CompulsoryDocumentsCard.tsx
+Each card has:
+- title
+- content when present
+- default blank state when missing
+
+4) Calendar:
+- GuestAppointmentsCalendar.tsx
+- Day cell coloring rules:
+  - today: strong highlight
+  - future with appt: green
+  - past with appt: gray
+- selecting a day updates agenda
+
+5) Agenda tabs:
+- GuestAgendaTabs.tsx with 3 tabs:
+  - Upcoming / Today / Completed
+- List items show:
+  time, doctor, title, status pill
+- Empty states per tab
+
+========================================================
+PHASE 5 — BACKEND ADJUSTMENTS (ONLY IF NEEDED)
+========================================================
+If /v1/patient/dashboard does not return the required data consistently:
+- Fix it to return stable DTO (200 always).
+- Ensure:
+  - transport/hotel null if missing
+  - appointments []
+  - documents list []
+No “failed data”.
+
+Do NOT add heavy new endpoints unless necessary.
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+Manual QA checklist:
+- Empty DB: banner shows images, cards show default blanks, calendar shows no markers, tabs show empty states
+- With data: transport/hotel/appointment/docs cards populated correctly
+- Calendar markers: past gray, future green, today highlighted
+- Tabs: upcoming/today/completed show correct items
+- No overlaps on small screens
+- Works on Expo Go
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit summary + routes used
+2) Files added/changed (including banner assets)
+3) API response shape used for dashboard
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Add banner assets + static registry
+3) Build useGuestDashboard + derived agenda hook
+4) Build banner + overview cards
+5) Build calendar + agenda tabs
+6) Final polish + verify
+
+Proceed now. Build it premium and robust.
+END.
