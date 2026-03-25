@@ -23,12 +23,23 @@ import { apiRequest } from "@/lib/query-client";
 type Tab = "guest" | "management";
 
 const ERROR_MESSAGES: Record<string, string> = {
+  // Staff login codes
+  "AUTH-001": "Email or password is incorrect.",
+  "AUTH-002": "Authentication required. Please log in again.",
+  "AUTH-003": "You don't have permission to access this.",
+  "AUTH-004": "Session expired. Please log in again.",
+  "BILL-001": "Clinic access is currently suspended due to billing. Please contact support.",
+  // Guest / patient login codes
+  "AUTH-GUEST-001": "This access key is invalid. Check with your clinic manager.",
+  "AUTH-GUEST-002": "This key is already active on another device. Ask your clinic manager to reset your device binding.",
+  // Legacy string keys (kept for safety)
   AUTH_INVALID_CREDENTIALS: "Email or password is incorrect.",
   PATIENT_KEY_INVALID: "Access key is incorrect. Check with your clinic manager.",
-  DEVICE_ALREADY_BOUND: "This access key is already active on another device. Contact your clinic.",
+  DEVICE_ALREADY_BOUND: "This key is already active on another device. Ask your clinic manager to reset your device binding.",
   CLINIC_SUSPENDED_BILLING: "Clinic access is currently suspended due to billing. Please contact support.",
   TOO_MANY_ATTEMPTS: "Too many attempts. Please wait a few minutes and try again.",
   ACCOUNT_INACTIVE: "Your account has been deactivated. Contact your administrator.",
+  RATE_LIMIT_EXCEEDED: "Too many attempts. Please wait a few minutes and try again.",
 };
 
 function friendlyError(e: any): string {

@@ -7,8 +7,12 @@ export const ErrorCodes = {
   AUTH_UNAUTHORIZED:        "AUTH-002",
   AUTH_FORBIDDEN:           "AUTH-003",
   AUTH_TOKEN_INVALID:       "AUTH-004",
-  AUTH_DEVICE_BOUND:        "AUTH-005",
-  AUTH_PATIENT_KEY_INVALID: "AUTH-006",
+  AUTH_DEVICE_BOUND:        "AUTH-005",  // legacy — prefer AUTH_DEVICE_BOUND_GUEST for patient flows
+  AUTH_PATIENT_KEY_INVALID: "AUTH-006",  // legacy — prefer AUTH_GUEST_KEY_INVALID
+
+  // Guest / Patient auth codes (granular)
+  AUTH_GUEST_KEY_INVALID:   "AUTH-GUEST-001",
+  AUTH_DEVICE_BOUND_GUEST:  "AUTH-GUEST-002",
 
   BILL_CLINIC_SUSPENDED:    "BILL-001",
 

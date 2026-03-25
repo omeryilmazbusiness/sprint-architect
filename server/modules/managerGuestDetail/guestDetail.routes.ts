@@ -5,7 +5,7 @@ import {
   clinicScopeMiddleware,
   requireActiveClinic,
 } from "../../auth/middleware";
-import { getGuestDetailController } from "./guestDetail.controller";
+import { getGuestDetailController, resetDeviceBindingController } from "./guestDetail.controller";
 
 const router = Router();
 
@@ -17,5 +17,6 @@ router.use(
 );
 
 router.get("/patients/:id/details", getGuestDetailController);
+router.post("/patients/:id/reset-device-binding", resetDeviceBindingController);
 
 export default router;

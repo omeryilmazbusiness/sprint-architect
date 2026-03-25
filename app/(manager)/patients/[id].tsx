@@ -125,6 +125,7 @@ export default function GuestDetailScreen() {
   const [showHotelSheet, setShowHotelSheet] = useState(false);
   const [showDocSheet, setShowDocSheet] = useState(false);
   const [showApptSheet, setShowApptSheet] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const detailKey = [`/v1/manager/patients/${id}/details`];
 
@@ -145,6 +146,19 @@ export default function GuestDetailScreen() {
       showToast("Guest approved ✓");
     },
     onError: () => showToast("Approval failed"),
+  });
+
+  const resetDeviceMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/v1/manager/patients/${id}/reset-device-binding`, {}),
+    onSuccess: () => {
+      setShowResetConfirm(false);
+      showToast("Device binding reset ✓");
+    },
+    onError: () => {
+      setShowResetConfirm(false);
+      showToast("Failed to reset device binding");
+    },
   });
 
   const trackingMutation = useMutation({
@@ -415,6 +429,47 @@ export default function GuestDetailScreen() {
           onAssign={() => setShowDocSheet(true)}
           onViewPdf={handleViewPdf}
         />
+
+        {/* Danger zone */}
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerZoneLabel}>Device Management</Text>
+          <Pressable
+            style={[styles.dangerBtn, resetDeviceMutation.isPending && { opacity: 0.6 }]}
+            onPress={() => {
+              if (Platform.OS === "web") {
+                if (typeof window !== "undefined" && window.confirm(`Reset device binding for ${patient.fullName}? They will be able to log in from a new device.`)) {
+                  resetDeviceMutation.mutate();
+                }
+              } else {
+                Alert.alert(
+                  "Reset Device Binding",
+                  `${patient.fullName} will be signed out and can log in from any device.\n\nKey: ${patient.patientKey}`,
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Reset",
+                      style: "destructive",
+                      onPress: () => resetDeviceMutation.mutate(),
+                    },
+                  ]
+                );
+              }
+            }}
+            disabled={resetDeviceMutation.isPending}
+          >
+            {resetDeviceMutation.isPending ? (
+              <ActivityIndicator size="small" color={T.danger} />
+            ) : (
+              <>
+                <Ionicons name="phone-portrait-outline" size={16} color={T.danger} />
+                <Text style={styles.dangerBtnText}>Reset Device Binding</Text>
+              </>
+            )}
+          </Pressable>
+          <Text style={styles.dangerBtnHint}>
+            Use this if the guest can't log in because their key is bound to an old device.
+          </Text>
+        </View>
       </ScrollView>
 
       <AssignTransportSheet
@@ -619,5 +674,46 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: "#fff",
+  },
+  dangerZone: {
+    marginTop: 8,
+    marginBottom: 4,
+    padding: T.sp16,
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: T.dangerBorder,
+  },
+  dangerZoneLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+    color: T.danger,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 10,
+  },
+  dangerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: T.dangerBg,
+    borderWidth: 1,
+    borderColor: T.dangerBorder,
+    borderRadius: T.r10,
+    paddingVertical: 12,
+    paddingHorizontal: T.sp16,
+    justifyContent: "center",
+  },
+  dangerBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: T.danger,
+  },
+  dangerBtnHint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.textMuted,
+    marginTop: 8,
+    lineHeight: 16,
   },
 });

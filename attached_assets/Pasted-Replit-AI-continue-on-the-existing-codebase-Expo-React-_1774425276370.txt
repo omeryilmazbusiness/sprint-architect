@@ -1,0 +1,206 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM (STILL HAPPENING):
+Guest login by patientKey keeps failing with:
+"This patient account is already bound to another device. Contact your clinic to reset."
+Even for demo keys that should be unbound.
+
+We need a PROFESSIONAL, PROD-READY device-binding design:
+- Manager creates a new guest -> system generates a unique guest key (patientKey) and saves it.
+- Guest logs in using guest key.
+- Single-device binding should work correctly:
+  - First login binds the key to that deviceId.
+  - Subsequent logins from the SAME deviceId succeed.
+  - Logins from different deviceId are blocked with a clear error code.
+- Manager must be able to reset the device binding for a guest (so guest can switch phones).
+- The current implementation likely has stale device records, wrong lookups, or mismatched patientId/key usage.
+
+GOALS:
+1) Audit the current patient-key login + device binding implementation end-to-end.
+2) Identify exactly why the system thinks the guest is already bound (DB evidence).
+3) Fix it with SOLID architecture, stable schemas, and strict rules.
+4) Add a manager reset action: “Reset device binding” on Guest Detail.
+5) Ensure guest key generation on create is robust (PT-XXXXXXXX) and unique.
+
+NON-NEGOTIABLE:
+- Do NOT guess. You MUST show the exact root cause with file paths + DB queries.
+- SOLID backend: controller -> usecase -> repo; DB only in repo.
+- Zod validation on every auth endpoint.
+- Proper error codes (system-specific), e.g.:
+  - AUTH-GUEST-001 INVALID_KEY
+  - AUTH-GUEST-002 DEVICE_ALREADY_BOUND
+  - AUTH-GUEST-003 DEVICE_BINDING_RESET_REQUIRED
+- No “failed data” style UI crashes.
+- Must work on Expo Go with real deviceId.
+
+========================================================
+PHASE 1 — AUDIT CURRENT FLOW (MANDATORY)
+========================================================
+A) Locate code paths (print file paths):
+1) Guest login endpoint:
+- POST /v1/patient/auth/login (or equivalent)
+2) Device binding persistence:
+- Which table: devices / device_bindings / refresh_tokens?
+- Columns and unique constraints
+3) Guest key generation:
+- Where patientKey is generated (manager create patient usecase?)
+4) Any demo seed scripts that create keys/bindings
+
+B) Reproduce the bug with DB evidence:
+1) Take a patientKey that fails and run DB queries to show:
+- patient row (id, patientKey)
+- device binding rows referencing that patient
+- whether binding is tied to wrong patientId or wrong clinic
+2) Confirm why it blocks:
+- is it matching by patientKey incorrectly?
+- is it not filtering by patientId?
+- is it using clinicId incorrectly?
+- is it reading from refresh_tokens rather than devices?
+3) Output root cause report:
+- exact failing query and why it misbehaves
+
+Do not implement fixes until this root cause report exists.
+
+========================================================
+PHASE 2 — DEFINE THE CORRECT PROD-READY RULES
+========================================================
+Rules to implement:
+1) Manager creates guest:
+- patientKey generated server-side: PT-XXXXXXXX (A–Z0–9)
+- Unique constraint in DB on patientKey
+- patient.status default WAITING_APPROVAL (or your workflow)
+2) Guest login:
+Input:
+- key (patientKey)
+- deviceId (from mobile)
+Behavior:
+- Find patient by patientKey (unique)
+- Determine existing binding for patientId:
+  - If none -> bind deviceId to patientId and allow login
+  - If exists and deviceId matches -> allow login
+  - If exists and deviceId differs -> block with AUTH-GUEST-002
+3) Reset binding:
+- Manager can reset the binding in Guest Detail:
+  - clears device binding row(s) for that patientId
+  - clears patient refresh tokens if any
+  - audit log event
+
+========================================================
+PHASE 3 — BACKEND REFACTOR (SOLID, ACID)
+========================================================
+A) DB schema hardening:
+1) devices table (or device_bindings) must have:
+- id
+- patientId (FK)
+- deviceId (string)
+- boundAt timestamp
+- UNIQUE(patientId)  // enforces single device per patient
+Optional:
+- deviceName, platform, appVersion
+2) patientKey unique index:
+- UNIQUE(patientKey)
+
+B) Implement SOLID auth module:
+server/modules/patientAuth/
+  patientAuth.routes.ts
+  patientAuth.controller.ts
+  schemas/patientAuth.schemas.ts
+  usecases/
+    GuestLogin.ts
+    ResetGuestDeviceBinding.ts (manager side or separate module)
+  repos/
+    PatientAuthRepo.drizzle.ts
+
+GuestLogin usecase:
+- Transactional:
+  - select patient by patientKey
+  - select binding by patientId
+  - if no binding -> insert binding (patientId, deviceId)
+  - else if mismatch -> throw AppError AUTH-GUEST-002 with message
+  - else proceed
+- Issue JWT tokens as per existing logic
+- Return guest profile info
+
+ResetGuestDeviceBinding usecase:
+- Must be manager-only and clinic-scoped:
+  - verify patient belongs to manager clinic
+  - delete devices where patientId
+  - delete refresh_tokens where patientId (if present)
+  - set patient.deviceResetAt maybe (optional)
+  - audit log
+
+C) Add endpoint for reset (manager side):
+POST /v1/manager/patients/:id/reset-device-binding
+Return 200 { ok:true }
+
+D) Logging & error responses:
+- Ensure errors return consistent JSON:
+{ code, message, requestId }
+- Specifically for device bound:
+code: AUTH-GUEST-002
+
+========================================================
+PHASE 4 — FRONTEND FIXES (MANAGER + GUEST)
+========================================================
+A) Manager create guest:
+- On success show patientKey clearly
+- Ensure it’s stored in DB and displayed in guest card
+
+B) Guest login UX:
+- When server returns AUTH-GUEST-002:
+  - show friendly message:
+    “Bu hesap başka bir cihaza bağlı. Klinik ile iletişime geçin veya yöneticiden sıfırlama isteyin.”
+  - show error code beneath for support
+
+C) Manager Guest Detail:
+- Add “Reset Device Binding” action (danger zone)
+- Confirm modal
+- On success toast short
+
+========================================================
+PHASE 5 — MIGRATION / CLEANUP OF STALE BINDINGS (MANDATORY)
+========================================================
+If root cause indicates stale/duplicate device rows:
+- Write one dev script:
+server/scripts/fixDeviceBindingsDev.ts
+- Detect patients with multiple device rows or mismatched rows
+- Keep only the most recent binding or wipe them in dev
+- Safe guards (NODE_ENV=development only)
+
+========================================================
+PHASE 6 — TESTS + VERIFICATION
+========================================================
+Backend tests:
+1) First login binds device (creates row)
+2) Second login same device allowed
+3) Login different device blocked AUTH-GUEST-002
+4) Reset clears binding and allows new device login
+5) patientKey uniqueness
+
+Manual QA:
+- Create new guest -> get key
+- Login on phone A -> OK
+- Login on phone B -> blocked
+- Manager reset -> phone B login OK
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Root cause report (with file paths + DB query findings)
+2) DB constraints added
+3) Endpoints added + sample curl:
+- POST /v1/patient/auth/login
+- POST /v1/manager/patients/:id/reset-device-binding
+4) Tests added + how to run
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Phase 1 audit + root cause proof
+2) Phase 3 backend refactor + constraints
+3) Phase 4 frontend handling + reset button
+4) Phase 5 cleanup script (dev)
+5) Phase 6 tests + verification
+
+Proceed now. Do not guess — prove the cause first, then fix end-to-end.
+END.

@@ -10,9 +10,9 @@ export const Errors = {
   FORBIDDEN: (msg = "Access denied") =>
     new AppError(ErrorCodes.AUTH_FORBIDDEN, msg, 403),
   DEVICE_ALREADY_BOUND: () =>
-    new AppError(ErrorCodes.AUTH_DEVICE_BOUND, "This patient account is already bound to another device. Contact your clinic to reset.", 403),
+    new AppError(ErrorCodes.AUTH_DEVICE_BOUND_GUEST, "This access key is already active on another device. Ask your clinic manager to reset your device binding.", 403),
   PATIENT_KEY_INVALID: () =>
-    new AppError(ErrorCodes.AUTH_PATIENT_KEY_INVALID, "Invalid patient key", 401),
+    new AppError(ErrorCodes.AUTH_GUEST_KEY_INVALID, "Invalid patient key", 401),
   VALIDATION_ERROR: (msg: string) =>
     new AppError(ErrorCodes.VAL_VALIDATION, msg, 422),
   TOKEN_INVALID: () =>
