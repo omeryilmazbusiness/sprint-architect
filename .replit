@@ -47,6 +47,10 @@ args = "DB Reset Launch"
 task = "workflow.run"
 args = "Seed Demo Admin"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Seed Demo Guest"
+
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -99,6 +103,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=development tsx server/scripts/seedDemoAdminOnly.ts"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Seed Demo Guest"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development tsx server/scripts/seedDemoGuestKey.ts"
 
 [workflows.workflow.metadata]
 outputType = "console"

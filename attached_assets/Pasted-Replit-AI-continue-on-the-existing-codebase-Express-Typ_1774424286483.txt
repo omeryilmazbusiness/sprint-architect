@@ -1,0 +1,79 @@
+Replit AI — continue on the existing codebase (Express/TypeScript backend + PostgreSQL + Drizzle + Expo). DO NOT re-scaffold.
+
+REQUEST:
+Create ONE demo guest/patient record with a default patientKey so we can log in immediately as a Guest.
+- This should be a safe, idempotent seed script.
+- It must NOT create extra data (no invoices etc.).
+- It must create whatever minimum clinic + manager relationship is required for the patient login to work.
+- After running, I should be able to log in using the patient key from the mobile Guest login screen.
+
+TARGET DEMO KEY:
+Use this exact format and example key:
+PT-4S9WQ2U6
+
+NON-NEGOTIABLE:
+- The seed must be idempotent (running twice won’t duplicate).
+- Must be clinic-scoped (patient belongs to a clinic).
+- Patient status should be APPROVED (or whatever status is required to allow guest login).
+- Must store device binding correctly on first login (existing logic).
+- Do not hardcode secrets.
+- Print only the demo key and minimal IDs.
+
+========================================================
+A) IMPLEMENT SEED SCRIPT
+========================================================
+Create:
+server/scripts/seedDemoGuestKey.ts
+
+Behavior:
+1) Ensure it runs only in development (NODE_ENV !== "production" recommended) OR add guard.
+2) Find or create ONE demo clinic:
+- name: "Demo Clinic"
+- status: ACTIVE
+3) Find or create ONE demo manager (optional, only if your schema requires a manager):
+- manager@demo.com / Manager123!
+- clinicId = demo clinic
+- role MANAGER
+4) Find if a patient with patientKey "PT-4S9WQ2U6" already exists:
+- If exists: ensure clinicId is demo clinic and status is APPROVED (or required)
+- If not:
+  - create patient with:
+    - clinicId demo clinic
+    - fullName: "Demo Guest"
+    - patientKey: "PT-4S9WQ2U6" (must satisfy unique constraint)
+    - status: APPROVED (or required)
+    - nationality: "Turkey" (optional)
+    - phoneE164: "+905000000000" (dummy)
+    - arrivalDate/departureDate optional
+5) Print output:
+- “Demo Guest Key ready: PT-4S9WQ2U6”
+- Also print clinic name (not DB password)
+
+========================================================
+B) ADD NPM SCRIPT
+========================================================
+package.json:
+- "db:seed:demo-guest": "NODE_ENV=development tsx server/scripts/seedDemoGuestKey.ts"
+
+========================================================
+C) VERIFY GUEST LOGIN
+========================================================
+1) Ensure patient login endpoint accepts key:
+POST /v1/patient/auth/login
+Body: { key: "PT-4S9WQ2U6", deviceId: "..." }
+2) If endpoint requires patient status APPROVED, ensure seed sets it.
+3) Output a short “How to test”:
+- run npm script
+- open app -> Guest login tab -> enter PT-4S9WQ2U6 -> login
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Files changed/added
+2) Command to run: npm run db:seed:demo-guest
+3) Demo login key: PT-4S9WQ2U6
+4) Notes if any status requirement existed (APPROVED vs PENDING)
+
+Proceed now. Implement and verify.
+END.
