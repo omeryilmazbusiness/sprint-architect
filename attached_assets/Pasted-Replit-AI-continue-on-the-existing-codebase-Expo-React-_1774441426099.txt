@@ -1,0 +1,209 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+GOAL:
+Redesign the Guest Dashboard to be ultra-modern, premium UX (light theme overall), with:
+- A premium header
+- A top 1/3 banner slider
+- Premium overview cards
+- Transport card MUST be premium black (luxury look) with a working Call button
+- Hotel card must also feel premium (luxury style)
+- Everything must be responsive, production-ready, and never show “failed data”.
+
+NON-NEGOTIABLE:
+- Light theme app background (white/off-white).
+- Transport card is “premium black” style (luxury, glassy, high contrast).
+- Hotel card premium look (not black necessarily, but luxury).
+- Call works (tap-to-call) for driver phone and hotel phone (if present).
+- SOLID frontend: screen is thin; logic in hooks; UI in components.
+- Robust states: loading skeleton, empty defaults, error retry.
+- Works in Expo Go.
+- Uses existing /v1/patient/dashboard (preferred) and safe defaults.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify the real guest dashboard route file path that is rendered after guest login.
+2) Identify existing guest dashboard components (if any).
+3) Confirm the data source endpoint (/v1/patient/dashboard) and its response shape:
+- transport, hotel, appointments, documents
+4) Output an audit summary with exact file paths.
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — PREMIUM DESIGN SYSTEM TOKENS (LIGHT THEME)
+========================================================
+Define a small set of design tokens for consistency (do not create a big new system):
+- background: off-white
+- card radius: 20–24
+- spacing scale: 8/12/16/20/24
+- shadow: soft
+- typography: strong headings, muted subtext
+Keep it consistent with existing UI primitives.
+
+If you already have components/ui primitives, reuse them and only extend.
+
+========================================================
+PHASE 3 — LAYOUT SPEC (FINAL GUEST DASHBOARD STRUCTURE)
+========================================================
+Screen layout order:
+
+A) Header (GuestHeader)
+- Title: “Dashboard”
+- Right: Profile icon (optional)
+- Subline (optional): “Welcome back” and today date
+- Safe area padded and non-overlapping
+
+B) Top Banner Carousel (height ~ 30–35% clamped 180–260)
+- Rounded container and soft shadow
+- Uses local banner images (static require registry)
+- Indicator dots
+- If images missing, show a tasteful fallback gradient slide
+
+C) Overview Section (cards)
+1) Transport Card (PREMIUM BLACK)
+- Luxury black gradient background
+- Brand logo (vehicle brand)
+- Brand + Model big and bold
+- Plate number (monospace)
+- Driver name
+- Driver phone
+- CTA buttons:
+  - “Call driver” (PRIMARY) -> tel: driverPhoneE164
+  - Optional “Copy plate” (secondary)
+- If no transport:
+  - still render black card but in empty state:
+    “Transport not assigned yet” + disabled call button
+
+2) Hotel Card (PREMIUM)
+- Light luxury card:
+  - subtle gradient or glass effect
+  - hotel name big
+  - address (1–2 lines)
+  - phone + website chips if present
+  - CTA “Call hotel” -> tel: phone
+- If no hotel:
+  - “Hotel not assigned yet” placeholder
+
+3) Today Appointment Card (premium)
+- If appointment today:
+  - time
+  - doctor
+  - procedure/title
+  - status pill
+- If none:
+  - “No appointment today”
+
+4) Documents Card (premium)
+- show Pending/Uploaded counts
+- show top 2 documents with status
+- If none:
+  - “No documents assigned”
+
+D) Calendar + Agenda
+- Monthly calendar showing appointment days:
+  - future appointments: green highlight
+  - past completed: gray
+  - today: strong highlight
+- Under it, segmented tabs:
+  - Upcoming / Today / Completed
+- Each item:
+  - time
+  - title
+  - doctor
+  - status
+
+E) Optional “Support” small section (professional)
+- One small card:
+  - “Need help?” -> call clinic/manager or open support message
+Only add if contact info exists.
+
+========================================================
+PHASE 4 — COMPONENTS (MODULAR)
+========================================================
+Create folder:
+components/guestDashboard/
+- GuestHeader.tsx (or reuse existing)
+- GuestBannerCarousel.tsx
+- TransportCardBlack.tsx
+- HotelCardPremium.tsx
+- TodayAppointmentCard.tsx
+- DocumentsCard.tsx
+- GuestAppointmentsCalendar.tsx
+- GuestAgendaTabs.tsx
+- GuestDashboardSkeleton.tsx (loading state)
+
+Brand logo usage:
+- Use VehicleBrandLogo component for transport brand.
+- Ensure logo always has explicit size and fallback.
+
+Call functionality:
+- Use Linking.openURL(`tel:${phone}`)
+- Normalize E.164 before using
+- If phone missing: disable button and show tooltip/toast.
+
+========================================================
+PHASE 5 — DATA HOOKS & SAFE DEFAULTS (SOLID)
+========================================================
+Create/Update:
+hooks/guest/useGuestDashboard.ts
+- Fetch from /v1/patient/dashboard
+- Return safe defaults:
+{
+  transport: null,
+  hotel: null,
+  appointments: [],
+  todayAppointment: null,
+  documents: { pending:0, uploaded:0, items:[] }
+}
+Never undefined arrays.
+
+Create:
+hooks/guest/useGuestAgenda.ts
+- Derive calendar markers and tab lists from appointments.
+- Memoize.
+
+If backend response lacks any field, coerce to defaults in hook.
+
+========================================================
+PHASE 6 — BACKEND (ONLY IF NEEDED)
+========================================================
+If /v1/patient/dashboard does not return enough fields reliably, fix it:
+- Always 200
+- transport/hotel null
+- appointments []
+- documents []
+No “failed data”.
+
+========================================================
+PHASE 7 — QA / VERIFICATION
+========================================================
+Manual QA:
+- Empty DB: banners render, cards show placeholders, no errors
+- Transport assigned: black card shows brand/model/plate/driver and Call works
+- Hotel assigned: premium card shows details and Call works
+- Calendar highlights correct days
+- Tabs show correct lists
+- Small screens: no overlap, CTAs tappable
+- Expo Go: tel: opens dialer
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit summary with file paths
+2) Files added/changed
+3) Any backend tweaks
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit route + API shape
+2) Build tokens and skeleton
+3) Banner carousel
+4) Premium cards (Transport black + Hotel)
+5) Calendar + tabs
+6) Hook safe defaults and polish
+7) Verify on Expo Go
+
+Proceed now. Implement exactly as specified, keep it premium and robust.
+END.

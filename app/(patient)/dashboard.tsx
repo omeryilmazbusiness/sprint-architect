@@ -1,29 +1,27 @@
 import React, { useMemo } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Platform,
-  Pressable,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { LoadingView } from "@/components/LoadingView";
-import { ErrorView } from "@/components/ErrorView";
 import { T } from "@/constants/adminTheme";
 import { useGuestDashboard } from "@/hooks/guest/useGuestDashboard";
 import { useGuestAgenda } from "@/hooks/guest/useGuestAgenda";
+import { ErrorView } from "@/components/ErrorView";
+import { GuestHeader } from "@/components/guestDashboard/GuestHeader";
 import { GuestBannerCarousel } from "@/components/guestDashboard/GuestBannerCarousel";
+import { GuestDashboardSkeleton } from "@/components/guestDashboard/GuestDashboardSkeleton";
 import { TransportCard } from "@/components/guestDashboard/TransportCard";
 import { HotelCard } from "@/components/guestDashboard/HotelCard";
 import { TodayAppointmentCard } from "@/components/guestDashboard/TodayAppointmentCard";
 import { DocumentsCard } from "@/components/guestDashboard/DocumentsCard";
 import { AppointmentsCalendar } from "@/components/guestDashboard/AppointmentsCalendar";
 import { AgendaTabs } from "@/components/guestDashboard/AgendaTabs";
+import { SectionLabel } from "@/components/guestDashboard/SectionLabel";
+import { SupportCard } from "@/components/guestDashboard/SupportCard";
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -35,11 +33,19 @@ function isSameDay(a: Date, b: Date) {
 
 export default function PatientDashboard() {
   const { logout } = useAuth();
-  const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { isLoading, isError, isRefetching, refetch, patient, transport, hotel, appointments, documents } =
-    useGuestDashboard();
+  const {
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+    patient,
+    transport,
+    hotel,
+    appointments,
+    documents,
+  } = useGuestDashboard();
 
   const agenda = useGuestAgenda(appointments);
 
@@ -52,16 +58,15 @@ export default function PatientDashboard() {
     );
   }, [appointments]);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = tabBarHeight + 24;
-
-  if (isLoading) return <LoadingView />;
+  if (isLoading) return <GuestDashboardSkeleton />;
   if (isError) return <ErrorView onRetry={refetch} />;
 
   return (
     <View style={styles.root}>
+      <GuestHeader patientName={patient?.fullName} onLogout={logout} />
+
       <ScrollView
-        contentContainerStyle={{ paddingBottom: bottomPad }}
+        contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + 24 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -71,34 +76,23 @@ export default function PatientDashboard() {
           />
         }
       >
-        {/* ── HEADER ── */}
-        <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-          <View>
-            <Text style={styles.greeting}>Welcome back 👋</Text>
-            <Text style={styles.patientName} numberOfLines={1}>
-              {patient?.fullName ?? ""}
-            </Text>
-          </View>
-          <Pressable onPress={logout} style={styles.logoutBtn} hitSlop={8}>
-            <Ionicons name="log-out-outline" size={22} color={T.textSec} />
-          </Pressable>
+        {/* Banner */}
+        <View style={styles.bannerSection}>
+          <GuestBannerCarousel />
         </View>
 
-        {/* ── BANNER CAROUSEL ── */}
-        <GuestBannerCarousel />
-
-        {/* ── OVERVIEW CARDS ── */}
+        {/* Overview */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Overview</Text>
+          <SectionLabel text="Overview" />
           <TransportCard transport={transport} />
           <HotelCard hotel={hotel} />
           <TodayAppointmentCard appointment={todayAppointment} />
           <DocumentsCard documents={documents} />
         </View>
 
-        {/* ── CALENDAR ── */}
+        {/* Calendar + Agenda */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appointments</Text>
+          <SectionLabel text="Schedule" />
           <AppointmentsCalendar
             days={agenda.calendarDays}
             monthLabel={agenda.monthLabel}
@@ -107,8 +101,6 @@ export default function PatientDashboard() {
             onPrev={agenda.prevMonth}
             onNext={agenda.nextMonth}
           />
-
-          {/* ── AGENDA TABS ── */}
           <AgendaTabs
             todayList={agenda.todayList}
             upcomingList={agenda.upcomingList}
@@ -116,15 +108,9 @@ export default function PatientDashboard() {
           />
         </View>
 
-        {/* ── SUPPORT CARD ── */}
+        {/* Support */}
         <View style={styles.section}>
-          <View style={styles.supportCard}>
-            <Ionicons name="headset-outline" size={22} color={T.accent} />
-            <View style={styles.supportText}>
-              <Text style={styles.supportTitle}>Need help?</Text>
-              <Text style={styles.supportSub}>Contact your clinic coordinator for any questions.</Text>
-            </View>
-          </View>
+          <SupportCard />
         </View>
       </ScrollView>
     </View>
@@ -136,79 +122,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: T.bg,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: T.sp20,
-    paddingBottom: T.sp16,
-    backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-    marginBottom: T.sp16,
-    ...(Platform.OS === "web"
-      ? {}
-      : {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.04,
-          shadowRadius: 4,
-        }),
+  scroll: {
+    paddingTop: T.sp16,
   },
-  greeting: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: T.textSec,
-    marginBottom: 2,
-  },
-  patientName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: T.text,
-    maxWidth: 250,
-  },
-  logoutBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: T.surfaceSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: T.border,
+  bannerSection: {
+    marginBottom: T.sp4,
   },
   section: {
     paddingHorizontal: T.sp16,
     marginBottom: T.sp8,
-  },
-  sectionTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: T.text,
-    marginBottom: T.sp12,
-  },
-  supportCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: T.sp12,
-    backgroundColor: T.surface,
-    borderRadius: T.r16,
-    borderWidth: 1,
-    borderColor: T.border,
-    padding: T.sp16,
-    marginBottom: T.sp12,
-  },
-  supportText: { flex: 1 },
-  supportTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: T.text,
-    marginBottom: 2,
-  },
-  supportSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: T.textSec,
-    lineHeight: 18,
   },
 });

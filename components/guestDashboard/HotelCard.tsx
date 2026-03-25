@@ -1,12 +1,39 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Linking,
+  Alert,
+  Platform,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { T, cardShadow } from "@/constants/adminTheme";
+import { T } from "@/constants/adminTheme";
 import type { PatientHotel } from "@/hooks/guest/useGuestDashboard";
 
 function fmtDate(s: string | null | undefined) {
   if (!s) return null;
-  return new Date(s).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(s).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+async function callPhone(phone: string | null | undefined) {
+  if (!phone) {
+    Alert.alert("No phone", "Hotel phone number is not available.");
+    return;
+  }
+  const url = `tel:${phone}`;
+  const canOpen = await Linking.canOpenURL(url);
+  if (canOpen) {
+    Linking.openURL(url);
+  } else {
+    Alert.alert("Cannot call", "Your device cannot make phone calls.");
+  }
 }
 
 interface Props {
@@ -15,102 +42,168 @@ interface Props {
 
 export function HotelCard({ hotel }: Props) {
   return (
-    <View style={[styles.card, cardShadow]}>
-      <View style={styles.header}>
-        <Ionicons name="bed-outline" size={16} color={T.accent} />
-        <Text style={styles.label}>Hotel</Text>
+    <LinearGradient
+      colors={["#FFFFFF", "#F0F7FF"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.card}
+    >
+      {/* Decorative arc */}
+      <View style={styles.arcDecor} />
+
+      <View style={styles.headerRow}>
+        <View style={styles.labelRow}>
+          <Ionicons name="bed-outline" size={13} color={T.accent} />
+          <Text style={styles.cardLabel}>Hotel</Text>
+        </View>
+        <View style={styles.hotelIcon}>
+          <Ionicons name="business-outline" size={18} color={T.accent} />
+        </View>
       </View>
 
       {!hotel ? (
-        <View style={styles.empty}>
-          <Ionicons name="bed-outline" size={32} color={T.textMuted} />
-          <Text style={styles.emptyText}>No hotel assigned</Text>
+        <View style={styles.emptyBody}>
+          <Ionicons name="bed-outline" size={34} color={T.border} />
+          <Text style={styles.emptyTitle}>Hotel not assigned yet</Text>
+          <Text style={styles.emptySub}>Your clinic will update this soon.</Text>
         </View>
       ) : (
-        <View style={styles.body}>
+        <>
           <Text style={styles.hotelName}>{hotel.name}</Text>
+
           {hotel.address ? (
-            <View style={styles.row}>
+            <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={14} color={T.textSec} />
-              <Text style={styles.detail} numberOfLines={2}>{hotel.address}</Text>
+              <Text style={styles.infoText} numberOfLines={2}>{hotel.address}</Text>
             </View>
           ) : null}
+
           {hotel.roomNo ? (
-            <View style={styles.row}>
+            <View style={styles.infoRow}>
               <Ionicons name="key-outline" size={14} color={T.textSec} />
-              <Text style={styles.detail}>Room {hotel.roomNo}</Text>
+              <Text style={styles.infoText}>Room {hotel.roomNo}</Text>
             </View>
           ) : null}
-          {hotel.checkInDate || hotel.checkOutDate ? (
+
+          {(hotel.checkInDate || hotel.checkOutDate) ? (
             <View style={styles.stayRow}>
-              <View style={styles.stayBox}>
-                <Text style={styles.stayBoxLabel}>Check-in</Text>
-                <Text style={styles.stayBoxDate}>{fmtDate(hotel.checkInDate) ?? "—"}</Text>
+              <View style={styles.stayItem}>
+                <Text style={styles.stayLabel}>Check-in</Text>
+                <Text style={styles.stayDate}>{fmtDate(hotel.checkInDate) ?? "—"}</Text>
               </View>
               <View style={styles.stayDivider} />
-              <View style={styles.stayBox}>
-                <Text style={styles.stayBoxLabel}>Check-out</Text>
-                <Text style={styles.stayBoxDate}>{fmtDate(hotel.checkOutDate) ?? "—"}</Text>
+              <View style={styles.stayItem}>
+                <Text style={styles.stayLabel}>Check-out</Text>
+                <Text style={styles.stayDate}>{fmtDate(hotel.checkOutDate) ?? "—"}</Text>
               </View>
               {hotel.stayDays ? (
-                <View style={[styles.stayBox, styles.stayBoxDays]}>
-                  <Text style={styles.stayBoxLabel}>Nights</Text>
-                  <Text style={[styles.stayBoxDate, { color: T.accent }]}>{hotel.stayDays}</Text>
-                </View>
+                <>
+                  <View style={styles.stayDivider} />
+                  <View style={styles.stayItem}>
+                    <Text style={styles.stayLabel}>Nights</Text>
+                    <Text style={[styles.stayDate, { color: T.accent }]}>{hotel.stayDays}</Text>
+                  </View>
+                </>
               ) : null}
             </View>
           ) : null}
-        </View>
+
+          <Pressable
+            style={styles.callBtn}
+            onPress={() => callPhone((hotel as any).phone ?? null)}
+          >
+            <Ionicons name="call-outline" size={15} color={T.accent} />
+            <Text style={styles.callBtnText}>Call Hotel</Text>
+          </Pressable>
+        </>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: T.surface,
-    borderRadius: T.r16,
-    borderWidth: 1,
-    borderColor: T.border,
-    padding: T.sp16,
+    borderRadius: 20,
+    padding: T.sp20,
     marginBottom: T.sp12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#DDE8F5",
+    position: "relative",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#0369A1",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: { elevation: 4 },
+    }),
   },
-  header: {
+  arcDecor: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: "rgba(3,105,161,0.05)",
+  },
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
     marginBottom: T.sp12,
   },
-  label: {
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  cardLabel: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
+    fontSize: 11,
     color: T.accent,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  empty: {
+  hotelIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(3,105,161,0.08)",
     alignItems: "center",
-    paddingVertical: T.sp16,
-    gap: 8,
+    justifyContent: "center",
   },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
+  emptyBody: {
+    alignItems: "center",
+    paddingVertical: T.sp24,
+    gap: T.sp8,
+  },
+  emptyTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
     color: T.textMuted,
   },
-  body: { gap: T.sp8 },
+  emptySub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.border,
+  },
   hotelName: {
     fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    fontSize: 22,
     color: T.text,
-    marginBottom: 2,
+    marginBottom: T.sp8,
+    letterSpacing: -0.3,
   },
-  row: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 6,
+    marginBottom: 6,
   },
-  detail: {
+  infoText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: T.textSec,
@@ -119,35 +212,49 @@ const styles = StyleSheet.create({
   },
   stayRow: {
     flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: "rgba(3,105,161,0.06)",
+    borderRadius: T.r12,
+    padding: T.sp12,
     marginTop: T.sp8,
-    backgroundColor: T.surfaceSubtle,
-    borderRadius: T.r10,
-    padding: T.sp8,
-    gap: 0,
+    marginBottom: T.sp12,
+    alignItems: "center",
   },
-  stayBox: {
+  stayItem: {
     flex: 1,
     alignItems: "center",
   },
-  stayBoxDays: {
-    flex: 0.6,
-  },
-  stayBoxLabel: {
+  stayLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 10,
     color: T.textMuted,
-    marginBottom: 2,
+    marginBottom: 3,
   },
-  stayBoxDate: {
-    fontFamily: "Inter_600SemiBold",
+  stayDate: {
+    fontFamily: "Inter_700Bold",
     fontSize: 13,
     color: T.text,
   },
   stayDivider: {
     width: 1,
     height: 28,
-    backgroundColor: T.border,
+    backgroundColor: "rgba(3,105,161,0.15)",
     marginHorizontal: 4,
+  },
+  callBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1.5,
+    borderColor: T.accent,
+    borderRadius: T.r10,
+    paddingVertical: 12,
+    marginTop: T.sp8,
+    backgroundColor: "rgba(3,105,161,0.05)",
+  },
+  callBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: T.accent,
   },
 });
