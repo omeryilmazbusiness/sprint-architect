@@ -13,6 +13,7 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -237,6 +238,7 @@ export default function PatientDashboard() {
   const isDark = useColorScheme() === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<PatientDashboardData>({
@@ -244,7 +246,7 @@ export default function PatientDashboard() {
   });
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad = tabBarHeight + 24;
 
   if (isLoading) return <LoadingView />;
   if (isError || !data) return <ErrorView onRetry={refetch} />;
@@ -254,7 +256,7 @@ export default function PatientDashboard() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />
         }

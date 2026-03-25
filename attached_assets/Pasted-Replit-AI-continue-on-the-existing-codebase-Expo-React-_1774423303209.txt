@@ -1,0 +1,122 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + existing Express/TS backend). DO NOT re-scaffold.
+
+GOAL:
+Create the foundational Patient/Guest experience with the SAME modern, premium light theme quality as the Manager screens, including a professional bottom tab footer.
+This is ONLY the base shell + navigation + core layout patterns (no heavy business features yet).
+We want a clean “Guest App” structure that we can build on.
+
+NON-NEGOTIABLE:
+- Premium light (white) theme consistent with Manager.
+- Expo Router file-based navigation.
+- Guest role lands on guest tabs, Manager role lands on manager tabs.
+- SOLID frontend structure:
+  - reusable UI primitives (Card, Pill, SectionHeader, EmptyState)
+  - hooks for data fetching (even if mocked for now)
+  - screens are thin compositions
+- Robust empty/loading/error handling (no “failed data”).
+- No layout break on small screens.
+
+========================================================
+PHASE 1 — AUDIT CURRENT ROUTING (MANDATORY)
+========================================================
+1) Identify the current role routing logic after login:
+- where it decides manager vs patient/guest route
+2) Identify existing patient/guest screens (if any):
+- app/(patient)/...
+- app/(guest)/...
+3) Output the audit summary with exact file paths.
+Do not implement until you confirm how routing works today.
+
+========================================================
+PHASE 2 — CREATE PATIENT/ GUEST TAB SHELL (FOUNDATION)
+========================================================
+Implement a dedicated guest route group with a bottom tab layout:
+app/(guest)/
+  _layout.tsx          // guest-only tabs layout
+  (tabs)/
+    _layout.tsx        // Tab navigator
+    dashboard.tsx      // guest dashboard shell (empty state)
+    documents.tsx      // documents shell
+    schedule.tsx       // schedule shell
+    profile.tsx        // profile & settings shell
+
+Tab bar design (premium):
+- light background + subtle top border
+- icons + labels
+- active tab indicator (subtle)
+- safe area padding
+- no clutter
+
+Each screen shell must:
+- use a consistent header (GuestHeader) matching manager style
+- show skeleton/loading placeholder and empty state
+- not crash if data is null
+
+========================================================
+PHASE 3 — GUEST HEADER + UI PRIMITIVES (CONSISTENT DESIGN)
+========================================================
+Create:
+components/guest/GuestHeader.tsx
+- title
+- optional back
+- right actions (optional)
+- premium light style
+
+Ensure you have consistent primitives (reuse existing if already built):
+components/ui/
+- Card
+- StatusPill
+- SectionHeader
+- EmptyState
+- LoadingSkeleton
+If currently everything is in one ui.tsx, do NOT refactor now; just reuse.
+
+========================================================
+PHASE 4 — GUEST DATA HOOKS (PLACEHOLDER READY)
+========================================================
+Create hooks that will later connect to real endpoints but for now can call existing /v1/patient/dashboard if it exists:
+
+hooks/guest/
+- useGuestDashboard.ts
+- useGuestDocuments.ts
+- useGuestSchedule.ts
+- useGuestProfile.ts
+
+Rules:
+- must return safe defaults
+- no “failed data” on empty arrays
+- expose isLoading/isError + retry
+
+If /v1/patient/dashboard exists, wire dashboard to it lightly (show empty state if no data).
+
+========================================================
+PHASE 5 — ROLE BASED ROUTING (MUST WORK)
+========================================================
+Ensure login flow routes:
+- role MANAGER -> /(manager)/(tabs)/...
+- role PATIENT or GUEST -> /(guest)/(tabs)/dashboard
+
+If your current role name is PATIENT but UI label is “Guest”, keep backend role as PATIENT and only rename UI.
+
+========================================================
+PHASE 6 — OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) File tree of new guest routes
+2) Which file decides role-based routing
+3) Screens created and what each shows (shell)
+4) Manual QA checklist:
+- login as guest routes to guest tabs
+- login as manager routes to manager tabs
+- tab bar looks premium and doesn’t overlap on small screens
+- each screen renders empty state cleanly
+
+IMPLEMENTATION ORDER:
+1) Audit routing
+2) Create guest tab group + layout
+3) Add GuestHeader and reuse UI primitives
+4) Add hooks with safe defaults
+5) Wire role routing and verify
+
+Proceed now. Implement the base shell only; keep it clean and extensible.
+END.
