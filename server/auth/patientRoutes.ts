@@ -8,6 +8,7 @@ import { patientRepo } from "../repositories/patientRepo";
 import rateLimit from "express-rate-limit";
 import { auditLog } from "../api/auditLogger";
 import { db } from "../db";
+import { env } from "../config";
 import { clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -80,16 +81,24 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     }
   }
 
-  const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);
-
-  if (existingDevice) {
-    if (existingDevice.deviceId !== deviceId) {
-      const e = Errors.DEVICE_ALREADY_BOUND();
-      res.status(e.statusCode).json({ code: e.code, message: e.message });
-      return;
-    }
+  if (env.guestMultiDeviceDemo) {
+    // DEV-ONLY: multi-device demo bypass — any device may use any key.
+    // Device binding is neither checked nor written so the devices table
+    // stays clean. This path is unreachable when NODE_ENV=production.
+    const maskedKey = `${patientKey.slice(0, 4)}****`;
+    console.info(`[DEMO] Guest multi-device bypass enabled for key ${maskedKey}`);
   } else {
-    await authRepo.bindDevice(patient.id, deviceId);
+    const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);
+
+    if (existingDevice) {
+      if (existingDevice.deviceId !== deviceId) {
+        const e = Errors.DEVICE_ALREADY_BOUND();
+        res.status(e.statusCode).json({ code: e.code, message: e.message });
+        return;
+      }
+    } else {
+      await authRepo.bindDevice(patient.id, deviceId);
+    }
   }
 
   const accessToken = signAccessToken({

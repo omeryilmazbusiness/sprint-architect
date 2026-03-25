@@ -8,6 +8,16 @@ const envSchema = z.object({
   DATABASE_URL_TEST: z.string().optional(),
   SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
   PORT: z.coerce.number().default(5000),
+  /**
+   * GUEST_MULTI_DEVICE_DEMO — Dev / demo only.
+   * When "true", guest login skips the single-device binding check so the
+   * same patientKey can be used from any number of devices simultaneously.
+   * Automatically forced to false in NODE_ENV=production regardless of value.
+   */
+  GUEST_MULTI_DEVICE_DEMO: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -50,6 +60,8 @@ export const env = {
   isDev: _env.NODE_ENV === "development",
   port: _env.PORT,
   sessionSecret: _env.SESSION_SECRET,
+  /** True only in non-production when GUEST_MULTI_DEVICE_DEMO=true is set. */
+  guestMultiDeviceDemo: _env.NODE_ENV !== "production" && (_env.GUEST_MULTI_DEVICE_DEMO ?? false),
 } as const;
 
 function safeDbInfo(url: string): string {

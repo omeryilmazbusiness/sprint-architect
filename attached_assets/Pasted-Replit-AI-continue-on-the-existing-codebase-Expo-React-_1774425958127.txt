@@ -1,0 +1,119 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+PROBLEM:
+Guest login with patientKey is blocked with:
+"This key is already active on another device..."
+For demo/testing we want the opposite:
+✅ For now, guest keys must work on ANY device (multi-device allowed).
+✅ Also create one permanent demo guest key that always exists and can be used to login.
+
+GOALS:
+1) Audit where the device-binding restriction is enforced and why it triggers.
+2) Implement a safe, temporary DEMO mode that bypasses device binding:
+   - Multi-device login allowed (no “already active” blocking)
+3) Create one demo guest record + key (PT-4S9WQ2U6) that always exists and can login.
+4) Keep this professional and controllable:
+   - Controlled by env flag: GUEST_MULTI_DEVICE_DEMO=true
+   - Only enabled in development (never in production)
+5) Make sure the error disappears and login succeeds on Expo Go across multiple devices.
+
+NON-NEGOTIABLE:
+- Do not guess: locate exact file paths and the code that throws the error.
+- The bypass must be DEV-ONLY:
+  - refuse / ignore flag when NODE_ENV === "production"
+- Must NOT break existing auth for manager/admin.
+- Must NOT require any UI changes to login; same endpoint, same payload.
+- Still keep basic security checks: key must exist, patient must be allowed to login.
+- Provide a clear way to turn demo bypass off.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate patient/guest login endpoint:
+- POST /v1/patient/auth/login (or equivalent)
+2) Locate device binding check:
+- where it looks up existing binding and blocks
+- which tables used (devices, refresh_tokens, etc.)
+3) Report:
+- exact file paths + function names
+- exact condition that triggers “already active” error
+4) Confirm if the device binding is stored per patientId or per patientKey.
+
+Do not implement bypass until this report is produced.
+
+========================================================
+PHASE 2 — IMPLEMENT DEV-ONLY MULTI-DEVICE BYPASS (PROFESSIONAL)
+========================================================
+1) Add config flag in server config (zod validated):
+- GUEST_MULTI_DEVICE_DEMO (boolean)
+Rules:
+- If NODE_ENV==="production", force this flag to false regardless of env var.
+
+2) Modify the Guest login usecase logic:
+- If GUEST_MULTI_DEVICE_DEMO === true:
+  - DO NOT block on existing device binding mismatch
+  - Either:
+    A) Skip device binding entirely
+    OR
+    B) Allow multiple device bindings (store one row per deviceId) in dev
+Choose A for simplest demo:
+- Just don’t check, and don’t write binding (or overwrite binding each time).
+- Must still generate tokens normally.
+
+3) Error handling:
+- Ensure the “already active” message is never returned when demo flag is enabled.
+
+4) Add a log (DEV only):
+- console.info("[DEMO] Guest multi-device bypass enabled for key", maskedKey)
+
+========================================================
+PHASE 3 — CREATE PERMANENT DEMO GUEST KEY (IDEMPOTENT SEED)
+========================================================
+Create script:
+server/scripts/seedDemoGuest.ts
+
+Behavior:
+- DEV ONLY (NODE_ENV !== "production")
+- Find or create one demo clinic "Demo Clinic"
+- Upsert patient with:
+  - patientKey: "PT-4S9WQ2U6"
+  - fullName: "Demo Guest"
+  - status: APPROVED (or whatever allows login)
+  - clinicId: demo clinic
+- Ensure patientKey unique constraint exists
+- Print:
+  "DEMO GUEST KEY READY: PT-4S9WQ2U6"
+
+Add npm script:
+- "db:seed:demo-guest": "NODE_ENV=development tsx server/scripts/seedDemoGuest.ts"
+
+========================================================
+PHASE 4 — VERIFY END-TO-END (MANDATORY)
+========================================================
+1) Run seed script and confirm demo guest exists.
+2) Enable demo bypass:
+- set env var GUEST_MULTI_DEVICE_DEMO=true in Replit Secrets
+3) Login from Device A with PT-4S9WQ2U6 -> must succeed
+4) Login from Device B with same key -> must also succeed (no blocking)
+5) Confirm when flag is OFF:
+- original device-binding rule applies again
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementing, print:
+1) Audit report (where the block came from)
+2) Files changed/added
+3) How to enable demo bypass (env var + dev-only rule)
+4) Command to create demo guest:
+   npm run db:seed:demo-guest
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Phase 1 audit report
+2) Phase 2 implement dev-only bypass
+3) Phase 3 seed demo guest
+4) Phase 4 verify multi-device login works
+
+Proceed now. Implement and verify.
+END.

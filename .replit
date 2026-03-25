@@ -115,12 +115,12 @@ outputType = "console"
 name = "Seed Demo Guest"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "NODE_ENV=development tsx server/scripts/seedDemoGuestKey.ts"
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development tsx server/scripts/seedDemoGuest.ts"
 
 [[workflows.workflow]]
 name = "Seed Demo Guest Unbound"
@@ -132,3 +132,8 @@ args = "NODE_ENV=development tsx server/scripts/seedDemoGuestUnbound.ts"
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[userenv]
+
+[userenv.development]
+GUEST_MULTI_DEVICE_DEMO = "true"
