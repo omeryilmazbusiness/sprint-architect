@@ -51,6 +51,10 @@ args = "Seed Demo Admin"
 task = "workflow.run"
 args = "Seed Demo Guest"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Seed Demo Guest Unbound"
+
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -114,6 +118,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=development tsx server/scripts/seedDemoGuestKey.ts"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Seed Demo Guest Unbound"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development tsx server/scripts/seedDemoGuestUnbound.ts"
 
 [workflows.workflow.metadata]
 outputType = "console"

@@ -1,0 +1,132 @@
+Replit AI — continue on the existing codebase (Express/TypeScript backend + PostgreSQL + Drizzle + Expo). DO NOT re-scaffold.
+
+PROBLEM:
+Guest login with patientKey fails with:
+"This patient account is already bound to another device..."
+Even though the key should not be bound.
+We need a clean DEMO key that works on any device and a reliable way to reset device binding in dev.
+
+GOALS:
+1) Diagnose why the device-bound check triggers (with evidence).
+2) Create a DEMO guest key that is NOT bound to any device (works immediately).
+3) Add a dev-only script to reset device binding for a given patientKey (optional but recommended).
+4) Must be safe, idempotent, and production-quality logic (SOLID).
+
+NON-NEGOTIABLE:
+- Do not guess: show which DB record causes the bind error.
+- Demo key must be unique and in format PT-XXXXXXXX (A–Z0–9).
+- Demo guest status must allow login (APPROVED if required).
+- Clear BOTH device bindings and refresh tokens linked to that patient.
+- Add safety guards (NODE_ENV !== "production", refuse if DB name contains "test" unless explicitly intended).
+- Print only demo key and minimal info (no secrets).
+
+========================================================
+PHASE 1 — ROOT CAUSE INVESTIGATION (MANDATORY)
+========================================================
+1) Locate the patient login code path:
+- POST /v1/patient/auth/login (or similar)
+- Identify exactly how device binding is checked:
+  - which table? (devices, device_bindings, refresh_tokens, etc.)
+  - what columns? (patientId, patientKey, deviceId)
+2) Reproduce and log:
+- incoming key
+- resolved patientId
+- query that finds an existing device binding record
+3) Query DB to prove:
+- show count of device records for that patientId/key
+- show the exact record(s) that cause the block (mask deviceId if needed)
+4) Output a short root cause report:
+- which table contains stale binding
+- why it's not cleared
+
+Do not implement until this report is produced.
+
+========================================================
+PHASE 2 — CREATE A DEMO KEY THAT ALWAYS WORKS (DEV SEED)
+========================================================
+Create script:
+server/scripts/seedDemoGuestUnbound.ts
+
+Behavior:
+1) Guards:
+- refuse if NODE_ENV==="production"
+- refuse if database name contains "test" unless NODE_ENV==="test" (we want dev demo)
+2) Find or create demo clinic:
+- "Demo Clinic" ACTIVE
+3) Create a NEW patientKey each run ONLY if requested, but default should be idempotent:
+- Prefer a fixed demo key if not used, else generate a fresh one:
+  - Generate PT-XXXXXXXX (8 chars A–Z0–9)
+  - Ensure UNIQUE in DB with retry loop (max 10)
+4) Create or upsert demo patient:
+- fullName: "Demo Guest"
+- status: APPROVED (or required for login)
+- patientKey: chosen key
+- clinicId: demo clinic
+- phoneE164: "+905000000000"
+5) CRITICAL: ensure the demo patient is UNBOUND:
+- Delete from devices table where patientId matches
+- Delete from refresh_tokens table where patientId matches (if exists)
+- Any other binding tables used by auth must be cleared too
+6) Print:
+- "DEMO GUEST KEY READY: <patientKey>"
+- "This key is unbound and can login on any device."
+
+Add npm script:
+- "db:seed:demo-guest-unbound": "NODE_ENV=development tsx server/scripts/seedDemoGuestUnbound.ts"
+
+========================================================
+PHASE 3 — DEV-ONLY RESET BINDING SCRIPT (RECOMMENDED)
+========================================================
+Create:
+server/scripts/resetGuestDeviceBinding.ts
+
+Usage:
+PATIENT_KEY="PT-XXXXXXXX" RESET_CONFIRM="YES_RESET_BINDING" NODE_ENV=development tsx server/scripts/resetGuestDeviceBinding.ts
+
+Behavior:
+1) Guards:
+- refuse if NODE_ENV==="production"
+- dry-run unless RESET_CONFIRM="YES_RESET_BINDING"
+2) Find patient by patientKey
+3) Show how many device bindings exist (dry run)
+4) If confirmed:
+- delete devices rows for patientId
+- delete refresh_tokens rows for patientId
+- print success
+
+========================================================
+PHASE 4 — OPTIONAL: BACKEND ENDPOINT (ADMIN ONLY) FOR RESET
+========================================================
+If you want in-app reset:
+POST /v1/admin/patients/:id/reset-device-binding
+SUPER_ADMIN only
+- clears devices + refresh tokens
+- audit logged
+(Only implement if you already have admin module patterns.)
+
+========================================================
+PHASE 5 — VERIFICATION (MANDATORY)
+========================================================
+1) Run seed script and get key.
+2) Guest login from Expo Go with that key should succeed.
+3) Attempt login from a second device:
+- should succeed if you want demo to allow any device
+OR if single-device rule must remain:
+- then provide reset script usage
+Explain which behavior you implemented.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementation print:
+1) Root cause report (which table/record caused the error)
+2) Files added/changed
+3) Command to generate demo key:
+   npm run db:seed:demo-guest-unbound
+4) The generated key format PT-XXXXXXXX
+5) Command to reset binding manually (dev):
+   PATIENT_KEY="..." RESET_CONFIRM="YES_RESET_BINDING" NODE_ENV=development tsx server/scripts/resetGuestDeviceBinding.ts
+6) Manual QA checklist
+
+Proceed now. Implement and verify with real DB queries.
+END.
