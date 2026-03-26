@@ -51,11 +51,11 @@ export default function PatientLayout() {
         }}
       />
       <Tabs.Screen
-        name="documents"
+        name="track"
         options={{
-          title: "Documents",
+          title: "Track",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
+            <Ionicons name="map-outline" size={size} color={color} />
           ),
         }}
       />

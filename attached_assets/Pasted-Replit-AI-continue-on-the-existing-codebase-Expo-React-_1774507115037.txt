@@ -1,0 +1,229 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend + PostgreSQL + Drizzle ORM). DO NOT re-scaffold.
+
+MISSION:
+Rebuild the ENTIRE Guest area UX to the highest “premium app” standard, with SOLID modular architecture, clean layering, and production-ready robustness.
+You must FULLY understand and implement all requirements below end-to-end.
+
+ABSOLUTE NON-NEGOTIABLES:
+- Everything must be modular + SOLID:
+  - UI: presentational components only (no API calls inside)
+  - Data: hooks (React Query) for fetching/derivation
+  - Domain rules: centralized utilities (status mapping, markers)
+  - Backend: controller -> usecase -> repo, zod validation, stable DTO defaults
+- Light theme (white/off-white), premium spacing, no layout breaks on small screens.
+- Fixed header on every Guest tab screen (consistent).
+- Banner carousel auto-slides on timer, safe and smooth.
+- Calendar uses a legend (dot palette) with strict meanings and correct mapping.
+- “Documents” bottom tab must be renamed to “Track”.
+- Track screen must have 2 internal tabs:
+  - Journey (step-by-step tracking UX)
+  - Documents (premium PDF upload/open)
+- Must be stable: no undefined.map, no “failed data” due to empty arrays.
+- Must work on Expo Go (iOS/Android).
+- Do not guess: audit routes and prove the correct files are being rendered.
+
+========================================================
+PHASE 0 — AUDIT & CONFIRM (MANDATORY, NO GUESSING)
+========================================================
+1) Identify the real Guest route group and tab layout currently used at runtime.
+2) Identify the exact file that decides role routing after login (Manager vs Guest).
+3) Identify current Guest screens and what they render now.
+4) Identify current endpoints used by Guest:
+- /v1/patient/dashboard (or equivalent)
+- documents upload/open endpoints
+5) Produce an Audit Report:
+- file paths
+- route structure
+- data shape available
+- what must be replaced
+
+Do not implement until this Audit Report is produced.
+
+========================================================
+PHASE 1 — DESIGN SYSTEM (SMALL, PRACTICAL, REUSABLE)
+========================================================
+Create a small set of reusable primitives (reuse existing ui components if present; do not bloat):
+components/ui/
+- PremiumCard.tsx (or extend existing Card)
+- SectionHeader.tsx
+- StatusPill.tsx
+- EmptyState.tsx
+- LoadingSkeleton.tsx
+- SegmentedTabs.tsx (for Track screen internal tabs)
+- IconButton.tsx
+
+Guidelines:
+- radius: 20–24
+- spacing: 12/16/20
+- subtle shadows & borders
+- typography hierarchy: title/subtitle/meta
+
+========================================================
+PHASE 2 — FIXED GUEST HEADER (GLOBAL, CONSISTENT)
+========================================================
+Create:
+components/guest/GuestHeader.tsx
+Props:
+- title
+- rightActions (profile/help)
+- optional subtitle chip row (today date / next appointment)
+
+Implement it ONCE in the Guest tabs layout so it appears on every tab:
+app/(guest)/(tabs)/_layout.tsx (or actual layout file found in audit)
+Rules:
+- header fixed, content below it
+- safe area padding
+- never overlaps with banners or scroll areas
+
+========================================================
+PHASE 3 — GUEST TABS (FOOTER) + ROUTING
+========================================================
+Guest bottom tabs must be:
+- Dashboard
+- Track   (rename Documents tab -> Track)
+- Schedule (optional if already exists; keep if useful)
+- Explore (if previously requested/exists)
+- Profile
+
+Make sure:
+- each tab has the fixed GuestHeader
+- icons and labels are consistent
+- no overlap on small screens
+
+========================================================
+PHASE 4 — GUEST DASHBOARD (PREMIUM)
+========================================================
+Dashboard layout:
+A) Banner carousel (top ~1/3 height clamped 180–260)
+- auto-slide every 5s
+- swipe resets timer
+- pauses when screen not focused
+- dots indicator
+- uses local assets registry:
+  src/constants/guestBanners.ts with static require()
+
+B) Overview cards (premium)
+Ordered cards:
+1) Transport card (premium black look is allowed if previously requested; otherwise premium light)
+- brand logo, brand+model big, plate, driver name + call button
+- if missing => elegant placeholder
+2) Hotel card premium
+- name, address, call button
+- if missing => placeholder
+3) Today appointment card
+4) Compulsory documents card (pending/uploaded counts + top 2 items)
+
+C) Calendar section + legend palette
+- Add a legend row with dots and labels:
+  - Light gray: Past & completed
+  - Light red: Past & missed/no-show
+  - Dark green filled: Today
+  - Light green: Future & scheduled
+  - Dark red: Future & cancelled
+- Calendar day coloring rules (EXACT):
+  1) Past & DONE/COMPLETED => light gray
+  2) Past & MISSED/NO_SHOW OR past & still SCHEDULED => light red
+  3) Today with any appointment => dark green filled
+  4) Future & SCHEDULED => light green
+  5) Future & CANCELLED => dark red
+- Selecting a day shows agenda list below
+
+D) Today Agenda list with 3 tabs (segmented)
+- Upcoming / Today / Completed
+- Each list item shows time, title, doctor, status
+- premium empty states
+
+Implement modular:
+components/guestDashboard/*
+hooks/guest/useGuestDashboard.ts
+hooks/guest/useGuestAgenda.ts
+hooks/guest/useGuestCalendarMarkers.ts
+
+========================================================
+PHASE 5 — TRACK SCREEN (2 INTERNAL TABS)
+========================================================
+Track screen replaces Documents tab.
+Route:
+app/(guest)/(tabs)/track.tsx
+
+Internal segmented tabs:
+1) Journey
+2) Documents
+
+Journey tab:
+- Modern stepper with the 6 steps:
+  1) Arrived airport
+  2) Picked up (vehicle)
+  3) Arrived hotel
+  4) Attended appointment
+  5) Back to airport
+  6) Arrived home
+- Completed steps green; upcoming gray; highlight current step
+- Must be safe if tracking info missing (show placeholder)
+
+Documents tab:
+- Premium document cards:
+  - typeName
+  - instructionText
+  - status pill (PENDING/UPLOADED)
+  - Upload PDF (pending)
+  - Open PDF (uploaded)
+- Ensure file open uses FileService and avoids deprecated APIs.
+
+========================================================
+PHASE 6 — FILE OPEN/UPLOAD SOLID SERVICE (NO DEPRECATION WARNING)
+========================================================
+Create:
+src/services/files/FileService.ts
+- Uses expo-file-system/legacy for downloadAsync (to remove deprecation warning)
+- openPdf(url) downloads to cache and opens safely
+
+Ensure:
+- all screens call FileService, not FileSystem directly.
+
+========================================================
+PHASE 7 — BACKEND DTO STABILITY (ONLY IF NEEDED)
+========================================================
+If guest endpoints return undefined/null arrays:
+- Fix /v1/patient/dashboard to always return:
+  - appointments: []
+  - documents.items: []
+  - transport/hotel: null
+  - tracking: { currentStep } or null
+No undefined.
+This eliminates UI crashes.
+
+========================================================
+PHASE 8 — VERIFICATION & QUALITY BAR
+========================================================
+1) No “failed data” for empty data
+2) No crashes on Expo Go
+3) Banner auto-slide works
+4) Calendar legend and coloring correct
+5) Fixed header appears on every tab and never overlaps
+6) Track screen internal tabs work
+7) PDF open/upload stable and warning-free
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation, print:
+1) Audit report (files + routes)
+2) File tree of guest area
+3) Files changed/added
+4) Calendar legend mapping implementation notes
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+0) Audit & confirm routes
+1) Shared UI primitives
+2) Fixed GuestHeader in layout
+3) Tabs (rename Documents -> Track)
+4) Dashboard (banner + overview + calendar + agenda)
+5) Track (Journey + Documents)
+6) FileService refactor
+7) Backend DTO stability if needed
+8) Final QA
+
+Proceed now. Implement end-to-end and verify with actual runtime screens.
+END.

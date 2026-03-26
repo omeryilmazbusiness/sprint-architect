@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   View,
   Image,
@@ -9,6 +9,7 @@ import {
   Platform,
   Text,
 } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { GUEST_BANNERS } from "@/constants/guestBanners";
 import { T } from "@/constants/adminTheme";
@@ -17,6 +18,7 @@ const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_H = Math.min(Math.max(SCREEN_W * 0.5, 180), 260);
 const CARD_MARGIN = T.sp16;
 const CARD_W = SCREEN_W - CARD_MARGIN * 2;
+const AUTO_SLIDE_MS = 5000;
 
 const CAPTIONS = [
   { title: "Istanbul", sub: "World-class health tourism destination" },
@@ -27,16 +29,54 @@ const CAPTIONS = [
 export function GuestBannerCarousel() {
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isScreenFocused = useRef(true);
 
-  const handleScroll = useCallback((e: any) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_W);
-    setActiveIndex(Math.max(0, Math.min(idx, GUEST_BANNERS.length - 1)));
+  const goTo = useCallback((idx: number) => {
+    const clampedIdx = Math.max(0, Math.min(idx, GUEST_BANNERS.length - 1));
+    scrollRef.current?.scrollTo({ x: clampedIdx * CARD_W, animated: true });
+    setActiveIndex(clampedIdx);
   }, []);
 
-  const goTo = (idx: number) => {
-    scrollRef.current?.scrollTo({ x: idx * CARD_W, animated: true });
-    setActiveIndex(idx);
-  };
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      if (!isScreenFocused.current) return;
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % GUEST_BANNERS.length;
+        scrollRef.current?.scrollTo({ x: next * CARD_W, animated: true });
+        return next;
+      });
+    }, AUTO_SLIDE_MS);
+  }, []);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocused.current = true;
+      startTimer();
+      return () => {
+        isScreenFocused.current = false;
+        stopTimer();
+      };
+    }, [startTimer, stopTimer])
+  );
+
+  const handleScroll = useCallback(
+    (e: any) => {
+      const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_W);
+      const clamped = Math.max(0, Math.min(idx, GUEST_BANNERS.length - 1));
+      setActiveIndex(clamped);
+      startTimer();
+    },
+    [startTimer]
+  );
 
   return (
     <View style={styles.wrapper}>
@@ -54,13 +94,11 @@ export function GuestBannerCarousel() {
           <View key={i} style={styles.slide}>
             <Image source={src} style={styles.image} resizeMode="cover" />
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.6)"]}
+              colors={["transparent", "rgba(0,0,0,0.65)"]}
               style={styles.overlay}
             />
             <View style={styles.caption}>
-              <Text style={styles.captionTitle}>
-                {CAPTIONS[i]?.title ?? ""}
-              </Text>
+              <Text style={styles.captionTitle}>{CAPTIONS[i]?.title ?? ""}</Text>
               <Text style={styles.captionSub} numberOfLines={1}>
                 {CAPTIONS[i]?.sub ?? ""}
               </Text>
@@ -71,7 +109,14 @@ export function GuestBannerCarousel() {
 
       <View style={styles.dots}>
         {GUEST_BANNERS.map((_, i) => (
-          <Pressable key={i} onPress={() => goTo(i)} hitSlop={10}>
+          <Pressable
+            key={i}
+            onPress={() => {
+              goTo(i);
+              startTimer();
+            }}
+            hitSlop={10}
+          >
             <View
               style={[
                 styles.dot,
@@ -104,7 +149,6 @@ const styles = StyleSheet.create({
   slide: {
     width: CARD_W,
     height: CARD_H,
-    position: "relative",
   },
   image: {
     width: "100%",
@@ -133,7 +177,7 @@ const styles = StyleSheet.create({
   captionSub: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.8)",
   },
   dots: {
     position: "absolute",
@@ -155,6 +199,6 @@ const styles = StyleSheet.create({
   },
   dotInactive: {
     width: 5,
-    backgroundColor: "rgba(255,255,255,0.45)",
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
 });
