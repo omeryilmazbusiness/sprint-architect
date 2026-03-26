@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import type { StorageProvider, SaveFileOptions } from "./StorageProvider";
 
@@ -79,5 +80,18 @@ export class S3StorageProvider implements StorageProvider {
     }
 
     return response.Body as Readable;
+  }
+
+  async deleteFile(storageKey: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: storageKey,
+      })
+    );
+  }
+
+  getFilePath(_storageKey: string): string {
+    throw new Error("getFilePath is not supported on S3StorageProvider");
   }
 }

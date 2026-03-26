@@ -1,0 +1,204 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Refine Guest UX with these exact requirements (premium, SOLID, prod-ready):
+
+1) Dashboard Overview cards:
+- In compact mode, cards must behave like full-width “tiles” (each takes one full card width, not small side-by-side).
+- Must be an AUTO-SLIDER carousel (timer-based) that cycles through:
+  - Transport tile
+  - Hotel tile
+  - Documents tile
+- Smooth paging, dots indicator, swipe supported, timer resets on swipe, pauses when screen not focused.
+
+2) Calendar:
+- Calendar UI became too narrow; redesign it to a professional, spacious UX.
+- Improve spacing, typography, and touch targets.
+- Ensure it looks great on small screens and does not “shrink” awkwardly.
+- CANCELED color must be BLACK in calendar.
+- Day cell background uses status color (no dots).
+- Provide legend row for colors (optional but recommended).
+
+3) Doctors section:
+- Each doctor profile card must be FULL-WIDTH (not small cards).
+- Must be an AUTO-SLIDER (timer-based), one doctor per slide.
+- Doctor card must include the most necessary professional info:
+  - photo or initials
+  - full name
+  - specialty
+  - university
+  - experienceYears
+  - languages chips
+  - certifications/diploma badge (if available)
+  - contact (optional call/email if you have it)
+- Empty state must be premium if no doctors.
+
+4) Documents:
+- Next to “Open PDF”, add “Remove file” option.
+- Removing must delete the uploaded PDF and revert status back to PENDING.
+- Must be safe: only PDF files, and only the owner can remove.
+- UI must update immediately after remove.
+
+NON-NEGOTIABLE:
+- First: audit current implementation and confirm file paths.
+- SOLID frontend: components presentational; hooks handle data; services for file actions.
+- SOLID backend: controller -> usecase -> repo; zod validation; stable DTOs.
+- No undefined arrays, no “failed data”.
+- Expo Go compatible.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify guest dashboard route file and current Overview slider implementation.
+2) Identify calendar component and day marker logic.
+3) Identify doctors slider section implementation (if exists) and data source.
+4) Identify documents open PDF implementation and upload storage path.
+5) Output an audit report:
+- file paths
+- what exists vs what must change
+- any known constraints
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — OVERVIEW AUTO-SLIDER (FULL WIDTH TILE)
+========================================================
+Implement a dedicated full-width carousel:
+components/guestDashboard/OverviewTileCarousel.tsx
+
+Behavior:
+- Full width tile per slide (100% width minus screen padding).
+- Auto-advance every 5s (configurable).
+- Dots indicator.
+- swipe resets timer.
+- pause when screen not focused.
+Slides:
+1) TransportTile
+2) HotelTile
+3) DocumentsTile (with CTA “Go to Documents”)
+All slides must have equal height and premium radius.
+
+Remove any “small grid” behavior; this is strictly one tile per slide.
+
+========================================================
+PHASE 3 — CALENDAR PROFESSIONAL REDESIGN + CANCELED BLACK
+========================================================
+Redesign calendar layout so it doesn’t look narrow:
+- Use full card width
+- Larger day cells
+- Clear header (month, prev/next, Today button)
+- Better spacing and touch targets
+- Ensure day number is centered and readable
+
+Status background colors (EXACT):
+- Past & completed => light gray background
+- Past & missed => light red background
+- Today with appointment => dark green filled
+- Future scheduled => light green background
+- Future cancelled => BLACK background (new requirement)
+Selected day:
+- Add a border ring or stronger highlight on top of the status fill.
+
+Implementation:
+hooks/guest/useGuestCalendarMarkers.ts -> markerType map
+Calendar day renderer uses markerType to choose background.
+No dots anywhere.
+
+Add a compact legend row (optional but recommended):
+- completed (gray)
+- missed (light red)
+- today (dark green)
+- upcoming (light green)
+- cancelled (black)
+
+========================================================
+PHASE 4 — DOCTORS FULL-WIDTH AUTO-SLIDER
+========================================================
+Implement:
+components/guestDashboard/DoctorsCarousel.tsx
+- One full-width doctor per slide
+- Auto-advance every 6s
+- Dots indicator
+- swipe resets timer, pause on blur
+
+DoctorProfileSlide.tsx shows:
+- photo/initials large
+- fullName, specialty
+- University + experienceYears
+- Languages chips
+- Certifications summary (1 line) or diploma badge
+- Optional contact actions if available
+
+Data:
+- Use existing /v1/patient/dashboard doctors array if present,
+  otherwise add endpoint:
+  GET /v1/patient/doctors (clinic-scoped)
+Return stable [].
+
+Empty state:
+- Premium empty card “Clinic doctors will appear here soon.”
+
+========================================================
+PHASE 5 — DOCUMENTS: REMOVE FILE (BACKEND + FRONTEND)
+========================================================
+Backend:
+Add endpoint (patient scope):
+DELETE /v1/patient/documents/:id/file
+Rules:
+- Verify doc belongs to authenticated patient
+- If file exists:
+  - delete file from storage (server/uploads/... or storage provider)
+- Update patient_documents:
+  - fileUrl = null
+  - fileName = null
+  - fileMime = null
+  - fileSize = null
+  - uploadedAt = null
+  - status = PENDING
+Return updated doc DTO (or 200 ok).
+Zod validate :id.
+
+Frontend:
+- In document card, when status=UPLOADED show:
+  - Open PDF
+  - Remove file (destructive)
+- Remove file flow:
+  - confirm modal: “Remove uploaded file?”
+  - call delete endpoint
+  - invalidate docs query
+  - toast success (short)
+
+Ensure docs list updates immediately.
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+Manual QA checklist:
+1) Overview tiles auto-slide full width, swipe works, timer pauses on blur
+2) Calendar looks spacious and professional, cancelled days are black
+3) Doctors carousel shows full-width cards, auto slides
+4) Documents remove file works:
+   - status returns to PENDING
+   - Open PDF disappears
+   - UI updates immediately
+5) Expo Go: no crashes
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit report
+2) Files changed/added
+3) Endpoint(s) added + sample curl for remove file
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Overview tile carousel
+3) Calendar redesign + cancelled black
+4) Doctors full-width carousel
+5) Remove file backend + frontend
+6) Final polish + QA
+
+Proceed now. Implement and verify end-to-end.
+END.

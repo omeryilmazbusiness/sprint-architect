@@ -208,4 +208,59 @@ router.get(
   }
 );
 
+router.delete(
+  "/patient/documents/:id/file",
+  authMiddleware,
+  requireRole("PATIENT"),
+  async (req, res, next) => {
+    try {
+      const docId = req.params.id as string;
+      const doc = await documentRepo.findById(docId);
+
+      if (!doc) {
+        throw new AppError("DOC-RM-404", "Document not found", 404);
+      }
+
+      if (doc.patientId !== req.actor!.sub) {
+        throw new AppError("DOC-RM-403", "You are not the owner of this document", 403);
+      }
+
+      if (!doc.fileUrl) {
+        throw new AppError("DOC-RM-400", "No file is attached to this document", 400);
+      }
+
+      const storageProvider = getStorageProvider();
+      await storageProvider.deleteFile(doc.fileUrl);
+
+      const updated = await documentRepo.updateDocument(docId, doc.clinicId, {
+        fileUrl: null,
+        fileName: null,
+        fileMime: null,
+        fileSize: null,
+        uploadedAt: null,
+        status: "ASSIGNED",
+        rejectionReason: null,
+      });
+
+      auditLog({
+        clinicId: doc.clinicId,
+        actorId: req.actor!.sub,
+        actorRole: req.actor!.role,
+        action: "DOCUMENT_FILE_REMOVED",
+        resourceType: "patient_document",
+        resourceId: docId,
+      });
+
+      res.json({
+        id: updated.id,
+        status: updated.status,
+        fileUrl: null,
+        fileName: null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

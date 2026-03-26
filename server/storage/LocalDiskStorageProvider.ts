@@ -49,6 +49,15 @@ export class LocalDiskStorageProvider implements StorageProvider {
     return this.resolveKey(storageKey);
   }
 
+  async deleteFile(storageKey: string): Promise<void> {
+    const absolutePath = this.resolveKey(storageKey);
+    try {
+      await fs.promises.unlink(absolutePath);
+    } catch (err: any) {
+      if (err.code !== "ENOENT") throw err;
+    }
+  }
+
   private resolveKey(storageKey: string): string {
     if (storageKey.startsWith("/v1/documents/files/")) {
       const parts = storageKey.replace("/v1/documents/files/", "").split("/");

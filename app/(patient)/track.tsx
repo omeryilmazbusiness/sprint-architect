@@ -388,11 +388,13 @@ function DocCard({
 }) {
   const [uploading, setUploading] = useState(false);
   const [opening, setOpening]     = useState(false);
+  const [removing, setRemoving]   = useState(false);
   const [expanded, setExpanded]   = useState(false);
 
-  const colors   = STATUS_COLORS[doc.status] ?? { bg: T.surfaceSubtle, text: T.textSec };
+  const colors    = STATUS_COLORS[doc.status] ?? { bg: T.surfaceSubtle, text: T.textSec };
   const canUpload = doc.status === "ASSIGNED" || doc.status === "REJECTED";
   const canOpen   = !!doc.fileUrl && ["UPLOADED", "APPROVED"].includes(doc.status);
+  const canRemove = canOpen;
 
   async function handleUpload() {
     try {
@@ -434,6 +436,34 @@ function DocCard({
       Alert.alert("Could not open PDF", e.message ?? "Unexpected error");
     } finally {
       setOpening(false);
+    }
+  }
+
+  function confirmRemove() {
+    Alert.alert(
+      "Remove uploaded file?",
+      "The PDF will be deleted and the document status will return to pending.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: handleRemove },
+      ]
+    );
+  }
+
+  async function handleRemove() {
+    if (!accessToken) return;
+    try {
+      setRemoving(true);
+      const res = await fetch(`${getApiUrl()}v1/patient/documents/${doc.id}/file`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message ?? "Remove failed"); }
+      onRefresh();
+    } catch (e: any) {
+      Alert.alert("Could not remove file", e.message ?? "Please try again");
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -485,7 +515,7 @@ function DocCard({
       ) : null}
 
       {/* Actions */}
-      {(canUpload || canOpen) ? (
+      {(canUpload || canOpen || canRemove) ? (
         <View style={ds.actions}>
           {canUpload && (
             <Pressable
@@ -508,6 +538,18 @@ function DocCard({
               {opening
                 ? <ActivityIndicator size="small" color={T.accent} />
                 : <><Ionicons name="open-outline" size={14} color={T.accent} /><Text style={ds.btnOpenTxt}>Open PDF</Text></>
+              }
+            </Pressable>
+          )}
+          {canRemove && (
+            <Pressable
+              style={[ds.btn, ds.btnRemove, removing && ds.btnDisabled]}
+              onPress={confirmRemove}
+              disabled={removing}
+            >
+              {removing
+                ? <ActivityIndicator size="small" color={T.danger} />
+                : <><Ionicons name="trash-outline" size={14} color={T.danger} /><Text style={ds.btnRemoveTxt}>Remove</Text></>
               }
             </Pressable>
           )}
@@ -704,6 +746,8 @@ const ds = StyleSheet.create({
   btnUploadTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
   btnOpen:      { backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE" },
   btnOpenTxt:   { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.accent },
+  btnRemove:    { backgroundColor: T.dangerBg, borderWidth: 1, borderColor: "#FECACA" },
+  btnRemoveTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.danger },
   btnDisabled:  { opacity: 0.6 },
   center: {
     flex: 1, alignItems: "center", justifyContent: "center",
