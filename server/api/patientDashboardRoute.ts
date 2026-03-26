@@ -95,9 +95,13 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
       doctors: uniqueDoctors.map(d => ({
         id: d.id,
         fullName: d.fullName,
-        specialty: d.specialty,
-        phone: d.phone,
-        photoUrl: d.photoUrl,
+        specialty: d.specialty ?? null,
+        phone: d.phone ?? null,
+        photoUrl: d.photoUrl ?? null,
+        university: d.university ?? null,
+        experienceYears: d.experienceYears ?? null,
+        languages: d.languages ?? null,
+        diplomaUrl: d.diplomaUrl ?? null,
       })),
       documents: patientDocs.map(d => ({
         id: d.id,

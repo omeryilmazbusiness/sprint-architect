@@ -1,0 +1,208 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Upgrade Guest area UX to a more premium, modern, trend design with these exact changes:
+
+A) Dashboard — Overview layout changes
+1) Under the Transport (driver) card, add Hotel card NEXT TO it as a slider-style card row (horizontal carousel).
+   - Transport + Hotel should be swipeable cards (like a small horizontal slider).
+2) Add Documents card NEXT TO those in the same slider row.
+   - So the slider row contains: Transport card, Hotel card, Documents card.
+3) Documents card MUST include a “Go to Documents” CTA (button) that navigates to Track → Documents tab.
+
+B) Dashboard — Calendar marker style change
+4) Remove dot markers in calendar.
+   - Instead, the selected date’s background should reflect the correct status color.
+   - Days with appointments should still be visibly marked, but not with dots:
+     - Use subtle background fills, borders, or corner badges.
+   - The legend remains (optional), but day UI uses background color emphasis, not dots.
+
+C) Track screen — modern trend UX
+5) Track page stepper must look modern (trend UX).
+   - Stepper should be clean, minimal, premium.
+   - Tab/segmented control also must be premium and modern.
+6) Track → Documents tab:
+   - Analyze what the “most necessary” additions are and implement them:
+     - Document summary (Pending/Uploaded counts)
+     - Quick actions: Upload PDF / Open PDF
+     - Sorting/filter: Pending first
+     - Search by document name
+     - Clear empty-state guidance
+   - Keep it light but highly usable.
+
+D) Dashboard — Doctors slider under calendar
+7) Add a Doctors card section as a horizontal slider (carousel) under the appointment calendar card.
+   - Each doctor profile card must show the most necessary professional info:
+     - Photo (if available) or initials
+     - Full name
+     - Specialty
+     - University
+     - Experience years
+     - Languages (chips)
+     - (Optional) diploma badge if diplomaUrl exists
+   - This section should feel premium and match the rest of dashboard.
+
+NON-NEGOTIABLE:
+- First: analyze current implementation and confirm file paths (audit).
+- Light theme premium, no layout breaks on small screens.
+- SOLID frontend: UI components are presentational; data fetching in hooks; derived logic in helpers.
+- Must work on Expo Go.
+- No “failed data” on empty states; use safe defaults.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify actual Guest Dashboard route file path.
+2) Identify current layout for:
+- Transport card
+- Hotel card
+- Documents card
+- Calendar component and its marker logic
+3) Identify Track screen files and current tab structure.
+4) Identify whether Guest has access to doctors list data:
+- via /v1/patient/dashboard or other endpoint
+- if not, propose minimal backend addition: GET /v1/patient/doctors (clinic scoped)
+5) Output an audit report:
+- exact file paths
+- what exists
+- what must change
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — DASHBOARD: HORIZONTAL “OVERVIEW SLIDER ROW”
+========================================================
+Implement a horizontal slider row under banner/overview header:
+- components/guestDashboard/OverviewSliderRow.tsx
+
+Cards included (in order):
+1) TransportCard (driver + vehicle)
+2) HotelCard
+3) DocumentsCard
+
+UX rules:
+- Each card has same height and premium radius (20+).
+- Snap spacing and smooth scroll.
+- Each card has a “default placeholder” when missing (e.g., No transport).
+- Transport card can remain premium black if already designed; hotel/documents premium light.
+- Documents card includes “Go to Documents” CTA:
+  - navigates to Track tab and opens Documents internal tab automatically.
+
+Routing requirement:
+- Implement navigation param: track?tab=documents or similar.
+- Track screen should read params and set initial tab accordingly.
+
+========================================================
+PHASE 3 — DASHBOARD: CALENDAR MARKERS WITHOUT DOTS
+========================================================
+Change calendar day rendering:
+- Remove dots entirely.
+- Use background color highlight on day cell (subtle fills).
+Color rules (same semantics you defined earlier):
+- Past & completed => light gray background
+- Past & missed => light red background
+- Today with appointment => dark green filled (strong)
+- Future scheduled => light green background
+- Future cancelled => dark red background
+
+Selected-day behavior:
+- If user taps a day, selection ring or stronger border appears,
+- and the fill color still reflects status category.
+
+Implement:
+hooks/guest/useGuestCalendarMarkers.ts
+- output map date -> markerType
+MonthlyCalendar component reads markerType and renders correct background fill (no dots).
+
+========================================================
+PHASE 4 — TRACK SCREEN: MODERN TREND UX (TABS + STEPPER)
+========================================================
+A) Tabs redesign
+- Replace basic tabs with premium segmented control:
+  - pill-shaped, smooth animation, clear active indicator
+- Two tabs: Journey | Documents
+
+B) Journey stepper redesign
+- Create a modern stepper:
+  - vertical with clean connectors
+  - minimal icons (check, current dot, future hollow dot)
+  - micro-animations optional (if reanimated exists)
+- Steps:
+  Arrived airport -> Picked up -> Arrived hotel -> Attended appointment -> Back to airport -> Arrived home
+- Current step highlighted
+- Completed green
+- Future gray
+
+C) Documents tab improvements (analyze + implement essential)
+Must include:
+- Summary (Pending / Uploaded)
+- Search by doc type name
+- Sort pending first
+- Each doc card shows:
+  - typeName
+  - instructionText (2 lines + expand)
+  - status pill
+  - Upload/Open action
+- Empty state guidance:
+  “Your clinic will assign required documents here.”
+
+Also ensure file open uses FileService (legacy import) and does not show deprecated warning.
+
+========================================================
+PHASE 5 — DASHBOARD: DOCTORS SLIDER UNDER CALENDAR
+========================================================
+Add section under calendar card:
+- Title: “Doctors”
+- Horizontal carousel of doctor profile cards
+
+Data:
+Option A: if /v1/patient/dashboard already includes doctors array, use it.
+Option B (minimal backend addition):
+GET /v1/patient/doctors
+Return clinic-scoped list.
+
+Doctor card component:
+components/guestDashboard/DoctorProfileCard.tsx
+Shows:
+- avatar/photoUrl
+- fullName
+- specialty
+- university
+- experienceYears
+- languages chips (max 2 + “+N”)
+- diploma badge if diplomaUrl exists
+
+Empty state:
+- “Doctors will appear here once clinic adds them.”
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+Manual QA checklist:
+1) Overview slider row scrolls with Transport/Hotel/Documents cards
+2) Documents card CTA navigates to Track → Documents tab
+3) Calendar shows background color fills, no dots
+4) Track tabs + stepper look modern, no layout issues
+5) Documents tab has summary/search/sort and upload/open actions
+6) Doctors slider renders correctly or shows premium empty state
+7) Expo Go: no crashes
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit report with file paths
+2) Files changed/added
+3) Any backend endpoint added (if doctors needed) + sample curl
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Overview slider row + documents CTA navigation
+3) Calendar marker redesign (no dots)
+4) Track screen redesign (tabs + stepper + documents improvements)
+5) Doctors slider section
+6) Final polish + QA
+
+Proceed now. Implement exactly as requested, keep it premium and SOLID-modular.
+END.

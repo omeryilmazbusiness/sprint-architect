@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
@@ -14,14 +15,14 @@ import { ErrorView } from "@/components/ErrorView";
 import { GuestHeader } from "@/components/guestDashboard/GuestHeader";
 import { GuestBannerCarousel } from "@/components/guestDashboard/GuestBannerCarousel";
 import { GuestDashboardSkeleton } from "@/components/guestDashboard/GuestDashboardSkeleton";
-import { TransportCard } from "@/components/guestDashboard/TransportCard";
-import { HotelCard } from "@/components/guestDashboard/HotelCard";
 import { TodayAppointmentCard } from "@/components/guestDashboard/TodayAppointmentCard";
-import { DocumentsCard } from "@/components/guestDashboard/DocumentsCard";
 import { AppointmentsCalendar } from "@/components/guestDashboard/AppointmentsCalendar";
 import { AgendaTabs } from "@/components/guestDashboard/AgendaTabs";
 import { SectionLabel } from "@/components/guestDashboard/SectionLabel";
 import { SupportCard } from "@/components/guestDashboard/SupportCard";
+import { OverviewSliderRow } from "@/components/guestDashboard/OverviewSliderRow";
+import { DoctorProfileCard } from "@/components/guestDashboard/DoctorProfileCard";
+import { Ionicons } from "@expo/vector-icons";
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -44,6 +45,7 @@ export default function PatientDashboard() {
     transport,
     hotel,
     appointments,
+    doctors,
     documents,
   } = useGuestDashboard();
 
@@ -81,14 +83,22 @@ export default function PatientDashboard() {
           <GuestBannerCarousel />
         </View>
 
-        {/* Overview */}
+        {/* Overview slider: Transport / Hotel / Documents */}
         <View style={styles.section}>
           <SectionLabel text="Overview" />
-          <TransportCard transport={transport} />
-          <HotelCard hotel={hotel} />
-          <TodayAppointmentCard appointment={todayAppointment} />
-          <DocumentsCard documents={documents} />
+          <OverviewSliderRow
+            transport={transport}
+            hotel={hotel}
+            documents={documents}
+          />
         </View>
+
+        {/* Today appointment */}
+        {todayAppointment ? (
+          <View style={styles.section}>
+            <TodayAppointmentCard appointment={todayAppointment} />
+          </View>
+        ) : null}
 
         {/* Calendar + Agenda */}
         <View style={styles.section}>
@@ -106,6 +116,30 @@ export default function PatientDashboard() {
             upcomingList={agenda.upcomingList}
             completedList={agenda.completedList}
           />
+        </View>
+
+        {/* Doctors slider */}
+        <View style={styles.section}>
+          <SectionLabel text="Doctors" />
+          {doctors.length === 0 ? (
+            <View style={styles.emptyDoctors}>
+              <Ionicons name="people-outline" size={32} color={T.textMuted} />
+              <Text style={styles.emptyDoctorsText}>
+                Doctors will appear here once your clinic adds them.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.doctorsScroll}
+              style={styles.doctorsList}
+            >
+              {doctors.map((doc) => (
+                <DoctorProfileCard key={doc.id} doctor={doc} />
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Support */}
@@ -130,6 +164,30 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: T.sp16,
-    marginBottom: T.sp8,
+    marginBottom: T.sp16,
+  },
+  doctorsList: {
+    marginHorizontal: -T.sp16,
+  },
+  doctorsScroll: {
+    paddingHorizontal: T.sp16,
+    gap: 12,
+    paddingBottom: 4,
+  },
+  emptyDoctors: {
+    backgroundColor: T.surface,
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: T.sp24,
+    alignItems: "center",
+    gap: T.sp8,
+  },
+  emptyDoctorsText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

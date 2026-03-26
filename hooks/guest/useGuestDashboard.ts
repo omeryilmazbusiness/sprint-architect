@@ -67,7 +67,17 @@ export interface PatientDashboardData {
   transport: PatientTransport | null;
   hotel: PatientHotel | null;
   appointments: PatientAppointment[];
-  doctors: Array<{ id: string; fullName: string; specialty?: string; phone?: string | null; photoUrl?: string | null }>;
+  doctors: Array<{
+    id: string;
+    fullName: string;
+    specialty?: string | null;
+    phone?: string | null;
+    photoUrl?: string | null;
+    university?: string | null;
+    experienceYears?: number | null;
+    languages?: string | null;
+    diplomaUrl?: string | null;
+  }>;
   documents: PatientDocument[];
 }
 

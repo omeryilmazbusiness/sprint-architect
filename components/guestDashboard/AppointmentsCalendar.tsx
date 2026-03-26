@@ -6,35 +6,28 @@ import type { CalendarDay, CalendarMark } from "@/hooks/guest/useGuestAgenda";
 
 const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-const LEGEND: { mark: CalendarMark; label: string; dotColor: string; filled?: boolean }[] = [
-  { mark: "past-done", label: "Completed", dotColor: "#9CA3AF" },
-  { mark: "past-missed", label: "Missed / Overdue", dotColor: "#FCA5A5" },
-  { mark: "today", label: "Today", dotColor: "#059669", filled: true },
-  { mark: "future-scheduled", label: "Scheduled", dotColor: "#6EE7B7" },
-  { mark: "future-cancelled", label: "Cancelled", dotColor: "#F87171" },
-];
+interface CellColors { bg: string; textColor: string }
 
-function getDotColor(mark: CalendarMark): string | null {
+function getCellColors(mark: CalendarMark, isSelected: boolean, hasAppt: boolean): CellColors {
+  if (isSelected) return { bg: T.accent, textColor: "#fff" };
+  if (!hasAppt)   return { bg: "transparent", textColor: T.text };
   switch (mark) {
-    case "past-done":        return "#9CA3AF";
-    case "past-missed":      return "#FCA5A5";
-    case "today":            return "#fff";
-    case "future-scheduled": return "#6EE7B7";
-    case "future-cancelled": return "#F87171";
-    default:                 return null;
+    case "past-done":        return { bg: "#F3F4F6", textColor: "#6B7280" };
+    case "past-missed":      return { bg: "#FEE2E2", textColor: "#DC2626" };
+    case "today":            return { bg: "#059669", textColor: "#fff" };
+    case "future-scheduled": return { bg: "#D1FAE5", textColor: "#065F46" };
+    case "future-cancelled": return { bg: "#FEE2E2", textColor: "#B91C1C" };
+    default:                 return { bg: "transparent", textColor: T.text };
   }
 }
 
-function getCellBg(mark: CalendarMark, isSelected: boolean): string {
-  if (isSelected) return T.accent;
-  if (mark === "today") return "#059669";
-  return "transparent";
-}
-
-function getNumColor(mark: CalendarMark, isSelected: boolean): string {
-  if (isSelected || mark === "today") return "#fff";
-  return T.text;
-}
+const LEGEND = [
+  { label: "Done",      bg: "#F3F4F6", tc: "#6B7280" },
+  { label: "Missed",    bg: "#FEE2E2", tc: "#DC2626" },
+  { label: "Today",     bg: "#059669", tc: "#fff" },
+  { label: "Scheduled", bg: "#D1FAE5", tc: "#065F46" },
+  { label: "Cancelled", bg: "#FECACA", tc: "#B91C1C" },
+];
 
 interface Props {
   days: CalendarDay[];
@@ -46,12 +39,7 @@ interface Props {
 }
 
 export function AppointmentsCalendar({
-  days,
-  monthLabel,
-  selectedDate,
-  onSelectDay,
-  onPrev,
-  onNext,
+  days, monthLabel, selectedDate, onSelectDay, onPrev, onNext,
 }: Props) {
   const isSel = (d: CalendarDay) =>
     d.day > 0 &&
@@ -61,7 +49,6 @@ export function AppointmentsCalendar({
 
   return (
     <View style={[styles.card, cardShadow]}>
-      {/* Month nav */}
       <View style={styles.navRow}>
         <Pressable onPress={onPrev} style={styles.navBtn} hitSlop={12}>
           <Ionicons name="chevron-back" size={20} color={T.accent} />
@@ -72,53 +59,36 @@ export function AppointmentsCalendar({
         </Pressable>
       </View>
 
-      {/* Day headers */}
       <View style={styles.weekRow}>
         {DAYS_OF_WEEK.map((d) => (
           <Text key={d} style={styles.weekDay}>{d}</Text>
         ))}
       </View>
 
-      {/* Grid */}
       <View style={styles.grid}>
         {days.map((d, i) => {
           if (d.day === 0) return <View key={`e-${i}`} style={styles.cell} />;
           const sel = isSel(d);
-          const cellBg = getCellBg(d.mark, sel);
-          const numColor = getNumColor(d.mark, sel);
-          const dotColor = (!sel && d.hasAppointment) ? getDotColor(d.mark) : null;
-
+          const { bg, textColor } = getCellColors(d.mark, sel, d.hasAppointment);
           return (
             <Pressable
               key={`d-${i}`}
-              style={[styles.cell, { backgroundColor: cellBg }]}
+              style={[styles.cell, { backgroundColor: bg }, sel ? styles.cellSel : null]}
               onPress={() => onSelectDay(d.date)}
             >
-              <Text style={[styles.dayNum, { color: numColor }]}>{d.day}</Text>
-              {dotColor ? (
-                <View style={[styles.dot, { backgroundColor: dotColor }]} />
-              ) : null}
+              <Text style={[styles.dayNum, { color: textColor }]}>{d.day}</Text>
             </Pressable>
           );
         })}
       </View>
 
-      {/* Legend */}
       <View style={styles.legendDivider} />
       <View style={styles.legend}>
         {LEGEND.map((l) => (
-          <View key={l.mark ?? "null"} style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                {
-                  backgroundColor: l.dotColor,
-                  borderRadius: l.filled ? 5 : 3,
-                  width: l.filled ? 10 : 6,
-                  height: l.filled ? 10 : 6,
-                },
-              ]}
-            />
+          <View key={l.label} style={styles.legendItem}>
+            <View style={[styles.swatch, { backgroundColor: l.bg }]}>
+              <Text style={[styles.swatchTxt, { color: l.tc }]}>{l.label[0]}</Text>
+            </View>
             <Text style={styles.legendLabel}>{l.label}</Text>
           </View>
         ))}
@@ -140,37 +110,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: T.sp12,
+    marginBottom: T.sp16,
   },
   navBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: T.surfaceSubtle,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: T.r8,
+    backgroundColor: "rgba(3,105,161,0.06)",
   },
   monthLabel: {
     fontFamily: "Inter_700Bold",
     fontSize: 16,
     color: T.text,
+    letterSpacing: -0.3,
   },
-  weekRow: {
-    flexDirection: "row",
-    marginBottom: T.sp8,
-  },
+  weekRow: { flexDirection: "row", marginBottom: T.sp8 },
   weekDay: {
-    flex: 1,
+    width: `${100 / 7}%`,
     textAlign: "center",
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
   },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
   cell: {
     width: `${100 / 7}%`,
     aspectRatio: 1,
@@ -178,38 +143,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: T.r8,
   },
-  dayNum: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
+  cellSel: {
+    shadowColor: T.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 2,
-  },
+  dayNum: { fontFamily: "Inter_500Medium", fontSize: 13 },
   legendDivider: {
     height: 1,
     backgroundColor: T.border,
     marginTop: T.sp12,
     marginBottom: T.sp12,
   },
-  legend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: T.sp8,
-  },
-  legendItem: {
-    flexDirection: "row",
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: T.sp8 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  swatch: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
     alignItems: "center",
-    gap: 5,
+    justifyContent: "center",
   },
-  legendDot: {
-    borderRadius: 3,
-  },
-  legendLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 10,
-    color: T.textMuted,
-  },
+  swatchTxt: { fontFamily: "Inter_700Bold", fontSize: 8 },
+  legendLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: T.textMuted },
 });
