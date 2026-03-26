@@ -60,6 +60,9 @@ export interface PatientInfo {
   arrivalDate?: string | null;
   departureDate?: string | null;
   clinicId?: string;
+  clinicName?: string | null;
+  clinicSupportPhone?: string | null;
+  clinicSupportEmail?: string | null;
 }
 
 export interface PatientDashboardData {

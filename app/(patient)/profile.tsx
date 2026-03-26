@@ -8,49 +8,106 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import Constants from "expo-constants";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { GuestHeader } from "@/components/guest/GuestHeader";
 import { useGuestProfile } from "@/hooks/guest/useGuestProfile";
 import { T, cardShadow } from "@/constants/adminTheme";
 
+// ─── Status config ────────────────────────────────────────────────────────────
+
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING: { label: "Pending Approval", color: T.warning, bg: T.warningBg },
-  ACTIVE: { label: "Active", color: T.success, bg: T.successBg },
-  APPROVED: { label: "Approved", color: T.success, bg: T.successBg },
-  DISCHARGED: { label: "Discharged", color: T.textSec, bg: T.inactiveBg },
-  CANCELLED: { label: "Cancelled", color: T.danger, bg: T.dangerBg },
+  PENDING:    { label: "Pending Approval", color: T.warning, bg: T.warningBg },
+  ACTIVE:     { label: "Active",           color: T.success, bg: T.successBg },
+  APPROVED:   { label: "Approved",         color: T.success, bg: T.successBg },
+  DISCHARGED: { label: "Discharged",       color: T.textSec, bg: T.inactiveBg },
+  CANCELLED:  { label: "Cancelled",        color: T.danger,  bg: T.dangerBg },
 };
+
+// ─── Nationality flag emoji ───────────────────────────────────────────────────
+
+function countryFlag(code: string | null | undefined): string {
+  if (!code || code.length !== 2) return "";
+  const base = 0x1f1e6 - 65;
+  const chars = code
+    .toUpperCase()
+    .split("")
+    .map((c) => base + c.charCodeAt(0));
+  try {
+    return String.fromCodePoint(...chars) + " ";
+  } catch {
+    return "";
+  }
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ label }: { label: string }) {
+  return <Text style={styles.sectionHeader}>{label}</Text>;
+}
+
+// ─── Info row ─────────────────────────────────────────────────────────────────
 
 function InfoRow({
   icon,
   label,
   value,
+  onPress,
 }: {
   icon: string;
   label: string;
   value: string | null | undefined;
+  onPress?: () => void;
 }) {
   if (!value) return null;
   return (
-    <View style={styles.infoRow}>
-      <Ionicons name={icon as any} size={16} color={T.textMuted} style={styles.infoIcon} />
+    <Pressable
+      style={styles.infoRow}
+      onPress={onPress}
+      disabled={!onPress}
+    >
+      <View style={styles.infoIconWrap}>
+        <Ionicons name={icon as any} size={16} color={T.accent} />
+      </View>
       <View style={styles.infoText}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        <Text style={[styles.infoValue, onPress ? { color: T.accent } : null]}>
+          {value}
+        </Text>
       </View>
-    </View>
+      {onPress ? (
+        <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
+      ) : null}
+    </Pressable>
   );
 }
 
+// ─── Row divider ──────────────────────────────────────────────────────────────
+
+function Divider() {
+  return <View style={styles.divider} />;
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function ProfileScreen() {
-  const { logout } = useAuth();
-  const tabBarHeight = useBottomTabBarHeight();
+  const { logout }     = useAuth();
+  const tabBarHeight   = useBottomTabBarHeight();
   const { isLoading, isError, refetch, patient, plan } = useGuestProfile();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [copied, setCopied]         = useState(false);
+
+  async function copyKey() {
+    if (!patient?.patientKey) return;
+    await Clipboard.setStringAsync(patient.patientKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   function handleLogout() {
     if (Platform.OS === "web") {
@@ -58,14 +115,10 @@ export default function ProfileScreen() {
         doLogout();
       }
     } else {
-      Alert.alert(
-        "Sign Out",
-        "Are you sure you want to sign out?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Sign Out", style: "destructive", onPress: doLogout },
-        ]
-      );
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign Out", style: "destructive", onPress: doLogout },
+      ]);
     }
   }
 
@@ -96,7 +149,7 @@ export default function ProfileScreen() {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
           <Text style={styles.errorTitle}>Couldn't load profile</Text>
-          <Pressable onPress={refetch} style={styles.retryBtn}>
+          <Pressable onPress={() => refetch()} style={styles.retryBtn}>
             <Text style={styles.retryText}>Try Again</Text>
           </Pressable>
         </View>
@@ -104,81 +157,142 @@ export default function ProfileScreen() {
     );
   }
 
-  const statusCfg =
-    STATUS_LABELS[patient.status?.toUpperCase()] ??
-    STATUS_LABELS.PENDING;
-
-  const initial = patient.fullName?.charAt(0)?.toUpperCase() ?? "?";
+  const statusCfg = STATUS_LABELS[patient.status?.toUpperCase()] ?? STATUS_LABELS.PENDING;
+  const initials = patient.fullName
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const flag = countryFlag(patient.nationality);
+  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const envLabel   = __DEV__ ? "Development" : "Production";
 
   return (
     <View style={styles.root}>
       <GuestHeader title="Profile" />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: tabBarHeight + 24 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar + name */}
+        {/* ── Hero card ── */}
         <View style={[styles.heroCard, cardShadow]}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.heroName}>{patient.fullName}</Text>
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: statusCfg.bg },
-            ]}
-          >
+          <Text style={styles.heroName}>
+            {flag}{patient.fullName}
+          </Text>
+          {patient.nationality ? (
+            <Text style={styles.heroNat}>{patient.nationality}</Text>
+          ) : null}
+          <View style={[styles.statusPill, { backgroundColor: statusCfg.bg }]}>
             <Text style={[styles.statusPillText, { color: statusCfg.color }]}>
               {statusCfg.label}
             </Text>
           </View>
-          <View style={styles.keyRow}>
-            <Ionicons name="key-outline" size={14} color={T.textMuted} />
+
+          {/* Patient key copy */}
+          <Pressable style={styles.keyRow} onPress={copyKey}>
+            <Ionicons name="key-outline" size={13} color={T.textMuted} />
             <Text style={styles.keyText}>{patient.patientKey}</Text>
-          </View>
+            <View style={[styles.copyBadge, copied ? styles.copyBadgeDone : null]}>
+              <Ionicons
+                name={copied ? "checkmark" : "copy-outline"}
+                size={11}
+                color={copied ? T.success : T.textMuted}
+              />
+              <Text style={[styles.copyTxt, copied ? { color: T.success } : null]}>
+                {copied ? "Copied!" : "Copy"}
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
-        {/* Plan info */}
+        {/* ── Personal info ── */}
+        <View style={[styles.card, cardShadow]}>
+          <SectionHeader label="Personal Info" />
+          <InfoRow icon="mail-outline" label="Email" value={patient.email} onPress={patient.email ? () => Linking.openURL(`mailto:${patient.email}`) : undefined} />
+          {patient.email ? <Divider /> : null}
+          <InfoRow icon="call-outline" label="Phone" value={patient.phone} onPress={patient.phone ? () => Linking.openURL(`tel:${patient.phone}`) : undefined} />
+          {patient.phone && (patient.arrivalDate || patient.departureDate) ? <Divider /> : null}
+          <InfoRow icon="airplane-outline" label="Arrival"   value={patient.arrivalDate   ? new Date(patient.arrivalDate).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : null} />
+          {patient.arrivalDate ? <Divider /> : null}
+          <InfoRow icon="airplane-outline" label="Departure" value={patient.departureDate  ? new Date(patient.departureDate).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : null} />
+        </View>
+
+        {/* ── Care plan ── */}
         {(plan.doctor || plan.hotel) ? (
           <View style={[styles.card, cardShadow]}>
-            <Text style={styles.cardTitle}>Your Care Plan</Text>
-            {plan.doctor ? (
-              <InfoRow
-                icon="person-circle-outline"
-                label="Assigned Doctor"
-                value={plan.doctor.name}
-              />
-            ) : null}
-            {plan.doctor?.specialty ? (
-              <InfoRow
-                icon="medical-outline"
-                label="Specialty"
-                value={plan.doctor.specialty}
-              />
-            ) : null}
-            {plan.hotel ? (
-              <InfoRow
-                icon="bed-outline"
-                label="Hotel"
-                value={plan.hotel.name}
-              />
-            ) : null}
-            {plan.hotel?.address ? (
-              <InfoRow
-                icon="location-outline"
-                label="Address"
-                value={plan.hotel.address}
-              />
-            ) : null}
+            <SectionHeader label="Care Plan" />
+            <InfoRow icon="person-circle-outline" label="Assigned Doctor" value={plan.doctor?.name} />
+            {plan.doctor?.specialty ? <Divider /> : null}
+            <InfoRow icon="medical-outline" label="Specialty" value={plan.doctor?.specialty} />
+            {plan.doctor?.specialty && plan.hotel ? <Divider /> : null}
+            <InfoRow icon="bed-outline"      label="Hotel"   value={plan.hotel?.name} />
+            {plan.hotel?.name && plan.hotel?.address ? <Divider /> : null}
+            <InfoRow icon="location-outline" label="Address" value={plan.hotel?.address} />
           </View>
         ) : null}
 
-        {/* Sign out */}
+        {/* ── Clinic support ── */}
+        {(patient.clinicName || patient.clinicSupportPhone || patient.clinicSupportEmail) ? (
+          <View style={[styles.card, cardShadow]}>
+            <SectionHeader label="Clinic Support" />
+            {patient.clinicName ? (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconWrap}>
+                  <Ionicons name="business-outline" size={16} color={T.accent} />
+                </View>
+                <View style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Clinic</Text>
+                  <Text style={styles.infoValue}>{patient.clinicName}</Text>
+                </View>
+              </View>
+            ) : null}
+            {patient.clinicName && patient.clinicSupportPhone ? <Divider /> : null}
+            <InfoRow
+              icon="call-outline"
+              label="Support Phone"
+              value={patient.clinicSupportPhone}
+              onPress={patient.clinicSupportPhone ? () => Linking.openURL(`tel:${patient.clinicSupportPhone}`) : undefined}
+            />
+            {patient.clinicSupportPhone && patient.clinicSupportEmail ? <Divider /> : null}
+            <InfoRow
+              icon="mail-outline"
+              label="Support Email"
+              value={patient.clinicSupportEmail}
+              onPress={patient.clinicSupportEmail ? () => Linking.openURL(`mailto:${patient.clinicSupportEmail}`) : undefined}
+            />
+          </View>
+        ) : null}
+
+        {/* ── App info ── */}
+        <View style={[styles.card, cardShadow]}>
+          <SectionHeader label="App Info" />
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconWrap}>
+              <Ionicons name="information-circle-outline" size={16} color={T.accent} />
+            </View>
+            <View style={styles.infoText}>
+              <Text style={styles.infoLabel}>Version</Text>
+              <Text style={styles.infoValue}>{appVersion}</Text>
+            </View>
+          </View>
+          <Divider />
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconWrap}>
+              <Ionicons name="layers-outline" size={16} color={T.accent} />
+            </View>
+            <View style={styles.infoText}>
+              <Text style={styles.infoLabel}>Environment</Text>
+              <Text style={styles.infoValue}>{envLabel}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Sign out ── */}
         <Pressable
           style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
           onPress={handleLogout}
@@ -198,142 +312,105 @@ export default function ProfileScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: T.bg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    gap: 12,
-  },
+  root: { flex: 1, backgroundColor: T.bg },
+  scroll: { flex: 1 },
+  content: { padding: T.sp16, gap: T.sp12 },
+
   center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-    gap: 12,
+    flex: 1, alignItems: "center", justifyContent: "center",
+    padding: 32, gap: 12,
   },
-  errorTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: T.text,
-  },
+  errorTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
   retryBtn: {
-    backgroundColor: T.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: T.accent, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: T.r10,
   },
-  retryText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: "#fff",
-  },
+  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+
   heroCard: {
-    backgroundColor: T.surface,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    gap: 8,
+    backgroundColor: T.surface, borderRadius: 20,
+    padding: T.sp24, alignItems: "center", gap: 8,
+    borderWidth: 1, borderColor: T.border,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: T.accent,
+    alignItems: "center", justifyContent: "center",
     marginBottom: 4,
+    shadowColor: T.accent, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
   },
-  avatarText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: "#fff",
-  },
+  avatarText: { fontFamily: "Inter_700Bold", fontSize: 30, color: "#fff" },
   heroName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: T.text,
-    textAlign: "center",
+    fontFamily: "Inter_700Bold", fontSize: 20, color: T.text,
+    textAlign: "center", letterSpacing: -0.3,
+  },
+  heroNat: {
+    fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted,
+    textTransform: "uppercase", letterSpacing: 1,
   },
   statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 5,
+    borderRadius: 20, marginTop: 2,
   },
-  statusPillText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
+  statusPillText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+
   keyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 4,
+    flexDirection: "row", alignItems: "center", gap: 7,
+    marginTop: 6, backgroundColor: T.surfaceSubtle,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: T.r10, borderWidth: 1, borderColor: T.border,
   },
   keyText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: T.textMuted,
-    letterSpacing: 1,
+    fontFamily: "Inter_500Medium", fontSize: 13,
+    color: T.textSec, letterSpacing: 1.5, flex: 1,
   },
+  copyBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: T.bg, borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: T.border,
+  },
+  copyBadgeDone: { borderColor: T.success, backgroundColor: T.successBg },
+  copyTxt: {
+    fontFamily: "Inter_600SemiBold", fontSize: 10, color: T.textMuted,
+  },
+
   card: {
-    backgroundColor: T.surface,
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
+    backgroundColor: T.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: T.border,
+    overflow: "hidden",
   },
-  cardTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 13,
-    color: T.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
+  sectionHeader: {
+    fontFamily: "Inter_700Bold", fontSize: 11,
+    color: T.textMuted, textTransform: "uppercase", letterSpacing: 0.8,
+    paddingHorizontal: T.sp16, paddingTop: T.sp16, paddingBottom: 4,
   },
+  divider: { height: 1, backgroundColor: T.border, marginHorizontal: T.sp16 },
+
   infoRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: T.sp16, paddingVertical: T.sp12, gap: T.sp12,
   },
-  infoIcon: {
-    marginTop: 1,
+  infoIconWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: "rgba(3,105,161,0.08)",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
-  infoText: {
-    flex: 1,
-    gap: 1,
-  },
+  infoText: { flex: 1, gap: 2 },
   infoLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    color: T.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    fontFamily: "Inter_500Medium", fontSize: 11,
+    color: T.textMuted, textTransform: "uppercase", letterSpacing: 0.4,
   },
-  infoValue: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: T.text,
-  },
+  infoValue: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+
   logoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: T.dangerBg,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: T.dangerBorder,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, backgroundColor: T.dangerBg, borderRadius: 14,
+    paddingVertical: 15, borderWidth: 1, borderColor: T.dangerBorder,
   },
-  logoutText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: T.danger,
-  },
+  logoutText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.danger },
 });

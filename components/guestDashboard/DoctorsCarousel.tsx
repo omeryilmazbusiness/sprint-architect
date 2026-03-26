@@ -26,26 +26,43 @@ export interface DoctorItem {
 }
 
 const { width: SCREEN_W } = Dimensions.get("window");
+const CARD_H = 240;
 const AUTO_MS = 6000;
 
 function initials(name: string) {
-  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 function parseLangs(raw: string | null | undefined): string[] {
   if (!raw) return [];
-  return raw.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+  return raw
+    .split(/[,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
   const langs = parseLangs(doctor.languages);
-  const visLangs = langs.slice(0, 3);
-  const extra = langs.length > 3 ? langs.length - 3 : 0;
+  const visLangs = langs.slice(0, 4);
+  const extra = langs.length > 4 ? langs.length - 4 : 0;
 
   return (
-    <View style={[s.slide, cardShadow]}>
-      {/* Avatar area */}
-      <View style={s.avatarSection}>
+    <View style={[s.card, cardShadow]}>
+      {/* Diploma badge — top-right */}
+      {doctor.diplomaUrl ? (
+        <View style={s.diplomaBadge}>
+          <Ionicons name="ribbon-outline" size={11} color="#059669" />
+          <Text style={s.diplomaText}>Certified</Text>
+        </View>
+      ) : null}
+
+      {/* Avatar row */}
+      <View style={s.topRow}>
         {doctor.photoUrl ? (
           <Image source={{ uri: doctor.photoUrl }} style={s.avatar} />
         ) : (
@@ -53,54 +70,56 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
             <Text style={s.avatarInitials}>{initials(doctor.fullName)}</Text>
           </View>
         )}
-        {doctor.diplomaUrl ? (
-          <View style={s.diplomaBadge}>
-            <Ionicons name="ribbon-outline" size={11} color="#059669" />
-            <Text style={s.diplomaText}>Certified</Text>
-          </View>
-        ) : null}
+        <View style={s.nameCol}>
+          <Text style={s.name} numberOfLines={2}>
+            {doctor.fullName}
+          </Text>
+          {doctor.specialty ? (
+            <View style={s.specialtyRow}>
+              <Ionicons name="medical-outline" size={12} color={T.accent} />
+              <Text style={s.specialty} numberOfLines={1}>
+                {doctor.specialty}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
-      {/* Info area */}
-      <View style={s.info}>
-        <Text style={s.name} numberOfLines={2}>{doctor.fullName}</Text>
-
-        {doctor.specialty ? (
-          <View style={s.infoRow}>
-            <Ionicons name="medical-outline" size={13} color={T.accent} />
-            <Text style={s.specialty} numberOfLines={1}>{doctor.specialty}</Text>
-          </View>
-        ) : null}
-
+      {/* Details */}
+      <View style={s.details}>
         {doctor.university ? (
-          <View style={s.infoRow}>
+          <View style={s.detailRow}>
             <Ionicons name="school-outline" size={13} color={T.textMuted} />
-            <Text style={s.infoTxt} numberOfLines={1}>{doctor.university}</Text>
+            <Text style={s.detailText} numberOfLines={1}>
+              {doctor.university}
+            </Text>
           </View>
         ) : null}
-
         {doctor.experienceYears ? (
-          <View style={s.infoRow}>
+          <View style={s.detailRow}>
             <Ionicons name="time-outline" size={13} color={T.textMuted} />
-            <Text style={s.infoTxt}>{doctor.experienceYears}+ years experience</Text>
-          </View>
-        ) : null}
-
-        {langs.length > 0 ? (
-          <View style={s.langsWrap}>
-            {visLangs.map(l => (
-              <View key={l} style={s.langChip}>
-                <Text style={s.langText}>{l}</Text>
-              </View>
-            ))}
-            {extra > 0 ? (
-              <View style={[s.langChip, s.langExtra]}>
-                <Text style={s.langText}>+{extra}</Text>
-              </View>
-            ) : null}
+            <Text style={s.detailText}>
+              {doctor.experienceYears}+ years experience
+            </Text>
           </View>
         ) : null}
       </View>
+
+      {/* Language chips */}
+      {langs.length > 0 ? (
+        <View style={s.langsRow}>
+          {visLangs.map((l) => (
+            <View key={l} style={s.langChip}>
+              <Text style={s.langText}>{l}</Text>
+            </View>
+          ))}
+          {extra > 0 ? (
+            <View style={[s.langChip, s.langExtra]}>
+              <Text style={s.langText}>+{extra}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -109,17 +128,22 @@ function Dots({ count, active }: { count: number; active: number }) {
   return (
     <View style={s.dots}>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[s.dot, i === active ? s.dotActive : s.dotInactive]} />
+        <View
+          key={i}
+          style={[s.dot, i === active ? s.dotActive : s.dotInactive]}
+        />
       ))}
     </View>
   );
 }
 
-interface Props { doctors: DoctorItem[] }
+interface Props {
+  doctors: DoctorItem[];
+}
 
 export function DoctorsCarousel({ doctors }: Props) {
   const scrollRef = useRef<ScrollView>(null);
-  const timerRef  = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
   const [idx, setIdx] = useState(0);
   const count = doctors.length;
 
@@ -127,7 +151,7 @@ export function DoctorsCarousel({ doctors }: Props) {
     clearInterval(timerRef.current);
     if (count <= 1) return;
     timerRef.current = setInterval(() => {
-      setIdx(prev => {
+      setIdx((prev) => {
         const next = (prev + 1) % count;
         scrollRef.current?.scrollTo({ x: next * SCREEN_W, animated: true });
         return next;
@@ -155,8 +179,12 @@ export function DoctorsCarousel({ doctors }: Props) {
         <View style={s.emptyIcon}>
           <Ionicons name="people-outline" size={30} color={T.textMuted} />
         </View>
-        <Text style={s.emptyTitle}>Clinic doctors will appear here soon.</Text>
-        <Text style={s.emptySub}>Your care team will be shown once assigned by the clinic.</Text>
+        <Text style={s.emptyTitle}>
+          Clinic doctors will appear here soon.
+        </Text>
+        <Text style={s.emptySub}>
+          Your care team will be shown once assigned by the clinic.
+        </Text>
       </View>
     );
   }
@@ -173,7 +201,7 @@ export function DoctorsCarousel({ doctors }: Props) {
         decelerationRate="fast"
         scrollEventThrottle={16}
       >
-        {doctors.map(doc => (
+        {doctors.map((doc) => (
           <View key={doc.id} style={s.page}>
             <DoctorSlide doctor={doc} />
           </View>
@@ -186,82 +214,158 @@ export function DoctorsCarousel({ doctors }: Props) {
 
 const s = StyleSheet.create({
   scroll: { marginHorizontal: -T.sp16 },
-  page:   { width: SCREEN_W, paddingHorizontal: T.sp16 },
-  slide: {
+  page: { width: SCREEN_W, paddingHorizontal: T.sp16 },
+
+  card: {
+    height: CARD_H,
     backgroundColor: T.surface,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: T.border,
     padding: T.sp20,
-    flexDirection: "row",
-    gap: T.sp16,
-    alignItems: "center",
+    gap: 12,
   },
-  avatarSection: { alignItems: "center", gap: 8 },
+
+  diplomaBadge: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#D1FAE5",
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 1,
+  },
+  diplomaText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    color: "#059669",
+  },
+
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.sp16,
+  },
   avatar: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 2.5, borderColor: T.accent,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2.5,
+    borderColor: T.accent,
   },
   avatarFallback: {
-    width: 80, height: 80, borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: "rgba(3,105,161,0.1)",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 2.5, borderColor: "rgba(3,105,161,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2.5,
+    borderColor: "rgba(3,105,161,0.2)",
+    flexShrink: 0,
   },
   avatarInitials: {
-    fontFamily: "Inter_700Bold", fontSize: 26,
-    color: T.accent, letterSpacing: -0.5,
+    fontFamily: "Inter_700Bold",
+    fontSize: 24,
+    color: T.accent,
+    letterSpacing: -0.5,
   },
-  diplomaBadge: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: "#D1FAE5",
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3,
-  },
-  diplomaText: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: "#059669" },
-  info: { flex: 1, gap: 6 },
+
+  nameCol: { flex: 1, gap: 4 },
   name: {
-    fontFamily: "Inter_700Bold", fontSize: 16,
-    color: T.text, letterSpacing: -0.3, lineHeight: 22,
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    color: T.text,
+    letterSpacing: -0.3,
+    lineHeight: 22,
   },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  specialtyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
   specialty: {
-    fontFamily: "Inter_600SemiBold", fontSize: 13,
-    color: T.accent, flex: 1,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: T.accent,
+    flex: 1,
   },
-  infoTxt: {
-    fontFamily: "Inter_400Regular", fontSize: 12,
-    color: T.textSec, flex: 1,
+
+  details: { gap: 6 },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
   },
-  langsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 2 },
+  detailText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textSec,
+    flex: 1,
+  },
+
+  langsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
   langChip: {
     backgroundColor: "rgba(3,105,161,0.08)",
-    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   langExtra: { backgroundColor: T.surfaceSubtle },
-  langText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.accent },
+  langText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: T.accent,
+  },
+
   dots: {
-    flexDirection: "row", justifyContent: "center",
-    alignItems: "center", gap: 6, paddingTop: T.sp12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: T.sp12,
   },
   dot: { borderRadius: 4 },
-  dotActive:   { width: 20, height: 6, backgroundColor: T.accent },
-  dotInactive: { width: 6,  height: 6, backgroundColor: T.border },
+  dotActive: { width: 20, height: 6, backgroundColor: T.accent },
+  dotInactive: { width: 6, height: 6, backgroundColor: T.border },
+
   emptyCard: {
-    backgroundColor: T.surface, borderRadius: 20,
-    borderWidth: 1, borderColor: T.border,
-    padding: T.sp24, alignItems: "center", gap: T.sp10,
+    backgroundColor: T.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: T.sp24,
+    alignItems: "center",
+    gap: T.sp10,
   },
   emptyIcon: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: T.surfaceSubtle,
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold", fontSize: 15,
-    color: T.text, textAlign: "center",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: T.text,
+    textAlign: "center",
   },
   emptySub: {
-    fontFamily: "Inter_400Regular", fontSize: 13,
-    color: T.textMuted, textAlign: "center", lineHeight: 19, maxWidth: 260,
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textMuted,
+    textAlign: "center",
+    lineHeight: 19,
+    maxWidth: 260,
   },
 });

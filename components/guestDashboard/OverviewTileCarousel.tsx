@@ -172,11 +172,13 @@ const DOC_S: Record<string, { label: string; bg: string; tc: string }> = {
 function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
   const router = useRouter();
   const pending  = documents.filter(d => d.status === "ASSIGNED" || d.status === "REJECTED").length;
-  const uploaded = documents.filter(d => d.status === "UPLOADED" || d.status === "APPROVED").length;
-  const preview  = documents.slice(0, 3);
+  const uploaded = documents.filter(d => d.status === "UPLOADED").length;
+  const approved = documents.filter(d => d.status === "APPROVED").length;
+  const total    = documents.length;
 
   return (
     <View style={[ts.tile, ts.docsTile]}>
+      {/* Header */}
       <View style={ts.header}>
         <View style={ts.chipRow}>
           <Ionicons name="documents-outline" size={12} color={T.accent} />
@@ -189,50 +191,43 @@ function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
         </View>
       </View>
 
+      {/* Content */}
       <View style={ts.grow}>
-        {documents.length === 0 ? (
+        {total === 0 ? (
           <View style={ts.empty}>
-            <Ionicons name="documents-outline" size={32} color={T.border} />
-            <Text style={ts.emptyTitleLight}>No documents yet</Text>
-            <Text style={ts.emptySubLight}>Your clinic will assign them here.</Text>
+            <Ionicons name="documents-outline" size={34} color={T.border} />
+            <Text style={ts.emptyTitleLight}>No documents assigned yet</Text>
+            <Text style={ts.emptySubLight}>Your clinic will add them here.</Text>
           </View>
         ) : (
-          <>
-            <View style={ts.countsRow}>
-              <View style={[ts.countBox, { backgroundColor: T.warningBg }]}>
-                <Text style={[ts.countNum, { color: T.warning }]}>{pending}</Text>
-                <Text style={[ts.countLbl, { color: T.warning }]}>Pending</Text>
-              </View>
-              <View style={[ts.countBox, { backgroundColor: T.successBg }]}>
-                <Text style={[ts.countNum, { color: T.success }]}>{uploaded}</Text>
-                <Text style={[ts.countLbl, { color: T.success }]}>Uploaded</Text>
-              </View>
-              <View style={[ts.countBox, { backgroundColor: T.surfaceSubtle }]}>
-                <Text style={[ts.countNum, { color: T.textSec }]}>{documents.length}</Text>
-                <Text style={[ts.countLbl, { color: T.textSec }]}>Total</Text>
-              </View>
+          <View style={ts.docsStats}>
+            <View style={[ts.statBox, { backgroundColor: T.warningBg }]}>
+              <Text style={[ts.statNum, { color: T.warning }]}>{pending}</Text>
+              <Text style={[ts.statLbl, { color: T.warning }]}>Pending</Text>
             </View>
-            {preview.map(doc => {
-              const cfg = DOC_S[doc.status] ?? DOC_S.ASSIGNED;
-              return (
-                <View key={doc.id} style={ts.docRow}>
-                  <Text style={ts.docName} numberOfLines={1}>{doc.documentType?.name ?? "Document"}</Text>
-                  <View style={[ts.pill, { backgroundColor: cfg.bg }]}>
-                    <Text style={[ts.pillTxt, { color: cfg.tc }]}>{cfg.label}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </>
+            <View style={[ts.statBox, { backgroundColor: "#EFF6FF" }]}>
+              <Text style={[ts.statNum, { color: T.accent }]}>{uploaded}</Text>
+              <Text style={[ts.statLbl, { color: T.accent }]}>Reviewing</Text>
+            </View>
+            <View style={[ts.statBox, { backgroundColor: T.successBg }]}>
+              <Text style={[ts.statNum, { color: T.success }]}>{approved}</Text>
+              <Text style={[ts.statLbl, { color: T.success }]}>Approved</Text>
+            </View>
+            <View style={[ts.statBox, { backgroundColor: T.surfaceSubtle }]}>
+              <Text style={[ts.statNum, { color: T.textSec }]}>{total}</Text>
+              <Text style={[ts.statLbl, { color: T.textSec }]}>Total</Text>
+            </View>
+          </View>
         )}
       </View>
 
+      {/* Single CTA */}
       <Pressable
         style={ts.ctaLight}
         onPress={() => router.push({ pathname: "/(patient)/track", params: { tab: "documents" } })}
       >
-        <Ionicons name="open-outline" size={15} color={T.accent} />
-        <Text style={ts.ctaLightTxt}>Go to Documents</Text>
+        <Ionicons name="folder-open-outline" size={15} color={T.accent} />
+        <Text style={ts.ctaLightTxt}>Manage Documents</Text>
       </Pressable>
     </View>
   );
@@ -416,17 +411,10 @@ const ts = StyleSheet.create({
     backgroundColor: "rgba(3,105,161,0.04)",
   },
   ctaLightTxt: { fontFamily: "Inter_700Bold", fontSize: 14, color: T.accent },
-  countsRow: { flexDirection: "row", gap: 8 },
-  countBox: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: T.r10 },
-  countNum: { fontFamily: "Inter_700Bold", fontSize: 18 },
-  countLbl: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
-  docRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingVertical: 5, borderTopWidth: 1, borderTopColor: T.border,
-  },
-  docName:  { fontFamily: "Inter_500Medium", fontSize: 12, color: T.text, flex: 1 },
-  pill:     { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
-  pillTxt:  { fontFamily: "Inter_600SemiBold", fontSize: 9 },
+  docsStats: { flexDirection: "row", gap: 7 },
+  statBox: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: T.r10 },
+  statNum: { fontFamily: "Inter_700Bold", fontSize: 20 },
+  statLbl: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
   dots: {
     flexDirection: "row", justifyContent: "center",
     alignItems: "center", gap: 6, paddingTop: T.sp12,

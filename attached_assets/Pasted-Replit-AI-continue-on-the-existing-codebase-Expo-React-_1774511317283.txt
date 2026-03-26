@@ -1,0 +1,215 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Make the following Guest UX upgrades, production-ready and SOLID-modular, without breaking existing layout:
+
+1) Dashboard → Overview carousel → Documents tile:
+- The buttons are overlapping / stacked incorrectly.
+- Fix the layout so buttons never overlap, stay minimal, and do not break card structure.
+- Keep it clean: ideally one primary CTA + one small secondary icon action.
+
+2) Dashboard → Doctors carousel cards:
+- Doctor cards must be taller (vertical), roughly the same height as the driver/transport tile.
+- Each doctor card should look like a professional profile card and include the most necessary info:
+  - Full name
+  - Specialty / expertise
+  - University
+  - Experience years
+  - Short “About / Bio” (1–2 lines)
+  - Languages chips (optional)
+  - Diploma badge if diplomaUrl exists
+- Maintain full-width auto-slider behavior.
+
+3) Guest → Schedule page:
+- Current design is good, but expand scope to show categorized lists:
+  - Upcoming
+  - Today
+  - Past
+  - Completed
+  - Missed (No-show)
+  - Cancelled (optional)
+- Present as a professional UX:
+  - segmented tabs or filter chips
+  - detailed list cards with time, doctor, title, status pill, and date grouping
+  - search (optional) and quick filter by month (optional)
+- Must use correct status mapping:
+  - Past scheduled but not done => Missed
+  - Done => Completed
+  - Cancelled => Cancelled
+
+4) Guest → Profile:
+- Analyze current Profile tab crash/issues or minimal content.
+- Build a premium, production-ready Guest Profile screen with only the most necessary information and actions:
+  - Guest identity: name, nationality flag, patientKey (copy)
+  - Contact info: phone/email (if available)
+  - Clinic info: clinic name (and support phone/email if available)
+  - Security/session: logout
+  - App info: version, environment (dev), diagnostics copy (optional)
+- Must be robust: no undefined access; always safe defaults.
+
+NON-NEGOTIABLE:
+- First: audit current implementation with file paths and root cause notes.
+- SOLID frontend:
+  - presentational components
+  - hooks for data
+  - utils for status mapping
+- No layout overlap on small screens.
+- No “failed data” when empty.
+- Expo Go compatible.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Identify file paths for:
+- Guest dashboard overview documents tile component
+- Doctors carousel components
+- Schedule screen route + list rendering
+- Profile screen route + data hooks
+2) Documents button overlap:
+- Identify why overlap occurs (flex row, absolute, missing minHeight, too many buttons, etc.)
+3) Doctors card height:
+- Identify current card layout and why it’s too short
+4) Schedule:
+- Identify current data source (appointments) and status values
+5) Profile:
+- Identify what currently exists and any crash reasons
+
+Output audit summary with exact file paths before implementing changes.
+
+========================================================
+PHASE 2 — FIX DOCUMENTS TILE BUTTON OVERLAP (MINIMAL CTA)
+========================================================
+Goal: never overlap, minimal and premium.
+
+Implement layout rules:
+- Documents tile uses a single primary button: “Go to Documents”
+- Secondary actions become icon-only (e.g., small “Upload” icon) OR moved into overflow menu.
+- Use:
+  - flexDirection row, alignItems center, justifyContent space-between
+  - allow wrapping or clamp text (numberOfLines=1)
+  - ensure button has minHeight 44 and container has enough padding
+- Add responsive behavior for <360px:
+  - primary becomes full-width, secondary icon moves to top-right corner (not absolute; use flex)
+
+Add a small visual test harness in __DEV__ (optional) to render tile at narrow width.
+
+========================================================
+PHASE 3 — DOCTORS CAROUSEL: TALL PROFILE CARD (PREMIUM)
+========================================================
+Update doctor slide component:
+components/guestDashboard/DoctorProfileSlide.tsx
+
+Requirements:
+- Height matched to transport tile height (approx 180–220 or same as current overview tile).
+- Full-width card.
+- Layout:
+  - top row: avatar/photo + name + specialty
+  - middle: University + Experience years (two-line)
+  - about/bio: 1–2 lines truncated
+  - bottom: language chips + diploma badge (if exists)
+- Keep auto-slider and dots.
+- Ensure long text truncation and no overlap.
+- If doctor fields missing, hide gracefully (no blank gaps).
+
+If backend lacks required fields, update patient doctors endpoint/DTO accordingly (SOLID + stable defaults).
+
+========================================================
+PHASE 4 — SCHEDULE PAGE: EXPAND TO PROFESSIONAL CATEGORIZED VIEW
+========================================================
+Build a professional Schedule page structure:
+
+A) Top controls
+- Search input (optional) “Search doctor or procedure”
+- Segmented tabs (premium):
+  - Upcoming
+  - Today
+  - Completed
+  - Missed
+  - Past (optional if needed)
+  - Cancelled (optional)
+Keep to max 5 visible; if more, use “More” filter sheet.
+
+B) Appointment cards (professional)
+Each item shows:
+- Time + date
+- Title/procedure
+- Doctor name
+- Status pill
+- Optional location/notes if exist
+Group by date with section headers.
+
+C) Status mapping (important)
+- Completed: status DONE/COMPLETED
+- Cancelled: status CANCELLED
+- Upcoming: future & SCHEDULED
+- Today: today & SCHEDULED
+- Missed: past & status SCHEDULED (not done/cancelled)
+- Past: past & any (optional, but if you already have Missed/Completed you may not need “Past”)
+
+Implement derived-data hook:
+hooks/guest/useGuestAppointmentsBuckets.ts
+Input: appointments[]
+Output: bucketed arrays + counts.
+
+Empty states:
+- per tab empty message.
+
+========================================================
+PHASE 5 — GUEST PROFILE: PREMIUM PROD-READY
+========================================================
+1) Create/upgrade:
+app/(guest)/(tabs)/profile.tsx
+Use a clean layout with sections:
+- Profile header card:
+  - Avatar initials
+  - Full name
+  - Nationality flag (from nationalityCode)
+  - patientKey with Copy button
+- Contact card:
+  - phone (tap-to-call if exists)
+  - email (tap mail if exists)
+- Clinic & Support card:
+  - clinic name
+  - support phone/email if available (else show “Support contact will be provided by clinic”)
+- App & session card:
+  - version
+  - environment (DEV)
+  - logout
+
+2) Data source:
+- Use /v1/patient/dashboard OR /v1/me if available to get guest identity.
+- Ensure hooks return safe defaults; no undefined property access.
+
+3) Robustness:
+- Loading skeleton
+- Error state with retry
+- No crashes.
+
+========================================================
+PHASE 6 — QA / VERIFICATION
+========================================================
+Manual QA:
+1) Documents tile button never overlaps on small screen.
+2) Doctor cards are tall and info-rich; no truncation issues.
+3) Schedule tabs show correct categorized lists and statuses.
+4) Profile tab loads without error and shows key info + logout works.
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit summary (file paths + causes)
+2) Files changed/added
+3) Schedule bucket mapping rules used
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Documents tile layout fix
+3) Doctors tall card redesign
+4) Schedule expansion + derived bucket hook
+5) Profile redesign
+6) Final QA
+
+Proceed now. Implement in this order and verify on Expo Go.
+END.

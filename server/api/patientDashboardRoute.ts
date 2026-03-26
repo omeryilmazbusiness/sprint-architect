@@ -6,6 +6,9 @@ import { planRepo } from "../repositories/planRepo";
 import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
+import { db } from "../db";
+import { clinics } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -24,10 +27,11 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
       throw new AppError("NOT_FOUND", "Patient record not found", 404);
     }
 
-    const [plan, appts, patientDocs] = await Promise.all([
+    const [plan, appts, patientDocs, clinic] = await Promise.all([
       planRepo.findByPatient(patientId),
       appointmentRepo.listForPatient(patientId, clinicId),
       documentRepo.listPatientDocuments(patientId, clinicId),
+      db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) }),
     ]);
 
     const doctorIdSet = new Set<string>();
@@ -51,6 +55,9 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
         arrivalDate: patient.arrivalDate,
         departureDate: patient.departureDate,
         status: patient.status,
+        clinicName: clinic?.name ?? null,
+        clinicSupportPhone: clinic?.contactPhone ?? null,
+        clinicSupportEmail: clinic?.contactEmail ?? null,
       },
       transport: plan?.transport
         ? {
