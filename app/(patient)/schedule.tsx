@@ -11,7 +11,7 @@ import {
   Animated,
   LayoutChangeEvent,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { GuestHeader } from "@/components/guest/GuestHeader";
@@ -173,7 +173,7 @@ function TabBar({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ScheduleScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { bottomPadding: tabBarHeight } = useTabBarMetrics();
   const insets       = useSafeAreaInsets();
   const [active, setActive] = useState<BucketKey>("upcoming");
   const [refreshing, setRefreshing] = useState(false);

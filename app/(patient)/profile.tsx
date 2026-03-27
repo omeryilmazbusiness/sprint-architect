@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { GuestHeader } from "@/components/guest/GuestHeader";
@@ -97,7 +97,7 @@ function Divider() {
 
 export default function ProfileScreen() {
   const { logout }     = useAuth();
-  const tabBarHeight   = useBottomTabBarHeight();
+  const { bottomPadding: tabBarHeight } = useTabBarMetrics();
   const { isLoading, isError, refetch, patient, plan } = useGuestProfile();
   const [loggingOut, setLoggingOut] = useState(false);
   const [copied, setCopied]         = useState(false);

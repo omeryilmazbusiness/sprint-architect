@@ -1,0 +1,106 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+PROBLEM:
+Render error:
+"couldn't find the bottom tab bar height. are u inside a screen in bottom tab navigator?"
+Happens in Guest/PatientDashboard (export default function PatientDashboard).
+
+This likely occurs because:
+- The screen is not inside a BottomTabNavigator context (wrong route group), OR
+- We are using expo-router/unstable-native-tabs (NativeTabs) where useBottomTabBarHeight() is NOT available.
+
+GOAL:
+Fix this production-ready:
+- No crashes in NativeTabs path.
+- Correct bottom padding when using ClassicTabs floating tab bar.
+- SOLID: a single ScreenContainer that always works, without fragile hooks.
+
+NON-NEGOTIABLE:
+- First, audit and prove root cause with file paths.
+- Do not “try/catch a hook”. Hooks can’t be conditional.
+- Implement a clean layout-driven solution:
+  Provide tab bar metrics via Context from the tabs layout.
+- After fix, PatientDashboard renders without error.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Search for useBottomTabBarHeight usage and list exact files.
+2) Identify where PatientDashboard is located:
+- exact route file path
+- confirm whether it is inside /(guest-tabs)/... or another group
+3) Identify which tab layout is active when error occurs:
+- NativeTabs path OR ClassicTabs path
+4) Print root cause report:
+- “Hook used outside BottomTabNavigator” OR “NativeTabs has no BottomTab context”
+- show file path + line where hook is called
+
+Do not implement until this report is produced.
+
+========================================================
+PHASE 2 — REPLACE useBottomTabBarHeight WITH CONTEXT-BASED METRICS (SOLID)
+========================================================
+Create a metrics context:
+
+A) Add:
+components/layout/TabBarMetricsContext.tsx
+- export type TabBarMetrics = { mode: "native" | "classic"; height: number; bottomGap: number }
+- export const TabBarMetricsProvider
+- export function useTabBarMetrics(): TabBarMetrics (returns safe defaults)
+
+B) Update the Guest tabs layout (and Manager tabs layout if it also uses ScreenContainer):
+- In ClassicTabs path (floating/absolute):
+  - Provide metrics: mode="classic", height=TAB_BAR_HEIGHT (e.g. 72), bottomGap=TAB_BAR_BOTTOM_GAP (e.g. 12)
+- In NativeTabs path:
+  - Provide metrics: mode="native", height=0, bottomGap=0
+(Reason: OS manages layout; we shouldn’t add extra padding.)
+
+C) Update ScreenContainer:
+components/layout/ScreenContainer.tsx
+- REMOVE useBottomTabBarHeight entirely.
+- Use:
+  const { height, bottomGap } = useTabBarMetrics()
+  const insets = useSafeAreaInsets()
+  paddingBottom = insets.bottom + height + bottomGap
+- Also support an override prop if a screen is not under tabs:
+  <ScreenContainer disableTabPadding />
+- Ensure it works both inside and outside tabs.
+
+========================================================
+PHASE 3 — FIX ROUTING IF PATIENTDASHBOARD IS OUTSIDE TABS
+========================================================
+If audit shows PatientDashboard is not under guest-tabs:
+- Move it (or create wrapper) under app/(guest-tabs)/dashboard.tsx
+- Ensure role routing redirects to /(guest-tabs)/dashboard
+- Ensure the screen uses ScreenContainer so padding is correct.
+
+========================================================
+PHASE 4 — VERIFY (MANDATORY)
+========================================================
+1) Run guest app:
+- PatientDashboard renders without crash.
+2) ClassicTabs mode:
+- content not hidden behind floating tab bar.
+3) NativeTabs mode:
+- content not overly padded (no huge blank space).
+4) Verify other tabs/screens still render.
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Root cause report (Phase 1)
+2) Files changed/added
+3) Where metrics provider is mounted (which layout files)
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit + root cause proof
+2) Add TabBarMetricsContext
+3) Update tabs layouts to provide metrics (native vs classic)
+4) Update ScreenContainer to use metrics + safe area (no useBottomTabBarHeight)
+5) Fix route placement if needed
+6) Verify end-to-end
+
+Proceed now. Implement and verify.
+END.

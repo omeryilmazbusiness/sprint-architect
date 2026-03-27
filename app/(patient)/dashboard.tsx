@@ -6,7 +6,7 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { useAuth } from "@/context/AuthContext";
 import { T } from "@/constants/adminTheme";
 import { useGuestDashboard } from "@/hooks/guest/useGuestDashboard";
@@ -33,7 +33,7 @@ function isSameDay(a: Date, b: Date) {
 
 export default function PatientDashboard() {
   const { logout } = useAuth();
-  const tabBarHeight = useBottomTabBarHeight();
+  const { bottomPadding: tabBarHeight } = useTabBarMetrics();
 
   const {
     isLoading,

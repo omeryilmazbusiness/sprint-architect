@@ -8,7 +8,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { GuestHeader } from "@/components/guest/GuestHeader";
 import { useGuestDashboard } from "@/hooks/guest/useGuestDashboard";
@@ -96,7 +96,7 @@ function FaqCard() {
 }
 
 export default function ExploreScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { bottomPadding: tabBarHeight } = useTabBarMetrics();
   const { patient, transport, hotel, appointments } = useGuestDashboard();
 
   const nextAppt = appointments.find((a) => a.status === "SCHEDULED");

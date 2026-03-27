@@ -13,7 +13,7 @@ import {
   LayoutChangeEvent,
   Linking,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { useFocusEffect, useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -965,7 +965,7 @@ const ds = StyleSheet.create({
 // ─── Root Screen ─────────────────────────────────────────────────────────────
 
 export default function TrackScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { bottomPadding: tabBarHeight } = useTabBarMetrics();
   const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<InnerTab>(
     params.tab === "documents" ? "documents" : "journey"
