@@ -1,0 +1,167 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router). DO NOT re-scaffold.
+
+REQUEST:
+Make the Guest footer tab bar use the SAME architecture and behavior as the Manager tab bar described below:
+- On iOS “liquid glass” supported devices: use expo-router/unstable-native-tabs (NativeTabs path)
+- On all other platforms: use Classic Tabs (Expo Router Tabs + BlurView) path
+- Same styling approach, same theme tokens, same safe-area / padding rules
+- Same route-guard pattern (role check)
+- Same separation of “guest-tabs” vs “guest” Stack group:
+  - (guest-tabs) = tab bar screens
+  - (guest) = detail / drilldown screens without tab bar
+
+CONTEXT (MANAGER TAB BAR MODEL TO COPY):
+- app/(manager-tabs)/_layout.tsx has ⭐ dual rendering paths:
+  - NativeTabs on iOS liquid-glass capable devices
+  - Classic Tabs with BlurView fallback otherwise
+- Guard inside layout redirects non-role users to login
+- Root routing sends MANAGER to /(manager-tabs)/dashboard
+
+TARGET FOR GUEST:
+- Create: app/(guest-tabs)/_layout.tsx (or keep existing guest group naming if already established; but match manager’s pattern)
+- Guest landing should route to: /(guest-tabs)/dashboard
+- Guest tabs must include:
+  1) dashboard
+  2) track (documents renamed to Track)
+  3) schedule
+  4) explore
+  5) profile
+
+Must work on iOS with liquid glass when available.
+
+NON-NEGOTIABLE:
+- First: audit current guest routing and tab layout file(s).
+- Do not break existing manager tabs.
+- Use the SAME design tokens (constants/adminTheme.ts) so colors match premium light theme.
+- Implement safe bottom padding so tab bar does not cover content:
+  - adopt useBottomTabBarHeight() pattern (or equivalent) and/or a shared ScreenContainer that applies correct paddingBottom.
+- Do NOT hardcode heights inside screens; provide a reusable helper.
+
+========================================================
+PHASE 1 — AUDIT CURRENT GUEST ROUTING (MANDATORY)
+========================================================
+1) Identify current guest route group(s) and their layout files:
+- app/(guest)/...
+- app/(guest)/(tabs)/_layout.tsx (if exists)
+2) Identify where role routing sends Guest/PATIENT users:
+- app/index.tsx redirect logic
+- login.tsx router.replace logic
+3) Identify existing guest screens and their file names/routes.
+
+Output an audit report:
+- current file paths
+- current routes
+- what needs to change to match manager pattern
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — CREATE GUEST TABS GROUP WITH DUAL PATH (NATIVE + CLASSIC)
+========================================================
+1) Create/implement:
+app/(guest-tabs)/_layout.tsx
+
+This layout must mirror manager-tabs layout logic:
+- A runtime feature check: isLiquidGlassAvailable()
+- If YES: render NativeTabs with SF Symbols icons
+- Else: render Classic Tabs with BlurView and style tokens
+
+2) ClassicTabs styling must match manager:
+- tabBarActiveTintColor: T.primary
+- tabBarInactiveTintColor: T.textMuted
+- tabBarStyle: position absolute; transparent background (iOS); subtle border; correct height
+- tabBarBackground: iOS -> BlurView intensity ~80 tint "light"
+
+3) NativeTabs path:
+- Use expo-router/unstable-native-tabs
+- Use SF Symbols for icons (default/selected)
+- Keep the same tab names as Classic path
+
+Tabs list (exact):
+- dashboard
+- track
+- schedule
+- explore
+- profile
+
+Ensure route files exist in app/(guest-tabs)/:
+- dashboard.tsx
+- track.tsx
+- schedule.tsx
+- explore.tsx
+- profile.tsx
+
+If any of these screens exist elsewhere, either:
+- move them into guest-tabs
+- or create thin wrapper screens that render the existing components
+
+========================================================
+PHASE 3 — ROLE ROUTING AND GUARD (PROD-READY)
+========================================================
+1) Routing entry points must send guest role to /(guest-tabs)/dashboard:
+- app/index.tsx: if user.role === "PATIENT" (or guest) -> Redirect to /(guest-tabs)/dashboard
+- app/(auth)/login.tsx: after login for guest -> router.replace("/(guest-tabs)/dashboard")
+
+2) Layout guard inside app/(guest-tabs)/_layout.tsx:
+- if not logged in or role not guest -> Redirect to /(auth)/login
+
+3) Create a separate stack group for guest detail screens:
+app/(guest)/_layout.tsx  (Stack group, no tab bar)
+- for drilldown routes (e.g., document detail, appointment detail) if needed later
+
+========================================================
+PHASE 4 — SAFE AREA / CONTENT PADDING (NO OVERLAP)
+========================================================
+Implement a reusable container pattern to avoid content being hidden under floating tabs:
+
+Option A (preferred):
+- Create:
+components/layout/ScreenContainer.tsx
+- Inside screens in (guest-tabs), wrap content in ScreenContainer
+- ScreenContainer uses:
+  - useBottomTabBarHeight() from @react-navigation/bottom-tabs
+  - adds paddingBottom = tabBarHeight + 12
+- Also handles top padding under header if needed
+
+Option B:
+- Ensure each screen uses useBottomTabBarHeight directly (less ideal)
+
+Use Option A for SOLID and consistency.
+
+========================================================
+PHASE 5 — VERIFY ON iOS + OTHER PLATFORMS
+========================================================
+Manual QA:
+1) iOS liquid glass devices:
+- Guest tabs render using NativeTabs
+- Tab bar looks system-native
+2) iOS non-liquid-glass / Android / Web:
+- Guest tabs render Classic with BlurView
+3) No overlaps:
+- content not hidden behind tab bar
+4) Guards:
+- guest cannot access manager tabs
+- unauthenticated user is redirected to login
+
+========================================================
+OUTPUT REQUIREMENTS (MANDATORY)
+========================================================
+After implementation print:
+1) Audit report (Phase 1) with file paths
+2) Files changed/added
+3) Confirm guest routes:
+- /(guest-tabs)/dashboard etc.
+4) Confirm which path is used on iOS:
+- NativeTabs or ClassicTabs (log once in dev)
+5) QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Create guest-tabs layout with dual rendering
+3) Create/move tab screen files
+4) Wire role routing + guard
+5) Add ScreenContainer padding solution
+6) Verify on iOS/Android
+
+Proceed now. Implement exactly like manager-tabs, but for guest.
+END.

@@ -45,7 +45,9 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(patient)" />
+                  <Stack.Screen name="(guest)" />
                   <Stack.Screen name="(manager)" />
+                  <Stack.Screen name="(manager-tabs)" />
                   <Stack.Screen name="(admin)" />
                 </Stack>
               </AuthProvider>
