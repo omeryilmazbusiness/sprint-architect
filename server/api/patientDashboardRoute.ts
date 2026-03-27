@@ -7,7 +7,7 @@ import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
 import { db } from "../db";
-import { clinics } from "@shared/schema";
+import { clinics, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -38,6 +38,20 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
       db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) }),
     ]);
 
+    let manager: { fullName: string | null; phone: string | null; email: string | null } | null = null;
+    if (clinic?.primaryManagerUserId) {
+      const managerUser = await db.query.users.findFirst({
+        where: eq(users.id, clinic.primaryManagerUserId),
+      });
+      if (managerUser) {
+        manager = {
+          fullName: managerUser.fullName ?? null,
+          phone: managerUser.phoneE164 ?? null,
+          email: managerUser.email,
+        };
+      }
+    }
+
     const doctorIdSet = new Set<string>();
     appts.filter(a => a.doctorId).forEach(a => doctorIdSet.add(a.doctorId as string));
     if (plan?.doctorId) doctorIdSet.add(plan.doctorId);
@@ -60,8 +74,11 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
         departureDate: patient.departureDate,
         status: patient.status,
         clinicName: clinic?.name ?? null,
+        clinicAddress: clinic?.address ?? null,
         clinicSupportPhone: clinic?.contactPhone ?? null,
         clinicSupportEmail: clinic?.contactEmail ?? null,
+        clinicWebsite: clinic?.websiteUrl ?? null,
+        manager,
       },
       transport: plan?.transport
         ? {
@@ -108,11 +125,13 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
         fullName: d.fullName,
         specialty: d.specialty ?? null,
         phone: d.phone ?? null,
+        email: d.email ?? null,
         photoUrl: d.photoUrl ?? null,
         university: d.university ?? null,
         experienceYears: d.experienceYears ?? null,
         languages: d.languages ?? null,
         diplomaUrl: d.diplomaUrl ?? null,
+        bio: d.bio ?? null,
       })),
       documents: patientDocs.map(d => ({
         id: d.id,

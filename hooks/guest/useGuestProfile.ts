@@ -23,5 +23,6 @@ export function useGuestProfile() {
     patient,
     plan,
     assignedDoctors: doctors,
+    manager: patient?.manager ?? null,
   };
 }

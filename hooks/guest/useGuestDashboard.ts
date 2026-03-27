@@ -49,6 +49,12 @@ export interface PatientHotel {
   checkOutDate: string | null;
 }
 
+export interface PatientManager {
+  fullName: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
 export interface PatientInfo {
   id: string;
   fullName: string;
@@ -61,8 +67,11 @@ export interface PatientInfo {
   departureDate?: string | null;
   clinicId?: string;
   clinicName?: string | null;
+  clinicAddress?: string | null;
   clinicSupportPhone?: string | null;
   clinicSupportEmail?: string | null;
+  clinicWebsite?: string | null;
+  manager?: PatientManager | null;
 }
 
 export interface PatientDashboardData {
@@ -75,11 +84,13 @@ export interface PatientDashboardData {
     fullName: string;
     specialty?: string | null;
     phone?: string | null;
+    email?: string | null;
     photoUrl?: string | null;
     university?: string | null;
     experienceYears?: number | null;
     languages?: string | null;
     diplomaUrl?: string | null;
+    bio?: string | null;
   }>;
   documents: PatientDocument[];
 }

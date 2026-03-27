@@ -1,0 +1,188 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Make 3 Guest screens production-ready with premium UX:
+
+1) Guest Dashboard → Doctors section:
+- Doctor card must be detailed, comprehensive, and professional (premium UX).
+- Full-width profile card style (vertical, elegant).
+- Must include the most important fields:
+  - Photo (or initials)
+  - Full name
+  - Specialty / expertise
+  - University
+  - Experience years
+  - Languages (chips)
+  - Short bio/about (1–2 lines)
+  - Certifications/diploma badge if diplomaUrl exists
+  - Contact actions if available (call/email), otherwise hide
+- Ensure no text overflow, works on small screens.
+
+2) Guest Schedule screen:
+- Filters must be more professional and dropdown-based (not messy chips).
+- Add a summary section at top showing current schedule overview as list cards:
+  - Next appointment
+  - Today appointments
+  - Upcoming count, Completed count, Missed count
+- Appointment list must be premium cards, grouped by date.
+- Filters should support:
+  - Status dropdown: All / Upcoming / Today / Completed / Missed / Cancelled
+  - Date range dropdown: This week / This month / All
+  - Search input (doctor/procedure)
+- Must remain fast and robust (safe defaults, empty states).
+
+3) Guest Profile screen:
+- Remove “Care Plan” section completely.
+- Remove “App info” section completely.
+- Keep only these essential sections:
+  A) Person info
+     - Name, nationality flag, patientKey (copy)
+     - Phone/email if available
+  B) Clinic info
+     - clinic name + address (if any)
+     - clinic phone/email/website if available
+  C) Manager info + contact
+     - manager full name
+     - manager phone (tap-to-call)
+     - manager email (tap mail) if available
+- Must be robust and not crash if fields missing.
+
+NON-NEGOTIABLE:
+- First: audit current implementation with exact file paths and what exists.
+- SOLID frontend: presentational components + hooks + utils.
+- No “failed data” empty states.
+- Expo Go compatible.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate file paths:
+- Guest dashboard doctors carousel components
+- Guest schedule screen components and filter UI
+- Guest profile screen file
+2) Identify data sources:
+- Doctors list data for guest (dashboard endpoint or dedicated)
+- Appointments list shape and statuses
+- Profile data sources for clinic/manager info
+3) Identify missing fields:
+- If guest endpoints don’t return manager/clinic info, propose minimal backend additions (stable DTO).
+4) Output audit report with:
+- file paths
+- gaps and root causes
+Do not implement until audit report is written.
+
+========================================================
+PHASE 2 — DASHBOARD DOCTOR PROFILE CARD (PREMIUM)
+========================================================
+Create/upgrade:
+components/guestDashboard/DoctorProfileSlide.tsx
+
+Design:
+- Full-width tall card (same height class as transport tile)
+- Strong hierarchy:
+  - Avatar + name + specialty top
+  - University + experience
+  - About snippet
+  - Chips row (languages)
+  - Badge (diploma) optional
+- Optional contact actions row (call/email) if fields exist
+- Smooth carousel (auto-slide stays)
+- Empty state card if no doctors
+
+Ensure safe truncation:
+- numberOfLines, minHeight, spacing, no overlap
+
+========================================================
+PHASE 3 — SCHEDULE SCREEN: DROPDOWN FILTERS + SUMMARY + PREMIUM LIST
+========================================================
+A) Summary section (top)
+Add:
+components/schedule/ScheduleSummaryCards.tsx
+Shows:
+- Next appointment (card)
+- Today’s appointments count + quick list (optional)
+- KPI mini cards: Upcoming / Completed / Missed
+
+B) Filters (dropdown UX)
+Add a FilterBar with:
+- Status dropdown (bottom sheet picker)
+- Range dropdown (bottom sheet picker)
+- Search input with debounce
+Implement as:
+components/filters/ScheduleFilterSheet.tsx
+- Apply / Clear / Cancel
+Active filters shown as compact chips below.
+
+C) Appointment list
+- Group by date with section headers
+- Appointment card includes:
+  - time
+  - procedure/title
+  - doctor
+  - status pill
+  - subtle meta (location optional)
+- Tabs optional; prefer dropdown + summary (premium)
+
+Data logic:
+hooks/guest/useGuestSchedule.ts
+hooks/guest/useGuestScheduleFilters.ts
+- derive buckets (upcoming/today/completed/missed/cancelled)
+- safe defaults
+
+Status mapping:
+- Completed: DONE/COMPLETED
+- Cancelled: CANCELLED
+- Missed: past & still scheduled
+- Upcoming: future scheduled
+- Today: today scheduled
+
+========================================================
+PHASE 4 — PROFILE CLEANUP + ESSENTIAL INFO ONLY
+========================================================
+Update guest profile screen to show only:
+1) Person Info card
+2) Clinic Info card
+3) Manager Contact card
+Remove:
+- Care Plan section
+- App info section
+
+If backend does not provide manager/clinic details to guest:
+- Add minimal endpoint or extend /v1/patient/dashboard to include:
+  clinic: { name, address?, phone?, email?, website? }
+  manager: { fullName, phoneE164?, email? }
+Return stable nulls when missing.
+
+UI requirements:
+- nationality flag from nationalityCode
+- patientKey copy button
+- call/email actions tap-to-call/tap mailto
+- hide rows when missing
+
+========================================================
+PHASE 5 — QA / VERIFICATION
+========================================================
+Manual QA:
+1) Doctors cards look premium and show required info without overflow
+2) Schedule filters open as dropdown/bottom sheet, apply works, summary shows
+3) Schedule list is grouped, status pills correct
+4) Profile shows only required sections and no crashes if fields missing
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Audit report with file paths
+2) Files changed/added
+3) Any backend changes and response shape (if added)
+4) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Doctor profile card upgrade
+3) Schedule summary + dropdown filter UX + list cards
+4) Profile cleanup + data wiring
+5) Final QA
+
+Proceed now. Implement and verify.
+END.

@@ -34,6 +34,13 @@ The application utilizes Replit's built-in PostgreSQL, managed with Drizzle ORM 
 -   **Circuit Breaker:** Implemented as a state machine (CLOSED → OPEN → HALF_OPEN) to enhance resilience, particularly for external services like email providers.
 -   **System Error UI:** A frontend `SystemErrorContext` and `MaintenanceBottomSheet` provide a global mechanism to display system-level errors to users, automatically triggered by 5xx API responses, showing `errorCode` and `requestId` for support.
 
+### Guest Patient UX
+
+-   **Dashboard — Doctors Carousel** (`components/guestDashboard/DoctorsCarousel.tsx`): Premium vertical card carousel. Each slide shows: avatar/photo, full name, specialty, university, experience years, bio (2 lines, italic), language chips, diploma badge, and contact action buttons (Call / Email) when fields exist. Flexible height (no fixed CARD_H).
+-   **Schedule Screen** (`app/(patient)/schedule.tsx`): Dropdown-filter UX replacing chip tabs. Top summary section: Next Appointment card + 3 KPI mini-cards (Upcoming / Completed / Missed). FilterBar: debounced search + Status dropdown (All/Upcoming/Today/Completed/Missed/Cancelled) + Range dropdown (All Time/This Week/This Month) with clear button. Appointment list uses `SectionList` grouped by date with section headers. Picker uses `Modal` (Expo Go safe). Logic extracted to `hooks/guest/useGuestScheduleFilters.ts`.
+-   **Profile Screen** (`app/(patient)/profile.tsx`): Streamlined to 3 essential sections only — Person Info (name/flag/patientKey copy/phone/email/dates), Clinic Info (name/address/phone/email/website), Manager Contact (fullName/phone/email). Removed Care Plan and App Info sections.
+-   **Dashboard API Extension** (`server/api/patientDashboardRoute.ts`): Patient response now includes `clinicAddress`, `clinicWebsite`, `manager: {fullName, phone, email}` (looked up from `clinic.primaryManagerUserId → users`). Doctors array now includes `bio` and `email`.
+
 ### API Routes
 
 The API is structured with specific routes for different user roles:

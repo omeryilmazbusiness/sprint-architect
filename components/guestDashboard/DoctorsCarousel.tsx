@@ -6,6 +6,8 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Pressable,
+  Linking,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
@@ -23,10 +25,11 @@ export interface DoctorItem {
   languages?: string | null;
   diplomaUrl?: string | null;
   phone?: string | null;
+  email?: string | null;
+  bio?: string | null;
 }
 
 const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_H = 240;
 const AUTO_MS = 6000;
 
 function initials(name: string) {
@@ -46,10 +49,13 @@ function parseLangs(raw: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+// ─── Premium Doctor Slide ─────────────────────────────────────────────────────
+
 function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
   const langs = parseLangs(doctor.languages);
-  const visLangs = langs.slice(0, 4);
-  const extra = langs.length > 4 ? langs.length - 4 : 0;
+  const visLangs = langs.slice(0, 5);
+  const extra = langs.length > 5 ? langs.length - 5 : 0;
+  const hasContact = !!(doctor.phone || doctor.email);
 
   return (
     <View style={[s.card, cardShadow]}>
@@ -61,8 +67,8 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
         </View>
       ) : null}
 
-      {/* Avatar row */}
-      <View style={s.topRow}>
+      {/* ── Hero row: avatar + name/specialty ── */}
+      <View style={s.heroRow}>
         {doctor.photoUrl ? (
           <Image source={{ uri: doctor.photoUrl }} style={s.avatar} />
         ) : (
@@ -70,7 +76,7 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
             <Text style={s.avatarInitials}>{initials(doctor.fullName)}</Text>
           </View>
         )}
-        <View style={s.nameCol}>
+        <View style={s.heroInfo}>
           <Text style={s.name} numberOfLines={2}>
             {doctor.fullName}
           </Text>
@@ -85,27 +91,36 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
         </View>
       </View>
 
-      {/* Details */}
-      <View style={s.details}>
-        {doctor.university ? (
-          <View style={s.detailRow}>
-            <Ionicons name="school-outline" size={13} color={T.textMuted} />
-            <Text style={s.detailText} numberOfLines={1}>
-              {doctor.university}
-            </Text>
-          </View>
-        ) : null}
-        {doctor.experienceYears ? (
-          <View style={s.detailRow}>
-            <Ionicons name="time-outline" size={13} color={T.textMuted} />
-            <Text style={s.detailText}>
-              {doctor.experienceYears}+ years experience
-            </Text>
-          </View>
-        ) : null}
-      </View>
+      {/* ── Meta row: university + experience ── */}
+      {(doctor.university || doctor.experienceYears) ? (
+        <View style={s.metaSection}>
+          {doctor.university ? (
+            <View style={s.metaRow}>
+              <Ionicons name="school-outline" size={13} color={T.textMuted} />
+              <Text style={s.metaText} numberOfLines={1}>
+                {doctor.university}
+              </Text>
+            </View>
+          ) : null}
+          {doctor.experienceYears ? (
+            <View style={s.metaRow}>
+              <Ionicons name="time-outline" size={13} color={T.textMuted} />
+              <Text style={s.metaText}>
+                {doctor.experienceYears}+ years of experience
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
-      {/* Language chips */}
+      {/* ── Bio snippet ── */}
+      {doctor.bio ? (
+        <Text style={s.bio} numberOfLines={2}>
+          {doctor.bio}
+        </Text>
+      ) : null}
+
+      {/* ── Language chips ── */}
       {langs.length > 0 ? (
         <View style={s.langsRow}>
           {visLangs.map((l) => (
@@ -120,9 +135,35 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
           ) : null}
         </View>
       ) : null}
+
+      {/* ── Contact actions ── */}
+      {hasContact ? (
+        <View style={s.contactRow}>
+          {doctor.phone ? (
+            <Pressable
+              style={s.contactBtn}
+              onPress={() => Linking.openURL(`tel:${doctor.phone}`)}
+            >
+              <Ionicons name="call-outline" size={14} color={T.accent} />
+              <Text style={s.contactBtnText}>Call</Text>
+            </Pressable>
+          ) : null}
+          {doctor.email ? (
+            <Pressable
+              style={s.contactBtn}
+              onPress={() => Linking.openURL(`mailto:${doctor.email}`)}
+            >
+              <Ionicons name="mail-outline" size={14} color={T.accent} />
+              <Text style={s.contactBtnText}>Email</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
+
+// ─── Dots ─────────────────────────────────────────────────────────────────────
 
 function Dots({ count, active }: { count: number; active: number }) {
   return (
@@ -136,6 +177,8 @@ function Dots({ count, active }: { count: number; active: number }) {
     </View>
   );
 }
+
+// ─── Carousel ─────────────────────────────────────────────────────────────────
 
 interface Props {
   doctors: DoctorItem[];
@@ -179,11 +222,9 @@ export function DoctorsCarousel({ doctors }: Props) {
         <View style={s.emptyIcon}>
           <Ionicons name="people-outline" size={30} color={T.textMuted} />
         </View>
-        <Text style={s.emptyTitle}>
-          Clinic doctors will appear here soon.
-        </Text>
+        <Text style={s.emptyTitle}>Your care team will appear here.</Text>
         <Text style={s.emptySub}>
-          Your care team will be shown once assigned by the clinic.
+          Doctors are shown once assigned to your treatment plan.
         </Text>
       </View>
     );
@@ -212,12 +253,13 @@ export function DoctorsCarousel({ doctors }: Props) {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   scroll: { marginHorizontal: -T.sp16 },
   page: { width: SCREEN_W, paddingHorizontal: T.sp16 },
 
   card: {
-    height: CARD_H,
     backgroundColor: T.surface,
     borderRadius: 20,
     borderWidth: 1,
@@ -245,10 +287,11 @@ const s = StyleSheet.create({
     color: "#059669",
   },
 
-  topRow: {
+  heroRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: T.sp16,
+    gap: 14,
+    paddingRight: 70,
   },
   avatar: {
     width: 72,
@@ -256,6 +299,7 @@ const s = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 2.5,
     borderColor: T.accent,
+    flexShrink: 0,
   },
   avatarFallback: {
     width: 72,
@@ -275,7 +319,7 @@ const s = StyleSheet.create({
     letterSpacing: -0.5,
   },
 
-  nameCol: { flex: 1, gap: 4 },
+  heroInfo: { flex: 1, gap: 5 },
   name: {
     fontFamily: "Inter_700Bold",
     fontSize: 17,
@@ -295,17 +339,25 @@ const s = StyleSheet.create({
     flex: 1,
   },
 
-  details: { gap: 6 },
-  detailRow: {
+  metaSection: { gap: 5 },
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
   },
-  detailText: {
+  metaText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,
+  },
+
+  bio: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textSec,
+    lineHeight: 19,
+    fontStyle: "italic",
   },
 
   langsRow: {
@@ -323,6 +375,29 @@ const s = StyleSheet.create({
   langText: {
     fontFamily: "Inter_500Medium",
     fontSize: 11,
+    color: T.accent,
+  },
+
+  contactRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 2,
+  },
+  contactBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(3,105,161,0.07)",
+    borderRadius: 10,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "rgba(3,105,161,0.15)",
+  },
+  contactBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
     color: T.accent,
   },
 
