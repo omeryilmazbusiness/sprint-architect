@@ -12,6 +12,10 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
+router.get("/notifications/unread-count", authMiddleware, requireRole("PATIENT"), async (_req, res) => {
+  res.json({ unread: 0 });
+});
+
 router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
   try {
     const actor = req.actor;

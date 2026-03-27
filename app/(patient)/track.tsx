@@ -11,10 +11,10 @@ import {
   Animated,
   TextInput,
   LayoutChangeEvent,
+  Linking,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useFocusEffect } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { GuestHeader } from "@/components/guest/GuestHeader";
@@ -166,6 +166,126 @@ const sc = StyleSheet.create({
   labelInactive: { color: T.textMuted },
 });
 
+// ─── Next Action Card ─────────────────────────────────────────────────────────
+
+const ACTION_CFG = {
+  doc: { icon: "document-attach-outline" as const, color: T.warning, bg: T.warningBg, border: "#FDE68A" },
+  appt: { icon: "calendar-outline" as const, color: T.accent, bg: "#EFF6FF", border: "#BFDBFE" },
+  transport: { icon: "car-outline" as const, color: T.textSec, bg: T.surfaceSubtle, border: T.border },
+};
+
+function NextActionCard() {
+  const { documents, appointments, transport } = useGuestDashboard();
+
+  const action = useMemo(() => {
+    const pending = documents.filter(d => d.status === "ASSIGNED" || d.status === "REJECTED");
+    if (pending.length > 0) {
+      const n = pending.length;
+      return {
+        type: "doc" as const,
+        title: `${n} document${n > 1 ? "s" : ""} need${n === 1 ? "s" : ""} your attention`,
+        sub: "Upload or re-upload required files to proceed.",
+        cta: "Open Documents",
+        onCta: () => router.push({ pathname: "/(patient)/track", params: { tab: "documents" } }),
+      };
+    }
+    const now = new Date();
+    const todayAppt = appointments.find(a => {
+      const d = new Date(a.startAt);
+      return d.toDateString() === now.toDateString() && a.status !== "CANCELLED";
+    });
+    if (todayAppt) {
+      const time = new Date(todayAppt.startAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return {
+        type: "appt" as const,
+        title: `Appointment today at ${time}`,
+        sub: `${todayAppt.title}${todayAppt.doctor?.fullName ? ` · Dr. ${todayAppt.doctor.fullName}` : ""}`,
+        cta: "View Schedule",
+        onCta: () => router.push("/(patient)/schedule"),
+      };
+    }
+    const next = appointments
+      .filter(a => a.status === "SCHEDULED" && new Date(a.startAt) > now)
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
+    if (next) {
+      const d = new Date(next.startAt);
+      const label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      const time  = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return {
+        type: "appt" as const,
+        title: `Next: ${next.title}`,
+        sub: `${label} at ${time}${next.doctor?.fullName ? ` · Dr. ${next.doctor.fullName}` : ""}`,
+        cta: "View Schedule",
+        onCta: () => router.push("/(patient)/schedule"),
+      };
+    }
+    return null;
+  }, [documents, appointments, transport]);
+
+  if (!action) return null;
+  const cfg = ACTION_CFG[action.type];
+
+  return (
+    <View style={[na.card, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
+      <View style={[na.iconWrap, { backgroundColor: "rgba(0,0,0,0.05)" }]}>
+        <Ionicons name={cfg.icon} size={20} color={cfg.color} />
+      </View>
+      <View style={na.body}>
+        <Text style={[na.title, { color: cfg.color }]}>{action.title}</Text>
+        <Text style={na.sub} numberOfLines={2}>{action.sub}</Text>
+      </View>
+      <Pressable style={[na.btn, { backgroundColor: cfg.color }]} onPress={action.onCta}>
+        <Text style={na.btnTxt}>{action.cta}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const na = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.sp12,
+    marginHorizontal: T.sp16,
+    marginTop: T.sp10,
+    marginBottom: 2,
+    padding: T.sp12,
+    borderRadius: T.r16,
+    borderWidth: 1,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: T.r12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  body: { flex: 1, gap: 3 },
+  title: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#555",
+    lineHeight: 16,
+  },
+  btn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: T.r10,
+    flexShrink: 0,
+  },
+  btnTxt: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: "#fff",
+  },
+});
+
 // ─── Journey Stepper ────────────────────────────────────────────────────────
 
 function JourneyTab() {
@@ -192,7 +312,10 @@ function JourneyTab() {
     );
   }
 
+  const hasClinicContact = patient?.clinicSupportPhone || patient?.clinicSupportEmail;
+
   return (
+    <>
     <View style={js.stepper}>
       {JOURNEY_STEPS.map((step, i) => {
         const stepNum = i + 1;
@@ -253,6 +376,38 @@ function JourneyTab() {
         );
       })}
     </View>
+
+    {hasClinicContact ? (
+      <View style={js.supportCard}>
+        <View style={js.supportIconWrap}>
+          <Ionicons name="headset-outline" size={20} color={T.accent} />
+        </View>
+        <View style={js.supportBody}>
+          <Text style={js.supportTitle}>
+            {patient?.clinicName ? `${patient.clinicName} Support` : "Clinic Support"}
+          </Text>
+          {patient?.clinicSupportPhone ? (
+            <Pressable
+              style={js.supportRow}
+              onPress={() => Linking.openURL(`tel:${patient!.clinicSupportPhone}`)}
+            >
+              <Ionicons name="call-outline" size={13} color={T.accent} />
+              <Text style={js.supportLink}>{patient.clinicSupportPhone}</Text>
+            </Pressable>
+          ) : null}
+          {patient?.clinicSupportEmail ? (
+            <Pressable
+              style={js.supportRow}
+              onPress={() => Linking.openURL(`mailto:${patient!.clinicSupportEmail}`)}
+            >
+              <Ionicons name="mail-outline" size={13} color={T.accent} />
+              <Text style={js.supportLink}>{patient.clinicSupportEmail}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    ) : null}
+    </>
   );
 }
 
@@ -358,6 +513,45 @@ const js = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     maxWidth: 260,
+  },
+  supportCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: T.sp12,
+    marginTop: T.sp16,
+    marginHorizontal: T.sp4,
+    backgroundColor: "rgba(3,105,161,0.05)",
+    borderRadius: T.r16,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    padding: T.sp16,
+  },
+  supportIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: T.r12,
+    backgroundColor: "rgba(3,105,161,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  supportBody: { flex: 1, gap: 6 },
+  supportTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: T.text,
+    marginBottom: 2,
+  },
+  supportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  supportLink: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: T.accent,
+    textDecorationLine: "underline",
   },
 });
 
@@ -786,6 +980,7 @@ export default function TrackScreen() {
   return (
     <View style={root.container}>
       <GuestHeader title="Track" />
+      <NextActionCard />
       <SegmentedControl active={activeTab} onChange={setActiveTab} />
 
       {activeTab === "journey" ? (

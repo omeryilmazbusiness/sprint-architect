@@ -10,19 +10,38 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+import { useGuestNotifications } from "@/hooks/guest/useGuestNotifications";
 
 interface GuestHeaderProps {
   title: string;
   subtitle?: string;
   onBack?: () => void;
-  right?: React.ReactNode;
+  hideNotifications?: boolean;
+}
+
+function NotificationBell() {
+  const { unread } = useGuestNotifications();
+  return (
+    <Pressable
+      style={styles.iconBtn}
+      hitSlop={10}
+      onPress={() => {}}
+    >
+      <Ionicons name="notifications-outline" size={21} color={T.text} />
+      {unread > 0 ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeTxt}>{unread > 99 ? "99+" : unread}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
 }
 
 export function GuestHeader({
   title,
   subtitle,
   onBack,
-  right,
+  hideNotifications = false,
 }: GuestHeaderProps) {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -30,18 +49,20 @@ export function GuestHeader({
   return (
     <View style={[styles.header, { paddingTop: topPad }]}>
       <View style={styles.inner}>
+        {/* Left — back or spacer */}
         {onBack ? (
           <Pressable
             onPress={onBack ?? (() => router.back())}
-            style={styles.backBtn}
+            style={styles.iconBtn}
             hitSlop={10}
           >
             <Ionicons name="arrow-back" size={22} color={T.text} />
           </Pressable>
         ) : (
-          <View style={styles.sideSlot} />
+          <View style={styles.side} />
         )}
 
+        {/* Center */}
         <View style={styles.center}>
           <Text style={styles.title} numberOfLines={1}>
             {title}
@@ -53,7 +74,10 @@ export function GuestHeader({
           ) : null}
         </View>
 
-        <View style={styles.sideSlot}>{right ?? null}</View>
+        {/* Right — notifications */}
+        <View style={styles.side}>
+          {!hideNotifications ? <NotificationBell /> : null}
+        </View>
       </View>
     </View>
   );
@@ -79,24 +103,25 @@ const styles = StyleSheet.create({
   inner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: T.sp16,
+    paddingVertical: 10,
     minHeight: 52,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sideSlot: {
-    width: 36,
-    alignItems: "center",
-    justifyContent: "center",
   },
   center: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  side: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -108,9 +133,28 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    fontSize: 11,
     color: T.textMuted,
     marginTop: 1,
     textAlign: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: T.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: T.surface,
+  },
+  badgeTxt: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    color: "#fff",
   },
 });

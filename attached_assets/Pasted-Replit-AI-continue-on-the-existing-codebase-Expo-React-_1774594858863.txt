@@ -1,0 +1,162 @@
+Replit AI — continue on the existing codebase (Expo React Native + Expo Router + Express/TypeScript backend). DO NOT re-scaffold.
+
+REQUEST:
+Make Guest UI feel like a premium iOS app:
+1) Guest footer tabs must look like iOS “liquid glass” floating tab bar (blur, rounded, elevated, inset).
+2) Add a premium fixed header on all Guest tabs with:
+   - Notifications icon + unread badge
+   - Profile icon
+   - Only the most necessary extras (no clutter)
+3) Analyze Track page and add the most necessary features:
+   - “Next Action” card (what guest should do next)
+   - Improve Documents tab UX (pending-first, search, quick upload, open/remove file)
+   - Add Support/contact card if we have manager/clinic contact.
+
+NON-NEGOTIABLE:
+- First do an audit and print file paths.
+- SOLID frontend: shared components + hooks; screens thin.
+- iOS first-class: BlurView + floating style.
+- Android fallback: non-blur, semi-opaque elevated bar.
+- No layout breaks on small screens.
+- Safe area respected.
+- Must work on Expo Go.
+
+========================================================
+PHASE 1 — AUDIT (MANDATORY)
+========================================================
+1) Locate Guest tabs layout file path:
+- app/(guest)/(tabs)/_layout.tsx (or actual path)
+2) Locate GuestHeader component and where it’s injected.
+3) Check if expo-blur is installed and used.
+4) Determine if guest notifications endpoints exist:
+- /v1/patient/notifications/unread-count or similar
+If missing, propose minimal endpoint.
+
+Output an audit report:
+- file paths
+- what exists
+- what will change
+
+Do not implement until audit is complete.
+
+========================================================
+PHASE 2 — LIQUID GLASS FLOATING TAB BAR (iOS)
+========================================================
+Implement a custom tab bar background for iOS using expo-blur:
+
+A) Create component:
+components/guest/GuestTabBarBackground.tsx
+- Uses <BlurView intensity={60..80} tint="light">
+- Rounded radius 26+
+- Border: rgba(255,255,255,0.35)
+- Soft shadow:
+  - shadowColor #000
+  - shadowOpacity 0.10
+  - shadowRadius 18
+  - shadowOffset {0, 8}
+
+B) Apply floating style in Tabs options:
+- position: "absolute"
+- left/right: 14–18
+- bottom: 10–16 (respect safe area)
+- height: 64–72
+- paddingBottom: 10
+- backgroundColor: transparent (BlurView provides bg)
+- tabBarBackground: () => <GuestTabBarBackground />
+
+C) Icons & active indicator:
+- active icon slightly bolder + subtle highlight
+- label size consistent
+- ensure min tap target 44px
+
+D) Android fallback:
+- backgroundColor: rgba(255,255,255,0.92)
+- same radius and elevation
+- no blur if not supported
+
+========================================================
+PHASE 3 — PREMIUM FIXED HEADER WITH NOTIFICATIONS
+========================================================
+A) Upgrade GuestHeader:
+components/guest/GuestHeader.tsx
+- Left: title
+- Right: Notifications bell + badge + Profile icon
+- Optional subtitle chip row:
+  - Next appointment time (if available)
+  - Today date
+
+B) Notification count:
+- Hook: hooks/guest/useGuestNotifications.ts
+  - fetch unread count
+  - safe defaults (0)
+- If endpoint missing, add minimal backend endpoint:
+  GET /v1/patient/notifications/unread-count
+  returns { unread: number } always
+
+C) Ensure header is used on ALL guest tabs:
+- Inject in guest layout, not per screen.
+
+========================================================
+PHASE 4 — TRACK PAGE: MOST NECESSARY UPGRADES
+========================================================
+Track screen has 2 internal tabs: Journey / Documents
+
+A) Add “Next Action” card (top of Track screen):
+- Derive from dashboard data:
+  - If pending docs > 0: “Upload required documents”
+  - If appointment today: show time + doctor + title
+  - If transport missing: show “Transport not assigned”
+- Present as a premium card with 1–2 CTAs:
+  - “Open Documents”
+  - “Open Schedule”
+
+B) Journey tab (keep modern):
+- Stepper remains premium; add “Current step” label and subtle icons.
+
+C) Documents tab UX improvements:
+- Pending-first sort
+- Search input by document name
+- Each doc card:
+  - status pill
+  - Upload PDF (pending)
+  - Open PDF (uploaded)
+  - Remove file (uploaded) (if endpoint exists)
+- Ensure list never clips under keyboard or tab bar:
+  - contentContainerStyle paddingBottom
+  - SafeAreaView
+  - proper sheet snap points
+
+D) Support card (if contact exists):
+- “Call clinic” or “Call manager” using tel:
+- Show only if phone exists
+
+========================================================
+PHASE 5 — QA / VERIFICATION
+========================================================
+Manual QA:
+1) iOS: tab bar floats with blur and looks “glass”
+2) Android: fallback looks premium and elevated
+3) No overlap with content; content has bottom padding for floating bar
+4) Notifications badge shows and updates (0..N)
+5) Track Next Action card shows correct prioritized action
+6) Documents tab: search/sort/upload/open/remove works and layout doesn’t clip
+
+========================================================
+OUTPUT REQUIREMENTS
+========================================================
+After implementing, print:
+1) Audit report with file paths
+2) Files changed/added
+3) Tab bar styling values (insets, height, blur)
+4) Notifications endpoint/hook details
+5) Manual QA checklist results
+
+IMPLEMENTATION ORDER:
+1) Audit
+2) Liquid glass tab bar + safe area spacing
+3) Header notifications + badge
+4) Track upgrades (Next Action + docs improvements + support card)
+5) QA polish
+
+Proceed now. Implement and verify end-to-end.
+END.
