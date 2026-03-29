@@ -1,0 +1,175 @@
+You are working on an EXISTING project.
+
+Your task is NOT to build new features first.
+Your first and primary task is to inspect the entire project deeply and produce a complete, structured audit of the "Manager" role.
+
+I want you to analyze and explain in a clear, technical-but-understandable way:
+
+1. What the Manager user can do in the system
+2. Which pages/screens the Manager can access
+3. Which actions the Manager can trigger
+4. Which API endpoints, services, functions, hooks, and components are involved in each Manager capability
+5. Which data/entities the Manager reads, creates, updates, deletes, or controls
+6. How the Manager role is related to other roles and permissions
+7. Which Manager capabilities are fully implemented, partially implemented, missing, broken, or unclear
+8. How all Manager functions relate to each other in the overall product flow
+
+IMPORTANT RULES
+- Do NOT assume
+- Do NOT give generic role descriptions
+- Inspect the real codebase and explain only what is grounded in the project
+- Do NOT rewrite the app in this step
+- Do NOT add new features in this step unless a tiny fix is absolutely necessary to complete the audit
+- If role logic is scattered, trace it carefully across frontend, backend, guards, APIs, services, contexts, DB, and UI
+- Be precise
+- Show file-level evidence
+- Explain relationships between functions, not just a flat list
+
+YOU MUST INSPECT
+- auth / login / session / role resolution logic
+- route guards / middleware / protected pages
+- dashboard pages
+- manager-specific pages
+- manager-specific buttons / actions / menus
+- API routes / controllers / services / repositories
+- state management / contexts / hooks
+- DB schema / role-related tables / ownership / foreign keys
+- UI conditions like "if manager then show..."
+- backend permission checks
+- entity ownership rules
+- feature flags or hidden conditions
+- audit/history/logging if manager actions are tracked
+
+MANAGER ANALYSIS GOAL
+I want a full "Manager Capability Map".
+
+For each Manager capability, determine:
+- capability name
+- what it does
+- where it starts in the UI
+- what component triggers it
+- what function/hook handles it
+- what backend route/service handles it
+- what database/entity it affects
+- what other Manager features it depends on
+- what downstream result it produces
+- whether it is complete / partial / broken / missing
+- exact files involved
+
+ALSO EXPLAIN THE RELATIONSHIPS
+Do not just list functions.
+Explain:
+- which Manager action leads to which next action
+- which screens depend on earlier steps
+- which entities are created first and reused later
+- which permissions protect which operations
+- which APIs are read-only vs mutating
+- which Manager capabilities are central/core and which are secondary
+- how the full Manager workflow operates end-to-end
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+Explain in simple but technical language:
+- who the Manager is in this project
+- what the Manager is generally responsible for
+- how complete the Manager role implementation appears
+- confidence level of the audit
+
+## 2. Manager Role Detection
+Explain:
+- how the system identifies a user as Manager
+- where role info is stored or derived
+- how role/session/auth state is loaded
+- which files handle this
+
+## 3. Manager Accessible Screens / Pages
+For each page/screen:
+- page name
+- route/path
+- purpose
+- whether Manager can access it
+- relevant files
+- how access is enforced
+
+## 4. Manager Capability Map
+For each capability, include:
+- capability name
+- user-visible purpose
+- trigger point in UI
+- frontend components/hooks/functions involved
+- backend routes/services involved
+- entities/data involved
+- dependencies
+- output/result
+- status: complete / partial / broken / unclear
+- files involved
+
+## 5. Manager Workflow Relationships
+Explain the major Manager flows as connected chains, for example:
+- Manager logs in → lands on dashboard → opens project → edits something → triggers backend update → result appears in another screen
+Do this for every major Manager flow in the project.
+
+## 6. Manager Data Ownership / Entity Relationships
+Explain:
+- which records belong to Manager
+- which records Manager can create
+- which records Manager can edit
+- which records Manager can delete/archive
+- what relationships exist between Manager and the core entities
+- which tables/models/schemas prove this
+
+## 7. Manager Permissions and Restrictions
+Explain:
+- what Manager is allowed to do
+- what Manager is NOT allowed to do
+- what checks enforce this
+- whether checks exist only in UI or also in backend
+- any security/authorization weaknesses found
+
+## 8. Feature Status Audit for Manager
+Create a table with columns:
+- Capability
+- Status
+- Why
+- Files
+- Risk Level
+- Next Action Needed
+
+## 9. Broken / Missing / Risky Areas
+List:
+- incomplete Manager features
+- broken flows
+- weak permission checks
+- confusing code paths
+- duplicated logic
+- risky frontend-only restrictions
+- missing backend enforcement
+
+## 10. Recommended Refactor / Improvement Order
+Give the safest and most professional implementation order to improve the Manager role.
+Prioritize:
+- security
+- correctness
+- maintainability
+- production readiness
+
+## 11. File-by-File Manager Map
+List all important files related to Manager and explain each one’s responsibility in one short paragraph.
+
+## 12. Final Plain-Language Summary
+Explain everything in a way a product owner can easily understand:
+- what Manager can do today
+- how those abilities are connected
+- what is missing
+- what should be improved first
+
+IMPORTANT FINAL RULE
+Do not stop at surface-level UI analysis.
+Trace the full chain from:
+UI → hook/function → API → service → DB
+for each important Manager capability.
+
+If there are unclear or conflicting code paths, call them out explicitly instead of guessing.
+Start by scanning the entire project now.
