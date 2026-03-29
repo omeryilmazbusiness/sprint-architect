@@ -1,0 +1,220 @@
+You are working on an EXISTING project.
+
+Your task is to fully inspect the codebase and produce a deep, complete, highly structured audit of the "Manager" role.
+
+IMPORTANT:
+I do NOT want a shallow answer.
+I do NOT want generic role descriptions.
+I want you to inspect the REAL code and explain EVERYTHING about the Manager role in a way that is extremely clear, connected, and easy to understand for a technical product owner and for another AI assistant.
+
+Your explanation must be:
+- complete
+- grounded in the real codebase
+- file-aware
+- relationship-aware
+- flow-aware
+- architecture-aware
+- easy to understand
+- detailed but organized
+
+DO NOT:
+- guess
+- invent features
+- rewrite the app first
+- give only a flat bullet list
+- stop at UI-level observations
+
+INSTEAD:
+Trace the full chain for every important Manager capability:
+UI → component → hook/function → API route → service → repository/DB → resulting effect on the system
+
+PRIMARY GOAL
+I want a complete “Manager Capability & Relationship Map”.
+
+You must explain:
+
+1. Who the Manager is in this system
+2. How the system knows a user is a Manager
+3. Which screens/pages the Manager can access
+4. Which menus, buttons, cards, panels, actions, and workflows belong to Manager
+5. Which backend routes/services are triggered by Manager actions
+6. Which entities/tables/models/data structures Manager reads, creates, updates, deletes, or controls
+7. Which Manager actions depend on earlier steps
+8. Which Manager actions produce downstream effects elsewhere in the product
+9. Which permissions are enforced in UI only vs backend too
+10. Which Manager features are complete, partial, broken, missing, duplicated, or risky
+11. Which files are central to Manager behavior
+12. How everything connects end-to-end
+
+INSPECT ALL OF THESE AREAS
+- auth logic
+- session logic
+- role detection logic
+- middleware / guards / protected routes
+- dashboard pages
+- manager-only screens
+- manager-only UI conditions
+- navigation / sidebars / tabs / menus
+- frontend components
+- hooks / contexts / state flows
+- API routes
+- services
+- repositories
+- DB schema / models / ownership relationships
+- permissions / authorization checks
+- audit/logging/history where relevant
+- feature flags / hidden conditions
+- conditional rendering based on role
+- create/update/delete operations
+- approval/review/status flows if any
+
+FOR EACH MANAGER CAPABILITY, EXPLAIN ALL OF THIS
+- capability name
+- business purpose
+- where it starts in the UI
+- what the user clicks/taps
+- which component renders it
+- which hook/function handles it
+- which API route it calls
+- which backend service processes it
+- which DB/entity/model it affects
+- what validations/permissions apply
+- what output/result it creates
+- what other features depend on it
+- whether it is complete / partial / broken / unclear
+- exact files involved
+
+VERY IMPORTANT:
+Do not just say “Manager can create X”.
+Explain the full relationship:
+- where that starts
+- what must happen before it
+- what gets created in DB
+- what screens later depend on that record
+- what can go wrong
+- how it is protected
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+Explain in clear plain language:
+- who the Manager is in this system
+- what the Manager is responsible for overall
+- how complete the Manager role appears
+- confidence level of the audit
+
+## 2. Role Detection and Authentication
+Explain:
+- how the system identifies a Manager
+- where role info comes from
+- how auth/session is loaded
+- which files handle role resolution
+- whether this is secure and complete
+
+## 3. Manager-Accessible Screens and Navigation
+For each screen/page/menu:
+- screen name
+- route/path
+- purpose
+- why Manager can access it
+- how access is enforced
+- files involved
+
+## 4. Complete Manager Capability Map
+For every Manager capability:
+- capability name
+- business purpose
+- UI entry point
+- frontend flow
+- backend flow
+- data/entities involved
+- permissions/checks
+- downstream effects
+- status
+- files involved
+
+## 5. Manager Workflow Chains
+Describe the main Manager journeys as full connected flows.
+Example style:
+Manager logs in → sees dashboard → opens project → edits data → triggers API → backend updates entity → another screen reflects new state.
+Do this for ALL major Manager workflows in the project.
+
+## 6. Entity and Data Relationship Map
+Explain:
+- which entities belong to Manager
+- which entities Manager creates
+- which entities Manager updates
+- which entities Manager deletes or archives
+- which records are linked together
+- what parent-child relationships exist
+- which schemas/tables/models prove this
+
+## 7. Permission and Authorization Audit
+Explain:
+- what Manager is allowed to do
+- what Manager is not allowed to do
+- where restrictions are enforced
+- whether protection exists in frontend only or backend too
+- any weak or missing authorization checks
+- any security risks
+
+## 8. File-by-File Manager Architecture Map
+List all important files related to Manager and explain each file’s exact responsibility clearly.
+I want to understand which file does what and how they connect.
+
+## 9. Complete Status Audit
+Create a table with:
+- Capability
+- Status (Complete / Partial / Broken / Missing / Unclear)
+- Reason
+- Files
+- Risk Level
+- Recommended Fix
+
+## 10. Problems, Gaps, and Risks
+List:
+- broken manager flows
+- incomplete features
+- duplicated logic
+- risky permission handling
+- UI-only restrictions without backend enforcement
+- confusing code paths
+- dead code related to Manager
+- architecture weaknesses
+
+## 11. Recommended Improvement Order
+Give the safest and most professional order to improve the Manager role.
+Prioritize:
+- security
+- correctness
+- backend authorization
+- maintainability
+- production readiness
+
+## 12. Final Plain-Language Explanation
+Explain everything in a simple, connected, human-readable way:
+- what the Manager can do today
+- how those abilities are connected to each other
+- which actions create data used later in other parts of the system
+- what is incomplete
+- what should be fixed first
+
+## 13. AI-Friendly Summary
+At the end, give a compact but precise summary written for another AI assistant so that another engineer/AI can immediately understand:
+- Manager role scope
+- main flows
+- critical files
+- key entities
+- permission model
+- top risks
+- next implementation priorities
+
+CRITICAL FINAL RULE
+Do NOT stop at surface-level UI analysis.
+For every important Manager capability, trace the full chain:
+UI → function/hook → API → service → DB/entity → result in system
+
+If code paths are unclear, conflicting, or incomplete, explicitly say so instead of guessing.
+
+Start now by scanning the full project and produce the complete Manager audit.
