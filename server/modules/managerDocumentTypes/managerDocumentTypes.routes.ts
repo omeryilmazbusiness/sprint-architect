@@ -1,11 +1,24 @@
 import { Router } from "express";
 import {
+  authMiddleware,
+  requireRole,
+  requireActiveClinic,
+  clinicScopeMiddleware,
+} from "../../auth/middleware";
+import {
   listDocumentTypes,
   createDocumentType,
   deleteDocumentType,
 } from "./managerDocumentTypes.controller";
 
 const router = Router();
+
+router.use(
+  authMiddleware,
+  requireRole("MANAGER", "ADMIN"),
+  requireActiveClinic,
+  clinicScopeMiddleware,
+);
 
 router.get("/", listDocumentTypes);
 router.post("/", createDocumentType);

@@ -90,6 +90,7 @@ export const patientRepo = {
       .values({
         ...rest,
         patientKey,
+        status: "ACTIVE",
         requestedServices: serializeServices(servicesArr),
       } as any)
       .returning();

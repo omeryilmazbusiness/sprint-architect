@@ -86,8 +86,6 @@ function GuestListCard({ patient, onPress, flagEmoji }: Props) {
     tags.push({ label: "Docs Pending", warn: true });
   if (patient.hasTodayAppointment)
     tags.push({ label: "Today Appt", warn: false, accent: true });
-  if (!patient.plan?.hotelId) tags.push({ label: "No Hotel", warn: false });
-  if (!patient.plan?.transportId) tags.push({ label: "No Transport", warn: false });
 
   function handleCopy(e: any) {
     e?.stopPropagation?.();

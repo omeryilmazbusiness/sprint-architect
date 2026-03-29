@@ -98,7 +98,7 @@ export default function ManagerSettingsScreen() {
             icon="people-outline"
             label="Guests"
             subtitle="Manage your patients"
-            onPress={() => router.push("/(manager-tabs)/guests")}
+            onPress={() => router.push("/(manager-tabs)/users")}
           />
           <Divider inset={56} />
           <ListRow

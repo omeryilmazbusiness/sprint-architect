@@ -76,6 +76,7 @@ export interface PatientInfo {
 
 export interface PatientDashboardData {
   patient: PatientInfo;
+  tracking: { currentStep: string | null };
   transport: PatientTransport | null;
   hotel: PatientHotel | null;
   appointments: PatientAppointment[];
@@ -116,6 +117,7 @@ export function useGuestDashboard() {
     isError: query.isError,
     refetch,
     patient: data?.patient ?? null,
+    tracking: data?.tracking ?? { currentStep: null },
     transport: data?.transport ?? null,
     hotel: data?.hotel ?? null,
     appointments: data?.appointments ?? [],

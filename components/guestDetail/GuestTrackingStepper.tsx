@@ -9,12 +9,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 
 export const TRACKING_STEPS = [
-  { key: "PRE_ARRIVAL", label: "Arrived Airport" },
-  { key: "ARRIVAL_TRANSFER", label: "Picked Up" },
-  { key: "HOTEL_CHECKIN", label: "Arrived Hotel" },
-  { key: "TREATMENT", label: "At Appointment" },
-  { key: "FOLLOWUP", label: "Back to Airport" },
-  { key: "DEPARTURE", label: "Arrived Home" },
+  { key: "PRE_ARRIVAL",      label: "Pre-Arrival" },
+  { key: "ARRIVAL_TRANSFER", label: "Arrival & Transfer" },
+  { key: "HOTEL_CHECKIN",    label: "Hotel Check-In" },
+  { key: "TREATMENT",        label: "Treatment" },
+  { key: "FOLLOWUP",         label: "Recovery & Follow-Up" },
+  { key: "DEPARTURE",        label: "Departure" },
 ];
 
 interface Props {

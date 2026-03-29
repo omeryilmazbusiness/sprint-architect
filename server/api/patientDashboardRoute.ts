@@ -80,6 +80,9 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
         clinicWebsite: clinic?.websiteUrl ?? null,
         manager,
       },
+      tracking: {
+        currentStep: plan?.currentStep ?? null,
+      },
       transport: plan?.transport
         ? {
             id: plan.transport.id,

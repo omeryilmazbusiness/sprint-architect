@@ -1,0 +1,332 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current codebase deeply, understand the current Manager → Guest creation and Guest login flow, and then implement the following requested changes in the safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the project from scratch
+- Do NOT break existing working flows unless they conflict with the new required business rules
+- First inspect the real codebase and understand the current implementation
+- Then directly implement the required changes
+- Preserve existing architecture where it is good
+- Refactor only where needed for correctness, maintainability, security, or UX quality
+- Keep strict TypeScript
+- No `any`
+- No fragile hacks
+- No UI-only fixes for backend/domain problems
+- Fix the root cause, not just the symptom
+
+PRIMARY BUSINESS CHANGES TO IMPLEMENT
+
+1) MANAGER CREATES GUEST → GUEST MUST BE IMMEDIATELY ACTIVE, BILLABLE, AND LOGIN-READY
+Current problem:
+- Manager creates a guest
+- guest access key is generated
+- but guest cannot log in with that key
+- guest does not start active immediately
+- invoice/billing event is not guaranteed at creation time
+
+Required behavior:
+- As soon as Manager creates a guest, that guest must:
+  - be ACTIVE immediately
+  - be login-ready immediately with the generated guest access key
+  - be included in billing/invoice flow immediately at creation time
+- Manager should not need a separate approval step for standard guest creation
+- The guest access key login flow must work reliably
+
+This means you must inspect and fix:
+- guest creation backend flow
+- access key generation flow
+- guest login/auth flow using access key
+- billing event generation timing
+- patient/guest initial status logic
+- any conflicting old approval flow that no longer matches the new business rule
+
+2) MANAGER SCREEN — NEWLY CREATED GUEST SHOULD NOT START WITH A MANUAL STATUS STEP
+Required behavior:
+- When manager creates a guest, there should be no separate pending/approval waiting experience for that guest
+- The guest should begin directly as active
+- Manager should not need to “approve” the guest after creation for the standard create flow
+- If there is old status-based logic that conflicts with this, refactor the domain flow properly
+
+3) GUEST LIST CARDS — PROFESSIONAL UX + CORRECT SIGNALS
+Required behavior:
+- In the Guests list, guest cards must show:
+  - docs pending information
+  - today’s appointment information
+- Guest cards must NOT show:
+  - “no hotel”
+  - “no transport”
+- Redesign the guest cards into a more professional, premium, clean manager UX
+- The card should emphasize useful operational signals, not empty-assignment noise
+- Keep mobile and desktop responsiveness strong
+
+4) GUEST DETAIL — PATIENT JOURNEY MUST BE SIMPLER, CLEARER, AND SYNC TO GUEST TRACK PAGE
+Current issue:
+- Patient journey steps are not as clear and general as needed
+
+Required behavior:
+- Simplify and clarify the journey steps into a more understandable general flow
+- When manager selects/updates the journey step, the guest must see the updated current status in their own login/track page
+- This must be a real data sync, not just separate UI labels
+- Inspect both manager-side journey update flow and guest-side track/status reading flow
+- Refactor the step model if needed, but do it safely
+- Ensure existing data and UI remain consistent after the refactor
+
+5) DOCUMENTS ASSIGN FLOW IS BROKEN / POPUP DOES NOT OPEN PROFESSIONALLY FROM THE BOTTOM
+Current issue:
+- Documents assign does not work correctly
+- popup/bottom sheet does not come from the bottom correctly
+- process feels broken or incomplete
+
+Required behavior:
+- Analyze the full document assignment process end-to-end
+- Fix the root cause professionally
+- Make the documents assign interaction a robust, premium bottom sheet / modal flow
+- Ensure:
+  - the panel opens correctly
+  - it is fully usable on mobile
+  - z-index / safe area / animation / snap behavior are correct
+  - submission works
+  - invalidation/refetch works
+  - error handling is clean
+- Build it in a SOLID way, not as a fragile visual patch
+
+FIRST TASK — FULL ANALYSIS BEFORE IMPLEMENTATION
+Before changing anything, inspect and understand:
+- current manager guest creation flow
+- current guest access key generation flow
+- current guest login flow
+- current billing event / invoice trigger flow
+- current patient status lifecycle
+- current guest list data mapping
+- current guest detail journey logic
+- current guest track page data source
+- current documents assign UI and backend flow
+- any duplicate routes / dead code / conflicting logic paths related to these features
+
+Then directly implement the required changes.
+
+IMPLEMENTATION PRIORITY
+Use this exact order:
+
+PHASE 1 — DOMAIN CORRECTNESS
+1. Audit current Manager create guest flow
+2. Audit current guest access key login flow
+3. Audit current billing event creation flow
+4. Audit current approval/status flow
+5. Refactor the domain so that:
+   - guest creation = active immediately
+   - access key works immediately
+   - billing event is created immediately
+6. Remove or safely neutralize conflicting approval-only logic for this standard flow
+7. Ensure guest can log in with access key right after creation
+
+PHASE 2 — GUEST LIST UX + DATA
+1. Inspect guest list card UI and data mapping
+2. Add docs pending indicator
+3. Add today’s appointment indicator
+4. Remove “no hotel” and “no transport” empty-state noise from guest cards
+5. Redesign the card structure into a more professional manager-oriented card
+6. Keep it responsive, readable, and polished
+
+PHASE 3 — JOURNEY MODEL + GUEST TRACK SYNC
+1. Inspect current patient journey step model
+2. Propose and implement a simpler, clearer, general step system
+3. Update manager detail screen to use the clearer steps
+4. Ensure manager selection persists correctly
+5. Ensure guest login / track page reads the same persisted current step
+6. Ensure the guest sees the latest current status immediately
+7. Update any mappings, labels, DTOs, or schema if needed
+8. Keep backward compatibility/data migration in mind
+
+PHASE 4 — DOCUMENT ASSIGN FLOW HARDENING
+1. Inspect document assign button → popup/sheet trigger
+2. Inspect component tree, modal/bottom-sheet implementation, z-index, layout, animation, and state handling
+3. Inspect backend request + response + invalidation flow
+4. Fix the root cause
+5. Rebuild the documents assign UX into a clean professional bottom sheet/modal interaction if needed
+6. Make it mobile-first and stable
+7. Ensure assign operation really works end-to-end
+
+PHASE 5 — CLEANUP + HARDENING
+1. Remove dead code or conflicting code paths related to old approval logic if safe
+2. Add proper structured logging around guest create, guest login, billing event creation, and document assignment
+3. Add requestId / correlation where helpful
+4. Improve error handling and user feedback
+5. Verify no duplicate route path is still shadowing the correct path
+6. Ensure UI and backend are consistent
+7. Add or update documentation comments where needed
+
+DETAILED REQUIREMENTS
+
+A. GUEST CREATE FLOW
+When manager creates a guest:
+- guest must be persisted correctly
+- guest status must start in active state
+- guest access key must be generated and usable
+- guest must appear in guest list correctly
+- billing event must be created/upserted for the current billing period
+- any audit logging should reflect that the guest started active immediately
+
+Acceptance criteria:
+- create guest succeeds
+- returned guest is active
+- guest can immediately log in with access key
+- billing event exists immediately after create
+- no separate approve step needed for normal flow
+
+B. ACCESS KEY LOGIN
+Inspect the full guest login mechanism:
+- where access key is checked
+- how patient/guest account is resolved
+- which status is required to allow login
+- whether device binding blocks first login unexpectedly
+- whether patientKey/accessKey is actually saved/queried correctly
+
+Fix the real issue so the generated key works.
+
+Acceptance criteria:
+- newly created guest can log in immediately with access key
+- first login works on clean device
+- failure states are meaningful if key is invalid
+
+C. BILLING / INVOICE RELATION
+Current expected business rule:
+- create guest = billable guest
+- do not wait for approval to enter invoice flow
+
+Implement accordingly:
+- billing event should be created at guest creation time
+- avoid duplicate billing rows
+- keep the existing billing scheduler compatible
+- if there is already an approval use case, refactor carefully so billing is not double-created
+
+Acceptance criteria:
+- guest creation creates or upserts billing event for current period
+- invoice pipeline still works correctly
+- no duplicate billing inflation
+
+D. GUEST LIST CARDS
+Redesign guest cards professionally for manager operations.
+
+Desired information hierarchy:
+- guest name
+- current primary status / journey label
+- docs pending signal
+- today appointment signal
+- maybe arrival/departure or key operational timeline if useful
+- clean quick-scan layout
+
+Do NOT show noisy useless empty-assignment messages like:
+- no hotel
+- no transport
+
+Acceptance criteria:
+- cards feel cleaner and more premium
+- docs pending and today appointment are visible
+- mobile layout is strong
+- no clutter
+
+E. JOURNEY STEPS
+Current journey is too granular/confusing.
+Refactor to a clearer high-level set of steps appropriate for health tourism operations.
+
+Choose a simpler general structure that makes sense operationally.
+Examples of direction only:
+- Pre-Arrival
+- Arrival / Transfer
+- Preparation / Check-In
+- Treatment
+- Recovery / Follow-Up
+- Departure
+You may adjust naming if the real code/data model suggests a better fit.
+
+Requirements:
+- manager can set/update current journey step
+- guest track page must show the same current step
+- use one shared persisted source of truth
+- labels should be user-friendly
+- avoid mismatched manager labels vs guest labels
+
+Acceptance criteria:
+- manager changes a journey step
+- guest track page shows the new current status
+- data survives reload
+- no duplicate mapping confusion
+
+F. DOCUMENT ASSIGN SHEET / POPUP
+Inspect the existing implementation carefully.
+Common things to check:
+- bottom sheet provider setup
+- stacking/z-index
+- modal root placement
+- safe area inset issues
+- state open/close race conditions
+- wrong route/screen container nesting
+- keyboard handling
+- snap points / animation config
+- stale query invalidation
+- missing data load before opening
+
+Then fix it properly.
+
+Acceptance criteria:
+- assign popup opens correctly from bottom
+- interaction is smooth and premium
+- submit works
+- data refreshes correctly after assign
+- no broken partial state
+- works on both mobile and web/native targets if applicable in this codebase
+
+SOLID / ARCHITECTURE EXPECTATIONS
+- Thin route/controller layer
+- Business rules in use cases/services
+- DB operations in repositories
+- Shared schemas/DTOs where appropriate
+- No duplicated approval logic
+- No duplicated billing trigger logic
+- No UI-level data truth that conflicts with backend truth
+- No fragile modal hacks
+- Keep architecture clean and understandable
+
+YOU MUST ALSO CHECK FOR THESE RISKS
+- duplicate route registrations causing shadowed code
+- old approve path still creating conflicting behavior
+- active status mismatch between create flow and login flow
+- login blocked because of wrong status enum or device-binding rule
+- guest list using stale or wrong DTO shape
+- guest track page reading a different field than manager updates
+- document assign component mounted in the wrong screen/root context
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current system
+2. Root cause for each of the 5 requested issues
+3. Exact files changed
+4. Why each change was made
+5. Any tradeoffs or migration considerations
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Clear summary of the old behavior vs new behavior
+2. Root cause explanation for the guest access key login issue
+3. Root cause explanation for billing not starting at guest creation
+4. Final guest status lifecycle after the refactor
+5. Final journey step model
+6. Final guest card UX changes
+7. Final document assign fix summary
+8. Exact files changed
+9. Manual QA checklist covering all 5 requested areas
+10. Remaining future improvements if any
+
+START NOW
+First inspect the current codebase and identify the real root causes behind:
+- guest access key not working
+- billing not starting at guest creation
+- status not being active immediately
+- guest card UX mismatch
+- journey sync inconsistency
+- documents assign popup failure
+
+Then implement the fixes end-to-end in the order above.

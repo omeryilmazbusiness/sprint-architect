@@ -34,13 +34,22 @@ const TABS: { key: InnerTab; label: string }[] = [
 ];
 
 const JOURNEY_STEPS: { icon: string; label: string; sub: string }[] = [
-  { icon: "airplane-outline",  label: "Arrived at Airport",   sub: "You've landed — welcome!" },
-  { icon: "car-sport-outline", label: "Picked Up by Driver",  sub: "Transport en route to hotel" },
-  { icon: "bed-outline",       label: "Arrived at Hotel",     sub: "Check-in and settle in" },
-  { icon: "medkit-outline",    label: "Attended Appointment", sub: "Your procedure / consultation" },
-  { icon: "airplane-outline",  label: "Returned to Airport",  sub: "Heading back home" },
-  { icon: "home-outline",      label: "Arrived Home",         sub: "Journey complete — take care!" },
+  { icon: "airplane-outline",  label: "Pre-Arrival",              sub: "You've landed — welcome!" },
+  { icon: "car-sport-outline", label: "Arrival & Transfer",       sub: "Transport en route to hotel" },
+  { icon: "bed-outline",       label: "Hotel Check-In",           sub: "Check-in and settle in" },
+  { icon: "medkit-outline",    label: "Treatment",                sub: "Your procedure / consultation" },
+  { icon: "airplane-outline",  label: "Recovery & Follow-Up",     sub: "Heading back home" },
+  { icon: "home-outline",      label: "Departure",                sub: "Journey complete — take care!" },
 ];
+
+const MANAGER_STEP_TO_NUM: Record<string, number> = {
+  PRE_ARRIVAL: 1,
+  ARRIVAL_TRANSFER: 2,
+  HOTEL_CHECKIN: 3,
+  TREATMENT: 4,
+  FOLLOWUP: 5,
+  DEPARTURE: 6,
+};
 
 function deriveCurrentStep(
   arrivalDate: string | null | undefined,
@@ -289,16 +298,24 @@ const na = StyleSheet.create({
 // ─── Journey Stepper ────────────────────────────────────────────────────────
 
 function JourneyTab() {
-  const { patient, transport, hotel, appointments } = useGuestDashboard();
+  const { patient, tracking, transport, hotel, appointments } = useGuestDashboard();
   const hasDoneAppt = appointments.some((a) => a.status === "DONE");
-  const currentStep = deriveCurrentStep(
-    patient?.arrivalDate,
-    patient?.departureDate,
-    !!transport,
-    !!hotel,
-    hasDoneAppt
-  );
-  const hasAnyData = patient?.arrivalDate || transport || hotel;
+
+  const persistedStep = tracking?.currentStep
+    ? (MANAGER_STEP_TO_NUM[tracking.currentStep] ?? 0)
+    : 0;
+
+  const currentStep = persistedStep > 0
+    ? persistedStep
+    : deriveCurrentStep(
+        patient?.arrivalDate,
+        patient?.departureDate,
+        !!transport,
+        !!hotel,
+        hasDoneAppt,
+      );
+
+  const hasAnyData = patient?.arrivalDate || transport || hotel || persistedStep > 0;
 
   if (!hasAnyData) {
     return (

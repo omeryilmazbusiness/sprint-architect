@@ -15,6 +15,7 @@ import { planRepo } from "../repositories/planRepo";
 import { notificationRepo } from "../repositories/notificationRepo";
 
 import { invoiceRepo } from "../repositories/invoiceRepo";
+import { billingEventsRepo } from "../modules/billingEvents/repos/BillingEventsRepo.drizzle";
 import { auditLog } from "./auditLogger";
 
 const router = Router();
@@ -97,7 +98,14 @@ router.post("/patients", async (req, res, next) => {
     const clinicId = getClinicId(req);
     const body = validateBody(createPatientSchema, req.body);
     const patient = await patientRepo.create({ clinicId, ...body });
-    
+
+    const now = new Date();
+    const billingPeriod = patient.arrivalDate
+      ? patient.arrivalDate.slice(0, 7)
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    await billingEventsRepo.upsert({ clinicId, patientId: patient.id, period: billingPeriod });
+
     auditLog({
       clinicId,
       actorId: req.actor!.sub,
@@ -105,6 +113,7 @@ router.post("/patients", async (req, res, next) => {
       action: "PATIENT_CREATED",
       resourceType: "patient",
       resourceId: patient.id,
+      metadata: { billingPeriod, status: "ACTIVE" },
     });
 
     res.status(201).json(patient);
