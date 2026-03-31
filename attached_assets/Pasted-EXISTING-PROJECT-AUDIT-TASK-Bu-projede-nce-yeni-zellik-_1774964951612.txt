@@ -1,0 +1,150 @@
+EXISTING PROJECT AUDIT TASK
+
+Bu projede önce yeni özellik geliştirme yapma.
+İlk görevin, mevcut projede **Manager rolünün tüm yeteneklerini eksiksiz analiz etmek**, kısa ama kapsamlı şekilde listelemek, hangilerinin çalıştığını gerçekten kontrol etmek, hangilerinin çalışmadığını veya eksik olduğunu net şekilde belirtmek ve sonunda projenin production readiness durumunu çıkarmaktır.
+
+ÇOK ÖNEMLİ KURALLAR
+- Tahmin etme
+- Genel/geçiştirilmiş cevap verme
+- Sadece kod tabanına dayanarak konuş
+- Manager ile ilgili tüm akışları gerçekten takip et
+- Sadece UI’a bakma; şu zinciri izle:
+  UI → component → hook/function → API route → service/use case → repository/DB
+- Mümkün olan yerlerde gerçekten çalışıp çalışmadığını kontrol et
+- Yeni özellik ekleme, önce audit yap
+- Gereksiz refactor yapma
+- Cevabı kısa maddeler halinde ama kapsamlı ver
+- Uzatma, ama eksik de bırakma
+
+AMAÇ
+Aşağıdaki soruların net cevabını istiyorum:
+1. Manager bu sistemde neler yapabiliyor?
+2. Bu özelliklerin hangileri gerçekten çalışıyor?
+3. Hangileri bozuk, eksik, kısmi veya riskli?
+4. Manager tarafı production-ready olarak ne kadar hazır?
+5. Production-ready olması için neler eksik?
+
+İNCELEMEN GEREKEN YERLER
+- auth / login / role detection
+- manager’a açık ekranlar
+- tab bar ve stack navigation
+- dashboard
+- users / guests / doctors
+- guest detail
+- services
+- hotels
+- transports
+- document types
+- document assign / approve / reject
+- appointments
+- invoices
+- notifications
+- settings
+- manager-only actions / buttons / sheets / forms
+- backend manager routes
+- middleware / role guard / clinic scope
+- repo ve DB ilişkileri
+- query invalidation / mutation success
+- mobile-specific ekran ve popup davranışları
+- dead code / duplicate route / shadowed route riskleri
+
+TEST / DOĞRULAMA BEKLENTİSİ
+Mümkün olan her özellik için şu ayrımı yap:
+- Kod var ama test edilmedi
+- Kod var ve çalışıyor
+- Kod var ama bozuk / eksik
+- Kod hiç yok
+Gerçekten kontrol edebildiğin yerlerde bunu açıkça belirt.
+
+ÇIKTI FORMATI
+Aynen şu başlıklarla cevap ver:
+
+## 1. Manager Özeti
+Manager rolü sistemde genel olarak ne yapıyor?
+Kısa, net, teknik ama anlaşılır anlat.
+
+## 2. Manager Tüm Özellikleri
+Manager’ın tüm yeteneklerini kısa maddeler halinde listele.
+Her madde için şu formatı kullan:
+- Özellik adı
+- Ne işe yarıyor
+- Durum: Çalışıyor / Kısmi / Çalışmıyor / Belirsiz
+- Kısa neden
+- İlgili ana dosyalar
+
+Örnek format:
+- Guest oluşturma
+  - Amaç: Yeni hasta/misafir kaydı açmak
+  - Durum: Çalışıyor
+  - Neden: Form, API ve DB akışı tamam
+  - Dosyalar: ...
+
+## 3. Çalışan Özellikler
+Sadece çalışan manager özelliklerini maddeler halinde sırala.
+
+## 4. Çalışmayan / Eksik / Riskli Özellikler
+Sadece bozuk, eksik, kısmi veya riskli olanları maddeler halinde sırala.
+Her biri için:
+- sorun ne
+- nerede
+- neden riskli
+- kullanıcı etkisi ne
+
+## 5. Manager Akış Özeti
+Manager’ın ana iş akışlarını kısa maddeler halinde yaz:
+- login
+- dashboard
+- guest oluşturma
+- guest yönetimi
+- doctor/hotel/transport yönetimi
+- documents
+- appointments
+- invoices
+Bu akışların birbiriyle ilişkisini çok kısa anlat.
+
+## 6. Production Readiness Skoru
+Manager tarafı için aşağıdaki alanları değerlendir:
+- Auth / Authorization
+- Frontend UX
+- Backend correctness
+- Mobile usability
+- Data integrity
+- Error handling
+- Logging / traceability
+- Maintainability
+- Security
+- Scalability
+
+Her biri için:
+- Hazır / Geliştirilmeli / Hazır değil
+- Tek cümle neden
+
+Sonunda genel bir tahmin ver:
+- Manager tarafı % kaç production-ready görünüyor?
+
+## 7. Prod-Ready İçin Eksikler
+Production-ready olması için gereken eksikleri öncelik sırasına göre listele:
+P1 = kritik
+P2 = önemli
+P3 = iyileştirme
+
+Her madde kısa olsun:
+- ne eksik
+- neden önemli
+- hangi dosya/alan etkileniyor
+
+## 8. En Önemli İlk 10 Fix
+Manager tarafını prod-ready’e taşımak için yapılması gereken en önemli ilk 10 işi sırala.
+
+## 9. Kısa Sonuç
+Normal bir ürün sahibinin anlayacağı şekilde kısa özet ver:
+- Manager tarafı güçlü mü?
+- En iyi çalışan yerler nereler?
+- En sorunlu yerler nereler?
+- Önce ne düzeltilmeli?
+
+EK KURAL
+Yanıtı gereksiz uzun yazma.
+Ama hiçbir önemli manager özelliğini atlama.
+Liste bazlı, kısa, net, kapsamlı ve profesyonel yaz.
+Önce tüm kodu tara, sonra sonucu ver.
