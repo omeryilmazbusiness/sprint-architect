@@ -1,0 +1,187 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase, understand the current manager dashboard and doctor create flow, and then implement the following changes in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break currently working flows
+- First inspect the real implementation deeply
+- Then directly implement the requested changes
+- Preserve good existing architecture where possible
+- Refactor only where needed for correctness, maintainability, or UX quality
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random UI patching without understanding the data flow
+- Solve root causes, not just visual symptoms
+
+PRIMARY REQUESTS
+
+1) ADD A PENDING DOCUMENTS CARD IN THE DASHBOARD OVERVIEW
+Required behavior:
+- Add a "Pending Documents" card/section in the manager dashboard overview area
+- It must feel like a first-class part of the dashboard, not an afterthought
+- The section must show document-related operational visibility for managers
+
+2) DESIGN THE PENDING DOCUMENTS SECTION AS A PROFESSIONAL RIGHT-FLOWING 3-COLUMN UX
+Required behavior:
+- Build the Pending Documents area in a professional layout that shows items in right-flowing groups of 3
+- The design must be premium, clean, and easy to scan
+- It must work well on mobile and desktop
+- It must not feel cluttered
+- Use clear hierarchy, spacing, badges, subtle grouping, and strong readability
+
+The information should help a manager quickly understand:
+- which guest has pending documents
+- how many documents are still pending
+- which ones are uploaded vs missing if available
+- what is most urgent
+
+If backend data already supports this, reuse it cleanly.
+If it does not, add the correct backend DTO / use case / repository flow in a SOLID way.
+
+3) REMOVE "NEW APPOINTMENTS" FROM QUICK ACTIONS
+Required behavior:
+- Remove "New Appointments" from the Quick Actions section
+- Clean up any related UI config, mapping, ordering, or dead code
+- Keep the quick actions layout balanced and professional after removal
+
+4) REDESIGN DOCTOR ADD FLOW AS A PROFESSIONAL BOTTOM POPUP PAGE
+Required behavior:
+- The Add Doctor flow must open as a polished bottom popup page / bottom sheet style screen
+- It must feel premium and professional on phone/mobile
+- It must be easy to fill and submit
+- Keyboard, scroll, safe area, submit CTA visibility, validation messages, and loading states must all be handled properly
+- It must work reliably on mobile
+
+5) KEEP THE IMPLEMENTATION SOLID-COMPLIANT
+Requirements:
+- thin route/controller layer
+- business logic in service/use case layer
+- DB logic in repository layer
+- reusable UI primitives/components
+- form state separated cleanly from presentation where appropriate
+- no duplicated mutation logic
+- no giant components if avoidable
+- no broken query invalidation
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before making changes, inspect and understand:
+- current dashboard overview structure
+- current dashboard KPI / card composition
+- current dashboard data source(s)
+- whether pending document data already exists in dashboard endpoints or separate endpoints
+- current quick actions structure and how "New Appointments" is rendered
+- current doctor create flow
+- current doctor form modal/bottom-sheet implementation
+- current doctor create mutation
+- current query invalidation / refetch logic after doctor creation
+- any mobile-specific layout issues affecting doctor create UX
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+Use this exact order:
+
+PHASE 1 — DASHBOARD OVERVIEW REFACTOR
+1. Inspect current overview/KPI/dashboard composition
+2. Add a "Pending Documents" overview card/section
+3. Ensure this section gets the correct data from backend
+4. If backend changes are needed:
+   - add them cleanly in route/service/repository layers
+   - do not overload unrelated endpoints with messy logic
+5. Remove "Arrivals this month" only if it conflicts with overview density or current requested layout
+6. Remove "New Appointments" from Quick Actions
+7. Clean up related UI config and dead code safely
+
+Acceptance criteria:
+- Pending Documents appears in dashboard overview
+- It is useful and visually integrated
+- Quick Actions no longer contains New Appointments
+- Layout remains professional and balanced
+
+PHASE 2 — PENDING DOCUMENTS UX
+1. Build the Pending Documents section with a right-flowing 3-column style layout
+2. The design must feel operational and premium
+3. Each item/card should be quick to scan
+4. Use clean badges/status indicators
+5. Make mobile behavior excellent:
+   - responsive stacking when needed
+   - no overlap
+   - good spacing
+   - preserved readability
+6. Use professional UX patterns, not plain raw lists
+
+Suggested information hierarchy per item:
+- guest name
+- pending count
+- uploaded/missing summary
+- optional urgency/status badge
+- optional compact document summary chips
+
+Acceptance criteria:
+- Manager can immediately understand document state at a glance
+- Section looks professional
+- Mobile layout is strong
+- 3-column/right-flowing concept works cleanly
+
+PHASE 3 — DOCTOR ADD UX REBUILD
+1. Inspect existing Add Doctor flow end-to-end
+2. Replace or refactor it into a bottom popup page / premium bottom sheet experience
+3. Ensure:
+   - keyboard-safe layout
+   - scrollable content
+   - sticky or always-accessible submit action if appropriate
+   - visible validation errors
+   - loading state
+   - success state
+   - failure state
+4. Keep the design professional and polished
+5. Ensure successful creation updates the doctor list immediately
+6. Ensure mobile touch interactions are reliable
+
+Acceptance criteria:
+- Add Doctor opens from bottom in a premium way
+- form is easy to use on phone
+- doctor can be created successfully
+- doctor list refreshes automatically
+- no broken submit / hidden button / keyboard issues
+
+PHASE 4 — SOLID CLEANUP
+1. Review the final implementation for SOLID alignment
+2. Separate UI, form logic, mutation logic, and repository logic cleanly
+3. Remove duplicated quick action or dashboard mapping code if present
+4. Keep files understandable and maintainable
+5. Do not leave temporary hacks behind
+
+YOU MUST CHECK FOR THESE RISKS
+- dashboard section fed by the wrong endpoint
+- pending documents summary exists but shape does not match UI needs
+- quick actions rendered from config object that still contains removed action
+- add doctor bottom sheet not keyboard-safe
+- submit button hidden under keyboard/safe area
+- mutation succeeds but query cache does not invalidate
+- mobile-specific touch/portal/z-index problems
+- duplicated doctor create logic in multiple places
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current codebase
+2. Root cause or architecture observations
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of dashboard overview changes
+2. Summary of Pending Documents UX design
+3. Confirmation that New Appointments was removed from Quick Actions
+4. Summary of Add Doctor bottom popup page UX changes
+5. Exact files changed
+6. Manual QA checklist for phone/mobile
+7. Any remaining future improvements
+
+START NOW
+First inspect the existing implementation for dashboard overview, quick actions, pending documents data flow, and doctor create UX.
+Then implement the requested changes end-to-end in the order above.

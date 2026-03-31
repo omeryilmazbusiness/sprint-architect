@@ -4,31 +4,133 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { T, cardShadow } from "@/constants/adminTheme";
+import { T } from "@/constants/adminTheme";
 import type { PendingGuestDocSummary } from "@/hooks/useManagerDashboard";
+
+const SCREEN_W = Dimensions.get("window").width;
+const GUTTER = T.sp16;
+const COL_GAP = 8;
+const NUM_COLS = 3;
+const CARD_W = (SCREEN_W - GUTTER * 2 - COL_GAP * (NUM_COLS - 1)) / NUM_COLS;
 
 interface Props {
   items: PendingGuestDocSummary[];
   isLoading: boolean;
 }
 
-function Skeleton() {
+function SkeletonCard() {
   return (
-    <View style={styles.card}>
-      <View style={[styles.skeletonLine, { width: "50%", height: 13, marginBottom: 8 }]} />
-      <View style={[styles.skeletonLine, { width: "80%", height: 11 }]} />
+    <View style={[styles.card, { width: CARD_W }]}>
+      <View style={styles.skeletonAvatar} />
+      <View style={[styles.skeletonLine, { width: "80%", height: 10, marginTop: 6 }]} />
+      <View style={[styles.skeletonLine, { width: "50%", height: 8, marginTop: 4 }]} />
+      <View style={[styles.skeletonBadge]} />
     </View>
+  );
+}
+
+function GuestDocCard({ item }: { item: PendingGuestDocSummary }) {
+  const urgency = item.pending >= 3 ? "high" : item.pending === 2 ? "medium" : "low";
+  const borderColor =
+    urgency === "high"
+      ? T.danger + "55"
+      : urgency === "medium"
+      ? T.warning + "55"
+      : T.border;
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.card,
+        { width: CARD_W, borderColor, opacity: pressed ? 0.78 : 1 },
+      ]}
+      onPress={() => router.push(`/(manager)/patients/${item.patientId}`)}
+    >
+      <View style={styles.cardHeader}>
+        <View
+          style={[
+            styles.avatar,
+            {
+              backgroundColor:
+                urgency === "high"
+                  ? T.danger + "18"
+                  : urgency === "medium"
+                  ? T.warning + "18"
+                  : T.accent + "14",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.avatarText,
+              {
+                color:
+                  urgency === "high"
+                    ? T.danger
+                    : urgency === "medium"
+                    ? T.warning
+                    : T.accent,
+              },
+            ]}
+          >
+            {item.patientName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.countBadge,
+            {
+              backgroundColor:
+                urgency === "high"
+                  ? T.danger
+                  : urgency === "medium"
+                  ? T.warning
+                  : T.accent,
+            },
+          ]}
+        >
+          <Text style={styles.countText}>{item.pending}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.guestName} numberOfLines={1}>
+        {item.patientName}
+      </Text>
+
+      <Text style={styles.pendingLabel}>
+        {item.pending} pending
+        {item.uploaded > 0 ? ` · ${item.uploaded} done` : ""}
+      </Text>
+
+      {item.pendingDocNames.slice(0, 2).map((name, idx) => (
+        <View key={idx} style={styles.docChip}>
+          <Ionicons name="document-text-outline" size={9} color={T.textMuted} />
+          <Text style={styles.docChipText} numberOfLines={1}>
+            {name}
+          </Text>
+        </View>
+      ))}
+      {item.pendingDocNames.length > 2 && (
+        <Text style={styles.moreText}>
+          +{item.pendingDocNames.length - 2} more
+        </Text>
+      )}
+    </Pressable>
   );
 }
 
 export function PendingDocumentsSection({ items, isLoading }: Props) {
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        {[0, 1].map((i) => <Skeleton key={i} />)}
+      <View style={styles.grid}>
+        {[0, 1, 2].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
       </View>
     );
   }
@@ -36,188 +138,105 @@ export function PendingDocumentsSection({ items, isLoading }: Props) {
   if (items.length === 0) {
     return (
       <View style={styles.allClearCard}>
-        <View style={styles.allClearIcon}>
-          <Ionicons name="checkmark-circle" size={22} color={T.success} />
+        <View style={styles.allClearIconWrap}>
+          <Ionicons name="checkmark-circle" size={24} color={T.success} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.allClearTitle}>All documents received</Text>
-          <Text style={styles.allClearSub}>No guests with pending documents right now</Text>
+          <Text style={styles.allClearTitle}>All clear</Text>
+          <Text style={styles.allClearSub}>No guests with pending documents</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.grid}>
       {items.map((item) => (
-        <Pressable
-          key={item.patientId}
-          style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push(`/(manager)/patients/${item.patientId}`)}
-        >
-          <View style={styles.cardTop}>
-            <View style={styles.guestInfo}>
-              <View style={styles.avatarWrap}>
-                <Text style={styles.avatarText}>
-                  {item.patientName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.guestName} numberOfLines={1}>
-                  {item.patientName}
-                </Text>
-                <View style={styles.chipsRow}>
-                  {item.pending > 0 && (
-                    <View style={styles.pendingChip}>
-                      <Ionicons name="time-outline" size={11} color={T.warning} />
-                      <Text style={styles.pendingChipText}>
-                        {item.pending} pending
-                      </Text>
-                    </View>
-                  )}
-                  {item.uploaded > 0 && (
-                    <View style={styles.uploadedChip}>
-                      <Ionicons name="cloud-upload-outline" size={11} color={T.success} />
-                      <Text style={styles.uploadedChipText}>
-                        {item.uploaded} uploaded
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
-          </View>
-
-          {item.pendingDocNames.length > 0 && (
-            <View style={styles.docNamesRow}>
-              {item.pendingDocNames.slice(0, 3).map((name, idx) => (
-                <View key={idx} style={styles.docNameTag}>
-                  <Ionicons name="document-text-outline" size={10} color={T.warning} />
-                  <Text style={styles.docNameText} numberOfLines={1}>
-                    {name}
-                  </Text>
-                </View>
-              ))}
-              {item.pendingDocNames.length > 3 && (
-                <View style={[styles.docNameTag, styles.docNameTagMore]}>
-                  <Text style={styles.docNameTextMore}>
-                    +{item.pendingDocNames.length - 3} more
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </Pressable>
+        <GuestDocCard key={item.patientId} item={item} />
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 8,
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: COL_GAP,
   },
   card: {
     backgroundColor: T.surface,
     borderRadius: T.r12,
-    padding: T.sp16,
     borderWidth: 1,
     borderColor: T.border,
-    gap: 10,
+    padding: 10,
+    gap: 4,
+    minHeight: 108,
   },
-  cardTop: {
+  cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: T.sp12,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
   },
-  guestInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: T.sp12,
-  },
-  avatarWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: T.warning + "22",
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
   },
   avatarText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: T.warning,
+    fontSize: 13,
+  },
+  countBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  countText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: "#fff",
+    lineHeight: 14,
   },
   guestName: {
     fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 14,
+    fontSize: 12,
     color: T.text,
-    marginBottom: 4,
+    lineHeight: 16,
   },
-  chipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  pendingChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: T.warningBg,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  pendingChipText: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 11,
-    color: T.warning,
-  },
-  uploadedChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: T.successBg,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  uploadedChipText: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 11,
-    color: T.success,
-  },
-  docNamesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  docNameTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: T.warningBg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: T.r8,
-    maxWidth: "48%" as any,
-  },
-  docNameTagMore: {
-    backgroundColor: T.surfaceSubtle,
-  },
-  docNameText: {
+  pendingLabel: {
     fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: T.warning,
+    fontSize: 10,
+    color: T.textMuted,
+    lineHeight: 14,
+  },
+  docChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: T.surfaceSubtle,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginTop: 2,
+  },
+  docChipText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 10,
+    color: T.textSec,
     flexShrink: 1,
   },
-  docNameTextMore: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
+  moreText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 10,
     color: T.textMuted,
+    marginTop: 2,
   },
   allClearCard: {
     backgroundColor: T.successBg,
@@ -229,10 +248,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.success + "30",
   },
-  allClearIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  allClearIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: T.surface,
     alignItems: "center",
     justifyContent: "center",
@@ -249,8 +268,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
     opacity: 0.8,
   },
+  skeletonAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: T.border,
+  },
   skeletonLine: {
     backgroundColor: T.border,
-    borderRadius: 6,
+    borderRadius: 4,
+  },
+  skeletonBadge: {
+    width: 36,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: T.border,
+    marginTop: 6,
   },
 });

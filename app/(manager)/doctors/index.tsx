@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Platform,
   Modal,
   ScrollView,
-  Alert,
   RefreshControl,
   Animated,
   Dimensions,
@@ -21,29 +20,74 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { T, cardShadow } from "@/constants/adminTheme";
+import { T } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
-import DoctorListCard from "@/components/managerDoctors/DoctorListCard";
+import DoctorListCard, { Doctor } from "@/components/managerDoctors/DoctorListCard";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
-interface Doctor {
-  id: string;
+interface DoctorForm {
   fullName: string;
-  specialty?: string;
-  phone?: string;
-  email?: string;
-  photoUrl?: string;
-  university?: string;
-  graduationYear?: number;
-  experienceYears?: number;
-  bio?: string;
-  languages?: string;
-  certifications?: string;
-  diplomaUrl?: string;
-  createdAt?: string;
+  specialty: string;
+  phone: string;
+  email: string;
+  university: string;
+  graduationYear: string;
+  experienceYears: string;
+  languages: string;
+  bio: string;
+  certifications: string;
 }
+
+const EMPTY_FORM: DoctorForm = {
+  fullName: "",
+  specialty: "",
+  phone: "",
+  email: "",
+  university: "",
+  graduationYear: "",
+  experienceYears: "",
+  languages: "",
+  bio: "",
+  certifications: "",
+};
+
+function SectionLabel({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
+  return (
+    <View style={sectionStyles.row}>
+      <View style={sectionStyles.iconWrap}>
+        <Ionicons name={icon} size={14} color={T.accent} />
+      </View>
+      <Text style={sectionStyles.label}>{title}</Text>
+    </View>
+  );
+}
+
+const sectionStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  iconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: T.accent + "14",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 12,
+    color: T.accent,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+});
 
 export default function DoctorsScreen() {
   const insets = useSafeAreaInsets();
@@ -55,18 +99,8 @@ export default function DoctorsScreen() {
   const [editingItem, setEditingItem] = useState<Doctor | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState({
-    fullName: "",
-    specialty: "",
-    phone: "",
-    email: "",
-    university: "",
-    graduationYear: "",
-    experienceYears: "",
-    languages: "",
-    bio: "",
-    certifications: "",
-  });
+  const [form, setForm] = useState<DoctorForm>(EMPTY_FORM);
+  const [nameError, setNameError] = useState(false);
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -99,13 +133,13 @@ export default function DoctorsScreen() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (body: any) => {
+    mutationFn: async (body: Record<string, unknown>) => {
       const method = editingItem ? "PUT" : "POST";
       const path = editingItem ? `/v1/manager/doctors/${editingItem.id}` : "/v1/manager/doctors";
       const res = await apiRequest(method, path, body);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Request failed" }));
-        throw new Error((err as any).message ?? "Failed to save doctor");
+        throw new Error((err as { message?: string }).message ?? "Failed to save doctor");
       }
       return res.json();
     },
@@ -113,29 +147,33 @@ export default function DoctorsScreen() {
       qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
       setShowForm(false);
       setEditingItem(null);
-      resetForm();
+      setForm(EMPTY_FORM);
       showToast(editingItem ? "Doctor updated" : "Doctor added");
     },
-    onError: (e: any) => showToast(e.message ?? "Failed to save doctor", "error"),
+    onError: (e: Error) => showToast(e.message ?? "Failed to save doctor", "error"),
   });
 
-  const resetForm = () => {
-    setForm({
-      fullName: "",
-      specialty: "",
-      phone: "",
-      email: "",
-      university: "",
-      graduationYear: "",
-      experienceYears: "",
-      languages: "",
-      bio: "",
-      certifications: "",
-    });
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
+    },
+    onSuccess: (_data, id) => {
+      setDeletedIds((prev) => new Set(prev).add(id));
+      showToast("Doctor removed");
+      qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
+    },
+    onError: (e: Error & { code?: string }) => {
+      if (e?.code === "DOC-DEL-001") {
+        showToast("Doctor has appointments — cannot delete", "error");
+      } else {
+        showToast(e.message ?? "Failed to delete doctor", "error");
+      }
+    },
+  });
 
   const handleEdit = (doctor: Doctor) => {
     setEditingItem(doctor);
+    setNameError(false);
     setForm({
       fullName: doctor.fullName || "",
       specialty: doctor.specialty || "",
@@ -153,37 +191,29 @@ export default function DoctorsScreen() {
 
   const handleCreate = () => {
     setEditingItem(null);
-    resetForm();
+    setNameError(false);
+    setForm(EMPTY_FORM);
     setShowForm(true);
   };
 
+  const handleClose = () => {
+    setShowForm(false);
+    setNameError(false);
+  };
+
   const handleSubmit = () => {
-    if (!form.fullName.trim()) return;
-    const payload = {
+    if (!form.fullName.trim()) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
+    const payload: Record<string, unknown> = {
       ...form,
       graduationYear: form.graduationYear ? parseInt(form.graduationYear) : null,
       experienceYears: form.experienceYears ? parseInt(form.experienceYears) : null,
     };
     mutation.mutate(payload);
   };
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/v1/manager/doctors/${id}`);
-    },
-    onSuccess: (_data, id) => {
-      setDeletedIds((prev) => new Set(prev).add(id));
-      showToast("Doctor removed");
-      qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
-    },
-    onError: (e: any) => {
-      if (e?.code === "DOC-DEL-001") {
-        showToast("Doctor has appointments — cannot delete", "error");
-      } else {
-        showToast(e.message ?? "Failed to delete doctor", "error");
-      }
-    },
-  });
 
   return (
     <View style={styles.root}>
@@ -267,163 +297,257 @@ export default function DoctorsScreen() {
         />
       )}
 
-      <Modal visible={showForm} transparent animationType="none" onRequestClose={() => setShowForm(false)} statusBarTranslucent>
+      {/* ─── Bottom Sheet Form ─── */}
+      <Modal
+        visible={showForm}
+        transparent
+        animationType="none"
+        onRequestClose={handleClose}
+        statusBarTranslucent
+      >
         <View style={styles.sheetOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowForm(false)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ width: "100%" }}
           >
-          <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingItem ? "Edit Doctor" : "Add Doctor"}</Text>
-              <Pressable onPress={() => setShowForm(false)} hitSlop={10} style={styles.sheetCloseBtn}>
-                <Ionicons name="close" size={24} color={T.text} />
-              </Pressable>
-            </View>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalContent}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Full Name *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Dr. Jane Smith"
-                placeholderTextColor={T.textMuted}
-                value={form.fullName}
-                onChangeText={(v) => setForm((f) => ({ ...f, fullName: v }))}
-              />
-            </View>
-            <View style={styles.fieldRow}>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Specialty</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Cardiology"
-                  placeholderTextColor={T.textMuted}
-                  value={form.specialty}
-                  onChangeText={(v) => setForm((f) => ({ ...f, specialty: v }))}
-                />
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Phone</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="+1..."
-                  placeholderTextColor={T.textMuted}
-                  value={form.phone}
-                  onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))}
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="dr.smith@clinic.com"
-                placeholderTextColor={T.textMuted}
-                value={form.email}
-                onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>University</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Medical School Name"
-                placeholderTextColor={T.textMuted}
-                value={form.university}
-                onChangeText={(v) => setForm((f) => ({ ...f, university: v }))}
-              />
-            </View>
-            <View style={styles.fieldRow}>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Grad. Year</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="2010"
-                  placeholderTextColor={T.textMuted}
-                  value={form.graduationYear}
-                  onChangeText={(v) => setForm((f) => ({ ...f, graduationYear: v }))}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Exp. Years</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="12"
-                  placeholderTextColor={T.textMuted}
-                  value={form.experienceYears}
-                  onChangeText={(v) => setForm((f) => ({ ...f, experienceYears: v }))}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Languages</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="English, Turkish..."
-                placeholderTextColor={T.textMuted}
-                value={form.languages}
-                onChangeText={(v) => setForm((f) => ({ ...f, languages: v }))}
-              />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Bio</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.textArea]}
-                placeholder="Doctor's background..."
-                placeholderTextColor={T.textMuted}
-                value={form.bio}
-                onChangeText={(v) => setForm((f) => ({ ...f, bio: v }))}
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Certifications</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.textArea]}
-                placeholder="List certifications..."
-                placeholderTextColor={T.textMuted}
-                value={form.certifications}
-                onChangeText={(v) => setForm((f) => ({ ...f, certifications: v }))}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </ScrollView>
-          <View style={styles.modalActions}>
-            <Pressable style={styles.btnSecondary} onPress={() => setShowForm(false)}>
-              <Text style={styles.btnSecondaryText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.btnPrimary, { opacity: !form.fullName.trim() || mutation.isPending ? 0.6 : 1 }]}
-              onPress={handleSubmit}
-              disabled={!form.fullName.trim() || mutation.isPending}
+            <Animated.View
+              style={[
+                styles.sheetContainer,
+                { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 16 },
+              ]}
             >
-              {mutation.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.btnPrimaryText}>{editingItem ? "Save Changes" : "Add Doctor"}</Text>
-              }
-            </Pressable>
-          </View>
-          </Animated.View>
+              {/* Handle pill */}
+              <View style={styles.sheetHandle} />
+
+              {/* Header */}
+              <View style={styles.sheetHeader}>
+                <View>
+                  <Text style={styles.sheetTitle}>
+                    {editingItem ? "Edit Doctor" : "Add Doctor"}
+                  </Text>
+                  <Text style={styles.sheetSubtitle}>
+                    {editingItem ? "Update doctor information" : "Fill in the doctor's details"}
+                  </Text>
+                </View>
+                <Pressable onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
+                  <View style={styles.sheetCloseWrap}>
+                    <Ionicons name="close" size={18} color={T.textSec} />
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Scrollable form body */}
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.sheetBody}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {/* ── Identity ── */}
+                <View style={styles.section}>
+                  <SectionLabel icon="person-outline" title="Identity" />
+                  <View style={styles.sectionContent}>
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>
+                        Full Name <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.fieldInput,
+                          nameError && styles.fieldInputError,
+                        ]}
+                        placeholder="Dr. Jane Smith"
+                        placeholderTextColor={T.textMuted}
+                        value={form.fullName}
+                        onChangeText={(v) => {
+                          setForm((f) => ({ ...f, fullName: v }));
+                          if (v.trim()) setNameError(false);
+                        }}
+                        returnKeyType="next"
+                      />
+                      {nameError && (
+                        <Text style={styles.errorText}>Full name is required</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.fieldRow}>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Specialty</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="Cardiology"
+                          placeholderTextColor={T.textMuted}
+                          value={form.specialty}
+                          onChangeText={(v) => setForm((f) => ({ ...f, specialty: v }))}
+                          returnKeyType="next"
+                        />
+                      </View>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Languages</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="EN, TR..."
+                          placeholderTextColor={T.textMuted}
+                          value={form.languages}
+                          onChangeText={(v) => setForm((f) => ({ ...f, languages: v }))}
+                          returnKeyType="next"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Contact ── */}
+                <View style={styles.section}>
+                  <SectionLabel icon="call-outline" title="Contact" />
+                  <View style={styles.sectionContent}>
+                    <View style={styles.fieldRow}>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Phone</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="+1..."
+                          placeholderTextColor={T.textMuted}
+                          value={form.phone}
+                          onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))}
+                          keyboardType="phone-pad"
+                          returnKeyType="next"
+                        />
+                      </View>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Email</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="dr@clinic.com"
+                          placeholderTextColor={T.textMuted}
+                          value={form.email}
+                          onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          returnKeyType="next"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Education ── */}
+                <View style={styles.section}>
+                  <SectionLabel icon="school-outline" title="Education" />
+                  <View style={styles.sectionContent}>
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>University</Text>
+                      <TextInput
+                        style={styles.fieldInput}
+                        placeholder="Medical School Name"
+                        placeholderTextColor={T.textMuted}
+                        value={form.university}
+                        onChangeText={(v) => setForm((f) => ({ ...f, university: v }))}
+                        returnKeyType="next"
+                      />
+                    </View>
+                    <View style={styles.fieldRow}>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Grad. Year</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="2010"
+                          placeholderTextColor={T.textMuted}
+                          value={form.graduationYear}
+                          onChangeText={(v) => setForm((f) => ({ ...f, graduationYear: v }))}
+                          keyboardType="numeric"
+                          returnKeyType="next"
+                        />
+                      </View>
+                      <View style={[styles.field, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Exp. Years</Text>
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="12"
+                          placeholderTextColor={T.textMuted}
+                          value={form.experienceYears}
+                          onChangeText={(v) => setForm((f) => ({ ...f, experienceYears: v }))}
+                          keyboardType="numeric"
+                          returnKeyType="next"
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>Certifications</Text>
+                      <TextInput
+                        style={[styles.fieldInput, styles.textArea]}
+                        placeholder="List certifications..."
+                        placeholderTextColor={T.textMuted}
+                        value={form.certifications}
+                        onChangeText={(v) => setForm((f) => ({ ...f, certifications: v }))}
+                        multiline
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Bio ── */}
+                <View style={[styles.section, { marginBottom: 0 }]}>
+                  <SectionLabel icon="document-text-outline" title="Bio" />
+                  <View style={styles.sectionContent}>
+                    <View style={styles.field}>
+                      <TextInput
+                        style={[styles.fieldInput, styles.textAreaTall]}
+                        placeholder="Doctor's background, expertise, approach..."
+                        placeholderTextColor={T.textMuted}
+                        value={form.bio}
+                        onChangeText={(v) => setForm((f) => ({ ...f, bio: v }))}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* ── Sticky actions ── */}
+              <View style={styles.sheetActions}>
+                <Pressable
+                  style={({ pressed }) => [styles.btnCancel, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={handleClose}
+                >
+                  <Text style={styles.btnCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.btnSave,
+                    { opacity: !form.fullName.trim() || mutation.isPending || pressed ? 0.72 : 1 },
+                  ]}
+                  onPress={handleSubmit}
+                  disabled={mutation.isPending}
+                >
+                  {mutation.isPending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={editingItem ? "checkmark-circle-outline" : "add-circle-outline"}
+                        size={18}
+                        color="#fff"
+                      />
+                      <Text style={styles.btnSaveText}>
+                        {editingItem ? "Save Changes" : "Add Doctor"}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            </Animated.View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
 
-      <Modal
-        visible={!!toast}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={() => {}}
-      >
+      {/* ─── Toast ─── */}
+      <Modal visible={!!toast} transparent animationType="none" statusBarTranslucent onRequestClose={() => {}}>
         <View style={styles.toastOverlay} pointerEvents="none" testID="doctors-screen-toast">
           <View
             style={[
@@ -446,8 +570,8 @@ export default function DoctorsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
   addBtn: { padding: 6 },
+
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -468,33 +592,7 @@ const styles = StyleSheet.create({
     color: T.text,
     height: 42,
   },
-  card: {
-    backgroundColor: T.surface,
-    borderRadius: T.r12,
-    padding: T.sp16,
-    marginBottom: T.sp12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: T.sp12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: "#fff",
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 16,
-  },
-  info: { flex: 1 },
-  name: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: T.text },
-  meta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
+
   listCount: {
     fontFamily: "Inter_600SemiBold" as any,
     fontSize: 13,
@@ -506,6 +604,7 @@ const styles = StyleSheet.create({
   empty: { paddingTop: 80, alignItems: "center", gap: T.sp8, paddingHorizontal: T.sp32 },
   emptyTitle: { fontFamily: "Inter_600SemiBold" as any, fontSize: 16, color: T.text, textAlign: "center" },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
+
   skeletonCard: {
     backgroundColor: T.surface,
     borderRadius: T.r16,
@@ -519,60 +618,169 @@ const styles = StyleSheet.create({
   skeletonRow: { flexDirection: "row", alignItems: "center", gap: T.sp12 },
   skeletonAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.border, flexShrink: 0 },
   skeletonLine: { height: 13, backgroundColor: T.border, borderRadius: 6 },
-  modal: { flex: 1, backgroundColor: T.bg },
-  modalHeader: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: T.sp20, paddingTop: T.sp24, paddingBottom: T.sp16,
-    backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border,
-  },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  modalContent: { padding: T.sp20, gap: T.sp16, paddingBottom: 40 },
-  field: { gap: T.sp4 },
-  fieldRow: { flexDirection: "row", gap: T.sp12 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
-  fieldInput: {
-    backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: T.r10,
-    paddingHorizontal: 14, paddingVertical: T.sp12,
-    fontFamily: "Inter_400Regular", fontSize: 15, color: T.text,
-  },
-  textArea: { height: 80, textAlignVertical: "top" },
-  modalActions: {
-    flexDirection: "row", padding: T.sp20, gap: T.sp12,
-    borderTopWidth: 1, borderTopColor: T.border, backgroundColor: T.surface,
-    ...(Platform.OS === "web" ? { paddingBottom: 34 } : {}),
-  },
-  btnSecondary: {
-    flex: 1, height: 46, borderRadius: T.r10, borderWidth: 1, borderColor: T.border,
-    alignItems: "center", justifyContent: "center", backgroundColor: T.surface,
-  },
-  btnSecondaryText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
-  btnPrimary: {
-    flex: 2, height: 46, borderRadius: T.r10, backgroundColor: T.primary,
-    alignItems: "center", justifyContent: "center",
-  },
-  btnPrimaryText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
+
+  // ── Sheet ──
   sheetOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.48)",
     justifyContent: "flex-end",
   },
   sheetContainer: {
     backgroundColor: T.bg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "90%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "92%",
     overflow: "hidden",
   },
   sheetHandle: {
-    width: 40,
+    width: 36,
     height: 4,
-    backgroundColor: T.border,
+    backgroundColor: T.borderStrong,
     borderRadius: 2,
     alignSelf: "center",
     marginTop: 10,
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: T.sp20,
+    paddingTop: T.sp16,
+    paddingBottom: T.sp16,
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+  },
+  sheetTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    color: T.text,
+  },
+  sheetSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.textMuted,
+    marginTop: 2,
   },
   sheetCloseBtn: { padding: 4 },
+  sheetCloseWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: T.surfaceSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: T.border,
+  },
+
+  sheetBody: {
+    padding: T.sp20,
+    paddingBottom: 12,
+    gap: 0,
+  },
+
+  // ── Sections ──
+  section: {
+    marginBottom: T.sp20,
+  },
+  sectionContent: {
+    backgroundColor: T.surface,
+    borderRadius: T.r12,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: T.sp16,
+    gap: T.sp16,
+  },
+
+  // ── Fields ──
+  field: { gap: T.sp4 },
+  fieldRow: { flexDirection: "row", gap: T.sp12 },
+  fieldLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: T.textSec,
+    marginBottom: 2,
+  },
+  required: {
+    color: T.danger,
+    fontFamily: "Inter_600SemiBold" as any,
+  },
+  fieldInput: {
+    backgroundColor: T.bg,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: T.r10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 11 : 9,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: T.text,
+  },
+  fieldInputError: {
+    borderColor: T.danger,
+    backgroundColor: T.danger + "06",
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: T.danger,
+    marginTop: 2,
+  },
+  textArea: {
+    height: 76,
+    textAlignVertical: "top",
+    paddingTop: Platform.OS === "ios" ? 11 : 9,
+  },
+  textAreaTall: {
+    height: 96,
+    textAlignVertical: "top",
+    paddingTop: Platform.OS === "ios" ? 11 : 9,
+  },
+
+  // ── Actions ──
+  sheetActions: {
+    flexDirection: "row",
+    paddingHorizontal: T.sp20,
+    paddingTop: T.sp12,
+    paddingBottom: Platform.OS === "web" ? 34 : T.sp8,
+    gap: T.sp12,
+    borderTopWidth: 1,
+    borderTopColor: T.border,
+    backgroundColor: T.bg,
+  },
+  btnCancel: {
+    flex: 1,
+    height: 48,
+    borderRadius: T.r10,
+    borderWidth: 1,
+    borderColor: T.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: T.surface,
+  },
+  btnCancelText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: T.textSec,
+  },
+  btnSave: {
+    flex: 2,
+    height: 48,
+    borderRadius: T.r10,
+    backgroundColor: T.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  btnSaveText: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 15,
+    color: "#fff",
+  },
+
+  // ── Toast ──
   toastOverlay: {
     flex: 1,
     justifyContent: "flex-end",

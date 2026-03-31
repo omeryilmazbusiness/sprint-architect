@@ -51,15 +51,8 @@ export function ManagerQuickActions() {
         }),
     },
     {
-      icon: "calendar-number-outline",
-      label: "New Appt",
-      color: T.accent,
-      bgColor: T.accent + "15",
-      onPress: () => router.push("/(manager-tabs)/users"),
-    },
-    {
       icon: "document-text-outline",
-      label: "Add New Doc",
+      label: "Doc Types",
       color: T.warning,
       bgColor: T.warning + "15",
       onPress: () => router.push("/(manager)/document-types"),
