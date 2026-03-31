@@ -77,12 +77,12 @@ interface Props {
 }
 
 export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Props) {
-  const { kpis, upcomingNext7Days, arrivingThisMonth } = data;
+  const { kpis, upcomingNext7Days } = data;
 
   if (isLoading) {
     return (
       <View style={styles.grid}>
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2].map((i) => (
           <KpiSkeleton key={i} />
         ))}
       </View>
@@ -107,14 +107,6 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
         subtitle="tap to view list"
         highlight
         onPress={onAppointmentsTodayPress}
-      />
-      <KpiCard
-        label="Arrivals This Month"
-        value={arrivingThisMonth}
-        icon="airplane-outline"
-        color="#6366F1"
-        subtitle="patients arriving"
-        onPress={() => router.push("/(manager-tabs)/users")}
       />
       <KpiCard
         label="Upcoming 7 Days"

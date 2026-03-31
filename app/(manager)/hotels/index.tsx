@@ -53,10 +53,14 @@ export default function HotelsScreen() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (body: any) => {
+    mutationFn: async (body: Record<string, unknown>) => {
       const method = editingItem ? "PUT" : "POST";
       const path = editingItem ? `/v1/manager/hotels/${editingItem.id}` : "/v1/manager/hotels";
       const res = await apiRequest(method, path, body);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Request failed" }));
+        throw new Error((err as { message?: string }).message ?? "Failed to save hotel");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -65,7 +69,7 @@ export default function HotelsScreen() {
       setEditingItem(null);
       resetForm();
     },
-    onError: (e: any) => Alert.alert("Error", e.message ?? "Failed to save hotel"),
+    onError: (e: Error) => Alert.alert("Error", e.message ?? "Failed to save hotel"),
   });
 
   const resetForm = () => {
@@ -102,10 +106,16 @@ export default function HotelsScreen() {
 
   const handleSubmit = () => {
     if (!form.name.trim()) return;
-    const payload = {
-      ...form,
-      stars: form.stars ? parseInt(form.stars) : null,
+    const starsVal = form.stars ? parseInt(form.stars, 10) : undefined;
+    const payload: Record<string, unknown> = {
+      name: form.name.trim(),
     };
+    if (form.address.trim()) payload.address = form.address.trim();
+    if (form.phone.trim()) payload.phone = form.phone.trim();
+    if (form.email.trim()) payload.email = form.email.trim();
+    if (form.website.trim()) payload.website = form.website.trim();
+    if (form.notes.trim()) payload.notes = form.notes.trim();
+    if (starsVal !== undefined && !isNaN(starsVal)) payload.stars = starsVal;
     mutation.mutate(payload);
   };
 

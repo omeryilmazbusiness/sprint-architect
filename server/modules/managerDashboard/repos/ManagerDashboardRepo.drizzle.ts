@@ -1,4 +1,4 @@
-import { and, count, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import {
   addDays,
   endOfDay,
@@ -10,12 +10,13 @@ import {
 import { db } from "../../../db";
 import {
   appointments,
+  documentTypes,
   patientDocuments,
   patientPlans,
   patients,
 } from "@shared/schema";
 import type { IManagerDashboardRepo, ManagerDashboardData } from "./ManagerDashboardRepo";
-import type { DashboardAppt } from "../schemas/managerDashboard.schemas";
+import type { DashboardAppt, PendingGuestDocSummary } from "../schemas/managerDashboard.schemas";
 
 function mapAppt(a: {
   id: string;
@@ -148,6 +149,8 @@ export class DrizzleManagerDashboardRepo implements IManagerDashboardRepo {
 
     const missingAssignments = Math.max(0, activeGuests - completePlans);
 
+    const pendingGuestDocs = await this.getPendingGuestDocs(clinicId);
+
     return {
       activeGuests,
       appointmentsToday,
@@ -157,7 +160,60 @@ export class DrizzleManagerDashboardRepo implements IManagerDashboardRepo {
       arrivingThisMonth,
       todayAppointments: todayApptRows.map(mapAppt),
       monthAppointments: monthApptRows.map(mapAppt),
+      pendingGuestDocs,
     };
+  }
+
+  private async getPendingGuestDocs(clinicId: string): Promise<PendingGuestDocSummary[]> {
+    const rows = await db.query.patientDocuments.findMany({
+      where: and(
+        eq(patientDocuments.clinicId, clinicId),
+        inArray(patientDocuments.status, ["ASSIGNED", "UPLOADED"]),
+      ),
+      with: {
+        patient: { columns: { id: true, fullName: true } },
+        documentType: { columns: { name: true } },
+      },
+    });
+
+    const byPatient = new Map<
+      string,
+      { patientName: string; pending: number; uploaded: number; pendingDocNames: string[] }
+    >();
+
+    for (const row of rows) {
+      if (!row.patient) continue;
+      const pid = row.patient.id;
+      if (!byPatient.has(pid)) {
+        byPatient.set(pid, {
+          patientName: row.patient.fullName,
+          pending: 0,
+          uploaded: 0,
+          pendingDocNames: [],
+        });
+      }
+      const entry = byPatient.get(pid)!;
+      if (row.status === "ASSIGNED") {
+        entry.pending += 1;
+        if (row.documentType?.name) {
+          entry.pendingDocNames.push(row.documentType.name);
+        }
+      } else if (row.status === "UPLOADED") {
+        entry.uploaded += 1;
+      }
+    }
+
+    return Array.from(byPatient.entries())
+      .filter(([, v]) => v.pending > 0)
+      .sort((a, b) => b[1].pending - a[1].pending)
+      .slice(0, 8)
+      .map(([patientId, v]) => ({
+        patientId,
+        patientName: v.patientName,
+        pending: v.pending,
+        uploaded: v.uploaded,
+        pendingDocNames: v.pendingDocNames,
+      }));
   }
 }
 

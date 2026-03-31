@@ -19,6 +19,7 @@ import { ManagerKpiGrid } from "@/components/managerDashboard/ManagerKpiGrid";
 import { ManagerQuickActions } from "@/components/managerDashboard/ManagerQuickActions";
 
 import { AppointmentsTodaySheet } from "@/components/managerDashboard/AppointmentsTodaySheet";
+import { PendingDocumentsSection } from "@/components/managerDashboard/PendingDocumentsSection";
 import { useManagerDashboard } from "@/hooks/useManagerDashboard";
 
 interface ClinicInfo {
@@ -100,6 +101,15 @@ export default function ManagerDashboard() {
           <View style={styles.quickWrap}>
             <ManagerQuickActions />
           </View>
+
+          <SectionLabel
+            label="Pending Documents"
+            action={data.kpis.pendingDocuments > 0 ? `${data.kpis.pendingDocuments} total` : undefined}
+          />
+          <PendingDocumentsSection
+            items={data.pendingGuestDocs}
+            isLoading={isLoading}
+          />
 
           <SectionLabel label="Monthly Schedule" />
           <ManagerScheduleSection />

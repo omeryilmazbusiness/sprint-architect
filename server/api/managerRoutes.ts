@@ -682,8 +682,8 @@ router.post("/hotels", async (req, res, next) => {
 router.get("/hotels", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
-    const hotels = await hotelRepo.list(clinicId);
-    res.json(hotels);
+    const rows = await hotelRepo.list(clinicId);
+    res.json({ rows });
   } catch (e) { next(e); }
 });
 

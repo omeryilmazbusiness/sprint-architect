@@ -14,6 +14,7 @@ import {
   RefreshControl,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -266,9 +267,13 @@ export default function DoctorsScreen() {
         />
       )}
 
-      <Modal visible={showForm} transparent animationType="none" onRequestClose={() => setShowForm(false)}>
+      <Modal visible={showForm} transparent animationType="none" onRequestClose={() => setShowForm(false)} statusBarTranslucent>
         <View style={styles.sheetOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowForm(false)} />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ width: "100%" }}
+          >
           <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 20 }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
@@ -408,6 +413,7 @@ export default function DoctorsScreen() {
             </Pressable>
           </View>
           </Animated.View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 

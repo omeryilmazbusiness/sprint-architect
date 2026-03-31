@@ -19,6 +19,7 @@ export class GetManagerDashboard {
       arrivingThisMonth: data.arrivingThisMonth,
       todayAppointments: data.todayAppointments,
       monthAppointments: data.monthAppointments,
+      pendingGuestDocs: data.pendingGuestDocs,
     };
   }
 }

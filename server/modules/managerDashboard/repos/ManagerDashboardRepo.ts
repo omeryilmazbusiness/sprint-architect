@@ -1,4 +1,4 @@
-import type { DashboardAppt } from "../schemas/managerDashboard.schemas";
+import type { DashboardAppt, PendingGuestDocSummary } from "../schemas/managerDashboard.schemas";
 
 export interface ManagerDashboardData {
   activeGuests: number;
@@ -9,6 +9,7 @@ export interface ManagerDashboardData {
   arrivingThisMonth: number;
   todayAppointments: DashboardAppt[];
   monthAppointments: DashboardAppt[];
+  pendingGuestDocs: PendingGuestDocSummary[];
 }
 
 export interface IManagerDashboardRepo {

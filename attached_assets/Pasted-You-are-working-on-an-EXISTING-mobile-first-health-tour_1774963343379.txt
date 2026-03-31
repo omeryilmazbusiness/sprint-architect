@@ -1,0 +1,241 @@
+You are working on an EXISTING mobile-first health tourism manager application.
+
+Your task is to inspect the current codebase deeply, identify the real root causes of the following manager-side issues, and then fix them in the safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break currently working flows
+- First inspect the real codebase and identify root causes
+- Then directly implement the fixes
+- Preserve good existing architecture where possible
+- Refactor only where needed for correctness, maintainability, or UX quality
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Fix the real cause, not just the visible symptom
+- Prioritize mobile behavior because the issues are happening on phone screens
+
+PRIMARY ISSUES TO FIX
+
+1) MANAGER > ADD DOCTOR DOES NOT WORK ON PHONE
+Problem:
+- In manager screens, "Add Doctor" does not work properly on mobile/phone
+- The form may open but submission flow is broken, or touch/scroll/keyboard behavior may block correct usage
+
+Required outcome:
+- Manager must be able to create a doctor successfully on phone
+- Form UX must be mobile-safe, polished, and reliable
+- Errors must be visible and understandable
+- Successful creation must update the doctors list immediately
+
+2) MANAGER > HOTELS CREATE DOES NOT SHOW IN LIST ON PHONE
+Problem:
+- Manager fills hotel information on phone
+- taps add/create
+- but the hotel does not appear in the hotels list
+
+Required outcome:
+- Hotel creation must truly work end-to-end
+- If backend succeeds, the list must refresh correctly
+- If backend fails, the real reason must be shown clearly
+- Mobile form behavior must be stable and professional
+
+3) GUEST DETAIL > DOCUMENT ASSIGN POPUP/BOTTOM SHEET SHOWS NO DOCUMENTS
+Problem:
+- In guest detail, document assign section opens a popup/bottom sheet
+- but no document items appear inside
+- current process is broken or incomplete
+
+Required outcome:
+- The document assign bottom sheet/modal must open correctly
+- It must load available document types correctly
+- The manager must be able to choose and assign documents
+- It must work smoothly on phone
+- It must have clean loading, empty, error, and success states
+- It must use a professional premium UX
+
+4) MANAGER DASHBOARD > REMOVE “ARRIVALS THIS MONTH”
+Required outcome:
+- Remove “Arrivals this month” from dashboard overview/KPI area if currently shown
+
+5) MANAGER DASHBOARD > ADD A PROFESSIONAL “PENDING DOCUMENTS” SECTION
+Required outcome:
+- Add a professional manager-facing dashboard section for pending documents
+- It should clearly show:
+  - which guest has pending documents
+  - which documents are uploaded
+  - which documents are still missing / not uploaded
+- The UX must be professional, operational, readable, and mobile-friendly
+- It should help the manager quickly understand document status at a glance
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand:
+
+- current doctor create UI flow on manager screens
+- doctor create modal/bottom sheet/form state
+- doctor create API call, payload, response, invalidation, and list refresh flow
+- current hotel create UI flow
+- hotel create API call, payload, response, invalidation, and list refresh flow
+- current document assign popup/bottom sheet implementation
+- current document types fetch route and auth/clinic scoping
+- current document assignment backend route and response mapping
+- current dashboard overview composition
+- current dashboard data source / hooks / DTOs
+- current pending document logic already available in backend if any
+- any duplicate routes, dead code, or shadowed handlers that could cause these issues
+
+Then directly implement the fixes.
+
+IMPLEMENTATION PRIORITY
+Use this exact order:
+
+PHASE 1 — DOCTOR CREATE MOBILE FIX
+1. Audit manager doctor create flow end-to-end
+2. Find the exact root cause of why add doctor fails on phone
+3. Fix the issue at the correct layer:
+   - UI interaction
+   - form state
+   - validation
+   - API mutation
+   - backend route
+   - query invalidation
+   - list refresh
+4. Improve the doctor create UX for mobile:
+   - keyboard-safe layout
+   - proper bottom sheet/modal height
+   - scroll behavior
+   - submit button visibility
+   - loading state
+   - success/error feedback
+5. Ensure doctor appears in list immediately after successful create
+
+Acceptance criteria:
+- manager can add a doctor on phone
+- created doctor persists correctly
+- doctor list refreshes automatically
+- errors are clearly visible if creation fails
+- no broken touch/scroll/keyboard issues
+
+PHASE 2 — HOTEL CREATE FIX
+1. Audit hotel create flow end-to-end
+2. Find the exact root cause of why hotels do not show in list after create
+3. Fix:
+   - payload issues
+   - validation issues
+   - API route issues
+   - repository persistence issues
+   - response mapping issues
+   - query invalidation/refetch issues
+4. Improve hotel create UX for mobile forms
+
+Acceptance criteria:
+- manager can create hotel on phone
+- hotel is actually saved
+- hotel appears in hotels list immediately
+- failure reasons are visible if something goes wrong
+
+PHASE 3 — DOCUMENT ASSIGN BOTTOM SHEET / POPUP FIX
+1. Audit guest detail document assign flow from button tap to backend assignment
+2. Inspect:
+   - bottom sheet/modal implementation
+   - state open/close logic
+   - data fetch timing
+   - document type list API
+   - clinic scope/auth
+   - loading/empty/error rendering
+   - z-index / portal / safe area / animation issues
+3. Find the real reason why no documents appear
+4. Fix the full flow professionally
+5. Ensure assignment mutation works and UI refreshes after success
+6. Rebuild the UX if necessary into a clean premium bottom sheet flow
+
+Acceptance criteria:
+- tapping assign opens the bottom sheet correctly
+- document types load correctly
+- loading state is visible
+- empty state is meaningful if there are really no document types
+- assignment succeeds and updates the guest detail UI
+- works smoothly on phone
+
+PHASE 4 — DASHBOARD OVERVIEW REFACTOR
+1. Remove “Arrivals this month” from dashboard overview/KPI section
+2. Add a new “Pending Documents” dashboard section with professional UX
+3. This section should show operationally useful information, such as:
+   - guest name
+   - pending document count
+   - uploaded document count
+   - missing/unuploaded document names or summary
+   - quick visual status badges
+4. Keep it clean and scannable for managers
+5. Make it mobile-first and responsive
+6. If backend already has document summary data, reuse it cleanly
+7. If backend lacks the exact shape needed, add a proper DTO/use case/repository query
+
+Acceptance criteria:
+- arrivals this month is removed from overview
+- pending documents section is visible and useful
+- manager can quickly understand which guest is missing which docs
+- the design feels professional and not cluttered
+- mobile layout is strong
+
+PHASE 5 — HARDENING AND CLEANUP
+1. Add or improve structured logging around these flows:
+   - create doctor
+   - create hotel
+   - fetch document types
+   - assign documents
+   - dashboard document summary load
+2. Improve error messages
+3. Ensure request loading states always reset correctly
+4. Ensure query invalidation/refetch is consistent
+5. Remove or isolate dead code or duplicate route paths if they are causing confusion
+6. Preserve current working features
+
+ARCHITECTURE EXPECTATIONS
+- Keep route/controller layer thin
+- Put business rules in services/use cases
+- Keep repositories responsible for DB work
+- Keep components focused on presentation and user interaction
+- Do not duplicate doctor/hotel/document logic across random files
+- Keep mobile modal/bottom-sheet patterns reusable and clean
+- Use proper DTOs / typed response shapes
+- Keep everything maintainable and production-ready
+
+YOU MUST CHECK FOR THESE LIKELY ROOT CAUSES
+- form submit button hidden behind keyboard on phone
+- modal/bottom sheet not scrollable enough
+- validation failing silently
+- mutation success but query not invalidated
+- wrong React Query key
+- stale cache
+- wrong response mapping
+- route shadowing / duplicate route registration
+- clinic scope mismatch
+- auth middleware issue on document types route
+- document list API returning different shape than UI expects
+- bottom sheet opens before data is loaded and never re-renders correctly
+- broken empty/loading conditional rendering
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found for each issue
+2. Exact files changed
+3. Why each fix was necessary
+4. Any architecture improvements made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for:
+   - add doctor not working on phone
+   - hotel create not showing in list
+   - document assign popup showing no documents
+2. What changed in dashboard overview
+3. What new pending documents UX was added
+4. Exact files changed
+5. Manual QA checklist for mobile testing
+6. Remaining future improvements if any
+
+START NOW
+First inspect the current codebase deeply and identify the real root causes behind these manager-side issues.
+Then implement the fixes end-to-end in the order above.

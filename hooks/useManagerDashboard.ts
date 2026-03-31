@@ -11,6 +11,14 @@ export interface DashboardAppt {
   doctorName: string | null;
 }
 
+export interface PendingGuestDocSummary {
+  patientId: string;
+  patientName: string;
+  pending: number;
+  uploaded: number;
+  pendingDocNames: string[];
+}
+
 export interface ManagerDashboardData {
   currentMonth: string;
   kpis: {
@@ -23,6 +31,7 @@ export interface ManagerDashboardData {
   arrivingThisMonth: number;
   todayAppointments: DashboardAppt[];
   monthAppointments: DashboardAppt[];
+  pendingGuestDocs: PendingGuestDocSummary[];
 }
 
 const DEFAULT_DATA: ManagerDashboardData = {
@@ -37,6 +46,7 @@ const DEFAULT_DATA: ManagerDashboardData = {
   arrivingThisMonth: 0,
   todayAppointments: [],
   monthAppointments: [],
+  pendingGuestDocs: [],
 };
 
 export function useManagerDashboard() {
