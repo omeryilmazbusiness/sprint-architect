@@ -2,10 +2,12 @@ import type { Request, Response, NextFunction } from "express";
 import { ManagerDocumentTypesRepoDrizzle } from "./repos/ManagerDocumentTypesRepo.drizzle";
 import { ListDocumentTypes } from "./usecases/ListDocumentTypes";
 import { CreateDocumentType } from "./usecases/CreateDocumentType";
+import { UpdateDocumentType } from "./usecases/UpdateDocumentType";
 import { DeleteDocumentType } from "./usecases/DeleteDocumentType";
 import {
   listDocumentTypesQuerySchema,
   createDocumentTypeBodySchema,
+  updateDocumentTypeBodySchema,
 } from "./schemas/managerDocumentTypes.schemas";
 import { AppError } from "../../auth/errors";
 import { auditLog } from "../../api/auditLogger";
@@ -44,6 +46,7 @@ function validateQuery<T>(schema: { parse: (v: unknown) => T }, query: unknown):
 const repo = new ManagerDocumentTypesRepoDrizzle();
 const listUC = new ListDocumentTypes(repo);
 const createUC = new CreateDocumentType(repo);
+const updateUC = new UpdateDocumentType(repo);
 const deleteUC = new DeleteDocumentType(repo);
 
 export async function listDocumentTypes(req: Request, res: Response, next: NextFunction) {
@@ -72,6 +75,27 @@ export async function createDocumentType(req: Request, res: Response, next: Next
       metadata: { name: dt.name },
     });
     res.status(201).json(dt);
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function updateDocumentType(req: Request, res: Response, next: NextFunction) {
+  try {
+    const clinicId = getClinicId(req);
+    const { id } = req.params;
+    const body = validateBody(updateDocumentTypeBodySchema, req.body);
+    const dt = await updateUC.execute(id, clinicId, { name: body.name, note: body.note });
+    auditLog({
+      clinicId,
+      actorId: getActorId(req),
+      actorRole: getActorRole(req),
+      action: "DOC_TYPE_UPDATE",
+      resourceType: "document_type",
+      resourceId: id,
+      metadata: { name: dt.name },
+    });
+    res.json(dt);
   } catch (e) {
     next(e);
   }

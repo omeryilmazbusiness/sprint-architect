@@ -120,7 +120,13 @@ export function useGuestAgenda(appointments: PatientAppointment[]) {
   const completedList = useMemo(
     () =>
       appointments
-        .filter((a) => a.status === "DONE" || a.status === "CANCELLED")
+        .filter(
+          (a) =>
+            a.status === "DONE" ||
+            a.status === "CANCELLED" ||
+            a.status === "NO_SHOW" ||
+            a.status === "MISSED"
+        )
         .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()),
     [appointments]
   );

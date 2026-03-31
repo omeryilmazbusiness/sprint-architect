@@ -16,7 +16,7 @@ export interface PatientAppointment {
   id: string;
   title: string;
   type: string | null;
-  status: "SCHEDULED" | "DONE" | "CANCELLED";
+  status: "SCHEDULED" | "DONE" | "CANCELLED" | "NO_SHOW" | "MISSED";
   startAt: string;
   endAt?: string | null;
   locationText?: string | null;

@@ -16,7 +16,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
 import { useRouter } from "expo-router";
 import { StatusBadge } from "@/components/StatusBadge";
-import EmptyState from "@/components/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 
 interface Notification {
   id: string;
@@ -148,7 +148,7 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <EmptyState
               title="No notifications"
-              description="You're all caught up!"
+              subtitle="You're all caught up!"
               icon="notifications-outline"
             />
           }

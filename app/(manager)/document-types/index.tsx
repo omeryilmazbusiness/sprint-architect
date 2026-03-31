@@ -43,6 +43,8 @@ export default function DocumentTypesScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<DocumentTypeItem | null>(null);
+  const [searchText, setSearchText] = useState("");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -71,6 +73,27 @@ export default function DocumentTypesScreen() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: { name: string; note?: string } }) => {
+      const res = await apiRequest("PUT", `/v1/manager/document-types/${id}`, body);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.code === "DOC-TYPE-001") throw new Error("This document type already exists.");
+        throw new Error(j?.message ?? "Failed to update document type");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK });
+      setEditingItem(null);
+      setFormError(null);
+      showToast("Document type updated", "success");
+    },
+    onError: (e: any) => {
+      setFormError(e.message ?? "Something went wrong");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiRequest("DELETE", `/v1/manager/document-types/${id}`);
@@ -87,6 +110,20 @@ export default function DocumentTypesScreen() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), type === "error" ? 2200 : 1400);
   };
+
+  const handleEdit = (item: DocumentTypeItem) => {
+    setFormError(null);
+    setEditingItem(item);
+  };
+
+  const filteredItems = (data?.items ?? []).filter((item) => {
+    if (!searchText.trim()) return true;
+    const q = searchText.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(q) ||
+      (item.note?.toLowerCase().includes(q) ?? false)
+    );
+  });
 
   const handleDelete = (item: DocumentTypeItem) => {
     if (Platform.OS === "web") {
@@ -132,32 +169,65 @@ export default function DocumentTypesScreen() {
         </View>
       ) : (
         <FlatList<DocumentTypeItem>
-          data={data?.items ?? []}
+          data={filteredItems}
           keyExtractor={(d) => d.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomPad + 40 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomPad + 40 }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />
           }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="document-attach-outline" size={32} color={T.accent} />
+          ListHeaderComponent={
+            (data?.items?.length ?? 0) > 0 ? (
+              <View style={styles.searchRow}>
+                <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search document types…"
+                  placeholderTextColor={T.textMuted}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  clearButtonMode="while-editing"
+                  returnKeyType="search"
+                />
+                {searchText.length > 0 && (
+                  <Pressable onPress={() => setSearchText("")} hitSlop={10}>
+                    <Ionicons name="close-circle" size={16} color={T.textMuted} />
+                  </Pressable>
+                )}
               </View>
-              <Text style={styles.emptyTitle}>No document types yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Create document types for your clinic. They will be used to track guest documentation.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => { setFormError(null); setShowForm(true); }}
-              >
-                <Ionicons name="add" size={16} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add Document Type</Text>
-              </Pressable>
-            </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            searchText.trim() ? (
+              <View style={styles.empty}>
+                <Ionicons name="search-outline" size={32} color={T.textMuted} />
+                <Text style={styles.emptyTitle}>No results</Text>
+                <Text style={styles.emptySubtitle}>No document types match "{searchText}"</Text>
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <View style={styles.emptyIconWrap}>
+                  <Ionicons name="document-attach-outline" size={32} color={T.accent} />
+                </View>
+                <Text style={styles.emptyTitle}>No document types yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Create document types for your clinic. They will be used to track guest documentation.
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => { setFormError(null); setShowForm(true); }}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.emptyBtnText}>Add Document Type</Text>
+                </Pressable>
+              </View>
+            )
           }
           renderItem={({ item }) => (
-            <DocumentTypeCard item={item} onDelete={() => handleDelete(item)} />
+            <DocumentTypeCard
+              item={item}
+              onEdit={() => handleEdit(item)}
+              onDelete={() => handleDelete(item)}
+            />
           )}
         />
       )}
@@ -170,12 +240,31 @@ export default function DocumentTypesScreen() {
         errorMessage={formError}
       />
 
+      <DocumentTypeFormSheet
+        visible={editingItem !== null}
+        editingItem={editingItem}
+        onClose={() => { setEditingItem(null); setFormError(null); }}
+        onSubmit={(d) => {
+          if (editingItem) updateMutation.mutate({ id: editingItem.id, body: d });
+        }}
+        isLoading={updateMutation.isPending}
+        errorMessage={formError}
+      />
+
       {toast && <Toast message={toast.msg} type={toast.type} />}
     </View>
   );
 }
 
-function DocumentTypeCard({ item, onDelete }: { item: DocumentTypeItem; onDelete: () => void }) {
+function DocumentTypeCard({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: DocumentTypeItem;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const created = new Date(item.createdAt).toLocaleDateString("en-US", {
     month: "short", day: "numeric", year: "numeric",
   });
@@ -195,9 +284,14 @@ function DocumentTypeCard({ item, onDelete }: { item: DocumentTypeItem; onDelete
           <Text style={styles.cardDate}>Added {created}</Text>
         </View>
       </View>
-      <Pressable onPress={onDelete} hitSlop={10} style={styles.deleteBtn} testID={`delete-doc-type-${item.id}`}>
-        <Ionicons name="trash-outline" size={16} color={T.danger} />
-      </Pressable>
+      <View style={styles.cardActions}>
+        <Pressable onPress={onEdit} hitSlop={10} style={styles.editBtn} testID={`edit-doc-type-${item.id}`}>
+          <Ionicons name="pencil-outline" size={16} color={T.accent} />
+        </Pressable>
+        <Pressable onPress={onDelete} hitSlop={10} style={styles.deleteBtn} testID={`delete-doc-type-${item.id}`}>
+          <Ionicons name="trash-outline" size={16} color={T.danger} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -208,18 +302,22 @@ interface FormSheetProps {
   onSubmit: (data: { name: string; note?: string }) => void;
   isLoading: boolean;
   errorMessage?: string | null;
+  editingItem?: DocumentTypeItem | null;
 }
 
-function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMessage }: FormSheetProps) {
+function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMessage, editingItem }: FormSheetProps) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [nameError, setNameError] = useState("");
+  const isEditing = !!editingItem;
 
   useEffect(() => {
     if (visible) {
-      setName(""); setNote(""); setNameError("");
+      setName(editingItem?.name ?? "");
+      setNote(editingItem?.note ?? "");
+      setNameError("");
       Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     } else {
       Animated.timing(slideAnim, { toValue: SCREEN_H, duration: 220, useNativeDriver: true }).start();
@@ -242,7 +340,7 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
             <View style={styles.handle} />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Add Document Type</Text>
+              <Text style={styles.sheetTitle}>{isEditing ? "Edit Document Type" : "Add Document Type"}</Text>
               <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
                 <Ionicons name="close" size={22} color={T.text} />
               </Pressable>
@@ -299,7 +397,7 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
                 disabled={isLoading}
                 testID="btn-save-doc-type"
               >
-                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>Save</Text>}
+                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>{isEditing ? "Update" : "Save"}</Text>}
               </Pressable>
             </View>
           </KeyboardAvoidingView>
@@ -333,6 +431,9 @@ const styles = StyleSheet.create({
   retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8, backgroundColor: T.accent },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
   addBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: T.surface, borderRadius: 12, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, marginTop: 16, gap: 8 },
+  searchIcon: { flexShrink: 0 },
+  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.text, padding: 0 },
   card: { backgroundColor: T.surface, borderRadius: 14, borderWidth: 1, borderColor: "#E8ECF0", marginBottom: 12, padding: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cardLeft: { flex: 1, flexDirection: "row", gap: 12, alignItems: "flex-start" },
   cardIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
@@ -341,7 +442,9 @@ const styles = StyleSheet.create({
   cardNote: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, lineHeight: 18, marginTop: 2 },
   cardNotePlaceholder: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, fontStyle: "italic", marginTop: 2 },
   cardDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 6 },
-  deleteBtn: { padding: 4, marginTop: 2 },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  editBtn: { padding: 4 },
+  deleteBtn: { padding: 4 },
   empty: { paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32 },
   emptyIconWrap: { width: 64, height: 64, borderRadius: 18, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 4 },
   emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text, textAlign: "center" },

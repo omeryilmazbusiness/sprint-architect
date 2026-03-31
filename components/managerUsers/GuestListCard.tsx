@@ -50,7 +50,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function fmtDate(s?: string) {
+function fmtDate(s?: string | null) {
   if (!s) return null;
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

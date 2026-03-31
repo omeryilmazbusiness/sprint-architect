@@ -13,6 +13,7 @@ export interface IManagerDocumentTypesRepo {
   list(clinicId: string, search?: string): Promise<DocumentTypeDTO[]>;
   findByName(clinicId: string, name: string): Promise<DocumentTypeDTO | null>;
   create(clinicId: string, name: string, note?: string | null): Promise<DocumentTypeDTO>;
+  update(id: string, clinicId: string, fields: { name?: string; note?: string | null }): Promise<DocumentTypeDTO | null>;
   delete(id: string, clinicId: string): Promise<DocumentTypeDTO | null>;
 }
 
@@ -55,6 +56,24 @@ export class ManagerDocumentTypesRepoDrizzle implements IManagerDocumentTypesRep
       .values({ clinicId, name, description: note ?? null })
       .returning();
     return toDTO(row);
+  }
+
+  async update(id: string, clinicId: string, fields: { name?: string; note?: string | null }): Promise<DocumentTypeDTO | null> {
+    const updateValues: Record<string, any> = {};
+    if (fields.name !== undefined) updateValues.name = fields.name;
+    if (fields.note !== undefined) updateValues.description = fields.note;
+    if (Object.keys(updateValues).length === 0) {
+      const row = await db.query.documentTypes.findFirst({
+        where: and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)),
+      });
+      return row ? toDTO(row) : null;
+    }
+    const [row] = await db
+      .update(documentTypes)
+      .set(updateValues)
+      .where(and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)))
+      .returning();
+    return row ? toDTO(row) : null;
   }
 
   async delete(id: string, clinicId: string): Promise<DocumentTypeDTO | null> {

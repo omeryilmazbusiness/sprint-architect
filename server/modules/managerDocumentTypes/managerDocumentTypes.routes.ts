@@ -8,6 +8,7 @@ import {
 import {
   listDocumentTypes,
   createDocumentType,
+  updateDocumentType,
   deleteDocumentType,
 } from "./managerDocumentTypes.controller";
 
@@ -22,6 +23,7 @@ router.use(
 
 router.get("/", listDocumentTypes);
 router.post("/", createDocumentType);
+router.put("/:id", updateDocumentType);
 router.delete("/:id", deleteDocumentType);
 
 export { router as managerDocumentTypesRouter };

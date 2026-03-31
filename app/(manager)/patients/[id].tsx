@@ -126,6 +126,7 @@ export default function GuestDetailScreen() {
   const [showDocSheet, setShowDocSheet] = useState(false);
   const [showApptSheet, setShowApptSheet] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [cancellingApptId, setCancellingApptId] = useState<string | null>(null);
 
   const detailKey = [`/v1/manager/patients/${id}/details`];
 
@@ -216,6 +217,66 @@ export default function GuestDetailScreen() {
     },
     onError: () => showToast("Failed to assign document"),
   });
+
+  const updateDocStatusMutation = useMutation({
+    mutationFn: async ({
+      docId,
+      status,
+      rejectionReason,
+    }: {
+      docId: string;
+      status: "APPROVED" | "REJECTED";
+      rejectionReason?: string;
+    }) => {
+      const res = await apiRequest("PUT", `/v1/manager/documents/${docId}`, {
+        status,
+        rejectionReason: rejectionReason ?? null,
+      });
+      if (!res.ok) throw new Error("Failed to update document status");
+    },
+    onSuccess: () => {
+      invalidate();
+      showToast("Document status updated ✓");
+    },
+    onError: () => showToast("Failed to update document status"),
+  });
+
+  const cancelAppointmentMutation = useMutation({
+    mutationFn: (apptId: string) => {
+      setCancellingApptId(apptId);
+      return apiRequest("DELETE", `/v1/manager/appointments/${apptId}`);
+    },
+    onSuccess: () => {
+      setCancellingApptId(null);
+      invalidate();
+      showToast("Appointment cancelled ✓");
+    },
+    onError: () => {
+      setCancellingApptId(null);
+      showToast("Failed to cancel appointment");
+    },
+  });
+
+  function handleCancelAppointment(apptId: string, title: string) {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(`Cancel "${title || "appointment"}"?`)) {
+        cancelAppointmentMutation.mutate(apptId);
+      }
+    } else {
+      Alert.alert(
+        "Cancel Appointment",
+        `Cancel "${title || "appointment"}"?`,
+        [
+          { text: "Keep", style: "cancel" },
+          {
+            text: "Cancel Appointment",
+            style: "destructive",
+            onPress: () => cancelAppointmentMutation.mutate(apptId),
+          },
+        ]
+      );
+    }
+  }
 
   const handleViewPdf = async (docId: string, fileName?: string | null) => {
     try {
@@ -367,13 +428,32 @@ export default function GuestDetailScreen() {
             <View style={styles.apptHeaderRow}>
               <Ionicons name="calendar-outline" size={14} color={T.success} />
               <Text style={styles.apptBadge}>Next Appointment</Text>
-              <Pressable
-                onPress={() => setShowApptSheet(true)}
-                style={styles.apptAddBtn}
-                hitSlop={8}
-              >
-                <Ionicons name="add-circle-outline" size={18} color={T.accent} />
-              </Pressable>
+              <View style={styles.apptHeaderActions}>
+                <Pressable
+                  onPress={() => setShowApptSheet(true)}
+                  style={styles.apptAddBtn}
+                  hitSlop={8}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={T.accent} />
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    handleCancelAppointment(
+                      nextAppointment.id,
+                      nextAppointment.title ?? "Appointment"
+                    )
+                  }
+                  style={styles.apptCancelBtn}
+                  hitSlop={8}
+                  disabled={cancellingApptId === nextAppointment.id}
+                >
+                  {cancellingApptId === nextAppointment.id ? (
+                    <ActivityIndicator size="small" color={T.danger} />
+                  ) : (
+                    <Ionicons name="close-circle-outline" size={18} color={T.danger} />
+                  )}
+                </Pressable>
+              </View>
             </View>
             <Text style={styles.apptTitle}>
               {nextAppointment.title ?? "Appointment"}
@@ -428,6 +508,9 @@ export default function GuestDetailScreen() {
           summary={documents.summary ?? { pending: 0, uploaded: 0 }}
           onAssign={() => setShowDocSheet(true)}
           onViewPdf={handleViewPdf}
+          onUpdateDocStatus={async (docId, status, rejectionReason) => {
+            await updateDocStatusMutation.mutateAsync({ docId, status, rejectionReason });
+          }}
         />
 
         {/* Danger zone */}
@@ -587,7 +670,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     flex: 1,
   },
+  apptHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   apptAddBtn: {
+    padding: 2,
+  },
+  apptCancelBtn: {
     padding: 2,
   },
   apptEmptyCard: {

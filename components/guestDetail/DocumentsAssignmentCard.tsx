@@ -1,5 +1,16 @@
-import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Platform,
+  Alert,
+  KeyboardAvoidingView,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 
@@ -20,6 +31,11 @@ interface Props {
   summary: { pending: number; uploaded: number };
   onAssign: () => void;
   onViewPdf?: (docId: string, fileName?: string | null) => void;
+  onUpdateDocStatus?: (
+    docId: string,
+    status: "APPROVED" | "REJECTED",
+    rejectionReason?: string
+  ) => Promise<void> | void;
 }
 
 const STATUS_CONFIG: Record<
@@ -45,7 +61,136 @@ function DocStatusPill({ status }: { status: string }) {
   );
 }
 
-export function DocumentsAssignmentCard({ docs, summary, onAssign, onViewPdf }: Props) {
+interface RejectModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isLoading: boolean;
+}
+
+function RejectReasonModal({ visible, onClose, onConfirm, isLoading }: RejectModalProps) {
+  const [reason, setReason] = useState("");
+
+  const handleConfirm = () => {
+    const trimmed = reason.trim();
+    if (!trimmed) return;
+    onConfirm(trimmed);
+  };
+
+  const handleClose = () => {
+    setReason("");
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Reject Document</Text>
+            <Text style={styles.modalSubtitle}>
+              Please provide a reason for rejection so the guest knows what to fix.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Image is blurry, wrong document…"
+              placeholderTextColor={T.textMuted}
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              numberOfLines={3}
+              maxLength={300}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={handleClose}
+                disabled={isLoading}
+              >
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnReject,
+                  (!reason.trim() || isLoading) && { opacity: 0.5 },
+                ]}
+                onPress={handleConfirm}
+                disabled={!reason.trim() || isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalBtnRejectText}>Reject</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+export function DocumentsAssignmentCard({
+  docs,
+  summary,
+  onAssign,
+  onViewPdf,
+  onUpdateDocStatus,
+}: Props) {
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const handleApprove = (doc: AssignedDoc) => {
+    if (!onUpdateDocStatus) return;
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(`Approve "${doc.typeName}"?`)) {
+        void runUpdate(doc.id, "APPROVED");
+      }
+    } else {
+      Alert.alert(
+        "Approve Document",
+        `Mark "${doc.typeName}" as approved?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Approve",
+            style: "default",
+            onPress: () => void runUpdate(doc.id, "APPROVED"),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleReject = (docId: string) => {
+    setRejectTarget(docId);
+  };
+
+  const handleRejectConfirm = async (reason: string) => {
+    if (!rejectTarget || !onUpdateDocStatus) return;
+    await runUpdate(rejectTarget, "REJECTED", reason);
+    setRejectTarget(null);
+  };
+
+  const runUpdate = async (
+    docId: string,
+    status: "APPROVED" | "REJECTED",
+    reason?: string
+  ) => {
+    if (!onUpdateDocStatus) return;
+    setActionLoading(docId);
+    try {
+      await onUpdateDocStatus(docId, status, reason);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const rejectingDoc = docs.find((d) => d.id === rejectTarget);
+
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.headerRow}>
@@ -86,44 +231,67 @@ export function DocumentsAssignmentCard({ docs, summary, onAssign, onViewPdf }: 
           </View>
 
           <View style={styles.docList}>
-            {docs.map((doc, idx) => (
-              <View
-                key={doc.id}
-                style={[
-                  styles.docRow,
-                  idx < docs.length - 1 && styles.docRowBorder,
-                ]}
-              >
-                <View style={styles.docInfo}>
-                  <Text style={styles.docName} numberOfLines={1}>
-                    {doc.typeName}
-                  </Text>
-                  {doc.instructionText ? (
-                    <Text style={styles.docInstruction} numberOfLines={1}>
-                      {doc.instructionText}
+            {docs.map((doc, idx) => {
+              const isUploaded = doc.status === "UPLOADED";
+              const isActing = actionLoading === doc.id;
+              return (
+                <View
+                  key={doc.id}
+                  style={[
+                    styles.docRow,
+                    idx < docs.length - 1 && styles.docRowBorder,
+                  ]}
+                >
+                  <View style={styles.docInfo}>
+                    <Text style={styles.docName} numberOfLines={1}>
+                      {doc.typeName}
                     </Text>
-                  ) : null}
-                  {doc.uploadedAt ? (
-                    <Text style={styles.docUploaded}>
-                      Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
-                    </Text>
-                  ) : null}
+                    {doc.instructionText ? (
+                      <Text style={styles.docInstruction} numberOfLines={1}>
+                        {doc.instructionText}
+                      </Text>
+                    ) : null}
+                    {doc.uploadedAt ? (
+                      <Text style={styles.docUploaded}>
+                        Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.docActions}>
+                    {doc.fileUrl && onViewPdf && (
+                      <Pressable
+                        onPress={() => onViewPdf(doc.id, doc.fileName)}
+                        style={styles.viewBtn}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="document-outline" size={14} color={T.accent} />
+                        <Text style={styles.viewBtnText}>PDF</Text>
+                      </Pressable>
+                    )}
+                    {isUploaded && onUpdateDocStatus && !isActing && (
+                      <>
+                        <Pressable
+                          onPress={() => handleApprove(doc)}
+                          style={styles.approveBtn}
+                          hitSlop={8}
+                        >
+                          <Ionicons name="checkmark" size={13} color={T.success} />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleReject(doc.id)}
+                          style={styles.rejectBtn}
+                          hitSlop={8}
+                        >
+                          <Ionicons name="close" size={13} color={T.danger} />
+                        </Pressable>
+                      </>
+                    )}
+                    {isActing && <ActivityIndicator size="small" color={T.accent} />}
+                    <DocStatusPill status={doc.status} />
+                  </View>
                 </View>
-                <View style={styles.docActions}>
-                  {doc.fileUrl && onViewPdf && (
-                    <Pressable
-                      onPress={() => onViewPdf(doc.id, doc.fileName)}
-                      style={styles.viewBtn}
-                      hitSlop={8}
-                    >
-                      <Ionicons name="document-outline" size={14} color={T.accent} />
-                      <Text style={styles.viewBtnText}>Open PDF</Text>
-                    </Pressable>
-                  )}
-                  <DocStatusPill status={doc.status} />
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </>
       ) : (
@@ -133,6 +301,13 @@ export function DocumentsAssignmentCard({ docs, summary, onAssign, onViewPdf }: 
           <Text style={styles.emptyHint}>Tap Add to assign document types</Text>
         </Pressable>
       )}
+
+      <RejectReasonModal
+        visible={rejectTarget !== null}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={handleRejectConfirm}
+        isLoading={actionLoading === rejectTarget}
+      />
     </View>
   );
 }
@@ -201,20 +376,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: T.sp16,
     paddingVertical: 12,
-    gap: 12,
+    gap: 8,
     backgroundColor: T.surface,
   },
   docActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
   },
   viewBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: T.r8,
     borderWidth: 1,
@@ -225,6 +400,26 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
     color: T.accent,
+  },
+  approveBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: T.successBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: T.success + "40",
+  },
+  rejectBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: T.dangerBg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: T.danger + "40",
   },
   docUploaded: {
     fontFamily: "Inter_400Regular",
@@ -273,5 +468,74 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: T.textMuted,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalBox: {
+    backgroundColor: T.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 380,
+    gap: 12,
+  },
+  modalTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    color: T.text,
+  },
+  modalSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: T.textMuted,
+    lineHeight: 18,
+  },
+  modalInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 12,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: T.text,
+    minHeight: 80,
+    textAlignVertical: "top",
+    marginTop: 4,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnCancel: {
+    backgroundColor: T.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: T.border,
+  },
+  modalBtnCancelText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: T.text,
+  },
+  modalBtnReject: {
+    backgroundColor: T.danger,
+  },
+  modalBtnRejectText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#fff",
   },
 });

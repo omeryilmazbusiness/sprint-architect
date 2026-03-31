@@ -1,0 +1,331 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase deeply, identify the real root causes of the manager-side issues and gaps, and then implement the required fixes and improvements in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break currently working flows
+- First inspect the real implementation deeply
+- Then directly implement the requested changes
+- Preserve good existing architecture where possible
+- Refactor only where needed for correctness, maintainability, security, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No UI-only fake fixes for backend/domain problems
+- Fix root causes, not just symptoms
+- Prioritize mobile usability because manager screens are heavily used on phone
+- Keep the codebase more maintainable than before
+
+PRIMARY GOAL
+Take the current manager side of the application and harden it into a much more production-ready state by fixing the critical bugs, completing missing manager workflows, improving UX, and cleaning up architectural inconsistencies.
+
+YOU MUST FIRST ANALYZE
+Before changing anything, inspect and understand all of the following:
+- current manager dashboard overview structure
+- current quick actions configuration
+- current pending documents dashboard data source and UI
+- current notifications screen rendering and imports
+- current document approval / reject backend routes and frontend rendering path
+- current invoice filters, invoice enums, and status mapping on frontend and backend
+- current appointment create/edit/cancel backend routes and frontend capabilities
+- current useGuestAgenda hook and appointment status enum handling
+- current GuestListCard date rendering and null handling
+- current document types CRUD flow, including whether edit exists
+- current guest detail invoice section or absence of it
+- legacy /metrics endpoint and whether it is dead code
+- current document type listing/search UI
+- current appointment status colors / no-show display logic
+- any duplicate routes, shadowed handlers, stale caches, invalid query keys, missing invalidations, or dead code related to these areas
+
+DO NOT STOP AFTER ANALYSIS
+After analysis, directly implement the fixes in the priority order below.
+
+IMPLEMENTATION PRIORITY
+
+P1 — CRITICAL
+1. Fix Notifications screen crash
+2. Add Document approve/reject UI for manager
+3. Fix Invoice filter enum/status mismatch
+4. Add Appointment edit/cancel UI
+
+P2 — IMPORTANT
+5. Fix useGuestAgenda enum/status handling
+6. Fix GuestListCard null-safe date rendering
+7. Add Document Type edit capability
+8. Improve Guest detail invoice visibility
+
+P3 — IMPROVEMENT
+9. Remove/clean legacy /metrics endpoint if unused
+10. Add Document Type search UI
+11. Improve appointment status colors and no-show visual representation
+
+ADDITIONAL DASHBOARD / UX IMPROVEMENTS TO KEEP
+Also keep and verify the following requested manager-side UX expectations:
+- Pending Documents card/section must exist in dashboard overview
+- Pending Documents section should use a professional, operational, premium UX
+- Prefer a clean right-flowing 3-column style layout where appropriate and responsive
+- Quick Actions should NOT contain “New Appointments”
+- Doctor Add flow should open as a professional bottom popup page / bottom sheet style experience
+- Keep mobile layout polished, keyboard-safe, and reliable
+
+DETAILED IMPLEMENTATION REQUIREMENTS
+
+PHASE 1 — NOTIFICATIONS SCREEN CRASH FIX
+Current problem:
+- Notifications screen can crash, especially on empty list or bad import/render path
+
+Required behavior:
+- Screen must never crash
+- Empty state must render professionally
+- Loading state must be safe
+- Error state must be safe
+- Import/export mismatch must be corrected cleanly
+- Works properly on phone
+
+Acceptance criteria:
+- notifications screen opens successfully
+- empty state renders correctly without crash
+- loading and error states behave safely
+
+PHASE 2 — DOCUMENT APPROVE / REJECT UI
+Current problem:
+- guest uploads document
+- backend already supports approve/reject
+- manager UI does not provide a clean review flow
+- documents can remain stuck in UPLOADED state
+
+Required behavior:
+- In manager guest detail, uploaded documents must have a proper review flow
+- Manager must be able to:
+  - view uploaded document
+  - approve it
+  - reject it
+  - enter rejection reason when rejecting
+- UI must be clean, professional, mobile-friendly
+- Related queries and document summaries must refresh after action
+
+Acceptance criteria:
+- uploaded document can be approved from manager UI
+- uploaded document can be rejected with reason
+- status updates immediately
+- document does not remain stuck in UPLOADED after review
+- error/loading states are clean
+
+PHASE 3 — INVOICE FILTER ENUM FIX
+Current problem:
+- Invoice filter logic may use wrong enum/status mapping
+- Manager may see wrong invoices or miss valid ones
+
+Required behavior:
+- Align frontend filter values with backend status truth exactly
+- Fix status mapping, labels, comparisons, chips/dropdowns, and filtering behavior
+- Ensure correct invoices appear for the selected status
+
+Acceptance criteria:
+- invoice filters return correct results
+- enum mismatch is removed
+- UI labels and API statuses are consistent
+
+PHASE 4 — APPOINTMENT EDIT / CANCEL UI
+Current problem:
+- Backend supports edit/cancel
+- Manager UI does not expose it properly
+
+Required behavior:
+- In manager guest detail and/or appointment-related UI, managers must be able to:
+  - edit appointment
+  - cancel appointment
+- Keep the UX professional and mobile-friendly
+- Ensure status changes/invalidation are correct
+- Avoid duplicated appointment mutation logic
+
+Acceptance criteria:
+- manager can edit an existing appointment from UI
+- manager can cancel an appointment from UI
+- UI refreshes correctly
+- no broken status transitions
+
+PHASE 5 — useGuestAgenda ENUM / STATUS FIX
+Current problem:
+- some appointment statuses may be handled incorrectly
+- NO_SHOW / MISSED or similar states may be mismatched
+
+Required behavior:
+- Audit guest agenda hook and related status typing
+- Align all appointment status handling with backend source of truth
+- Fix filtering, mapping, and display safely
+- Keep type-safety strict
+
+Acceptance criteria:
+- guest agenda shows correct statuses
+- no valid appointment statuses are ignored
+- no invalid enum assumptions remain
+
+PHASE 6 — GUEST LIST CARD NULL-SAFE DATE RENDERING
+Current problem:
+- null/missing dates may break card display or create ugly rendering
+
+Required behavior:
+- Add robust null-safe date handling
+- Missing dates must not break layout
+- Use professional fallback display text
+- Keep list cards visually clean
+
+Acceptance criteria:
+- guest cards never break on null dates
+- layout stays stable
+- fallback text is clear and professional
+
+PHASE 7 — DOCUMENT TYPE EDIT
+Current problem:
+- Document types can be created/listed/deleted, but not edited
+
+Required behavior:
+- Add edit capability for document types
+- Implement both backend and frontend if missing
+- Keep form/mutation flow consistent with current architecture
+- Ensure clinic scope and validation are respected
+
+Acceptance criteria:
+- manager can edit document type from UI
+- backend persists update correctly
+- list refreshes after update
+- no duplicate code mess
+
+PHASE 8 — GUEST DETAIL INVOICE VISIBILITY IMPROVEMENT
+Current problem:
+- Guest detail does not show invoice/billing-related visibility well enough
+
+Required behavior:
+- Improve invoice-related visibility inside guest detail in a clean, relevant way
+- Show useful billing context only if appropriate for manager operations
+- Do not clutter the page
+- If the data needs new backend aggregation, add it cleanly
+
+Acceptance criteria:
+- guest detail has clearer invoice/billing visibility
+- information is operationally useful
+- UI stays clean and professional
+
+PHASE 9 — CLEAN LEGACY /metrics ENDPOINT
+Current problem:
+- legacy /metrics endpoint appears unused / dead code
+
+Required behavior:
+- Verify whether /metrics is unused/shadowed/dead
+- Remove or isolate it safely if not needed
+- Do not break current dashboard flow
+- Document the cleanup briefly
+
+Acceptance criteria:
+- dead legacy path is removed or clearly isolated
+- dashboard still works normally
+
+PHASE 10 — DOCUMENT TYPE SEARCH UI
+Current problem:
+- backend may support search but frontend does not expose it
+
+Required behavior:
+- Add search UI to document type screen
+- Keep it lightweight and professional
+- Reuse existing query/filter patterns if possible
+- Maintain mobile-friendly UX
+
+Acceptance criteria:
+- manager can search document types from UI
+- search results match backend behavior
+- UX is clean and responsive
+
+PHASE 11 — APPOINTMENT STATUS COLORS / NO-SHOW VISUAL IMPROVEMENT
+Current problem:
+- appointment statuses and no-show/missed display are not visually strong enough
+
+Required behavior:
+- Improve appointment status visual system
+- Add clear color/status treatment for:
+  - scheduled
+  - completed
+  - cancelled
+  - no-show / missed
+  - other valid states from backend
+- Keep it professional, readable, and consistent across relevant screens
+
+Acceptance criteria:
+- statuses are easier to understand visually
+- no-show/missed appointments are clearly distinguishable
+- no inconsistent color semantics remain
+
+PHASE 12 — PENDING DOCUMENTS DASHBOARD UX VERIFICATION
+Current requirement:
+- Dashboard overview must include Pending Documents section
+- This section should feel premium, operational, and useful
+- Prefer a right-flowing 3-column style layout where appropriate
+- It should show which guest has pending docs and enough summary context to act quickly
+- Keep it responsive for phone
+
+Acceptance criteria:
+- pending documents section is present and useful
+- layout looks professional
+- mobile behavior is strong
+- not cluttered
+
+PHASE 13 — QUICK ACTIONS / DOCTOR ADD UX VERIFICATION
+Current requirement:
+- Quick Actions must not include “New Appointments”
+- Doctor Add must work as a professional bottom popup page / bottom sheet flow
+- Mobile keyboard, spacing, safe area, scroll, submit visibility must all be reliable
+
+Acceptance criteria:
+- Quick Actions no longer contains New Appointments
+- Doctor create flow works cleanly on phone
+- list refreshes after doctor creation
+- no broken bottom-sheet interaction
+
+ARCHITECTURE EXPECTATIONS
+- Keep route/controller layer thin
+- Put business rules in services/use cases where appropriate
+- Keep repositories/DB access separate
+- Reuse shared enums/types instead of duplicating status logic
+- Avoid duplicated document status logic
+- Avoid duplicated appointment mutation logic
+- Keep components focused on presentation and interaction
+- Keep queries/mutations/invalidation clean
+- Remove or isolate dead code that causes confusion
+- Leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- document review route exists but frontend payload shape is wrong
+- rejection reason required by backend but not enforced in UI
+- query invalidation missing after approve/reject or edit/cancel
+- notifications import/export mismatch
+- invoice UI labels differ from real API values
+- date formatter receives null and throws
+- guest agenda assumes wrong status enum values
+- document type update route missing even if UI exists
+- guest detail invoice section pulling wrong data shape
+- legacy /metrics still used somewhere unexpectedly
+- document type search causes stale cache or broken filters
+- appointment color system inconsistent across screens
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found for each issue
+2. Exact files changed
+3. Why each fix was necessary
+4. Any architecture improvement made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for all implemented issues
+2. Exact files changed
+3. What was fixed in P1
+4. What was fixed in P2
+5. What was improved in P3
+6. Manual QA checklist
+7. Remaining future improvements if any
+
+START NOW
+First inspect the current implementation deeply and identify the exact root causes of all P1, P2, and P3 items above.
+Then implement the fixes end-to-end in the priority order above.
