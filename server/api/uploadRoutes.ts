@@ -1,9 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
-import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
 import { authMiddleware, requireRole } from "../auth/middleware";
+import { signAccessToken } from "../auth/jwt";
 import { getStorageProvider } from "../storage/getStorageProvider";
 import { documentRepo } from "../repositories/documentRepo";
 import { AppError } from "../auth/errors";
@@ -135,14 +134,14 @@ router.get(
 
       if (!allowed) throw new AppError("DOC-UP-003", "Access denied", 403);
 
-      const secret = process.env.SESSION_SECRET || "dev-secret";
-      const token = jwt.sign(
-        { sub: actor.sub, docId, purpose: "download" },
-        secret,
-        { expiresIn: "15m" }
-      );
+      const downloadToken = signAccessToken({
+        sub: actor.sub,
+        role: actor.role,
+        clinicId: actor.clinicId,
+        type: actor.type,
+      });
 
-      const downloadUrl = `/v1/documents/${docId}/download?token=${token}`;
+      const downloadUrl = `/v1/documents/${docId}/download?token=${downloadToken}`;
       res.json({
         url: downloadUrl,
         fileName: doc.fileName ?? `document.pdf`,

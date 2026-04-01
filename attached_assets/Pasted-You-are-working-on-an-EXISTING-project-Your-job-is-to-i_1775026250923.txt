@@ -1,0 +1,252 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase deeply and then fix the uploaded PDF viewing flow for BOTH Manager and Guest in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break currently working flows
+- First inspect the real implementation deeply
+- Then directly implement the fixes
+- Preserve good existing architecture where possible
+- Refactor only where needed for correctness, maintainability, security, mobile reliability, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT make an insecure public-file workaround
+- Fix the root cause end-to-end, not just one screen
+- This must work for both Manager and Guest
+- This must work on phone/mobile properly
+
+PRIMARY PROBLEM
+Currently, uploaded PDFs cannot be opened reliably by Manager or Guest.
+This issue happens especially on mobile/phone.
+The PDF viewing/opening flow is broken or unreliable.
+
+REQUIRED BUSINESS OUTCOME
+- Manager must be able to open/view uploaded PDFs
+- Guest must be able to open/view uploaded PDFs
+- Mobile PDF viewing must work reliably
+- Web fallback behavior must also be correct
+- Access control must remain secure
+- The implementation must be production-ready and architecturally clean
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand ALL of the following:
+
+1. FILE UPLOAD FLOW
+- where PDFs are uploaded
+- where file metadata is stored
+- what URL/path is stored in DB
+- whether the stored path is public URL, private path, tokenized URL, or signed URL
+- what content type is stored
+- what file naming/storage provider is used
+
+2. FILE ACCESS / DOWNLOAD FLOW
+- how Manager currently tries to open uploaded PDFs
+- how Guest currently tries to open uploaded PDFs
+- which API endpoints are used for viewing or downloading
+- whether signed URLs are used
+- whether authenticated download endpoints are used
+- whether the response headers are correct for PDFs
+- whether there is an issue with content-type, content-disposition, range support, auth, token expiry, or mobile file opening strategy
+
+3. MOBILE PDF VIEWER FLOW
+- what libraries are currently used on mobile to open PDFs
+- whether the app uses expo-file-system, expo-sharing, expo-web-browser, Linking, WebView, or another method
+- whether Android and iOS have different failures
+- whether the app is trying to open a remote signed URL directly instead of downloading locally first
+- whether the system viewer/open-with flow is broken
+- whether permissions/safe file access are an issue
+
+4. WEB FLOW
+- how PDFs are opened on web
+- whether the URL is valid and accessible
+- whether auth cookies/headers are missing on web open
+- whether the browser is blocked by CORS or signed URL expiry
+
+5. SECURITY / AUTHORIZATION
+- whether Manager can open only documents belonging to guests in the same clinic
+- whether Guest can open only their own documents
+- whether there is any insecure direct file URL exposure
+- whether the current implementation leaks private document access
+
+6. SHARED DOCUMENT UI
+- all places where PDFs are opened from manager screens
+- all places where PDFs are opened from guest screens
+- whether there is duplicate opening logic in multiple components
+- whether a shared document opening utility/service should be introduced
+
+Then directly implement the fixes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ROOT CAUSE FIX
+Find the real root cause behind why uploaded PDFs do not open correctly for Manager and Guest, especially on phone.
+
+You must determine whether the failure is caused by:
+- bad stored URL/path
+- wrong signed URL flow
+- missing auth on file access
+- bad response headers
+- unsupported mobile opening strategy
+- temporary URL expiry
+- incorrect content type
+- invalid viewer library usage
+- broken platform-specific logic
+- wrong backend route or permission checks
+
+Do not guess.
+Identify the actual failure path and fix it.
+
+PHASE 2 — CREATE A PROFESSIONAL DOCUMENT OPENING ARCHITECTURE
+Refactor the PDF viewing flow into a clean reusable architecture.
+
+Requirements:
+- Use one shared document open service/utility if appropriate
+- Separate:
+  - UI trigger layer
+  - document access service
+  - backend file access logic
+  - mobile/web opening strategy
+- Do not duplicate fragile open-file code in many components
+- Keep the code SOLID-compliant and maintainable
+
+PHASE 3 — BACKEND HARDENING FOR SECURE PDF ACCESS
+Inspect and fix the backend file/document access flow.
+
+Requirements:
+- Secure access control must remain enforced
+- Manager should only access authorized clinic guest documents
+- Guest should only access their own documents
+- If signed URLs are used, ensure they are generated correctly and are suitable for actual mobile usage
+- If a protected download endpoint is better, implement/refactor cleanly
+- Ensure correct PDF response headers:
+  - content-type
+  - content-disposition
+  - any headers needed for reliable file opening
+- Avoid insecure public exposure of files
+- Return safe structured errors when document access fails
+
+Acceptance criteria:
+- authorized manager can fetch/open allowed PDF
+- authorized guest can fetch/open allowed PDF
+- unauthorized access is blocked
+- backend response is correct for real PDF opening
+
+PHASE 4 — MOBILE PDF OPENING FIX
+Implement a robust mobile-first PDF opening strategy.
+
+Requirements:
+- The PDF flow must work on phone
+- If direct remote opening is unreliable, use a safer strategy such as:
+  - obtain authorized file URL or download stream
+  - download to local temp/cache file if needed
+  - open with appropriate system/native viewer
+- Keep the experience professional
+- Add loading state while preparing/opening the file
+- Add safe error handling and retry
+- Ensure Android and iOS are both handled correctly
+- Avoid brittle hacks
+
+Acceptance criteria:
+- manager can open uploaded PDF on phone
+- guest can open uploaded PDF on phone
+- loading and error handling are clean
+- no silent failures
+- no broken temp-file handling
+
+PHASE 5 — WEB PDF OPENING FIX
+Ensure the web flow is also correct.
+
+Requirements:
+- PDF opens correctly on web
+- If the app uses web browser open/new tab behavior, make it correct and secure
+- If a tokenized/signed route is needed, ensure it works correctly
+- No broken auth/cors/path issues
+
+Acceptance criteria:
+- manager can open PDF on web
+- guest can open PDF on web
+- no invalid or expired-open behavior during normal usage
+
+PHASE 6 — UI/UX IMPROVEMENT
+Upgrade the PDF viewing/opening UX for both Manager and Guest.
+
+Requirements:
+- Show a clean loading state while document is being prepared/opened
+- Show a professional error message if open fails
+- Add retry action if useful
+- Keep buttons and interactions clear
+- If a file is unavailable, show a meaningful message
+- Do not leave the user wondering what happened
+
+PHASE 7 — LOGGING / DEBUGGABILITY
+Add professional debugging support around document open flow.
+
+Requirements:
+- Add structured logging around:
+  - document open request start
+  - authorization success/failure
+  - signed URL generation if used
+  - download/open success
+  - download/open failure
+- Include requestId/correlation where the app already uses it
+- Do NOT log secrets or sensitive private URLs unnecessarily
+- Make it possible to identify whether failures come from backend access, signed URL generation, mobile open strategy, or UI layer
+
+PHASE 8 — CLEANUP
+- Remove duplicate/broken document open logic if found
+- Keep shared logic centralized
+- Keep type-safety strict
+- Keep the implementation production-ready and maintainable
+
+ARCHITECTURE EXPECTATIONS
+- Thin route/controller layer
+- Business rules and document-access logic in service/use case layer
+- Repository/storage layer isolated
+- Shared viewer/open utility for frontend if appropriate
+- Avoid duplicated platform-specific hacks
+- Keep Manager and Guest flows consistent where possible
+- Leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- signed URL expires too quickly
+- mobile tries to open protected remote URL directly and fails
+- PDF content-type is wrong
+- content-disposition breaks inline opening
+- auth token is not available in browser/open call
+- guest document open path differs from manager path incorrectly
+- manager and guest use different broken logic paths
+- local temp file handling is incomplete
+- platform-specific open APIs are used incorrectly
+- file URL works on simulator/web but not on real phone
+- document button UI fires but backend returns HTML/error instead of PDF
+- unauthorized documents can be opened through weak URL logic
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found
+2. Exact files changed
+3. Why each change was necessary
+4. What architecture improvement was made
+5. Manual test steps for manager and guest
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for why PDFs were not opening
+2. Final secure PDF access strategy
+3. Final mobile PDF opening strategy
+4. Confirmation for manager flow
+5. Confirmation for guest flow
+6. Exact files changed
+7. Manual QA checklist for:
+   - manager on phone
+   - guest on phone
+   - manager on web
+   - guest on web
+8. Remaining future improvements if any
+
+START NOW
+First inspect the full document upload → access → open flow for both Manager and Guest.
+Identify the real root cause.
+Then implement the production-ready fix end-to-end.
