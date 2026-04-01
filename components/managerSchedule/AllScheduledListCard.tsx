@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,6 +19,8 @@ const FILTERS: { label: string; value: ScheduleFilter }[] = [
   { label: "All", value: "ALL" },
   { label: "Upcoming", value: "UPCOMING" },
   { label: "Completed", value: "DONE" },
+  { label: "Missed", value: "MISSED" },
+  { label: "Cancelled", value: "CANCELLED" },
 ];
 
 interface RowProps {
@@ -55,11 +58,7 @@ function ApptRow({ appt }: RowProps) {
   );
 }
 
-interface GroupHeaderProps {
-  label: string;
-}
-
-function GroupHeader({ label }: GroupHeaderProps) {
+function GroupHeader({ label }: { label: string }) {
   return (
     <View style={styles.groupHeader}>
       <Text style={styles.groupLabel}>{label}</Text>
@@ -88,30 +87,34 @@ export function AllScheduledListCard({
           <View style={[styles.dot, { backgroundColor: "#6366F1" }]} />
           <Text style={styles.headerTitle}>All Scheduled</Text>
         </View>
+        {groups.length > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>
+              {groups.reduce((s, g) => s + g.appts.length, 0)}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Filter chips */}
-      <View style={styles.filterRow}>
+      {/* Filter chips — horizontal scroll for all 5 options */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
         {FILTERS.map((f) => (
           <Pressable
             key={f.value}
-            style={[
-              styles.chip,
-              filter === f.value && styles.chipActive,
-            ]}
+            style={[styles.chip, filter === f.value && styles.chipActive]}
             onPress={() => onFilterChange(f.value)}
           >
-            <Text
-              style={[
-                styles.chipText,
-                filter === f.value && styles.chipTextActive,
-              ]}
-            >
+            <Text style={[styles.chipText, filter === f.value && styles.chipTextActive]}>
               {f.label}
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Content */}
       {isLoading ? (
@@ -121,7 +124,7 @@ export function AllScheduledListCard({
       ) : groups.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="layers-outline" size={22} color={T.border} />
-          <Text style={styles.emptyText}>No scheduled appointments yet.</Text>
+          <Text style={styles.emptyText}>No appointments found.</Text>
         </View>
       ) : (
         groups.map((group, gi) => (
@@ -174,13 +177,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: T.text,
   },
+  countBadge: {
+    backgroundColor: "#6366F114",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "#6366F130",
+  },
+  countText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+    color: "#6366F1",
+  },
+  filterScroll: {
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+  },
   filterRow: {
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: T.sp16,
     paddingVertical: T.sp12,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
   },
   chip: {
     paddingHorizontal: T.sp12,

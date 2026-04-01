@@ -31,7 +31,20 @@ import {
 } from "@/components/filters/ManagerFilterSheet";
 import { ActiveFilterChips, type ActiveChip } from "@/components/filters/ActiveFilterChips";
 
-type TabType = "Guests" | "Doctors";
+type TabType = "Guests" | "Doctors" | "Pending Docs";
+
+type DocFilter = "ALL" | "HAS_PENDING" | "FULLY_UPLOADED" | "HAS_REJECTED";
+
+interface DocSummaryItem {
+  patientId: string;
+  patientName: string;
+  pending: number;
+  uploaded: number;
+  approved: number;
+  rejected: number;
+  total: number;
+  pendingDocNames: string[];
+}
 
 interface Patient {
   id: string;
@@ -449,10 +462,287 @@ function DoctorsTab() {
   );
 }
 
+const DOC_FILTER_OPTIONS: { label: string; value: DocFilter }[] = [
+  { label: "All", value: "ALL" },
+  { label: "Pending", value: "HAS_PENDING" },
+  { label: "Uploaded", value: "FULLY_UPLOADED" },
+  { label: "Rejected", value: "HAS_REJECTED" },
+];
+
+function DocStatusBadge({ count, color, label }: { count: number; color: string; label: string }) {
+  if (count === 0) return null;
+  return (
+    <View style={[docStyles.badge, { backgroundColor: color + "18", borderColor: color + "40" }]}>
+      <Text style={[docStyles.badgeText, { color }]}>{count} {label}</Text>
+    </View>
+  );
+}
+
+function PendingDocsTab() {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [docFilter, setDocFilter] = useState<DocFilter>("HAS_PENDING");
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading, isRefetching, refetch } = useQuery<DocSummaryItem[]>({
+    queryKey: ["/v1/manager/patients/doc-summaries", debouncedSearch, docFilter],
+    queryFn: async () => {
+      const p = new URLSearchParams();
+      if (debouncedSearch) p.set("search", debouncedSearch);
+      p.set("filter", docFilter);
+      const res = await apiRequest("GET", `/v1/manager/patients/doc-summaries?${p.toString()}`);
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const items: DocSummaryItem[] = data ?? [];
+
+  function renderItem({ item }: { item: DocSummaryItem }) {
+    const hasRejected = item.rejected > 0;
+    const hasPending = item.pending > 0;
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          docStyles.card,
+          cardShadow,
+          hasRejected && docStyles.cardRejected,
+          !hasRejected && hasPending && docStyles.cardPending,
+          { opacity: pressed ? 0.8 : 1 },
+        ]}
+        onPress={() => router.push(`/(manager)/patients/${item.patientId}` as any)}
+      >
+        {/* Top row */}
+        <View style={docStyles.cardTop}>
+          <View style={[docStyles.avatar, { backgroundColor: hasPending ? T.warning + "18" : T.accent + "14" }]}>
+            <Text style={[docStyles.avatarText, { color: hasPending ? T.warning : T.accent }]}>
+              {item.patientName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={docStyles.name} numberOfLines={1}>{item.patientName}</Text>
+            <Text style={docStyles.totalLine}>{item.total} document{item.total !== 1 ? "s" : ""} total</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
+        </View>
+
+        {/* Status badges */}
+        <View style={docStyles.badgeRow}>
+          <DocStatusBadge count={item.pending} color={T.warning} label="pending" />
+          <DocStatusBadge count={item.uploaded} color={T.accent} label="uploaded" />
+          <DocStatusBadge count={item.approved} color={T.success} label="approved" />
+          <DocStatusBadge count={item.rejected} color={T.danger} label="rejected" />
+        </View>
+
+        {/* Pending doc names */}
+        {item.pendingDocNames.length > 0 && (
+          <View style={docStyles.chipRow}>
+            {item.pendingDocNames.slice(0, 3).map((name, i) => (
+              <View key={i} style={docStyles.chip}>
+                <Ionicons name="document-outline" size={10} color={T.warning} />
+                <Text style={docStyles.chipText} numberOfLines={1}>{name}</Text>
+              </View>
+            ))}
+            {item.pendingDocNames.length > 3 && (
+              <Text style={docStyles.moreText}>+{item.pendingDocNames.length - 3} more</Text>
+            )}
+          </View>
+        )}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Search + filter bar */}
+      <View style={styles.filterBar}>
+        <View style={[styles.searchBar, { marginHorizontal: T.sp16, marginBottom: T.sp12 }]}>
+          <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search guests..."
+            placeholderTextColor={T.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")}>
+              <Ionicons name="close-circle" size={16} color={T.textMuted} />
+            </Pressable>
+          )}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.statusFilters, { paddingHorizontal: T.sp16 }]}
+        >
+          {DOC_FILTER_OPTIONS.map((f) => (
+            <Pressable
+              key={f.value}
+              style={[styles.filterPill, docFilter === f.value && styles.filterPillActive]}
+              onPress={() => setDocFilter(f.value)}
+            >
+              <Text style={[styles.filterPillText, docFilter === f.value && styles.filterPillTextActive]}>
+                {f.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={T.accent} />
+        </View>
+      ) : (
+        <FlatList<DocSummaryItem>
+          data={items}
+          keyExtractor={(item) => item.patientId}
+          contentContainerStyle={{ padding: T.sp16, paddingBottom: bottomPad + 100, gap: T.sp12 }}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
+          ListHeaderComponent={
+            items.length > 0 ? (
+              <Text style={styles.listCount}>
+                {items.length} guest{items.length !== 1 ? "s" : ""}
+                {docFilter === "HAS_PENDING" ? " with pending docs" :
+                  docFilter === "FULLY_UPLOADED" ? " with uploaded docs" :
+                  docFilter === "HAS_REJECTED" ? " with rejected docs" : ""}
+              </Text>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons
+                name="document-text-outline"
+                size={40}
+                color={T.border}
+              />
+              <Text style={styles.emptyTitle}>
+                {docFilter === "HAS_PENDING" ? "No pending documents" :
+                  docFilter === "FULLY_UPLOADED" ? "No uploaded documents" :
+                  docFilter === "HAS_REJECTED" ? "No rejected documents" :
+                  "No document records"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {debouncedSearch ? "Try a different search" : "All guests are up to date"}
+              </Text>
+            </View>
+          }
+          renderItem={renderItem}
+        />
+      )}
+    </View>
+  );
+}
+
+const docStyles = StyleSheet.create({
+  card: {
+    backgroundColor: T.surface,
+    borderRadius: T.r12,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: T.sp16,
+    gap: T.sp8,
+  },
+  cardPending: {
+    borderColor: T.warning + "50",
+    backgroundColor: T.warningBg,
+  },
+  cardRejected: {
+    borderColor: T.danger + "50",
+    backgroundColor: T.dangerBg,
+  },
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: T.sp12,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+  name: {
+    fontFamily: "Inter_600SemiBold" as any,
+    fontSize: 15,
+    color: T.text,
+  },
+  totalLine: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: T.textMuted,
+    marginTop: 1,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: T.warning + "40",
+    backgroundColor: T.warningBg,
+  },
+  chipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    color: T.warning,
+    flexShrink: 1,
+  },
+  moreText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 10,
+    color: T.textMuted,
+    alignSelf: "center",
+  },
+});
+
 export default function UsersScreen() {
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("Guests");
   const { logout } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : 0;
+
+  // Auto-switch tab from URL param (e.g., from KPI card navigation)
+  useEffect(() => {
+    if (params.tab === "Pending Docs") {
+      setActiveTab("Pending Docs");
+    }
+  }, [params.tab]);
 
   async function handleLogout() {
     await logout();
@@ -462,34 +752,53 @@ export default function UsersScreen() {
   return (
     <View style={styles.root}>
       <ManagerHeader title="Users" onLogout={handleLogout} />
-      <View style={[styles.tabs, { paddingTop: Platform.OS === "web" ? 0 : 0 }]}>
-        {(["Guests", "Doctors"] as TabType[]).map(tab => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabs}
+      >
+        {(["Guests", "Doctors", "Pending Docs"] as TabType[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab}
+            </Text>
           </Pressable>
         ))}
-      </View>
-      {activeTab === "Guests" ? <GuestsTab /> : <DoctorsTab />}
+      </ScrollView>
+      {activeTab === "Guests" ? (
+        <GuestsTab />
+      ) : activeTab === "Doctors" ? (
+        <DoctorsTab />
+      ) : (
+        <PendingDocsTab />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  tabs: {
-    flexDirection: "row",
+  tabsScroll: {
     backgroundColor: T.surface,
     borderBottomWidth: 1,
     borderBottomColor: T.border,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  tabs: {
+    flexDirection: "row",
+    minWidth: "100%" as any,
   },
   tab: {
-    flex: 1,
     paddingVertical: T.sp12,
+    paddingHorizontal: T.sp20,
     alignItems: "center",
+    minWidth: 90,
   },
   tabActive: {
     borderBottomWidth: 2,

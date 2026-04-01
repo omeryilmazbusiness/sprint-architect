@@ -82,7 +82,7 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
   if (isLoading) {
     return (
       <View style={styles.grid}>
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <KpiSkeleton key={i} />
         ))}
       </View>
@@ -116,6 +116,20 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
         subtitle="scheduled appointments"
         onPress={() => router.push("/(manager-tabs)/users")}
       />
+      <KpiCard
+        label="Pending Docs"
+        value={kpis.pendingDocuments}
+        icon="document-text-outline"
+        color={T.warning}
+        subtitle="awaiting patient upload"
+        highlight={kpis.pendingDocuments > 0}
+        onPress={() =>
+          router.push({
+            pathname: "/(manager-tabs)/users",
+            params: { tab: "Pending Docs" },
+          })
+        }
+      />
     </View>
   );
 }
@@ -141,7 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent + "05",
   },
   skeleton: {
-    height: 120,
+    height: 110,
     alignItems: "center",
     justifyContent: "center",
   },

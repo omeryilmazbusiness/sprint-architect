@@ -8,8 +8,14 @@ import {
 } from "date-fns";
 import type { ScheduleAppt } from "./useManagerMonthAppointments";
 
-export type DayMarker = "today" | "upcoming" | "pastDone";
-export type ScheduleFilter = "ALL" | "UPCOMING" | "DONE";
+export type DayMarker =
+  | "today"
+  | "upcoming"
+  | "cancelled"
+  | "missed"
+  | "completed";
+
+export type ScheduleFilter = "ALL" | "UPCOMING" | "DONE" | "MISSED" | "CANCELLED";
 
 export interface DayGroup {
   dateKey: string;
@@ -23,6 +29,11 @@ export interface ScheduleDerivedData {
   nextAppointment: ScheduleAppt | null;
   allScheduledGrouped: DayGroup[];
 }
+
+const MISSED_STATUSES = new Set(["MISSED", "NO_SHOW"]);
+const DONE_STATUSES = new Set(["DONE"]);
+const CANCELLED_STATUSES = new Set(["CANCELLED"]);
+const UPCOMING_STATUSES = new Set(["SCHEDULED"]);
 
 export function useScheduleDerivedData(
   appointments: ScheduleAppt[],
@@ -44,7 +55,7 @@ export function useScheduleDerivedData(
       byDate.get(key)!.push(appt);
     }
 
-    // ── Day markers (two-pass, per-date logic) ───────────────────────────────
+    // ── Day markers ──────────────────────────────────────────────────────────
     const dayMarkers: Record<string, DayMarker> = {};
 
     for (const [key, dayAppts] of byDate.entries()) {
@@ -56,24 +67,26 @@ export function useScheduleDerivedData(
       }
 
       if (isAfter(d, todayStart)) {
-        // Future: green if any SCHEDULED
-        if (dayAppts.some((a) => a.status === "SCHEDULED")) {
+        // Future day: upcoming takes priority, then cancelled
+        if (dayAppts.some((a) => UPCOMING_STATUSES.has(a.status))) {
           dayMarkers[key] = "upcoming";
+        } else if (dayAppts.every((a) => CANCELLED_STATUSES.has(a.status))) {
+          dayMarkers[key] = "cancelled";
         }
         continue;
       }
 
-      // Past: gray only if no SCHEDULED (all completed/cancelled)
-      const hasScheduled = dayAppts.some((a) => a.status === "SCHEDULED");
-      const hasDone = dayAppts.some(
-        (a) => a.status === "DONE" || a.status === "CANCELLED",
-      );
-      if (!hasScheduled && hasDone) {
-        dayMarkers[key] = "pastDone";
+      // Past day priority: missed > completed > cancelled
+      if (dayAppts.some((a) => MISSED_STATUSES.has(a.status))) {
+        dayMarkers[key] = "missed";
+      } else if (dayAppts.some((a) => DONE_STATUSES.has(a.status))) {
+        dayMarkers[key] = "completed";
+      } else if (dayAppts.every((a) => CANCELLED_STATUSES.has(a.status))) {
+        dayMarkers[key] = "cancelled";
       }
     }
 
-    // Today always gets its marker (even with no appointments)
+    // Today always marked
     dayMarkers[todayKey] = "today";
 
     // ── Selected day appointments ────────────────────────────────────────────
@@ -90,7 +103,7 @@ export function useScheduleDerivedData(
     const nextAppointment =
       appointments
         .filter(
-          (a) => a.status === "SCHEDULED" && isAfter(parseISO(a.startAt), now),
+          (a) => UPCOMING_STATUSES.has(a.status) && isAfter(parseISO(a.startAt), now),
         )
         .sort(
           (a, b) =>
@@ -99,8 +112,10 @@ export function useScheduleDerivedData(
 
     // ── All scheduled grouped (with filter) ──────────────────────────────────
     const filtered = appointments.filter((a) => {
-      if (filter === "UPCOMING") return a.status === "SCHEDULED";
-      if (filter === "DONE") return a.status === "DONE";
+      if (filter === "UPCOMING") return UPCOMING_STATUSES.has(a.status);
+      if (filter === "DONE") return DONE_STATUSES.has(a.status);
+      if (filter === "MISSED") return MISSED_STATUSES.has(a.status);
+      if (filter === "CANCELLED") return CANCELLED_STATUSES.has(a.status);
       return true;
     });
 

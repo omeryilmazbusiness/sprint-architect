@@ -7,6 +7,8 @@ import type {
   PatientListResult,
   ApprovePatientInput,
   ApprovePatientResult,
+  DocSummaryItem,
+  ListDocSummariesFilter,
 } from "./ManagerPatientsRepo";
 import { AppError } from "../../../auth/errors";
 
@@ -155,5 +157,92 @@ export const managerPatientsRepo: IManagerPatientsRepo = {
       .where(eq(patients.id, patientId));
 
     return { alreadyApproved: false, approvedAt: now, billingPeriod: period };
+  },
+
+  async listDocSummaries(filter): Promise<DocSummaryItem[]> {
+    const { clinicId, search, filter: docFilter = "ALL" } = filter;
+
+    const rows = await db.query.patientDocuments.findMany({
+      where: and(
+        eq(patientDocuments.clinicId, clinicId),
+        inArray(patientDocuments.status, ["ASSIGNED", "UPLOADED", "APPROVED", "REJECTED"]),
+      ),
+      with: {
+        patient: { columns: { id: true, fullName: true } },
+        documentType: { columns: { name: true } },
+      },
+    });
+
+    const byPatient = new Map<
+      string,
+      {
+        patientName: string;
+        pending: number;
+        uploaded: number;
+        approved: number;
+        rejected: number;
+        pendingDocNames: string[];
+      }
+    >();
+
+    for (const row of rows) {
+      if (!row.patient) continue;
+      const pid = row.patient.id;
+      if (!byPatient.has(pid)) {
+        byPatient.set(pid, {
+          patientName: row.patient.fullName,
+          pending: 0,
+          uploaded: 0,
+          approved: 0,
+          rejected: 0,
+          pendingDocNames: [],
+        });
+      }
+      const entry = byPatient.get(pid)!;
+      if (row.status === "ASSIGNED") {
+        entry.pending += 1;
+        if (row.documentType?.name) entry.pendingDocNames.push(row.documentType.name);
+      } else if (row.status === "UPLOADED") {
+        entry.uploaded += 1;
+      } else if (row.status === "APPROVED") {
+        entry.approved += 1;
+      } else if (row.status === "REJECTED") {
+        entry.rejected += 1;
+      }
+    }
+
+    let results = Array.from(byPatient.entries()).map(([patientId, v]) => ({
+      patientId,
+      patientName: v.patientName,
+      pending: v.pending,
+      uploaded: v.uploaded,
+      approved: v.approved,
+      rejected: v.rejected,
+      total: v.pending + v.uploaded + v.approved + v.rejected,
+      pendingDocNames: v.pendingDocNames,
+    }));
+
+    // Apply search filter
+    if (search) {
+      const lc = search.toLowerCase();
+      results = results.filter((r) => r.patientName.toLowerCase().includes(lc));
+    }
+
+    // Apply status filter
+    if (docFilter === "HAS_PENDING") {
+      results = results.filter((r) => r.pending > 0);
+    } else if (docFilter === "FULLY_UPLOADED") {
+      results = results.filter((r) => r.pending === 0 && r.uploaded > 0);
+    } else if (docFilter === "HAS_REJECTED") {
+      results = results.filter((r) => r.rejected > 0);
+    }
+
+    // Sort: pending desc, then by name
+    results.sort((a, b) => {
+      if (b.pending !== a.pending) return b.pending - a.pending;
+      return a.patientName.localeCompare(b.patientName);
+    });
+
+    return results;
   },
 };

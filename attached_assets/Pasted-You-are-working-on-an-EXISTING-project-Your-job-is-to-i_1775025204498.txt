@@ -1,0 +1,287 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase deeply and then implement the following manager-side UX and feature improvements in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break currently working flows
+- First inspect the real implementation deeply
+- Especially inspect the existing GUEST calendar design first and use it as the reference
+- Then directly implement the requested improvements
+- Preserve good existing architecture where possible
+- Refactor only where needed for correctness, maintainability, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random visual patching without understanding data flow
+- Fix at the right layer: UI + state + DTO + backend support if needed
+- Keep everything mobile-first and premium
+
+PRIMARY REQUESTS
+
+1) MANAGER APPOINTMENTS CALENDAR SHOULD MATCH THE GUEST CALENDAR DESIGN QUALITY
+Required behavior:
+- First inspect the guest-side calendar structure, design language, and appointment status rendering
+- Then bring the manager-side appointments calendar to a similar professional UX level
+- Appointment states must not be represented by tiny dots
+- Use colored box/badge-like day indicators or clearly visible colored containers
+- Each major appointment case must have its own color
+- Under the calendar, show a clear legend that explains what each color means
+
+Required appointment states to represent with different colors:
+- past missed / not attended appointment
+- completed appointment
+- today’s appointment
+- pending future appointment
+- cancelled future appointment
+
+If backend/source enums differ, map them correctly and professionally.
+Keep color semantics consistent everywhere.
+
+2) MANAGER OVERVIEW SHOULD INCLUDE ONE MORE CARD: PENDING DOCUMENTS COUNT
+Required behavior:
+- In manager dashboard overview, add one more card showing the total pending documents count
+- It should feel like a first-class KPI/overview card
+- It must integrate visually with the existing overview area
+- If the backend already returns this count, reuse it cleanly
+- If not, add the correct backend DTO / use case / query in a SOLID way
+
+3) THE LOWER PENDING DOCUMENTS SECTION SHOULD BECOME A HORIZONTAL CARD CAROUSEL / SIDE-SCROLL LIST
+Required behavior:
+- The existing pending documents area below should be redesigned into a horizontally scrollable list of cards
+- Cards should slide horizontally / be side-scroll friendly
+- The design must feel premium, operational, clean, and mobile-friendly
+- Each card should quickly show:
+  - guest/patient name
+  - pending document count
+  - uploaded vs missing summary
+  - optional urgency/status treatment
+- It must be easy for managers to scan quickly on phone
+
+4) ADD A THIRD TAB IN USERS PAGE: “PENDING DOCUMENTS”
+Required behavior:
+- In the Users screen, create a third tab called “Pending Documents”
+- The existing tabs structure must remain clean and professional
+- This tab should provide a full manager-facing pending-documents workspace
+
+The Pending Documents tab must support:
+- list of all guests/patients who have assigned documents
+- for each guest:
+  - assigned documents
+  - uploaded documents
+  - not uploaded / still missing documents
+  - current document statuses
+- proper filtering and searching
+- correct grouping and summaries
+- a premium professional UX
+- mobile-friendly cards/list layout
+- clean empty/loading/error states
+
+The filtering/interaction should allow managers to quickly answer:
+- which patients are missing documents
+- which documents are uploaded
+- which patients are fully complete
+- which patients still need action
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before making changes, inspect and understand all of the following:
+
+A. Guest calendar reference
+- how the guest calendar is built
+- which components render it
+- how status colors are assigned
+- how appointment states are mapped
+- what visual patterns make it better
+- whether there is reusable calendar logic or styling
+
+B. Manager calendar
+- current manager overview calendar / schedule implementation
+- how appointments are rendered
+- current status colors or lack of them
+- current event/day display limitations
+
+C. Dashboard overview
+- current KPI card composition
+- current dashboard data source
+- whether pending documents count already exists in the dashboard API/DTO
+- whether a backend enhancement is needed
+
+D. Pending Documents section
+- current implementation
+- current data source and DTO shape
+- current UI layout
+- whether horizontal card rendering is already partially present
+
+E. Users screen tabs
+- current Users page tab structure
+- current guests/doctors tabs implementation
+- current queries and state flow
+- best way to add a third tab without breaking layout or performance
+
+F. Pending Documents data model
+- assigned documents
+- uploaded documents
+- approved / rejected / missing states
+- how these are currently represented in backend and frontend
+- which endpoints already exist
+- whether a new manager-focused aggregate endpoint is needed
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — GUEST CALENDAR ANALYSIS + MANAGER CALENDAR REDESIGN
+1. Inspect guest calendar implementation first
+2. Identify reusable visual and structural patterns
+3. Redesign manager calendar UX to match the quality level
+4. Replace small point-based indicators with stronger colored block/box treatments
+5. Add distinct colors for:
+   - past missed / no-show
+   - completed
+   - today
+   - pending future
+   - cancelled future
+6. Add a professional legend below the calendar explaining each color
+7. Keep it responsive and readable on mobile
+
+Acceptance criteria:
+- manager calendar looks significantly more professional
+- statuses are visually easy to understand
+- colors are distinct and meaningful
+- legend is visible below the calendar
+- design quality is close to guest calendar quality
+
+PHASE 2 — OVERVIEW PENDING DOCUMENTS COUNT CARD
+1. Inspect current overview card layout
+2. Add one more card for pending documents count
+3. Ensure count is correct and backend-supported
+4. Keep spacing, density, and visual hierarchy professional
+
+Acceptance criteria:
+- overview has a pending documents count card
+- count is accurate
+- layout still feels balanced and premium
+
+PHASE 3 — HORIZONTAL PENDING DOCUMENTS CARD LIST
+1. Redesign the lower pending documents section into a horizontal card list / side-scroll area
+2. Build premium cards with clear hierarchy
+3. Optimize for manager quick scanning on phone
+4. Ensure clean snapping/scroll behavior if appropriate
+5. Make loading, empty, and error states professional
+
+Suggested per-card information hierarchy:
+- guest name
+- pending count
+- uploaded count
+- missing count
+- compact document summary chips or badges
+- optional CTA to open guest detail / pending docs tab
+
+Acceptance criteria:
+- pending documents list scrolls horizontally as cards
+- cards are readable and useful
+- mobile UX is strong
+- information is operationally useful at a glance
+
+PHASE 4 — USERS PAGE THIRD TAB: PENDING DOCUMENTS
+1. Extend Users page tabs to include a third tab: Pending Documents
+2. Keep tab UX professional and balanced
+3. Build a manager workspace for pending docs
+4. This tab must show all relevant patients and their document status breakdown
+5. Add useful filtering and search
+6. Add professional card/list UX
+7. Keep performance reasonable
+8. Reuse backend capabilities cleanly or add a dedicated manager aggregate endpoint if needed
+
+Recommended filters:
+- all
+- has pending
+- fully uploaded
+- has missing docs
+- has rejected docs (if available)
+- search by patient name
+- optional document type filter if backend makes this practical
+
+Acceptance criteria:
+- Users page now has 3 tabs
+- Pending Documents tab works correctly
+- tab data is accurate
+- filtering/search is useful and correct
+- design is professional and mobile-friendly
+
+PHASE 5 — DATA / BACKEND HARDENING
+If the frontend needs better data than currently available:
+1. Add or refactor backend DTOs/use cases/repository queries in a SOLID way
+2. Do not overload unrelated endpoints with messy logic
+3. Prefer a clean manager-focused aggregate endpoint if needed
+4. Keep route/controller thin
+5. Put aggregation/business rules in service/use case
+6. Keep repo responsible for querying DB
+
+Potential backend needs:
+- pending documents summary count for dashboard overview
+- grouped pending document summaries per patient for horizontal cards
+- list endpoint for Users > Pending Documents tab with filters/search
+
+Acceptance criteria:
+- frontend gets the right shaped data cleanly
+- backend remains maintainable
+- no duplicated document-summary logic across random files
+
+PHASE 6 — POLISH / HARDENING
+1. Ensure loading, empty, and error states are professional
+2. Ensure query invalidation / refetch is correct
+3. Ensure mobile spacing and scrolling feel polished
+4. Keep accessibility reasonable:
+   - labels
+   - focus states
+   - usable touch targets
+5. Avoid dead code or duplicate mapping logic
+6. Keep colors consistent between manager and guest experiences where appropriate
+
+ARCHITECTURE EXPECTATIONS
+- Keep route/controller layer thin
+- Put business rules and aggregation in services/use cases
+- Keep repository layer responsible for DB queries
+- Reuse shared enums/types if available
+- Avoid duplicated appointment-status mapping
+- Avoid duplicated document-status mapping
+- Keep components focused on presentation and interaction
+- Keep tab state and query state manageable and clean
+- Leave the codebase more maintainable than before
+
+YOU MUST CHECK FOR THESE RISKS
+- guest and manager calendars use different status truth sources
+- manager calendar currently maps statuses incorrectly
+- no-show / missed status may not exist in frontend enum handling
+- pending documents count may be derived inconsistently in different places
+- horizontal card list may overflow badly on small screens if done poorly
+- users page third tab may introduce heavy unnecessary fetches
+- filtering may be frontend-only while backend data remains too large or inconsistent
+- document status aggregation may ignore approved/rejected/uploaded distinctions
+- legend colors may become inconsistent with actual appointment status styling
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current codebase
+2. What you learned from the guest calendar design
+3. Exact files changed
+4. Why each change was made
+5. Any backend/data changes introduced
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of manager calendar redesign
+2. Final appointment status color model
+3. Confirmation that legend was added under calendar
+4. Summary of new pending documents count overview card
+5. Summary of horizontal pending documents card section
+6. Summary of Users > Pending Documents third tab
+7. Exact files changed
+8. Manual QA checklist for phone/mobile and desktop
+9. Remaining future improvements if any
+
+START NOW
+First inspect the guest calendar design and current manager dashboard/users implementations deeply.
+Then implement the requested changes end-to-end in the order above.

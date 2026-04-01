@@ -25,6 +25,16 @@ import type { DayMarker } from "@/hooks/useScheduleDerivedData";
 
 const WEEK_DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
+// ─── Status color config ───────────────────────────────────────────────────────
+
+const MARKER_CFG: Record<DayMarker, { bg: string; tc: string; strip: string; label: string }> = {
+  today:     { bg: T.success,       tc: "#fff",     strip: T.success,   label: "Today" },
+  upcoming:  { bg: "#EFF6FF",       tc: T.accent,   strip: T.accent,    label: "Upcoming" },
+  completed: { bg: T.successBg,     tc: T.success,  strip: T.success,   label: "Completed" },
+  missed:    { bg: "#FEF3C7",       tc: "#D97706",  strip: "#D97706",   label: "Missed" },
+  cancelled: { bg: T.dangerBg,      tc: T.danger,   strip: T.danger,    label: "Cancelled" },
+};
+
 interface Props {
   currentMonth: Date;
   selectedDay: Date;
@@ -48,22 +58,6 @@ export function MonthlyCalendar({
     start: startOfWeek(monthStart),
     end: endOfWeek(monthEnd),
   });
-
-  function getDayStyle(day: Date) {
-    const key = format(day, "yyyy-MM-dd");
-    const marker = dayMarkers[key];
-    const selected = isSameDay(day, selectedDay);
-    const today = isToday(day);
-
-    if (today) return { cell: styles.cellToday, text: styles.textToday };
-    if (selected)
-      return { cell: styles.cellSelected, text: styles.textSelected };
-    if (marker === "upcoming")
-      return { cell: styles.cellUpcoming, text: styles.textUpcoming };
-    if (marker === "pastDone")
-      return { cell: styles.cellPastDone, text: styles.textPastDone };
-    return { cell: null, text: null };
-  }
 
   return (
     <View style={[styles.card, cardShadow]}>
@@ -101,26 +95,6 @@ export function MonthlyCalendar({
         </Pressable>
       </View>
 
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: T.success }]} />
-          <Text style={styles.legendText}>Today</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View
-            style={[styles.legendDot, { backgroundColor: T.successBg, borderColor: T.successBorder, borderWidth: 1 }]}
-          />
-          <Text style={styles.legendText}>Upcoming</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View
-            style={[styles.legendDot, { backgroundColor: T.surfaceSubtle, borderColor: T.border, borderWidth: 1 }]}
-          />
-          <Text style={styles.legendText}>Completed</Text>
-        </View>
-      </View>
-
       {/* Week headers */}
       <View style={styles.weekRow}>
         {WEEK_DAYS.map((d, i) => (
@@ -134,39 +108,53 @@ export function MonthlyCalendar({
       <View style={styles.grid}>
         {calDays.map((day, i) => {
           const inMonth = isSameMonth(day, currentMonth);
-          const { cell, text } = getDayStyle(day);
           const key = format(day, "yyyy-MM-dd");
           const marker = dayMarkers[key];
-          const hasAppts = !!marker && marker !== "today" && !isToday(day);
+          const selected = isSameDay(day, selectedDay);
+          const todayDay = isToday(day);
+          const cfg = marker ? MARKER_CFG[marker] : null;
 
           return (
             <Pressable
               key={i}
-              style={[styles.dayCell, cell]}
+              style={[
+                styles.dayCell,
+                cfg && { backgroundColor: cfg.bg },
+                selected && !todayDay && styles.dayCellSelected,
+              ]}
               onPress={() => onDaySelect(day)}
             >
               <Text
                 style={[
                   styles.dayText,
                   !inMonth && styles.dayTextOtherMonth,
-                  text,
+                  cfg && { color: cfg.tc, fontFamily: "Inter_600SemiBold" as any },
+                  selected && !todayDay && styles.dayTextSelected,
                 ]}
               >
                 {format(day, "d")}
               </Text>
-              {hasAppts && (
+              {/* Colored status strip at the bottom */}
+              {marker && marker !== "today" && (
                 <View
-                  style={[
-                    styles.apptDot,
-                    marker === "upcoming"
-                      ? styles.dotUpcoming
-                      : styles.dotPastDone,
-                  ]}
+                  style={[styles.statusStrip, { backgroundColor: cfg!.strip }]}
                 />
               )}
             </Pressable>
           );
         })}
+      </View>
+
+      {/* Legend */}
+      <View style={styles.legend}>
+        {(Object.entries(MARKER_CFG) as [DayMarker, typeof MARKER_CFG[DayMarker]][]).map(
+          ([key, cfg]) => (
+            <View key={key} style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: cfg.bg, borderColor: cfg.strip + "80" }]} />
+              <Text style={styles.legendText}>{cfg.label}</Text>
+            </View>
+          ),
+        )}
       </View>
 
       {isLoading && (
@@ -230,28 +218,6 @@ const styles = StyleSheet.create({
     color: T.success,
   },
 
-  legend: {
-    flexDirection: "row",
-    gap: T.sp12,
-    marginBottom: T.sp8,
-    paddingHorizontal: 2,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: T.textMuted,
-  },
-
   weekRow: {
     flexDirection: "row",
     marginBottom: 4,
@@ -275,7 +241,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: T.r8,
-    gap: 2,
+    position: "relative",
+    overflow: "hidden",
+  },
+  dayCellSelected: {
+    borderWidth: 2,
+    borderColor: T.accent,
   },
   dayText: {
     fontFamily: "Inter_400Regular",
@@ -286,44 +257,47 @@ const styles = StyleSheet.create({
     color: T.textMuted,
     opacity: 0.35,
   },
-
-  // Day states
-  cellToday: {
-    backgroundColor: T.success,
-  },
-  textToday: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-  },
-  cellSelected: {
-    borderWidth: 2,
-    borderColor: T.accent,
-  },
-  textSelected: {
+  dayTextSelected: {
     color: T.accent,
     fontFamily: "Inter_600SemiBold" as any,
   },
-  cellUpcoming: {
-    backgroundColor: T.successBg,
-  },
-  textUpcoming: {
-    color: T.success,
-    fontFamily: "Inter_500Medium",
-  },
-  cellPastDone: {
-    backgroundColor: T.surfaceSubtle,
-  },
-  textPastDone: {
-    color: T.textMuted,
+
+  // Colored status strip at the bottom of the cell
+  statusStrip: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 0,
   },
 
-  apptDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+  // Legend below the grid
+  legend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: T.sp12,
+    paddingTop: T.sp8,
+    borderTopWidth: 1,
+    borderTopColor: T.border,
   },
-  dotUpcoming: { backgroundColor: T.success },
-  dotPastDone: { backgroundColor: T.textMuted },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  legendSwatch: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  legendText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: T.textSec,
+  },
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

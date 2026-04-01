@@ -41,7 +41,27 @@ export interface ApprovePatientResult {
   billingPeriod: string;
 }
 
+export interface DocSummaryItem {
+  patientId: string;
+  patientName: string;
+  pending: number;
+  uploaded: number;
+  approved: number;
+  rejected: number;
+  total: number;
+  pendingDocNames: string[];
+}
+
+export type DocSummaryFilter = "ALL" | "HAS_PENDING" | "FULLY_UPLOADED" | "HAS_REJECTED";
+
+export interface ListDocSummariesFilter {
+  clinicId: string;
+  search?: string;
+  filter?: DocSummaryFilter;
+}
+
 export interface IManagerPatientsRepo {
   listPatients(filter: ListPatientsFilter): Promise<PatientListResult>;
   approvePatient(input: ApprovePatientInput): Promise<ApprovePatientResult>;
+  listDocSummaries(filter: ListDocSummariesFilter): Promise<DocSummaryItem[]>;
 }

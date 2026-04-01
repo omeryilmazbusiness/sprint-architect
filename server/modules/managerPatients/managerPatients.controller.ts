@@ -1,13 +1,16 @@
 import type { Request, Response, NextFunction } from "express";
 import { ListPatients } from "./usecases/ListPatients";
 import { ApprovePatient } from "./usecases/ApprovePatient";
+import { ListDocSummaries } from "./usecases/ListDocSummaries";
 import { managerPatientsRepo } from "./repos/ManagerPatientsRepo.drizzle";
 import { billingEventsRepo } from "../billingEvents/repos/BillingEventsRepo.drizzle";
 import { listPatientsQuerySchema } from "./schemas/managerPatients.schemas";
+import type { DocSummaryFilter } from "./repos/ManagerPatientsRepo";
 import { AppError } from "../../auth/errors";
 
 const listPatientsUseCase = new ListPatients(managerPatientsRepo);
 const approvePatientUseCase = new ApprovePatient(managerPatientsRepo, billingEventsRepo);
+const listDocSummariesUseCase = new ListDocSummaries(managerPatientsRepo);
 
 export async function handleListPatients(
   req: Request,
@@ -72,6 +75,28 @@ export async function handleApprovePatient(
       approvedAt: result.approvedAt,
       billingPeriod: result.billingPeriod,
     });
+  } catch (e) {
+    next(e);
+  }
+}
+
+const VALID_DOC_FILTERS: DocSummaryFilter[] = ["ALL", "HAS_PENDING", "FULLY_UPLOADED", "HAS_REJECTED"];
+
+export async function handleListDocSummaries(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const clinicId = (req as any).clinicId as string;
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : undefined;
+    const rawFilter = typeof req.query.filter === "string" ? req.query.filter : "ALL";
+    const filter: DocSummaryFilter = VALID_DOC_FILTERS.includes(rawFilter as DocSummaryFilter)
+      ? (rawFilter as DocSummaryFilter)
+      : "ALL";
+
+    const result = await listDocSummariesUseCase.execute({ clinicId, search, filter });
+    res.json(result);
   } catch (e) {
     next(e);
   }
