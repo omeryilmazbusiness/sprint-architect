@@ -1,0 +1,181 @@
+You are working on an EXISTING production-grade Health Tourism SaaS project.
+
+Your task is NOT to build anything from scratch.
+Your task is to deeply analyze the system and produce a COMPLETE, CLEAR, and PROFESSIONAL breakdown of the ADMIN notification system.
+
+IMPORTANT RULES
+- Do NOT assume anything — inspect real code
+- Do NOT hallucinate events — only list what actually exists
+- Trace notifications end-to-end from trigger → storage → delivery → UI
+- Keep output structured, clear, and concise
+- Focus on REAL system behavior
+
+GOAL
+Explain EXACTLY what notifications the ADMIN receives in the system.
+
+STEP 1 — FIND NOTIFICATION SYSTEM ARCHITECTURE
+Analyze and explain:
+
+- Where notifications are created (services, use-cases, triggers)
+- Where they are stored (DB table, schema)
+- How they are delivered (API endpoints, polling, sockets, etc.)
+- How they are read (admin panel endpoints)
+- How read/unread status is handled
+
+Locate:
+- notification-related modules
+- notification repositories
+- notification routes
+- any event-driven logic (billing, documents, appointments, etc.)
+
+STEP 2 — IDENTIFY ALL NOTIFICATION TRIGGERS
+You MUST scan the entire backend and list ALL places where a notification is created.
+
+Look for:
+- notificationRepo.create(...)
+- createNotification(...)
+- event emitters
+- audit logs triggering notifications
+- billing scheduler
+- document workflow
+- appointment flow
+- patient lifecycle
+
+Then produce a COMPLETE list of triggers.
+
+STEP 3 — GROUP NOTIFICATIONS BY CATEGORY
+
+Group admin notifications into categories like:
+
+1. BILLING NOTIFICATIONS
+2. PATIENT / GUEST EVENTS
+3. DOCUMENT EVENTS
+4. APPOINTMENT EVENTS
+5. SYSTEM / CLINIC STATUS
+6. ERROR / WARNING EVENTS
+7. OTHER
+
+STEP 4 — FOR EACH NOTIFICATION TYPE PROVIDE
+
+For EACH notification type, output:
+
+- Event Name (clear label)
+- When it is triggered (exact condition)
+- Which module/file triggers it
+- Who triggers it (Manager, System, Scheduler, Guest, Admin)
+- What data is included (clinicId, patientId, etc.)
+- Whether it is critical / info / warning
+- Whether it requires action from Admin
+
+Example format:
+
+--------------------------------------------------
+Notification: "New Guest Approved"
+Triggered when:
+- Manager approves a guest
+
+Triggered by:
+- server/modules/managerPatients/usecases/ApprovePatient.ts
+
+Actor:
+- Manager
+
+Data:
+- clinicId
+- patientId
+- billingPeriod
+
+Type:
+- INFO
+
+Admin Action Required:
+- No (just monitoring)
+--------------------------------------------------
+
+STEP 5 — TRACE REAL FLOWS
+You MUST verify notifications inside these flows:
+
+1. Guest lifecycle:
+- create guest
+- approve guest
+- update status
+
+2. Document flow:
+- assign document
+- guest uploads document
+- manager approves/rejects document
+
+3. Appointment flow:
+- create appointment
+- update/cancel appointment
+- missed / no-show cases
+
+4. Billing flow:
+- billing event creation
+- invoice generation (scheduler)
+- invoice unpaid / overdue
+- clinic suspended
+
+5. System flow:
+- clinic suspended
+- errors / failures
+- unusual states
+
+STEP 6 — ADMIN PANEL SIDE
+Analyze admin frontend:
+
+- Which endpoint loads notifications
+- How notifications are displayed
+- Whether filtering exists
+- Whether unread count exists
+- Whether marking as read exists
+- Any bugs or inconsistencies
+
+STEP 7 — FIND GAPS / PROBLEMS
+Identify:
+
+- Missing important notifications (e.g. no alert on unpaid invoices)
+- Duplicate notifications
+- Dead code notifications (never triggered)
+- Notifications created but never shown in UI
+- Missing severity levels
+- Missing grouping
+- Missing pagination / performance issues
+
+STEP 8 — PRODUCTION READINESS ANALYSIS
+
+Score notification system:
+
+- Coverage (how complete)
+- Reliability
+- Performance
+- UX clarity
+- Debuggability
+
+Then answer:
+
+- Is this production-ready?
+- What is missing?
+- What is risky?
+
+STEP 9 — OUTPUT FORMAT
+
+Return:
+
+1. Executive Summary (short)
+2. Notification System Architecture
+3. FULL LIST of Admin Notifications (grouped)
+4. Real Flow Mapping (guest, documents, billing, appointments)
+5. Admin UI Behavior
+6. Problems / Gaps
+7. Production Readiness Score
+8. Top 10 Improvements (prioritized)
+
+IMPORTANT
+- Be precise
+- Be structured
+- Be concise (no unnecessary long text)
+- Use bullet points and sections
+
+START NOW
+Scan the entire codebase and extract the REAL admin notification system.
