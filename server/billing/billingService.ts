@@ -6,6 +6,7 @@ import { auditLog } from "../api/auditLogger";
 import { getEmailProvider } from "../email/getEmailProvider";
 import { invoiceEmailHtml, invoiceEmailText, monthlyReportHtml, monthlyReportText } from "../email/templates";
 import { getPeriodBoundaries, BILLABLE_STATUSES } from "./billingCalculator";
+import { notificationService } from "../services/NotificationService";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -176,6 +177,16 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
     }
   }
 
+  if (generatedInvoices.length > 0) {
+    notificationService.emitAdminNotification({
+      type: "INVOICE_GENERATED",
+      title: "Invoices Generated",
+      body: `${generatedInvoices.length} invoice(s) generated for period ${period}.`,
+      severity: "INFO",
+      metadata: { period, invoiceCount: generatedInvoices.length },
+    }).catch(() => {});
+  }
+
   return generatedInvoices;
 }
 
@@ -260,15 +271,30 @@ export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
   });
 
   for (const clinicId of clinicIdsToSuspend) {
+    const clinicOverdueInvoices = overdueInvoices.filter((i) => i.clinicId === clinicId);
     auditLog({
       clinicId,
       actorId: "system",
       actorRole: "SYSTEM",
       action: "clinic.suspended_unpaid_invoice",
       metadata: {
-        invoiceIds: overdueInvoices.filter((i) => i.clinicId === clinicId).map((i) => i.id),
+        invoiceIds: clinicOverdueInvoices.map((i) => i.id),
       },
     });
+
+    notificationService.emitAdminNotification({
+      type: "CLINIC_SUSPENDED",
+      title: "Clinic Suspended",
+      body: `A clinic has been suspended due to ${clinicOverdueInvoices.length} unpaid invoice(s).`,
+      severity: "CRITICAL",
+      relatedId: clinicId,
+      relatedType: "clinic",
+      metadata: {
+        clinicId,
+        invoiceIds: clinicOverdueInvoices.map((i) => i.id),
+        invoiceCount: clinicOverdueInvoices.length,
+      },
+    }).catch(() => {});
   }
 }
 

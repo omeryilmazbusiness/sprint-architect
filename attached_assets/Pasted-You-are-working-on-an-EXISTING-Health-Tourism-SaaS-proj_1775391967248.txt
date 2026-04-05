@@ -1,0 +1,282 @@
+You are working on an EXISTING Health Tourism SaaS project.
+
+Your task is to DESIGN and IMPLEMENT a FULLY PRODUCTION-READY ADMIN NOTIFICATION SYSTEM.
+
+This is NOT a simple feature.
+This is a CORE SYSTEM.
+
+It must be:
+- Event-driven
+- Scalable
+- Secure
+- Mobile push-enabled (works even when app is closed)
+- SOLID-compliant
+- Clean architecture
+
+DO NOT hack.
+DO NOT add quick fixes.
+BUILD IT PROPERLY.
+
+--------------------------------------------------
+GOAL
+--------------------------------------------------
+
+Admin must receive REAL-TIME notifications for ALL critical system events:
+
+- Inside the app (notification center)
+- As push notifications (mobile device)
+- Even when the app is CLOSED
+
+--------------------------------------------------
+PHASE 1 — ANALYZE CURRENT SYSTEM
+--------------------------------------------------
+
+Scan the entire codebase and identify:
+
+1. Existing notification structures:
+   - notifications table
+   - credential_requests
+   - notificationRepo
+   - any unused notification logic
+
+2. All critical business events:
+   - billing
+   - guest lifecycle
+   - documents
+   - appointments
+   - system failures
+
+3. Where to hook notification triggers
+
+Then proceed to implementation.
+
+--------------------------------------------------
+PHASE 2 — DEFINE ADMIN NOTIFICATION TYPES
+--------------------------------------------------
+
+Create a COMPLETE set of admin notification types.
+
+You MUST include:
+
+1. BILLING (CRITICAL)
+- Invoice created
+- Invoice overdue
+- Clinic suspended
+- Payment received
+- Billing job failed
+
+2. GUEST / PATIENT EVENTS
+- New guest created
+- Guest approved
+- Guest status changed
+
+3. DOCUMENT EVENTS
+- Guest uploaded document
+- Document rejected
+- Document approved
+
+4. APPOINTMENT EVENTS
+- Appointment created
+- Appointment cancelled
+- No-show detected
+
+5. SYSTEM EVENTS
+- Scheduler failure
+- API critical error
+- Email send failure
+
+Each notification must include:
+- type
+- title
+- message
+- severity (INFO | WARNING | CRITICAL)
+- relatedId
+- relatedType
+- clinicId
+- createdAt
+
+--------------------------------------------------
+PHASE 3 — DATABASE DESIGN (PRODUCTION READY)
+--------------------------------------------------
+
+Design a proper schema:
+
+Table: notifications
+
+Fields:
+- id (uuid)
+- targetRole (ADMIN | MANAGER | GUEST)
+- targetUserId (nullable)
+- clinicId
+- type
+- title
+- body
+- severity (INFO | WARNING | CRITICAL)
+- status (UNREAD | READ)
+- relatedId
+- relatedType
+- metadata (jsonb)
+- createdAt
+- readAt
+
+Table: device_tokens
+
+Fields:
+- id
+- userId
+- role
+- deviceToken
+- platform (ios | android | web)
+- lastSeenAt
+
+--------------------------------------------------
+PHASE 4 — EVENT-DRIVEN NOTIFICATION SYSTEM
+--------------------------------------------------
+
+Create a centralized notification service:
+
+notificationService.createNotification(event)
+
+DO NOT call DB directly everywhere.
+
+Instead:
+- Create domain events (clean architecture)
+- Each event triggers notificationService
+
+Examples:
+- onGuestCreated
+- onGuestApproved
+- onDocumentUploaded
+- onInvoiceOverdue
+- onClinicSuspended
+
+Hook into existing flows:
+- ApprovePatient use case
+- document upload endpoint
+- document approve/reject
+- appointment creation
+- billing scheduler jobs
+
+--------------------------------------------------
+PHASE 5 — PUSH NOTIFICATION SYSTEM (CRITICAL)
+--------------------------------------------------
+
+Implement mobile push notifications.
+
+Requirements:
+
+- Must work when app is CLOSED
+- Must support Android + iOS
+
+Use:
+- Firebase Cloud Messaging (FCM)
+
+Steps:
+
+1. Integrate FCM server-side
+2. Store device tokens (device_tokens table)
+3. When notification is created:
+   → send push notification to all ADMIN devices
+
+Payload must include:
+- title
+- body
+- data (relatedId, type)
+
+--------------------------------------------------
+PHASE 6 — FRONTEND (ADMIN APP)
+--------------------------------------------------
+
+Implement:
+
+1. Notification Center screen
+- List notifications
+- Group by date
+- Show severity colors
+- Show unread indicator
+- Pagination or infinite scroll
+
+2. Header bell icon
+- Unread count
+- Live updates (polling or socket)
+
+3. Tap behavior:
+- Navigate to related screen
+  (guest, document, invoice, etc.)
+
+4. Mark as read
+- Single
+- Mark all
+
+--------------------------------------------------
+PHASE 7 — REAL-TIME UPDATE STRATEGY
+--------------------------------------------------
+
+Implement ONE of:
+
+Option A (simple):
+- Poll every 15–30 seconds
+
+Option B (better):
+- WebSocket or SSE for real-time push
+
+--------------------------------------------------
+PHASE 8 — ERROR HANDLING & LOGGING
+--------------------------------------------------
+
+- Log every notification creation
+- Log push send success/failure
+- Retry failed push sends
+- DO NOT crash system if push fails
+
+--------------------------------------------------
+PHASE 9 — SECURITY
+--------------------------------------------------
+
+- Admin sees ONLY relevant data
+- No cross-clinic leaks
+- Validate all relatedId access
+- Do NOT expose raw file URLs or secrets
+
+--------------------------------------------------
+PHASE 10 — UX STANDARDS
+--------------------------------------------------
+
+- CRITICAL → red
+- WARNING → orange
+- INFO → blue/gray
+
+- Clear titles
+- No technical text
+- Actionable messages
+
+Example:
+"Clinic suspended due to unpaid invoice"
+
+--------------------------------------------------
+FINAL OUTPUT
+--------------------------------------------------
+
+When finished, provide:
+
+1. Full list of implemented notification types
+2. Where each is triggered in code
+3. DB schema summary
+4. Push notification flow explanation
+5. Files created/updated
+6. Manual test steps:
+   - Admin receives push when app closed
+   - Admin sees in-app notification
+7. Any remaining improvements
+
+--------------------------------------------------
+IMPORTANT
+--------------------------------------------------
+
+- Do NOT leave unused code
+- Do NOT create duplicate logic
+- Keep architecture clean
+- Follow SOLID
+- Make it production-ready
+
+START NOW.

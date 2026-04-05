@@ -9,6 +9,7 @@ import {
   integer,
   doublePrecision,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -396,9 +397,25 @@ export const notifications = pgTable("notifications", {
   title: text("title").notNull(),
   body: text("body").notNull(),
   type: text("type").notNull().default("INFO"),
+  severity: text("severity").notNull().default("INFO"),
   status: notificationStatusEnum("status").notNull().default("UNREAD"),
   relatedId: text("related_id"),
   relatedType: text("related_type"),
+  metadata: jsonb("metadata"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const deviceTokens = pgTable("device_tokens", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  role: text("role").notNull(),
+  clinicId: varchar("clinic_id"),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(),
+  lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -13,6 +13,8 @@ import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { planRepo } from "../repositories/planRepo";
 import { notificationRepo } from "../repositories/notificationRepo";
+import { deviceTokenRepo } from "../repositories/deviceTokenRepo";
+import { notificationService } from "../services/NotificationService";
 
 import { invoiceRepo } from "../repositories/invoiceRepo";
 import { billingEventsRepo } from "../modules/billingEvents/repos/BillingEventsRepo.drizzle";
@@ -115,6 +117,16 @@ router.post("/patients", async (req, res, next) => {
       resourceId: patient.id,
       metadata: { billingPeriod, status: "ACTIVE" },
     });
+
+    notificationService.emitAdminNotification({
+      type: "GUEST_CREATED",
+      title: "New Guest Registered",
+      body: `${patient.fullName} has been added to a clinic.`,
+      severity: "INFO",
+      relatedId: patient.id,
+      relatedType: "patient",
+      metadata: { clinicId, patientKey: patient.patientKey },
+    }).catch(() => {});
 
     res.status(201).json(patient);
   } catch (e) { next(e); }
@@ -358,6 +370,18 @@ router.put("/patients/:id/status", async (req, res, next) => {
       resourceId: id,
       metadata: { newStatus: status },
     });
+
+    if (status === "APPROVED" || status === "ENDED") {
+      notificationService.emitAdminNotification({
+        type: status === "APPROVED" ? "GUEST_APPROVED" : "GUEST_STATUS_CHANGED",
+        title: status === "APPROVED" ? "Guest Approved" : "Guest Status Changed",
+        body: `${existing!.fullName} is now ${status.toLowerCase()}.`,
+        severity: "INFO",
+        relatedId: id,
+        relatedType: "patient",
+        metadata: { clinicId, newStatus: status },
+      }).catch(() => {});
+    }
 
     res.json(patient);
   } catch (e) { next(e); }
@@ -750,6 +774,18 @@ router.put("/documents/:id", async (req, res, next) => {
         resourceId: doc.id,
         metadata: body.status === "REJECTED" ? { reason: (body as any).rejectionReason } : undefined,
       });
+
+      notificationService.emitManagerNotification(clinicId, {
+        type: body.status === "APPROVED" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
+        title: body.status === "APPROVED" ? "Document Approved" : "Document Rejected",
+        body: body.status === "APPROVED"
+          ? `A document has been approved and marked ready.`
+          : `A document was rejected. Reason: ${(body as any).rejectionReason ?? "Not specified"}`,
+        severity: body.status === "REJECTED" ? "WARNING" : "INFO",
+        relatedId: doc.id,
+        relatedType: "patient_document",
+        metadata: { clinicId, documentId: doc.id },
+      }).catch(() => {});
     }
 
     res.json(doc);
@@ -867,6 +903,32 @@ router.put("/notifications/read-all", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     await notificationRepo.markAllRead(clinicId);
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+router.post("/device-token", async (req, res, next) => {
+  try {
+    const { token, platform } = validateBody(
+      z.object({ token: z.string().min(1), platform: z.enum(["ios", "android", "web"]) }),
+      req.body,
+    );
+    const clinicId = getClinicId(req);
+    await deviceTokenRepo.upsert({
+      userId: req.actor!.sub,
+      role: req.actor!.role,
+      clinicId,
+      token,
+      platform,
+    });
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+router.delete("/device-token", async (req, res, next) => {
+  try {
+    const { token } = validateBody(z.object({ token: z.string().min(1) }), req.body);
+    await deviceTokenRepo.delete(token);
     res.json({ success: true });
   } catch (e) { next(e); }
 });

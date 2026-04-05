@@ -7,6 +7,7 @@ import {
   sendMonthlyReport,
 } from "./billingService";
 import { insertJobRun } from "../modules/jobRuns/repos/JobRunsRepo.drizzle";
+import { notificationService } from "../services/NotificationService";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -64,14 +65,23 @@ function scheduleCron(
       );
     } catch (err) {
       const finishedAt = new Date();
+      const errMsg = sanitizeError(err);
       console.error(`[scheduler] Job failed: ${label}`, err);
       insertJobRun({
         jobName,
         status: "FAILED",
         startedAt,
         finishedAt,
-        errorMessageSafe: sanitizeError(err),
+        errorMessageSafe: errMsg,
       }).catch((e) => console.error(`[scheduler] Failed to record job run for ${jobName}:`, e));
+
+      notificationService.emitAdminNotification({
+        type: "BILLING_JOB_FAILED",
+        title: "Billing Job Failed",
+        body: `Scheduled job "${label}" failed: ${errMsg}`,
+        severity: "CRITICAL",
+        metadata: { jobName, label, errorMessage: errMsg },
+      }).catch(() => {});
     }
   }, 60 * 1000);
 }

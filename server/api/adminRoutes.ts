@@ -6,6 +6,8 @@ import { clinicRepo } from "../repositories/clinicRepo";
 import { userRepo, generateSecurePassword } from "../repositories/userRepo";
 import { patientRepo } from "../repositories/patientRepo";
 import { credentialRequestRepo } from "../repositories/credentialRequestRepo";
+import { notificationRepo } from "../repositories/notificationRepo";
+import { deviceTokenRepo } from "../repositories/deviceTokenRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
 import { db } from "../db";
@@ -113,8 +115,72 @@ router.get("/audit-logs", async (req, res, next) => {
 
 router.get("/notifications/unread-count", async (req, res, next) => {
   try {
-    const count = await credentialRequestRepo.countPending();
-    res.json({ count });
+    const [credentialCount, systemCount] = await Promise.all([
+      credentialRequestRepo.countPending(),
+      notificationRepo.getAdminUnreadCount(),
+    ]);
+    res.json({ count: credentialCount + systemCount, credentialCount, systemCount });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/notifications/events", async (req, res, next) => {
+  try {
+    const { limit, offset } = req.query as Record<string, string>;
+    const rows = await notificationRepo.listAdmin(
+      limit ? Math.min(parseInt(limit), 100) : 50,
+      offset ? parseInt(offset) : 0,
+    );
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.put("/notifications/events/:id/read", async (req, res, next) => {
+  try {
+    const notification = await notificationRepo.markAdminRead(req.params.id);
+    if (!notification) throw new AppError("NOT_FOUND", "Notification not found", 404);
+    res.json(notification);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.put("/notifications/events/read-all", async (req, res, next) => {
+  try {
+    await notificationRepo.markAllAdminRead();
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/device-token", async (req, res, next) => {
+  try {
+    const { token, platform } = z
+      .object({ token: z.string().min(1), platform: z.enum(["ios", "android", "web"]) })
+      .parse(req.body);
+
+    await deviceTokenRepo.upsert({
+      userId: req.actor!.sub,
+      role: req.actor!.role,
+      clinicId: null,
+      token,
+      platform,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete("/device-token", async (req, res, next) => {
+  try {
+    const { token } = z.object({ token: z.string().min(1) }).parse(req.body);
+    await deviceTokenRepo.delete(token);
+    res.json({ success: true });
   } catch (e) {
     next(e);
   }

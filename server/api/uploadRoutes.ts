@@ -7,6 +7,7 @@ import { getStorageProvider } from "../storage/getStorageProvider";
 import { documentRepo } from "../repositories/documentRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
+import { notificationService } from "../services/NotificationService";
 import { db } from "../db";
 import { patientDocuments } from "@shared/schema";
 
@@ -99,6 +100,16 @@ router.post(
         resourceType: "patient_document",
         resourceId: docId,
       });
+
+      notificationService.emitManagerNotification(doc.clinicId, {
+        type: "DOCUMENT_UPLOADED",
+        title: "Document Uploaded",
+        body: `A guest has uploaded a document: ${originalName}`,
+        severity: "INFO",
+        relatedId: docId,
+        relatedType: "patient_document",
+        metadata: { patientId: doc.patientId, fileName: originalName },
+      }).catch(() => {});
 
       res.json({
         id: updated.id,
