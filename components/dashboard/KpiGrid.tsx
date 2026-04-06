@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import type { AdminDashboardData } from "@/lib/api/adminDashboard";
 import { goToInvoices, goToClinics } from "@/services/navigation/filteredNavigation";
+import { useT } from "@/hooks/useT";
 
 interface KpiCardProps {
   label: string;
@@ -47,6 +48,8 @@ interface Props {
 export function KpiGrid({ data, isLoading }: Props) {
   const { width } = useWindowDimensions();
   const cardWidth = (width - 32 - 10) / 2;
+  const t = useT();
+  const d = t.adminDashboard;
 
   if (isLoading) {
     return (
@@ -61,38 +64,38 @@ export function KpiGrid({ data, isLoading }: Props) {
   return (
     <View style={styles.grid}>
       <KpiCard
-        label="Active Clinics"
+        label={d.kpiActiveClinics}
         value={data?.clinics.active ?? 0}
         icon="business-outline"
         color={T.success}
-        sub="running"
+        sub={d.kpiRunning}
         cardWidth={cardWidth}
         onPress={() => goToClinics({ status: "ACTIVE" })}
       />
       <KpiCard
-        label="Suspended"
+        label={d.statusSuspended}
         value={data?.clinics.suspended ?? 0}
         icon="ban-outline"
         color={T.danger}
-        sub="clinics"
+        sub={d.kpiClinics}
         cardWidth={cardWidth}
         onPress={() => goToClinics({ status: "SUSPENDED" })}
       />
       <KpiCard
-        label="Pending"
+        label={d.statusPending}
         value={data?.invoices.pending ?? 0}
         icon="time-outline"
         color={T.warning}
-        sub="invoices"
+        sub={d.kpiInvoices}
         cardWidth={cardWidth}
         onPress={() => goToInvoices({ status: "PENDING" })}
       />
       <KpiCard
-        label="Unpaid"
+        label={d.statusUnpaid}
         value={data?.invoices.unpaid ?? 0}
         icon="alert-circle-outline"
         color={T.danger}
-        sub="invoices"
+        sub={d.kpiInvoices}
         cardWidth={cardWidth}
         onPress={() => goToInvoices({ status: "UNPAID" })}
       />

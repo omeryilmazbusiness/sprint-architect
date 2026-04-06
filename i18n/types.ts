@@ -29,6 +29,34 @@ export interface AdminDashboardDict {
   manageUsersSub: string;
   loadError: string;
   retry: string;
+  // Banner slide titles & subtitles
+  bannerBillingTitle: string;
+  bannerBillingSubtitle: string;
+  bannerClinicsTitle: string;
+  bannerClinicsSubtitle: string;
+  bannerPeriodSubtitle: string;
+  // Banner CTA labels
+  bannerViewUnpaid: string;
+  bannerViewSuspended: string;
+  bannerViewPeriod: string;
+  // Launch state slide
+  bannerLaunchTitle: string;
+  bannerLaunchSubtitle: string;
+  bannerLaunchCta: string;
+  // Chip / status labels
+  statusActive: string;
+  statusSuspended: string;
+  statusPending: string;
+  statusUnpaid: string;
+  statusPaid: string;
+  statusBilled: string;
+  statusClinics: string;
+  statusInvoices: string;
+  // KPI sub-labels
+  kpiActiveClinics: string;
+  kpiRunning: string;
+  kpiClinics: string;
+  kpiInvoices: string;
 }
 
 export interface AdminTabLabelsDict {

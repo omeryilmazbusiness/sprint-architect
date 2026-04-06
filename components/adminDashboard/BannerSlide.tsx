@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  useWindowDimensions,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,16 +30,16 @@ export interface BannerSlideData {
 interface Props {
   slide: BannerSlideData;
   height: number;
+  width: number;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BannerSlide({ slide, height }: Props) {
-  const { width } = useWindowDimensions();
+export function BannerSlide({ slide, height, width }: Props) {
   const isNarrow = width < 360;
 
   return (
-    <BannerBackground3D colors={slide.gradientColors} height={height}>
+    <BannerBackground3D colors={slide.gradientColors} height={height} width={width}>
       {/* ── Content grid ──────────────────────────────────────────────────── */}
       <View style={[styles.content, { width, height }]}>
         {/* ── Headline row ──────────────────────────────────────────────── */}

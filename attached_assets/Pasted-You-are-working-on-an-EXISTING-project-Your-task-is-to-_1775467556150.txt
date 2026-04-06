@@ -1,0 +1,185 @@
+You are working on an EXISTING project.
+
+Your task is to improve the ADMIN dashboard in two areas only, in the safest, cleanest, most professional, SOLID-compliant, production-ready way:
+
+1. Add full translation support to the ADMIN dashboard banner and overview area
+2. Redesign the ADMIN banner UX so it matches the premium design quality of the GUEST banner
+
+IMPORTANT RULES
+- Do NOT rebuild the whole admin panel
+- Do NOT change unrelated pages
+- Focus only on the admin dashboard banner and overview area
+- First inspect the current implementation deeply
+- Then directly implement the requested improvements
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random style patching without understanding the data flow
+- The result must feel premium, polished, modern, and production-ready
+
+PRIMARY GOALS
+
+A) ADMIN BANNER + OVERVIEW TRANSLATION
+Required behavior:
+- Banner area in admin dashboard must be fully language-aware
+- Overview area in admin dashboard must be fully language-aware
+- When language changes, all visible text in these areas must change immediately
+- No hardcoded strings should remain in these areas
+- Use the existing i18n system if one already exists
+- Do NOT create a second translation system
+
+This includes:
+- banner title
+- banner subtitle
+- banner summary text
+- overview titles
+- overview KPI labels
+- overview helper text
+- badges/chips/status labels shown in banner/overview
+- empty/fallback text if present
+
+B) ADMIN BANNER UX REDESIGN
+Required behavior:
+- Inspect the GUEST dashboard banner first
+- Use the GUEST banner as the visual/UX reference
+- Redesign the ADMIN banner so it feels in the same design family:
+  - same premium quality
+  - same strong visual hierarchy
+  - same polished background treatment
+  - same modern spacing/typography rhythm
+  - same level of professionalism
+- But keep ADMIN-specific content, not guest content
+
+The admin banner must feel:
+- premium
+- modern
+- elegant
+- readable
+- operationally useful
+- visually consistent with the guest banner
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT ADMIN DASHBOARD
+- current banner implementation
+- current overview implementation
+- current admin dashboard data source
+- what text is currently hardcoded
+- what text already comes from translation keys if any
+
+2. GUEST BANNER REFERENCE
+- inspect the guest dashboard banner deeply
+- identify exactly what makes it look more premium:
+  - background image treatment
+  - overlay
+  - spacing
+  - typography
+  - card composition
+  - chips/badges
+  - hierarchy
+  - responsiveness
+- identify which parts can be reused or adapted safely
+
+3. CURRENT I18N STRUCTURE
+- inspect whether the project already has a language provider/context/hook/resource structure
+- reuse it
+- do not duplicate translation architecture
+- make the admin banner and overview integrate cleanly into the existing system
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ADMIN BANNER / OVERVIEW TRANSLATION
+1. Inspect all visible strings in admin banner and overview
+2. Move all those strings into the existing i18n system
+3. Add proper translation keys in a clean structure
+4. Ensure language switching updates these areas immediately
+5. Ensure no mixed-language UI remains in these areas
+
+Suggested key grouping:
+- admin.dashboard.banner.*
+- admin.dashboard.overview.*
+- admin.dashboard.common.*
+Adjust to current project conventions if needed, but keep it clean and consistent.
+
+Acceptance criteria:
+- banner text is fully language-aware
+- overview text is fully language-aware
+- no hardcoded strings remain in those areas
+- switching language updates everything immediately
+
+PHASE 2 — ADMIN BANNER REDESIGN USING GUEST BANNER AS REFERENCE
+1. Redesign the admin banner to match the guest banner’s design quality
+2. Reuse/adapt the same premium visual language
+3. Keep the admin banner content relevant to admin operations
+4. Ensure readability, spacing, and polish are excellent
+5. If the guest banner uses a strong background treatment, adapt that carefully for admin
+
+Do NOT blindly clone content.
+Mirror the quality and design system, not the guest-specific business meaning.
+
+Acceptance criteria:
+- admin banner feels much more premium
+- visual language matches the guest banner closely
+- admin-specific information remains clear
+- mobile UX is strong
+
+PHASE 3 — ADMIN OVERVIEW POLISH
+1. Ensure the overview area visually harmonizes with the new banner
+2. Improve label clarity and hierarchy if needed
+3. Keep the overview operational and readable
+4. Preserve professional density without clutter
+
+Acceptance criteria:
+- banner and overview feel like one premium dashboard experience
+- translations look clean in all supported languages
+- no layout regressions with longer translated strings
+
+PHASE 4 — HARDENING / CLEANUP
+1. Remove leftover hardcoded strings in banner/overview
+2. Ensure translation keys are organized cleanly
+3. Ensure no duplicated banner logic remains unnecessarily
+4. Keep the codebase maintainable
+5. Ensure dark/light mode consistency if applicable
+6. Ensure Russian or other longer translations do not break layout
+
+ARCHITECTURE EXPECTATIONS
+- Reuse existing i18n system
+- No second translation provider
+- Keep components focused on presentation
+- Keep data shaping in the correct layer
+- Avoid duplicated banner styling logic where possible
+- Leave the admin dashboard cleaner and more consistent than before
+
+YOU MUST CHECK FOR THESE RISKS
+- guest and admin banners may use different structures and require careful adaptation
+- banner strings may be buried inside nested components
+- overview labels may come from enum mappings or helper files
+- translation length may affect layout
+- banner may become visually good but lose admin usefulness if overdesigned
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current admin dashboard and guest banner
+2. Which strings were localized
+3. Exact files changed
+4. Why each change was made
+5. Any design/data changes introduced
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of admin banner redesign
+2. Summary of admin banner + overview translation coverage
+3. Confirmation that the admin banner now matches the guest banner design quality
+4. Exact files changed
+5. Manual QA checklist
+6. Remaining future improvements if any
+
+START NOW
+First inspect the current admin dashboard banner and overview, the guest banner design, and the current i18n system.
+Then implement the requested improvements end-to-end.

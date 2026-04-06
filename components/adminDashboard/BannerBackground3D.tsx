@@ -13,11 +13,13 @@ const NATIVE_DRIVER = Platform.OS !== "web";
 interface Props {
   colors: readonly [string, string, ...string[]];
   height: number;
+  width?: number;
   children: React.ReactNode;
 }
 
-export function BannerBackground3D({ colors, height, children }: Props) {
-  const { width } = useWindowDimensions();
+export function BannerBackground3D({ colors, height, width: widthProp, children }: Props) {
+  const { width: screenWidth } = useWindowDimensions();
+  const width = widthProp ?? screenWidth;
 
   // ── Blob animation refs ────────────────────────────────────────────────────
   const blob1TranslateY = useRef(new Animated.Value(0)).current;

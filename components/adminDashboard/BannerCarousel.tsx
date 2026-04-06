@@ -6,12 +6,15 @@ import {
   ViewToken,
   useWindowDimensions,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { T } from "@/constants/adminTheme";
 import type { AdminDashboardData } from "@/lib/api/adminDashboard";
 import { goToInvoices, goToClinics } from "@/services/navigation/filteredNavigation";
 import { BannerSlide, type BannerSlideData } from "./BannerSlide";
+import { useT } from "@/hooks/useT";
+import type { AdminDashboardDict } from "@/i18n/types";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +27,11 @@ const P = {
   navyMid: "#0A3D62",
   navyLight: "#1D6FA4",
 } as const;
+
+const CARD_H_RATIO = 0.32;
+const CARD_H_MIN = 200;
+const CARD_H_MAX = 270;
+const SIDE_MARGIN = 16;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,19 +52,19 @@ function isLaunchState(data: AdminDashboardData): boolean {
 
 // ─── Slide builders ───────────────────────────────────────────────────────────
 
-function buildSlides(data: AdminDashboardData): BannerSlideData[] {
+function buildSlides(data: AdminDashboardData, d: AdminDashboardDict): BannerSlideData[] {
   return [
     {
       id: "billing",
       gradientColors: [P.orange, P.blue] as const,
       icon: "receipt-outline",
-      title: "Billing Overview",
-      subtitle: "Invoice status across all clinics",
+      title: d.bannerBillingTitle,
+      subtitle: d.bannerBillingSubtitle,
       chips: [
-        { label: "Pending", value: data.invoices.pending },
-        { label: "Unpaid", value: data.invoices.unpaid },
+        { label: d.statusPending, value: data.invoices.pending },
+        { label: d.statusUnpaid, value: data.invoices.unpaid },
       ],
-      ctaText: data.invoices.unpaid > 0 ? "View Unpaid" : "All Invoices",
+      ctaText: data.invoices.unpaid > 0 ? d.bannerViewUnpaid : d.allInvoices,
       onCta: () =>
         data.invoices.unpaid > 0
           ? goToInvoices({ status: "UNPAID" })
@@ -66,13 +74,13 @@ function buildSlides(data: AdminDashboardData): BannerSlideData[] {
       id: "clinics",
       gradientColors: [P.blue, P.green] as const,
       icon: "business-outline",
-      title: "Clinics",
-      subtitle: "Platform-wide clinic status",
+      title: d.bannerClinicsTitle,
+      subtitle: d.bannerClinicsSubtitle,
       chips: [
-        { label: "Active", value: data.clinics.active },
-        { label: "Suspended", value: data.clinics.suspended },
+        { label: d.statusActive, value: data.clinics.active },
+        { label: d.statusSuspended, value: data.clinics.suspended },
       ],
-      ctaText: data.clinics.suspended > 0 ? "View Suspended" : "All Clinics",
+      ctaText: data.clinics.suspended > 0 ? d.bannerViewSuspended : d.allClinics,
       onCta: () =>
         data.clinics.suspended > 0
           ? goToClinics({ status: "SUSPENDED" })
@@ -83,42 +91,44 @@ function buildSlides(data: AdminDashboardData): BannerSlideData[] {
       gradientColors: [P.green, P.crimson] as const,
       icon: "calendar-outline",
       title: data.currentPeriod,
-      subtitle: "Current billing period snapshot",
+      subtitle: d.bannerPeriodSubtitle,
       chips: [
         {
-          label: "Billed",
+          label: d.statusBilled,
           value: fmtCurrency(data.invoices.totalBilledThisMonth),
         },
-        { label: "Paid", value: data.invoices.paid },
+        { label: d.statusPaid, value: data.invoices.paid },
       ],
-      ctaText: "View Period",
+      ctaText: d.bannerViewPeriod,
       onCta: () => goToInvoices({ period: data.currentPeriod }),
     },
   ];
 }
 
-function buildLaunchSlide(): BannerSlideData {
+function buildLaunchSlide(d: AdminDashboardDict): BannerSlideData {
   return {
     id: "launch",
     gradientColors: [P.navyDark, P.navyLight] as const,
     icon: "rocket-outline",
-    title: "System Ready",
-    subtitle: "Create your first clinic to get started.",
+    title: d.bannerLaunchTitle,
+    subtitle: d.bannerLaunchSubtitle,
     chips: [
-      { label: "Clinics", value: 0 },
-      { label: "Invoices", value: 0 },
+      { label: d.statusClinics, value: 0 },
+      { label: d.statusInvoices, value: 0 },
     ],
-    ctaText: "Create First Clinic",
+    ctaText: d.bannerLaunchCta,
     onCta: () => router.push("/(admin)/clinics/create"),
   };
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-function SkeletonBanner({ width, height }: { width: number; height: number }) {
+function SkeletonBanner({ cardWidth, height }: { cardWidth: number; height: number }) {
   return (
-    <View style={[styles.skeleton, { width, height }]}>
-      <ActivityIndicator color={T.accent} />
+    <View style={[styles.card, { width: cardWidth, height }]}>
+      <View style={[StyleSheet.absoluteFill, styles.skeletonFill]}>
+        <ActivityIndicator color={T.accent} />
+      </View>
     </View>
   );
 }
@@ -131,16 +141,20 @@ interface Props {
 }
 
 export function BannerCarousel({ data, isLoading }: Props) {
-  const { width, height: screenHeight } = useWindowDimensions();
-  const bannerHeight = Math.min(260, Math.max(180, screenHeight * 0.32));
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const cardWidth = screenWidth - SIDE_MARGIN * 2;
+  const bannerHeight = Math.min(CARD_H_MAX, Math.max(CARD_H_MIN, screenHeight * CARD_H_RATIO));
+
+  const t = useT();
+  const d = t.adminDashboard;
 
   const [activeSlide, setActiveSlide] = useState(0);
   const flatRef = useRef<FlatList<BannerSlideData>>(null);
 
   const slides: BannerSlideData[] = data
     ? isLaunchState(data)
-      ? [buildLaunchSlide()]
-      : buildSlides(data)
+      ? [buildLaunchSlide(d)]
+      : buildSlides(data, d)
     : [];
 
   const onViewableItemsChanged = useCallback(
@@ -154,8 +168,8 @@ export function BannerCarousel({ data, isLoading }: Props) {
 
   if (isLoading) {
     return (
-      <View style={styles.wrap}>
-        <SkeletonBanner width={width} height={bannerHeight} />
+      <View style={styles.outerWrap}>
+        <SkeletonBanner cardWidth={cardWidth} height={bannerHeight} />
       </View>
     );
   }
@@ -163,39 +177,41 @@ export function BannerCarousel({ data, isLoading }: Props) {
   const showDots = slides.length > 1;
 
   return (
-    <View style={styles.wrap}>
-      <FlatList
-        ref={flatRef}
-        data={slides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-        renderItem={({ item }) => (
-          <BannerSlide slide={item} height={bannerHeight} />
-        )}
-        getItemLayout={(_, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
-        initialNumToRender={1}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-      />
+    <View style={styles.outerWrap}>
+      <View style={[styles.card, { width: cardWidth, height: bannerHeight }]}>
+        <FlatList
+          ref={flatRef}
+          data={slides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          renderItem={({ item }) => (
+            <BannerSlide slide={item} height={bannerHeight} width={cardWidth} />
+          )}
+          getItemLayout={(_, index) => ({
+            length: cardWidth,
+            offset: cardWidth * index,
+            index,
+          })}
+          initialNumToRender={1}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+        />
 
-      {showDots && (
-        <View style={styles.dots}>
-          {slides.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === activeSlide && styles.dotActive]}
-            />
-          ))}
-        </View>
-      )}
+        {showDots && (
+          <View style={styles.dots} pointerEvents="none">
+            {slides.map((_, i) => (
+              <View
+                key={i}
+                style={[styles.dot, i === activeSlide && styles.dotActive]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -203,30 +219,49 @@ export function BannerCarousel({ data, isLoading }: Props) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: 4 },
+  outerWrap: {
+    marginHorizontal: SIDE_MARGIN,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.16,
+        shadowRadius: 18,
+      },
+      android: { elevation: 7 },
+    }),
+  },
 
-  skeleton: {
+  card: {
+    borderRadius: 20,
+    overflow: "hidden",
     backgroundColor: "#D1D9E6",
+  },
+
+  skeletonFill: {
     alignItems: "center",
     justifyContent: "center",
   },
 
   dots: {
+    position: "absolute",
+    bottom: 14,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     justifyContent: "center",
-    gap: 6,
-    paddingTop: 10,
-    paddingBottom: 2,
-    backgroundColor: T.bg,
+    alignItems: "center",
+    gap: 5,
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: T.border,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.40)",
+    width: 5,
   },
   dotActive: {
-    width: 18,
-    backgroundColor: T.accent,
+    width: 20,
+    backgroundColor: "#fff",
   },
 });
