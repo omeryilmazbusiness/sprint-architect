@@ -86,7 +86,7 @@ export default function ManagerDashboard() {
         }
       >
         {/* Banner spans full width */}
-        <ManagerBannerCarousel data={data} isLoading={isLoading} />
+        <ManagerBannerCarousel data={data} isLoading={isLoading} clinicName={clinic?.name} />
 
         {/* Padded body */}
         <View style={styles.body}>

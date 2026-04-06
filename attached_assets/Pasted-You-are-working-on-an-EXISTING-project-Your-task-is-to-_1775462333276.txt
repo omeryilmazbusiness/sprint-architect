@@ -1,0 +1,172 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current guest dashboard banner implementation and then redesign the manager dashboard banner UX so that it matches the same design language, visual quality, background treatment, and premium feel — while still showing the correct manager-specific information.
+
+IMPORTANT RULES
+- Do NOT rebuild the dashboard from scratch
+- Do NOT break current working manager flows
+- First inspect the real implementation deeply
+- Use the guest dashboard banner as the visual and UX reference
+- Then directly implement the manager banner redesign
+- Preserve good existing architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random style copy-paste without understanding data flow
+- The result must feel intentional, premium, and production-ready
+- Mobile-first quality is critical
+
+PRIMARY GOAL
+Make the manager dashboard banner feel like the guest dashboard banner in:
+- overall visual design
+- background image treatment
+- layout quality
+- premium feel
+- spacing and typography
+- polished composition
+
+At the same time, the manager banner must show the MOST IMPORTANT manager-facing information, not guest-facing information.
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. GUEST DASHBOARD BANNER
+- exact component(s) used
+- layout structure
+- background image usage
+- overlay/gradient treatment
+- card structure
+- typography hierarchy
+- chips/badges/mini info blocks
+- carousel behavior if any
+- responsive/mobile behavior
+- what makes the guest banner feel premium
+
+2. MANAGER DASHBOARD BANNER
+- current manager banner implementation
+- what data it currently shows
+- what data source it uses
+- what is visually weak compared to guest banner
+- whether it is static or carousel-based
+- whether it can reuse or adapt shared banner primitives
+
+3. MANAGER-SPECIFIC DATA
+Determine the most useful information that should appear in the manager banner.
+Focus on the highest-value operational information only.
+Avoid clutter.
+Possible examples:
+- active guests
+- today’s appointments
+- pending documents
+- upcoming 7-day activity
+- clinic name / status
+- operational summary
+Use the actual project context and current backend data shape to choose the right fields.
+
+Then directly implement the redesign.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — GUEST BANNER REFERENCE ANALYSIS
+1. Inspect the guest dashboard banner in detail
+2. Identify the exact visual/system patterns that should be mirrored:
+   - background treatment
+   - card spacing
+   - typography
+   - overlay
+   - highlight blocks
+   - carousel behavior
+   - premium visual rhythm
+3. Identify what can be reused or abstracted cleanly
+
+Acceptance criteria:
+- you clearly understand why the guest banner looks better
+- manager banner redesign is based on the real reference, not guesswork
+
+PHASE 2 — MANAGER BANNER CONTENT STRATEGY
+1. Decide the most important manager information for the banner
+2. Keep it operational and high-value
+3. Avoid overcrowding the banner
+4. Keep a premium hero-banner style, not a dense KPI board
+5. Use only the most necessary summary information
+
+Acceptance criteria:
+- manager banner shows useful operational information
+- information hierarchy is clean
+- no clutter
+
+PHASE 3 — MANAGER BANNER REDESIGN
+1. Redesign the manager banner to match the guest banner design language
+2. Use the same or equivalent background visual style
+3. Use the same premium overlay / image treatment
+4. Match visual quality and layout quality closely
+5. Preserve manager-specific meaning
+6. Keep mobile responsiveness excellent
+7. If the guest banner is carousel-based and it makes sense, adapt that pattern safely for manager
+8. Ensure text remains readable over backgrounds
+
+Acceptance criteria:
+- manager banner visually feels like the same family as guest banner
+- background design and composition quality match closely
+- UX feels premium and polished
+- banner still communicates manager-relevant information clearly
+
+PHASE 4 — DATA WIRING / BACKEND SUPPORT IF NEEDED
+1. Inspect whether current manager dashboard response already provides the right banner data
+2. If not, extend backend DTO/use case/repository cleanly
+3. Do not overload unrelated endpoints with messy logic
+4. Keep route/controller thin
+5. Keep business aggregation in service/use case layer
+
+Acceptance criteria:
+- manager banner gets the right data cleanly
+- no frontend guessing or patchy derived logic
+- architecture remains maintainable
+
+PHASE 5 — POLISH / CLEANUP
+1. Ensure the manager banner does not regress other dashboard sections
+2. Ensure dark/light mode compatibility if already supported
+3. Ensure safe spacing on smaller phones
+4. Ensure images/backgrounds load correctly
+5. Reuse shared styles/components only where it truly improves maintainability
+6. Avoid duplicated hardcoded banner logic across guest and manager if a small shared abstraction helps
+
+ARCHITECTURE EXPECTATIONS
+- Keep components focused on presentation
+- Keep data shaping in the correct layer
+- Avoid duplicated mapping logic
+- Avoid giant banner components if they can be cleanly composed
+- Keep styles maintainable
+- Leave the codebase cleaner and more consistent than before
+
+YOU MUST CHECK FOR THESE RISKS
+- guest and manager banners using entirely separate incompatible structures
+- background assets duplicated messily
+- manager banner becoming too dense with too many metrics
+- text contrast becoming poor on image background
+- mobile cropping/layout issues
+- carousel behavior introducing instability if not already supported
+- manager banner showing the wrong priority information
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the guest and manager banner implementations
+2. What visual patterns were reused or adapted
+3. Exact files changed
+4. Why each change was made
+5. Any backend/data changes introduced
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new manager banner design
+2. Which manager data is shown in the banner and why
+3. Confirmation that the design now matches the guest banner style
+4. Exact files changed
+5. Manual QA checklist for phone/mobile
+6. Remaining future improvements if any
+
+START NOW
+First inspect the guest dashboard banner and current manager banner deeply.
+Then implement the manager banner redesign end-to-end in the order above.
