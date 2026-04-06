@@ -1,0 +1,226 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current guest-side codebase deeply and then implement the following UI/UX improvements in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing working guest flows
+- First inspect the real implementation deeply
+- Then directly implement the requested changes
+- Preserve good existing architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random styling patches without understanding the navigation/state flow
+- Mobile-first quality is critical
+- The result must feel premium, modern, elegant, and polished
+
+PRIMARY REQUESTS
+
+1) GUEST HEADER MUST BE MORE MODERN AND PREMIUM
+Required behavior:
+- Redesign the guest header with a more modern, minimal, premium UX
+- Notification and logout icons must look cleaner, more elegant, and more minimal
+- Improve spacing, icon sizing, touch targets, alignment, and visual hierarchy
+- Keep the design refined, not flashy
+- Preserve dark/light mode compatibility if the app already supports it
+- Keep performance and maintainability strong
+
+2) TAPPING NOTIFICATIONS MUST ACTUALLY NAVIGATE TO THE NOTIFICATIONS LIST SCREEN
+Current problem:
+- Notification icon is present
+- But tapping it does not correctly navigate to the notifications list screen
+
+Required behavior:
+- Tapping the notification icon in guest header must reliably open the guest notifications list screen
+- Navigation must work consistently
+- Unread count badge behavior must remain correct if already present
+- Fix the root cause, not just the symptom
+
+3) EXPLORE TAB SHOULD SHOW A PREMIUM “COMING SOON” EXPERIENCE
+Current problem:
+- Tapping Explore should not feel broken or empty
+
+Required behavior:
+- When user goes to Explore, the Explore page should visually blur/fade the underlying content and show a premium popup/modal/sheet
+- The popup should say “Coming Soon”
+- Under it, show a beautiful short description of what will be available
+- The content should be professionally written and premium in tone
+
+Required content direction:
+- Premium hammam experiences
+- Spa reservations
+- Tour bookings
+- Priority reservations
+- Exclusive guest experiences
+- Concierge-style add-ons
+- And more
+
+The popup/modal should:
+- feel premium
+- be visually modern
+- be mobile-first
+- have elegant spacing and typography
+- have subtle background blur
+- have a dismiss/close action
+- avoid looking like a rough placeholder
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. GUEST HEADER
+- current guest header implementation
+- current icon set
+- current navigation logic
+- notification badge logic
+- logout action logic
+- whether header is shared or duplicated across guest screens
+
+2. NOTIFICATIONS NAVIGATION
+- current guest notifications route/screen
+- whether the route exists
+- whether the header is wired to the wrong route
+- whether there is a layout/navigation issue preventing the screen from opening
+- whether the guest notifications screen itself is missing, stubbed, or incorrectly registered
+
+3. EXPLORE SCREEN
+- current Explore tab/screen implementation
+- whether it already has content
+- whether it should remain visible behind the popup
+- where the blur/overlay/modal should be mounted
+- whether existing modal/sheet primitives should be reused
+- what navigation/state structure is best
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — GUEST HEADER PREMIUM REDESIGN
+1. Inspect current guest header UI and code structure
+2. Refactor it into a cleaner, more modern premium header
+3. Improve:
+   - layout
+   - spacing
+   - icon style
+   - icon container style
+   - touch area
+   - alignment
+   - visual hierarchy
+4. Keep the result minimal and elegant, not noisy
+5. Ensure notification and logout icons feel modern and premium
+
+Acceptance criteria:
+- header looks more modern and polished
+- icons feel minimal and premium
+- touch areas are good on phone
+- no layout regressions
+
+PHASE 2 — FIX NOTIFICATIONS NAVIGATION
+1. Inspect the notification icon press handler
+2. Identify the exact root cause of why tapping does not navigate correctly
+3. Fix the route/navigation integration cleanly
+4. Ensure guest can reliably open the notifications list screen
+5. Keep unread indicator behavior correct
+
+Acceptance criteria:
+- tapping notification icon opens guest notifications list screen
+- no broken route behavior
+- no silent failures
+- badge/unread UI remains correct
+
+PHASE 3 — EXPLORE “COMING SOON” PREMIUM EXPERIENCE
+1. Inspect current Explore screen
+2. Build a premium coming-soon overlay/modal/popup experience
+3. Add background blur / dim effect
+4. Add a polished content card with:
+   - title: “Coming Soon”
+   - premium descriptive text
+   - feature bullets or cards for:
+     - Premium Hammam
+     - Spa Reservations
+     - Tour Bookings
+     - Priority Reservations
+     - Exclusive Experiences
+     - Concierge Add-ons
+5. Add a close action
+6. Make the content feel aspirational and high-end
+7. Keep the page performant and mobile-first
+
+Suggested tone:
+- refined
+- luxury hospitality
+- reassuring
+- premium but concise
+
+Acceptance criteria:
+- Explore does not feel empty or broken
+- user sees a beautiful coming-soon experience
+- blur/overlay feels premium
+- content clearly explains what is coming
+- mobile UX is excellent
+
+PHASE 4 — CONTENT / COPY POLISH
+Write polished premium UX copy for the Explore popup.
+Keep it concise and elegant.
+Avoid awkward or generic placeholder text.
+
+Suggested content direction:
+“Coming Soon”
+“Soon you will be able to enrich your stay with curated premium experiences.”
+Then elegant short lines/cards such as:
+- Premium Hammam & Spa
+- Private and Group Tours
+- Priority Reservations
+- Exclusive Wellness Experiences
+- Concierge Support
+- More curated services coming soon
+
+PHASE 5 — HARDENING
+1. Ensure clean loading/empty/error states where relevant
+2. Ensure navigation is type-safe and correct
+3. Avoid duplicated header logic if there is a shared header opportunity
+4. Keep modal/overlay implementation maintainable
+5. Preserve accessibility and mobile interaction quality
+6. Ensure no screen gets permanently blurred or blocked after dismissing the popup
+
+ARCHITECTURE EXPECTATIONS
+- Keep components focused on presentation
+- Keep navigation logic clean
+- Keep header actions reusable if possible
+- Reuse existing modal/sheet/dialog primitives if they are already good
+- Avoid duplicated styling logic across guest screens
+- Avoid brittle route-name hacks
+- Leave the guest UX cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- guest notification screen exists but route path is wrong
+- icon press handler points to wrong stack/tab route
+- header is rendered in a layout that does not have correct navigation context
+- notifications list screen exists but is not registered correctly
+- Explore popup mounted incorrectly and blocks navigation state
+- blur layer causes performance or touch issues
+- overlay dismissal fails on mobile
+- logout action styling regresses while redesigning header
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current guest header/navigation
+2. Root cause of notifications navigation issue
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of guest header redesign
+2. Root cause + fix summary for notifications navigation
+3. Summary of Explore coming-soon popup implementation
+4. Final premium copy used in Explore
+5. Exact files changed
+6. Manual QA checklist for phone/mobile
+7. Remaining future improvements if any
+
+START NOW
+First inspect the current guest header, notifications route, and Explore screen implementation deeply.
+Then implement the requested improvements end-to-end in the order above.

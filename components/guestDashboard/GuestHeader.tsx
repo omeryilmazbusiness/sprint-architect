@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { T } from "@/constants/adminTheme";
 import { useGuestNotifications } from "@/hooks/guest/useGuestNotifications";
 
@@ -23,9 +24,13 @@ export function GuestHeader({ patientName, onLogout }: Props) {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { unread } = useGuestNotifications();
 
+  function openNotifications() {
+    router.push("/(patient)/notifications");
+  }
+
   return (
-    <View style={[styles.container, { paddingTop: topPad + 12 }]}>
-      {/* Left: date + name */}
+    <View style={[styles.container, { paddingTop: topPad + 14 }]}>
+      {/* Left: greeting */}
       <View style={styles.left}>
         <Text style={styles.date}>{todayLabel()}</Text>
         <Text style={styles.name} numberOfLines={1}>
@@ -33,11 +38,16 @@ export function GuestHeader({ patientName, onLogout }: Props) {
         </Text>
       </View>
 
-      {/* Right: bell + logout */}
+      {/* Right: actions */}
       <View style={styles.actions}>
-        {/* Notifications bell */}
-        <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => {}}>
-          <Ionicons name="notifications-outline" size={20} color={T.textSec} />
+        <Pressable
+          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+          hitSlop={10}
+          onPress={openNotifications}
+          accessibilityLabel="Notifications"
+          accessibilityRole="button"
+        >
+          <Ionicons name="notifications-outline" size={21} color={T.text} />
           {unread > 0 ? (
             <View style={styles.badge}>
               <Text style={styles.badgeTxt}>{unread > 99 ? "99+" : unread}</Text>
@@ -45,9 +55,14 @@ export function GuestHeader({ patientName, onLogout }: Props) {
           ) : null}
         </Pressable>
 
-        {/* Logout */}
-        <Pressable onPress={onLogout} style={styles.iconBtn} hitSlop={10}>
-          <Ionicons name="log-out-outline" size={20} color={T.textSec} />
+        <Pressable
+          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+          hitSlop={10}
+          onPress={onLogout}
+          accessibilityLabel="Log out"
+          accessibilityRole="button"
+        >
+          <Ionicons name="log-out-outline" size={21} color={T.text} />
         </Pressable>
       </View>
     </View>
@@ -59,56 +74,62 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: T.sp20,
-    paddingBottom: T.sp16,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
     backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
       },
-      android: { elevation: 2 },
+      android: { elevation: 3 },
+      default: {
+        borderBottomWidth: 1,
+        borderBottomColor: T.border,
+      },
     }),
   },
-  left: { flex: 1, marginRight: 12 },
+  left: { flex: 1, marginRight: 16 },
   date: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: T.textMuted,
-    marginBottom: 3,
+    marginBottom: 4,
+    letterSpacing: 0.1,
   },
   name: {
     fontFamily: "Inter_700Bold",
-    fontSize: 22,
+    fontSize: 24,
     color: T.text,
+    letterSpacing: -0.3,
   },
-  actions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: T.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: T.border,
     alignItems: "center",
     justifyContent: "center",
   },
   badge: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
+    top: 6,
+    right: 6,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
     backgroundColor: T.danger,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 2,
-    borderWidth: 1.5,
+    paddingHorizontal: 3,
+    borderWidth: 2,
     borderColor: T.surface,
   },
   badgeTxt: {

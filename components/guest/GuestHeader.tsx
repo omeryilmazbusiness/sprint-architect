@@ -23,9 +23,11 @@ function NotificationBell() {
   const { unread } = useGuestNotifications();
   return (
     <Pressable
-      style={styles.iconBtn}
-      hitSlop={10}
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+      hitSlop={12}
       onPress={() => router.push("/(patient)/notifications")}
+      accessibilityLabel="Notifications"
+      accessibilityRole="button"
     >
       <Ionicons name="notifications-outline" size={21} color={T.text} />
       {unread > 0 ? (
@@ -52,11 +54,13 @@ export function GuestHeader({
         {/* Left — back or spacer */}
         {onBack ? (
           <Pressable
-            onPress={onBack ?? (() => router.back())}
-            style={styles.iconBtn}
-            hitSlop={10}
+            onPress={onBack}
+            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+            hitSlop={12}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
-            <Ionicons name="arrow-back" size={22} color={T.text} />
+            <Ionicons name="arrow-back" size={21} color={T.text} />
           </Pressable>
         ) : (
           <View style={styles.side} />
@@ -74,7 +78,7 @@ export function GuestHeader({
           ) : null}
         </View>
 
-        {/* Right — notifications */}
+        {/* Right — notifications or spacer */}
         <View style={styles.side}>
           {!hideNotifications ? <NotificationBell /> : null}
         </View>
@@ -86,42 +90,44 @@ export function GuestHeader({
 const styles = StyleSheet.create({
   header: {
     backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
     zIndex: 10,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
       },
-      android: { elevation: 2 },
-      default: {},
+      android: { elevation: 3 },
+      default: {
+        borderBottomWidth: 1,
+        borderBottomColor: T.border,
+      },
     }),
   },
   inner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: T.sp16,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    minHeight: 52,
+    minHeight: 54,
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   side: {
-    width: 40,
+    width: 42,
     alignItems: "center",
     justifyContent: "center",
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: T.surfaceSubtle,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -130,31 +136,32 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: T.text,
     textAlign: "center",
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: T.textMuted,
-    marginTop: 1,
+    marginTop: 2,
     textAlign: "center",
   },
   badge: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 16,
-    height: 16,
+    top: 7,
+    right: 7,
+    minWidth: 15,
+    height: 15,
     borderRadius: 8,
     backgroundColor: T.danger,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: T.surface,
   },
   badgeTxt: {
     fontFamily: "Inter_700Bold",
-    fontSize: 9,
+    fontSize: 8,
     color: "#fff",
   },
 });
