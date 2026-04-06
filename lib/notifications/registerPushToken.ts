@@ -34,9 +34,12 @@ export async function registerPushToken(endpoint: string): Promise<void> {
       (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
       (Constants.easConfig?.projectId as string | undefined);
 
-    const tokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
+    if (!projectId) {
+      console.log("[Push] No projectId found — skipping push token registration (expected in Expo Go dev mode)");
+      return;
+    }
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
     const token = tokenData.data;
     const platform: "ios" | "android" = Platform.OS === "ios" ? "ios" : "android";

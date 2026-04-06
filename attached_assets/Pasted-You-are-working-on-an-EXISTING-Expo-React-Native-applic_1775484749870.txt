@@ -1,0 +1,178 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to implement a premium black-themed welcome / intro screen that appears EVERY TIME the app is opened, before the login screen, in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing auth, navigation, or startup flows
+- First inspect the current app startup flow deeply
+- Then directly implement the welcome/start flow
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT make it a fake or random overlay
+- Build it properly into the real app startup flow
+- The result must feel premium, polished, modern, elegant, and mobile-first
+
+PRIMARY REQUIREMENT
+Every single time the application is opened:
+1. A premium black-themed welcome screen must appear first
+2. It should stay visible briefly as a short loading / startup experience
+3. After that, the app should continue to the normal login screen
+4. This must happen on every cold app open / app launch
+5. The experience must feel intentional and high-end, not cheap or placeholder-like
+
+UX / DESIGN REQUIREMENTS
+The welcome screen must feel:
+- black themed
+- premium
+- elegant
+- luxury-style
+- modern
+- smooth
+- subtle
+- professional
+
+Use a design direction like:
+- deep black or charcoal background
+- elegant gradients or soft glows
+- refined typography
+- minimal but premium motion
+- clean branded feel
+- tasteful loading indication
+- no clutter
+- no heavy or distracting animation
+
+The screen should include:
+- app name or logo if available
+- short premium loading/welcome presentation
+- subtle loading state
+- smooth transition to login screen
+
+IMPORTANT UX RULES
+- It must not stay too long
+- It must not feel laggy
+- It must not feel like fake waiting
+- It must not flicker awkwardly
+- It must not break auth/session/navigation flow
+- It must be consistent on Android and iOS
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT APP START FLOW
+- app entry point
+- root layout / root navigator
+- splash / startup logic if any
+- auth restore/session check flow
+- where login screen is mounted
+- how the initial route is chosen
+- whether there is already a loading/splash screen
+
+2. NAVIGATION STRUCTURE
+- current routing/navigation setup
+- best place to insert the welcome screen so it appears every app open
+- how to transition cleanly from welcome screen to login
+
+3. DESIGN SYSTEM / THEME
+- current fonts
+- existing black/dark premium components if any
+- existing animation libraries / motion setup if any
+- branding assets if any
+
+Then directly implement the requested startup experience.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — STARTUP FLOW INTEGRATION
+1. Identify the correct place in the app startup lifecycle
+2. Insert the welcome screen into the real startup flow
+3. Ensure it appears every time the app launches
+4. Ensure it transitions cleanly to login
+5. Avoid breaking the rest of the app navigation
+
+Acceptance criteria:
+- app launch always starts with the welcome screen
+- after a short duration/loading, login opens
+- no navigation glitches or broken startup flow
+
+PHASE 2 — PREMIUM BLACK WELCOME SCREEN DESIGN
+1. Create a premium black-themed welcome screen
+2. Use refined visual design:
+   - dark premium background
+   - elegant glow/gradient
+   - smooth, subtle motion
+   - premium typography
+   - minimal loading indicator
+3. Make it feel like a real startup-quality product
+4. Keep mobile performance good
+
+Acceptance criteria:
+- welcome screen looks premium and modern
+- visual quality is high-end
+- it does not feel like a placeholder
+
+PHASE 3 — SHORT LOADING / TRANSITION LOGIC
+1. Add a short controlled loading period
+2. Keep it brief and intentional
+3. Transition smoothly to login screen
+4. Ensure this works consistently on Android and iOS
+5. Ensure repeated launches still show the screen correctly
+
+Acceptance criteria:
+- loading duration feels natural
+- no awkward delay
+- transition is smooth
+- happens every app open
+
+PHASE 4 — CLEANUP / HARDENING
+1. Keep startup code maintainable
+2. Avoid duplicate splash/welcome logic
+3. Keep the screen component clean and reusable
+4. Ensure no memory leaks or broken timers
+5. Ensure the implementation is production-ready
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- clear separation of concerns
+- startup flow logic separated from UI presentation
+- no fragile timer hacks scattered in random places
+- one clean welcome/start screen component
+- one clean startup coordinator/logic path if needed
+- leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- existing splash/auth loading flow may conflict with the new welcome screen
+- navigation may flicker if inserted at the wrong level
+- login screen may render behind the welcome screen awkwardly
+- timer may continue after unmount if not cleaned up
+- app reopen vs resume behavior may differ
+- Android and iOS launch timing may not feel identical
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current startup flow
+2. Exact files changed
+3. Why each change was made
+4. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new welcome/start screen
+2. Summary of how it is integrated into app startup
+3. Exact files changed
+4. Manual QA checklist for Android and iOS
+5. Any remaining future improvements if any
+
+FINAL STRICT RULE
+This task is not complete unless:
+- the welcome screen appears every time the app is opened
+- it is black-themed and premium
+- it shows briefly with a loading feel
+- it transitions cleanly to the login screen
+
+START NOW
+First inspect the current app startup flow and navigation deeply.
+Then implement the premium black welcome screen end-to-end.

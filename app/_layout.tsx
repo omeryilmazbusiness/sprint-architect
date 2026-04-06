@@ -13,6 +13,7 @@ import { MaintenanceBottomSheet } from "@/components/system/MaintenanceBottomShe
 import { useAppFonts } from "@/lib/fonts/FontLoader";
 import { initNotificationHandler } from "@/lib/notifications/setup";
 import { ensureAndroidChannels } from "@/lib/notifications/channels";
+import StartupScreen from "@/components/StartupScreen";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -65,6 +66,8 @@ export default function RootLayout() {
                   </Stack>
                 </AuthProvider>
                 <MaintenanceBottomSheet />
+                {/* Appears on every cold launch, fades out after ~2.3s */}
+                <StartupScreen />
               </SystemErrorProvider>
             </LanguageProvider>
           </KeyboardProvider>
