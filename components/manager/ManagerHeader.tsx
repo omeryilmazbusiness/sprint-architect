@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/context/LanguageContext";
+import { LOCALE_FLAGS } from "@/i18n";
+import { LanguageSelectorSheet } from "@/components/admin/LanguageSelectorSheet";
 
 interface ManagerHeaderProps {
   title: string;
@@ -36,6 +39,8 @@ export function ManagerHeader({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const { locale } = useLanguage();
+  const [showLang, setShowLang] = useState(false);
 
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/v1/manager/notifications/unread-count"],
@@ -53,58 +58,74 @@ export function ManagerHeader({
   };
 
   return (
-    <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
-      <View style={styles.row}>
-        {backButton ? (
-          <Pressable
-            style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={onBack}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={22} color={T.primary} />
-          </Pressable>
-        ) : (
-          <View style={styles.brandMark}>
-            <View style={styles.brandDot} />
-          </View>
-        )}
-
-        <View style={styles.titleBlock}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
-          {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.rightArea}>
-          <Pressable
-            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={handleNotifications}
-            hitSlop={8}
-          >
-            <Ionicons name="notifications-outline" size={22} color={T.text} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-
-          {right}
-          {onLogout && (
+    <>
+      <View style={[styles.header, { paddingTop: topPad + 10 }, cardShadow]}>
+        <View style={styles.row}>
+          {backButton ? (
             <Pressable
-              style={({ pressed }) => [styles.logoutBtn, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={onLogout}
+              style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
+              onPress={onBack}
+              hitSlop={10}
+            >
+              <Ionicons name="arrow-back" size={22} color={T.primary} />
+            </Pressable>
+          ) : (
+            <View style={styles.brandMark}>
+              <View style={styles.brandDot} />
+            </View>
+          )}
+
+          <View style={styles.titleBlock}>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            {subtitle ? (
+              <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.rightArea}>
+            {/* Language switcher */}
+            <Pressable
+              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+              onPress={() => setShowLang(true)}
+              hitSlop={8}
+              accessibilityLabel="Switch language"
+            >
+              <Text style={styles.langFlag}>{LOCALE_FLAGS[locale]}</Text>
+            </Pressable>
+
+            {/* Notifications bell */}
+            <Pressable
+              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.6 : 1 }]}
+              onPress={handleNotifications}
               hitSlop={8}
             >
-              <Ionicons name="log-out-outline" size={20} color={T.textMuted} />
+              <Ionicons name="notifications-outline" size={22} color={T.text} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
-          )}
+
+            {right}
+
+            {onLogout && (
+              <Pressable
+                style={({ pressed }) => [styles.logoutBtn, { opacity: pressed ? 0.6 : 1 }]}
+                onPress={onLogout}
+                hitSlop={8}
+              >
+                <Ionicons name="log-out-outline" size={20} color={T.textMuted} />
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
-    </View>
+
+      <LanguageSelectorSheet visible={showLang} onClose={() => setShowLang(false)} />
+    </>
   );
 }
 
@@ -164,6 +185,10 @@ const styles = StyleSheet.create({
   iconBtn: {
     padding: 4,
     position: "relative",
+  },
+  langFlag: {
+    fontSize: 20,
+    lineHeight: 24,
   },
   logoutBtn: {
     padding: 4,

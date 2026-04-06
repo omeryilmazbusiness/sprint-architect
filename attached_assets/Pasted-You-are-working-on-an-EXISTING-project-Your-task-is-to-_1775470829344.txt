@@ -1,0 +1,204 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current MANAGER-side implementation and do the following in the cleanest, safest, most professional, SOLID-compliant, production-ready way:
+
+PRIMARY REQUIREMENT
+1. Add a language icon / language switcher to the MANAGER header
+2. If full manager translation is not already completed, implement full translation support across ALL manager-visible pages and components
+3. If full manager translation is already completed, then ONLY add the manager header language icon/switcher cleanly and integrate it with the existing i18n system
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break current manager flows
+- First inspect the real implementation deeply
+- Detect whether the manager i18n system already exists and is fully wired
+- Reuse the existing i18n system if present
+- Do NOT create a second translation system
+- Do NOT leave mixed-language UI
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Keep the implementation scalable to the whole app
+- Keep it mobile-first and premium
+
+STRICT DECISION LOGIC
+You MUST first determine which state the project is in:
+
+CASE A — Manager translation is already implemented
+If manager pages are already fully translation-ready and react to language changes:
+- DO NOT redo the full translation system
+- ONLY add a professional language icon / language switcher to the manager header
+- Hook it into the existing i18n/language system
+- Ensure selected language updates manager UI immediately
+- Ensure language preference persists
+
+CASE B — Manager translation is not fully implemented
+If manager-visible pages still have hardcoded or untranslated text:
+- First add the manager header language icon / language switcher
+- Then complete full translation support across the ENTIRE manager side using the existing i18n foundation or extending it professionally
+- Make the result fully language-reactive
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT MANAGER HEADER
+- current header component
+- whether it is shared or duplicated
+- current icon/action area
+- best place to add a language icon
+- how to keep the header premium and balanced on mobile
+
+2. CURRENT I18N SYSTEM
+- whether the project already has a translation provider/context/hook
+- whether admin or guest already uses it
+- whether manager already partially uses it
+- whether language persistence already exists
+- whether a language switcher already exists elsewhere and can be reused
+
+3. CURRENT MANAGER TRANSLATION COVERAGE
+Scan manager-visible screens/components and determine whether manager side is already translated or still incomplete.
+
+Inspect:
+- manager tabs layout
+- manager stack layout
+- dashboard
+- users
+- services
+- invoices
+- settings
+- notifications
+- guest detail
+- doctors
+- hotels
+- transports
+- document types
+- appointments-related screens/components
+- sheets, dialogs, forms, tables, cards, filters, badges, statuses
+- all shared manager-visible components
+
+Then decide whether this is CASE A or CASE B.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — MANAGER HEADER LANGUAGE ICON
+1. Inspect current manager header action area
+2. Add a language icon / language switcher in a premium, minimal, professional style
+3. Ensure the interaction feels polished and mobile-friendly
+4. Support at least:
+   - current default language
+   - Russian
+5. Persist the selected language
+6. Ensure the UI updates immediately after selection
+
+Acceptance criteria:
+- manager header contains a language icon
+- tapping it opens a clean language selection interaction
+- changing language updates manager UI immediately
+- language choice persists
+- header layout remains balanced and premium
+
+PHASE 2 — CONDITIONAL FULL MANAGER I18N ROLLOUT
+ONLY IF CASE B is true:
+Implement full translation support across ALL manager-visible UI.
+
+This includes:
+- page titles
+- tabs
+- headers
+- navigation labels
+- section titles
+- card titles
+- KPI labels
+- buttons
+- form labels
+- placeholders
+- helper text
+- validation messages shown in UI
+- table headers
+- row actions
+- status chips/badges
+- modal/dialog text
+- empty states
+- loading states
+- error text shown to manager
+- notifications UI
+- settings/profile labels
+- filters/search labels
+- all reusable manager-visible components
+
+Requirements:
+- reuse existing i18n architecture
+- no second translation system
+- no hardcoded strings left in manager UI where they should be translated
+- make switching languages affect the entire manager UI
+
+Acceptance criteria:
+- if manager translation was incomplete, it is now fully language-aware
+- no mixed-language UI remains
+- all manager-visible text reacts to language switching
+
+PHASE 3 — STATUS / ENUM / BADGE LOCALIZATION
+If full translation is needed, inspect and localize all manager-visible status labels:
+- guest statuses
+- appointment statuses
+- document statuses
+- invoice statuses
+- clinic statuses
+- notification severities
+- generic action/result states
+
+Acceptance criteria:
+- no raw enum labels leak to manager UI
+- badges/chips are localized consistently
+
+PHASE 4 — HARDENING / CLEANUP
+1. Remove leftover hardcoded manager-visible strings where needed
+2. Ensure no duplicate translation helpers or systems exist
+3. Ensure Russian text length does not break layout
+4. Keep mobile usability strong
+5. Keep the codebase maintainable and clean
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- one reusable i18n system
+- one clean manager header language switcher
+- reusable translation hook/helper
+- centralized dictionaries/resources
+- minimal component clutter
+- no duplicated translation logic
+- leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- manager already translated but header missing only
+- duplicated header components
+- language switcher exists elsewhere and should be reused
+- some manager strings may live in deep shared components
+- Russian text may break mobile layouts
+- status labels may still be hardcoded in utility files
+- modals/sheets may bypass translation layer
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Whether the project was CASE A or CASE B
+2. What you found in the current manager header/i18n setup
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Whether only the header language icon was added or full manager i18n was completed too
+2. Summary of the manager header language switcher
+3. Confirmation that manager UI reacts correctly to language selection
+4. Exact files changed
+5. Manual QA checklist
+6. Any remaining edge cases if found
+
+FINAL STRICT RULE
+If manager translation is already fully done, do NOT waste time rebuilding it.
+In that case, only add the manager header language icon professionally and integrate it correctly.
+
+START NOW
+First inspect the current manager header and i18n setup deeply.
+Then determine whether manager is already translated.
+After that, implement the correct path end-to-end.
