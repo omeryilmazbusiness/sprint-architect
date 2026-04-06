@@ -166,7 +166,7 @@ export default function IntroScreen() {
           { opacity: contentOp, transform: [{ translateY: contentY }] },
         ]}
       >
-        <Text style={styles.brandName}>HealthTour</Text>
+        <Text style={styles.brandName}>Healory</Text>
         <View style={styles.rulerRow}>
           <View style={styles.ruler} />
           <Text style={styles.tagline}>OPERATIONS PLATFORM</Text>

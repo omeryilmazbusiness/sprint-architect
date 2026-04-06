@@ -307,8 +307,8 @@ export default function LoginScreen() {
               <View style={styles.logoWrap}>
                 <Ionicons name="airplane" size={28} color="#fff" />
               </View>
-              <Text style={styles.brandName}>HealthTour</Text>
-              <Text style={styles.brandSub}>Your journey, beautifully organised.</Text>
+              <Text style={styles.brandName}>Healory</Text>
+              <Text style={styles.brandSub}>Your complete care journey, beautifully managed.</Text>
             </View>
 
             <View style={styles.card}>
@@ -493,7 +493,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <Text style={styles.footer}>HealthTour · Secure Health Tourism Management</Text>
+            <Text style={styles.footer}>Healory · Secure Health Tourism Platform</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

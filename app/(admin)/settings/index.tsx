@@ -319,7 +319,7 @@ export default function AdminSettings() {
 
   function handleReportIssue() {
     const subject = encodeURIComponent(
-      `Issue Report – HealthTour v${APP_VERSION} [${user?.email ?? "admin"}]`,
+      `Issue Report – Healory v${APP_VERSION} [${user?.email ?? "admin"}]`,
     );
     const body = encodeURIComponent(
       `Describe the issue:\n\n\n---\nEmail: ${user?.email ?? "unknown"}\nVersion: ${APP_VERSION}\nTimestamp: ${new Date().toISOString()}\nEnvironment: ${diagData?.env.nodeEnv ?? "unknown"}`,
@@ -589,7 +589,7 @@ export default function AdminSettings() {
           <Text style={s.infoLabel}>{ts.versionLabel}</Text>
           <Text style={s.infoValue}>v{APP_VERSION}</Text>
         </View>
-        <Text style={s.brand}>HealthTour Operations Platform · v{APP_VERSION}</Text>
+        <Text style={s.brand}>Healory Operations Platform · v{APP_VERSION}</Text>
       </ScrollView>
 
       {/* ─── Logout Modal ──────────────────────────────────────── */}

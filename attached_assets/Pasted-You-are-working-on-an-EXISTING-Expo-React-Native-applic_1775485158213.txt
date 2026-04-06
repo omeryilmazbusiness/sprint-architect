@@ -1,0 +1,233 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to improve the app startup / welcome experience and branding in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing auth, navigation, or startup flows
+- First inspect the current startup/welcome implementation deeply
+- Then directly improve it
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT create a fake-looking splash
+- The result must feel premium, branded, elegant, and intentional
+- Mobile-first quality is critical
+
+PRIMARY REQUESTS
+
+1) THE WELCOME SCREEN DURATION IS TOO SHORT
+Required behavior:
+- The startup welcome screen must stay visible longer than it does now
+- It should feel intentional and premium, not like a flash
+- The timing should still feel smooth and professional, not annoyingly slow
+- The duration must be tuned so the welcome experience is actually felt
+
+2) THE WELCOME SCREEN DESIGN MUST BE MUCH MORE DETAILED, PREMIUM, AND BLACK-THEMED
+Required behavior:
+- Redesign/improve the welcome screen into a richer premium black luxury-style experience
+- It should feel more complete, more branded, and more impressive
+- It should include a more thoughtful visual hierarchy and richer content
+- It should look like a serious high-end product intro screen, not just a loading page
+
+3) ADD A LINE-STYLE LOADING INDICATOR AT THE BOTTOM
+Required behavior:
+- Add a subtle premium line/progress loading indicator near the bottom
+- It should feel elegant and minimal
+- It must fit the premium black design
+- It should not look cheap or generic
+
+4) MAKE IT A REAL “WELCOME TO THE APP” SCREEN
+Required behavior:
+- The screen should introduce the app and brand more clearly
+- It should feel like a real welcome/start experience
+- Add elegant branded content about the app
+- Keep the wording concise, premium, and polished
+- It should communicate that this is a premium health tourism / care journey application
+
+5) REBRAND “HEALTHTOUR” TO “HEALORY” EVERYWHERE
+Required behavior:
+- Replace “Healthtour” with “Healory” everywhere in the app where it is visible or used as product branding
+- This includes:
+  - welcome screen
+  - app title text
+  - branded labels
+  - headers if applicable
+  - splash/welcome content
+  - any visible brand mentions
+- Inspect the codebase carefully and replace branding consistently
+- Do not break technical identifiers unless safe and intended
+- Focus especially on user-visible branding first
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT STARTUP / WELCOME FLOW
+- current app entry point
+- current startup screen / welcome screen implementation
+- current timing logic
+- where the transition to login happens
+- whether auth/session logic is involved
+- whether there are already timers, loaders, or splash transitions
+
+2. CURRENT WELCOME SCREEN DESIGN
+- current layout
+- current typography
+- current animations
+- current loading indicator
+- what currently feels too short / too shallow / too plain
+
+3. CURRENT BRAND USAGE
+- all visible occurrences of “Healthtour”
+- whether some are safe user-visible strings and some are internal identifiers
+- which usages should be rebranded visually
+- whether assets/logo/title text need updating
+
+4. DESIGN / THEME SYSTEM
+- current dark theme styles
+- reusable visual primitives
+- typography setup
+- animation libraries if any
+- whether gradients, blur, glow, or subtle motion systems already exist
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — REBRAND “HEALTHTOUR” TO “HEALORY”
+1. Scan the codebase for all visible brand references
+2. Replace visible “Healthtour” branding with “Healory”
+3. Keep the branding consistent and premium
+4. Do not break technical internals unless clearly safe
+5. Focus first on user-visible names/titles/text
+
+Acceptance criteria:
+- visible brand name is now Healory
+- no old visible “Healthtour” branding remains
+- branding is consistent across the app startup experience and key visible surfaces
+
+PHASE 2 — WELCOME SCREEN UX REDESIGN
+1. Redesign the welcome screen to feel much richer and more premium
+2. Make it black-themed, elegant, modern, and luxury-style
+3. Add stronger visual structure:
+   - premium background treatment
+   - elegant layered dark gradients/glows
+   - refined typography
+   - stronger branded hierarchy
+   - concise welcome messaging
+   - polished composition
+4. Make it feel like a high-end branded app intro
+
+Suggested design direction:
+- deep black / charcoal background
+- soft premium glow accents
+- elegant vertical composition
+- large brand title: Healory
+- short refined subtitle
+- short premium explanation of the app’s purpose
+- subtle visual motion if appropriate
+- no clutter
+
+Acceptance criteria:
+- welcome screen feels much more premium and complete
+- visual quality is clearly improved
+- it feels like a real product intro, not a placeholder
+
+PHASE 3 — LONGER, BETTER-TUNED STARTUP TIMING
+1. Increase the time the welcome screen remains visible
+2. Tune the duration so it feels intentional and premium
+3. Avoid making it frustratingly long
+4. Keep the transition to login smooth
+5. Ensure timing is stable and cleaned up correctly
+
+Acceptance criteria:
+- screen no longer disappears too quickly
+- duration feels polished and deliberate
+- transition remains smooth and professional
+
+PHASE 4 — BOTTOM LINE LOADING INDICATOR
+1. Add a premium line-style loading indicator near the bottom
+2. Keep it elegant and subtle
+3. Ensure it matches the premium black theme
+4. Animate it smoothly if appropriate
+5. Ensure it works well on both Android and iOS
+
+Acceptance criteria:
+- bottom loading line exists
+- it looks premium and minimal
+- it improves the startup feel without clutter
+
+PHASE 5 — APP INTRO / WELCOME CONTENT
+Add elegant product copy on the welcome screen.
+The content should explain the app in a premium, concise way.
+
+Content direction:
+- brand name: Healory
+- premium healthcare / health tourism experience
+- seamless care journey
+- appointments, stay, transport, and care coordination in one place
+- reassuring, modern, high-end tone
+
+Do NOT use generic placeholder copy.
+Make it feel polished and product-quality.
+
+Acceptance criteria:
+- screen includes meaningful welcome/app intro content
+- copy feels premium and branded
+- no awkward or generic text
+
+PHASE 6 — CLEANUP / HARDENING
+1. Ensure no old Healthtour branding remains in visible app UI
+2. Keep startup logic maintainable
+3. Avoid duplicated welcome/splash logic
+4. Ensure timers/animations are cleaned up properly
+5. Ensure Android and iOS both feel good
+6. Preserve the login flow after the welcome screen
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- startup logic separated from presentation
+- welcome screen component clean and reusable
+- no scattered timer hacks
+- branding changes applied consistently
+- codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- brand name may exist in multiple visible and non-visible places
+- changing branding may affect assets or titles
+- welcome timing may conflict with auth/session restore
+- loading line animation may feel too cheap if not designed well
+- transition to login may flicker if inserted incorrectly
+- older Healthtour strings may remain in hidden/reusable components
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current welcome/start flow
+2. Where “Healthtour” branding existed
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new Healory welcome experience
+2. Summary of the longer startup timing
+3. Summary of the bottom line loading indicator
+4. Confirmation that visible Healthtour branding was replaced with Healory
+5. Exact files changed
+6. Manual QA checklist for Android and iOS
+7. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is not complete unless:
+- the welcome screen is visibly longer and more premium
+- the design is richer and black-themed
+- a premium bottom loading line exists
+- the screen includes real welcome/app intro content
+- visible “Healthtour” branding is replaced with “Healory”
+
+START NOW
+First inspect the current startup/welcome flow and all visible Healthtour branding deeply.
+Then implement the new Healory premium welcome experience end-to-end.

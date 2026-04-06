@@ -242,7 +242,7 @@ export default function SettingsScreen() {
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Text style={[styles.footerText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
-            HealthTour Operations Platform
+            Healory Operations Platform
           </Text>
           <Text style={[styles.footerSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
             Sprint 2 · Auth & RBAC Foundation
