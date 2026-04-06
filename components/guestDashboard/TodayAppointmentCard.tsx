@@ -2,32 +2,38 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 import type { PatientAppointment } from "@/hooks/guest/useGuestDashboard";
-
-const STATUS_CONFIG = {
-  SCHEDULED: { label: "Scheduled", bg: T.successBg, text: T.success },
-  DONE: { label: "Done", bg: T.inactiveBg, text: T.inactiveText },
-  CANCELLED: { label: "Cancelled", bg: T.dangerBg, text: T.danger },
-} as const;
 
 interface Props {
   appointment: PatientAppointment | null;
 }
 
 export function TodayAppointmentCard({ appointment }: Props) {
-  const cfg = appointment ? STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.SCHEDULED : null;
+  const t = useT();
+  const tg = t.guestDashboard;
+
+  const STATUS_CONFIG = {
+    SCHEDULED: { label: tg.todayStatusScheduled, bg: T.successBg, text: T.success },
+    DONE: { label: tg.todayStatusDone, bg: T.inactiveBg, text: T.inactiveText },
+    CANCELLED: { label: tg.todayStatusCancelled, bg: T.dangerBg, text: T.danger },
+  } as const;
+
+  const cfg = appointment
+    ? (STATUS_CONFIG[appointment.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.SCHEDULED)
+    : null;
 
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.header}>
         <Ionicons name="calendar-outline" size={16} color={T.accent} />
-        <Text style={styles.label}>Today's Appointment</Text>
+        <Text style={styles.label}>{tg.todayCardLabel}</Text>
       </View>
 
       {!appointment ? (
         <View style={styles.empty}>
           <Ionicons name="calendar-outline" size={32} color={T.textMuted} />
-          <Text style={styles.emptyText}>No appointment today</Text>
+          <Text style={styles.emptyText}>{tg.todayCardEmpty}</Text>
         </View>
       ) : (
         <View style={styles.body}>
@@ -48,7 +54,7 @@ export function TodayAppointmentCard({ appointment }: Props) {
           {appointment.doctor?.fullName ? (
             <View style={styles.doctorRow}>
               <Ionicons name="person-circle-outline" size={14} color={T.textSec} />
-              <Text style={styles.doctorName}>Dr. {appointment.doctor.fullName}</Text>
+              <Text style={styles.doctorName}>{tg.drPrefix}{appointment.doctor.fullName}</Text>
               {appointment.doctor.specialty ? (
                 <Text style={styles.doctorSpec}> · {appointment.doctor.specialty}</Text>
               ) : null}

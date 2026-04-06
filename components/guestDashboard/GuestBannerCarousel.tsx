@@ -13,6 +13,7 @@ import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { GUEST_BANNERS } from "@/constants/guestBanners";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_H = Math.min(Math.max(SCREEN_W * 0.5, 180), 260);
@@ -20,17 +21,19 @@ const CARD_MARGIN = T.sp16;
 const CARD_W = SCREEN_W - CARD_MARGIN * 2;
 const AUTO_SLIDE_MS = 5000;
 
-const CAPTIONS = [
-  { title: "Istanbul", sub: "World-class health tourism destination" },
-  { title: "Your Health Journey", sub: "Expert care, every step of the way" },
-  { title: "İstanbul", sub: "Trusted clinics across the city" },
-];
-
 export function GuestBannerCarousel() {
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isScreenFocused = useRef(true);
+  const t = useT();
+  const tg = t.guestDashboard;
+
+  const CAPTIONS = [
+    { title: tg.banner0Title, sub: tg.banner0Sub },
+    { title: tg.banner1Title, sub: tg.banner1Sub },
+    { title: tg.banner2Title, sub: tg.banner2Sub },
+  ];
 
   const goTo = useCallback((idx: number) => {
     const clampedIdx = Math.max(0, Math.min(idx, GUEST_BANNERS.length - 1));

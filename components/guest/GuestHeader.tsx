@@ -11,6 +11,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
 import { useGuestNotifications } from "@/hooks/guest/useGuestNotifications";
+import { LanguageSwitcherButton } from "@/components/common/LanguageSwitcherButton";
 
 interface GuestHeaderProps {
   title: string;
@@ -63,7 +64,7 @@ export function GuestHeader({
             <Ionicons name="arrow-back" size={21} color={T.text} />
           </Pressable>
         ) : (
-          <View style={styles.side} />
+          <View style={styles.leftSpacer} />
         )}
 
         {/* Center */}
@@ -78,8 +79,9 @@ export function GuestHeader({
           ) : null}
         </View>
 
-        {/* Right — notifications or spacer */}
-        <View style={styles.side}>
+        {/* Right — language switcher + notifications */}
+        <View style={styles.rightRow}>
+          <LanguageSwitcherButton />
           {!hideNotifications ? <NotificationBell /> : null}
         </View>
       </View>
@@ -118,10 +120,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  side: {
+  leftSpacer: {
     width: 42,
+  },
+  rightRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
+    minWidth: 42,
   },
   iconBtn: {
     width: 42,

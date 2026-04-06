@@ -1,0 +1,334 @@
+You are working on an EXISTING project.
+
+Your task is to implement FULL Russian language support across the ENTIRE GUEST side of the application in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+THIS IS A STRICT REQUIREMENT.
+
+WHEN RUSSIAN IS SELECTED:
+EVERY SINGLE VISIBLE TEXT on ALL GUEST screens MUST become Russian.
+
+NO EXCEPTIONS.
+NO PARTIAL TRANSLATION.
+NO MIXED LANGUAGE.
+NO HARDCODED LEFTOVERS.
+
+PRIMARY REQUIREMENTS
+
+1. Add Russian language support to ALL guest pages
+2. Add a language icon / language switcher to the GUEST header
+3. When the guest changes language, the ENTIRE guest UI must update immediately
+4. The selected language must persist
+5. The implementation must be scalable and reusable across the whole project
+6. The implementation must reuse any good existing i18n architecture if present
+7. Do NOT create a second conflicting translation system
+
+EVERYTHING ON GUEST SIDE MUST BE TRANSLATED
+This includes ALL visible guest UI text, such as:
+- page titles
+- tab labels
+- header labels
+- navigation labels
+- card titles
+- section titles
+- dashboard texts
+- doctor card texts
+- hotel card texts
+- transport/driver card texts
+- appointment labels
+- schedule/calendar labels
+- notifications screen texts
+- track/journey screen texts
+- profile labels
+- settings labels
+- button text
+- badges/chips/status labels
+- search placeholders if any
+- filters if any
+- form labels
+- helper text
+- modal/dialog text
+- empty states
+- loading states
+- error states shown to guest
+- success/warning/info messages shown to guest
+- document screen labels
+- upload screen labels
+- explore screen texts
+- coming soon texts
+- any reusable component text rendered on guest screens
+- ANY string visible to the guest user
+
+IF EVEN ONE VISIBLE STRING REMAINS UNTRANSLATED, THIS TASK IS NOT COMPLETE.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing guest flows
+- First inspect the current implementation deeply
+- Reuse the existing i18n/language system if one already exists
+- Do NOT create a second translation system
+- Do NOT leave mixed-language UI
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random inline translation patches everywhere
+- Build this like a real enterprise multilingual mobile/web app
+- The result must be scalable to the full project
+
+FIRST TASK — FULL GUEST I18N AUDIT
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT I18N ARCHITECTURE
+- existing language provider/context/hook/resource setup
+- whether admin/manager already use a translation system
+- whether guest already partially uses it
+- how language persistence currently works
+- whether there are duplicated or conflicting translation patterns
+
+2. GUEST SURFACE AREA
+Scan ALL guest-related screens, layouts, and reusable components.
+You must inspect:
+- guest tab layouts
+- guest stack/layout wrappers
+- guest header
+- dashboard
+- appointments / schedule
+- notifications
+- track / journey
+- documents
+- profile
+- settings
+- explore
+- coming soon screen/state
+- doctor card
+- hotel card
+- transport/driver card
+- all guest cards
+- all guest sheets/modals/dialogs/forms
+- all shared guest-visible components
+
+3. STRING SOURCES
+Find ALL visible guest strings:
+- hardcoded labels
+- enum-to-label mappings
+- placeholders
+- helper text
+- form validation/help text
+- confirmation dialog text
+- empty state text
+- loading text
+- error text shown to user
+- toast/success/warning UI strings
+- badge/chip/status text
+- button text
+- fallback strings
+- section subtitles
+- card descriptions
+
+Then directly implement the localization rollout.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — VERIFY / EXTEND I18N FOUNDATION
+1. Inspect the current i18n architecture
+2. Reuse it if it is already clean
+3. If needed, generalize it so guest can use it properly
+4. Ensure there is ONE translation system, not multiple conflicting ones
+5. Keep the structure scalable to the entire project
+
+Suggested key organization style:
+- guest.common.*
+- guest.header.*
+- guest.dashboard.*
+- guest.appointments.*
+- guest.schedule.*
+- guest.notifications.*
+- guest.track.*
+- guest.documents.*
+- guest.profile.*
+- guest.settings.*
+- guest.explore.*
+- guest.doctor.*
+- guest.hotel.*
+- guest.transport.*
+- guest.status.*
+- guest.errors.*
+- guest.empty.*
+
+Adjust to the current project conventions if needed, but keep it consistent and scalable.
+
+Acceptance criteria:
+- one clean i18n system is used
+- guest plugs into it cleanly
+- no duplicate translation system exists
+
+PHASE 2 — ADD LANGUAGE ICON TO GUEST HEADER
+1. Inspect current guest header implementation
+2. Add a language icon / language switcher to the guest header
+3. Make the switcher premium, minimal, and professional
+4. Support at minimum:
+   - current default language
+   - Russian
+5. Switching language must update the entire guest UI immediately
+6. Persist the language selection
+7. Ensure header UX remains clean on mobile
+
+Acceptance criteria:
+- guest header has a language switcher
+- tapping it allows selecting Russian
+- UI updates immediately after selection
+- selected language persists after navigation/reload
+
+PHASE 3 — FULL GUEST PAGE LOCALIZATION
+Localize the ENTIRE guest side.
+
+Move all visible guest strings into the i18n system.
+
+This includes all guest pages and guest-visible components:
+- dashboard
+- appointments/schedule
+- notifications
+- track/journey
+- documents
+- profile
+- settings
+- explore / coming soon
+- doctor/hotel/transport cards
+- all cards
+- all lists
+- all forms
+- all dialogs
+- all sheets
+- all empty/loading/error states
+
+Acceptance criteria:
+- all guest pages are fully language-aware
+- switching to Russian turns the full guest UI into Russian
+- no mixed-language guest screens remain
+
+PHASE 4 — ENUM / STATUS / BADGE LOCALIZATION
+Inspect and localize all guest-visible enum labels and status texts properly.
+
+Examples:
+- appointment statuses
+- journey/track statuses
+- document statuses
+- notification severities/categories if visible
+- generic action/result states
+
+Requirements:
+- centralize mapping where practical
+- avoid duplicated label logic
+- do not leak raw enum values to UI
+- keep badge colors but translate their text
+
+Acceptance criteria:
+- all guest-visible statuses are localized
+- no raw enum text appears untranslated
+- wording is consistent across the whole guest panel
+
+PHASE 5 — MODALS / FORMS / TABLES / EDGE CASES
+Ensure Russian covers ALL of the guest UX, including:
+- modal titles
+- confirmation dialogs
+- form labels
+- placeholders
+- helper texts
+- validation messages shown in UI
+- row/list labels
+- search/filter labels if any
+- empty states
+- fallback text
+- error states shown in UI
+- success / warning / info copy shown to guest
+
+Acceptance criteria:
+- guest forms, dialogs, lists, and cards are fully localized
+- no partially translated UX remains
+
+PHASE 6 — RUSSIAN TRANSLATION QUALITY
+Russian translations must be:
+- natural
+- professional
+- concise
+- UI-appropriate
+- consistent across the whole guest side
+- not awkward machine garbage
+
+Use consistent professional product terminology for:
+- appointments
+- documents
+- treatment journey
+- doctor/hotel/transport information
+- profile/settings
+- dashboard messages
+- premium service / explore copy
+
+Acceptance criteria:
+- Russian feels product-quality
+- terminology is consistent
+- no strange literal wording remains
+
+PHASE 7 — LANGUAGE SWITCH REACTIVITY
+Ensure that when Russian is selected:
+- the ENTIRE guest UI updates immediately
+- current screen updates too
+- header, layout, tabs, cards, modals, lists — everything reacts
+- language preference persists after refresh/navigation/app reopen if supported
+
+Acceptance criteria:
+- language switching updates all visible guest text immediately
+- no stale untranslated UI remains
+- selected language persists correctly
+
+PHASE 8 — HARDENING / CLEANUP
+1. Remove all remaining hardcoded guest-visible strings where they should be localized
+2. Fix missing translation keys
+3. Ensure no runtime crashes from missing keys
+4. Ensure Russian text length does not break layouts
+5. Keep mobile layout stable
+6. Keep the implementation maintainable
+7. Leave the guest side cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant structure
+- clean separation of concerns
+- one reusable translation system
+- reusable translation hook/helper
+- centralized dictionaries/resources
+- no duplicated translation helpers
+- minimal page/component clutter
+- guest rollout should stay aligned with admin/manager rollout, not diverge
+
+YOU MUST CHECK FOR THESE RISKS
+- guest strings may live in deeply nested shared components
+- there may already be partial translation systems elsewhere
+- toasts/modals may bypass the current translation layer
+- status labels may come from utility files or enum mappers
+- Russian text may break narrow mobile layouts
+- some guest strings may come from hardcoded chip/badge arrays
+- explore / coming soon copy may remain hardcoded
+- doctor/hotel/transport cards may contain hidden untranslated fallback text
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current guest/i18n setup
+2. Which guest pages/components were localized
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the final guest i18n architecture usage
+2. Confirmation that ALL guest-visible text now switches to Russian
+3. Summary of the guest header language switcher
+4. Exact files changed
+5. Manual QA checklist
+6. Any remaining hidden edge cases if found
+
+FINAL STRICT RULE
+If Russian is selected and even ONE visible guest string remains in the old language, this task is NOT complete.
+
+START NOW
+First inspect the current i18n system and all guest-visible screens/components deeply.
+Then implement full Russian localization across the entire guest side and add the guest header language switcher.

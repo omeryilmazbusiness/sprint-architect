@@ -17,19 +17,8 @@ import { useAuth } from "@/context/AuthContext";
 import { GuestHeader } from "@/components/guest/GuestHeader";
 import { useGuestProfile } from "@/hooks/guest/useGuestProfile";
 import { T, cardShadow } from "@/constants/adminTheme";
-
-// ─── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_LABELS: Record<
-  string,
-  { label: string; color: string; bg: string }
-> = {
-  PENDING:    { label: "Pending Approval", color: T.warning,  bg: T.warningBg },
-  ACTIVE:     { label: "Active",           color: T.success,  bg: T.successBg },
-  APPROVED:   { label: "Approved",         color: T.success,  bg: T.successBg },
-  DISCHARGED: { label: "Discharged",       color: T.textSec,  bg: T.inactiveBg },
-  CANCELLED:  { label: "Cancelled",        color: T.danger,   bg: T.dangerBg },
-};
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
 
 // ─── Country flag helper ────────────────────────────────────────────────────────
 
@@ -102,6 +91,19 @@ export default function ProfileScreen() {
   const { isLoading, isError, refetch, patient, manager } = useGuestProfile();
   const [loggingOut, setLoggingOut] = useState(false);
   const [copied, setCopied] = useState(false);
+  const t = useT();
+  const tp = t.guestProfile;
+  const { locale } = useLanguage();
+
+  const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+    PENDING:    { label: tp.statusPendingApproval, color: T.warning,  bg: T.warningBg },
+    ACTIVE:     { label: tp.statusActive,          color: T.success,  bg: T.successBg },
+    APPROVED:   { label: tp.statusApproved,        color: T.success,  bg: T.successBg },
+    DISCHARGED: { label: tp.statusDischarged,      color: T.textSec,  bg: T.inactiveBg },
+    CANCELLED:  { label: tp.statusCancelled,       color: T.danger,   bg: T.dangerBg },
+  };
+
+  const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
 
   async function copyKey() {
     if (!patient?.patientKey) return;
@@ -112,13 +114,13 @@ export default function ProfileScreen() {
 
   function handleLogout() {
     if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm("Sign out of your account?")) {
+      if (typeof window !== "undefined" && window.confirm(tp.signOutWebMsg)) {
         doLogout();
       }
     } else {
-      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Sign Out", style: "destructive", onPress: doLogout },
+      Alert.alert(tp.signOutTitle, tp.signOutBody, [
+        { text: tp.signOutCancel, style: "cancel" },
+        { text: tp.signOut, style: "destructive", onPress: doLogout },
       ]);
     }
   }
@@ -135,7 +137,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.root}>
-        <GuestHeader title="Profile" />
+        <GuestHeader title={tp.pageTitle} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={T.accent} />
         </View>
@@ -146,12 +148,12 @@ export default function ProfileScreen() {
   if (isError || !patient) {
     return (
       <View style={styles.root}>
-        <GuestHeader title="Profile" />
+        <GuestHeader title={tp.pageTitle} />
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
-          <Text style={styles.errorTitle}>Couldn't load profile</Text>
+          <Text style={styles.errorTitle}>{tp.errorTitle}</Text>
           <Pressable onPress={() => refetch()} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{tp.tryAgain}</Text>
           </Pressable>
         </View>
       </View>
@@ -180,7 +182,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <GuestHeader title="Profile" />
+      <GuestHeader title={tp.pageTitle} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -232,7 +234,7 @@ export default function ProfileScreen() {
                   copied ? { color: T.success } : null,
                 ]}
               >
-                {copied ? "Copied!" : "Copy"}
+                {copied ? tp.copied : tp.copy}
               </Text>
             </View>
           </Pressable>
@@ -240,10 +242,10 @@ export default function ProfileScreen() {
 
         {/* ── Person Info ── */}
         <View style={[styles.card, cardShadow]}>
-          <SectionHeader label="Person Info" />
+          <SectionHeader label={tp.sectionPersonInfo} />
           <InfoRow
             icon="mail-outline"
-            label="Email"
+            label={tp.labelEmail}
             value={patient.email}
             onPress={
               patient.email
@@ -254,7 +256,7 @@ export default function ProfileScreen() {
           {patient.email && patient.phone ? <Divider /> : null}
           <InfoRow
             icon="call-outline"
-            label="Phone"
+            label={tp.labelPhone}
             value={patient.phone}
             onPress={
               patient.phone
@@ -268,10 +270,10 @@ export default function ProfileScreen() {
           ) : null}
           <InfoRow
             icon="airplane-outline"
-            label="Arrival"
+            label={tp.labelArrival}
             value={
               patient.arrivalDate
-                ? new Date(patient.arrivalDate).toLocaleDateString("en-US", {
+                ? new Date(patient.arrivalDate).toLocaleDateString(dateLocale, {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
@@ -283,11 +285,11 @@ export default function ProfileScreen() {
           {patient.arrivalDate && patient.departureDate ? <Divider /> : null}
           <InfoRow
             icon="airplane-outline"
-            label="Departure"
+            label={tp.labelDeparture}
             value={
               patient.departureDate
                 ? new Date(patient.departureDate).toLocaleDateString(
-                    "en-US",
+                    dateLocale,
                     {
                       weekday: "long",
                       year: "numeric",
@@ -303,7 +305,7 @@ export default function ProfileScreen() {
         {/* ── Clinic Info ── */}
         {hasClinicInfo ? (
           <View style={[styles.card, cardShadow]}>
-            <SectionHeader label="Clinic Info" />
+            <SectionHeader label={tp.sectionClinicInfo} />
             {patient.clinicName ? (
               <View style={styles.infoRow}>
                 <View style={styles.infoIconWrap}>
@@ -314,7 +316,7 @@ export default function ProfileScreen() {
                   />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoLabel}>Clinic</Text>
+                  <Text style={styles.infoLabel}>{tp.labelClinic}</Text>
                   <Text style={styles.infoValue}>{patient.clinicName}</Text>
                 </View>
               </View>
@@ -322,7 +324,7 @@ export default function ProfileScreen() {
             {patient.clinicName && patient.clinicAddress ? <Divider /> : null}
             <InfoRow
               icon="location-outline"
-              label="Address"
+              label={tp.labelAddress}
               value={patient.clinicAddress}
             />
             {patient.clinicAddress && patient.clinicSupportPhone ? (
@@ -330,7 +332,7 @@ export default function ProfileScreen() {
             ) : null}
             <InfoRow
               icon="call-outline"
-              label="Phone"
+              label={tp.labelPhone}
               value={patient.clinicSupportPhone}
               onPress={
                 patient.clinicSupportPhone
@@ -344,7 +346,7 @@ export default function ProfileScreen() {
             ) : null}
             <InfoRow
               icon="mail-outline"
-              label="Email"
+              label={tp.labelEmail}
               value={patient.clinicSupportEmail}
               onPress={
                 patient.clinicSupportEmail
@@ -358,7 +360,7 @@ export default function ProfileScreen() {
             ) : null}
             <InfoRow
               icon="globe-outline"
-              label="Website"
+              label={tp.labelWebsite}
               value={patient.clinicWebsite}
               onPress={
                 patient.clinicWebsite
@@ -372,7 +374,7 @@ export default function ProfileScreen() {
         {/* ── Manager Contact ── */}
         {hasManagerInfo ? (
           <View style={[styles.card, cardShadow]}>
-            <SectionHeader label="Your Manager" />
+            <SectionHeader label={tp.sectionManager} />
             {manager?.fullName ? (
               <View style={styles.infoRow}>
                 <View style={styles.infoIconWrap}>
@@ -383,7 +385,7 @@ export default function ProfileScreen() {
                   />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoLabel}>Manager</Text>
+                  <Text style={styles.infoLabel}>{tp.labelManager}</Text>
                   <Text style={styles.infoValue}>{manager.fullName}</Text>
                 </View>
               </View>
@@ -391,7 +393,7 @@ export default function ProfileScreen() {
             {manager?.fullName && manager?.phone ? <Divider /> : null}
             <InfoRow
               icon="call-outline"
-              label="Phone"
+              label={tp.labelPhone}
               value={manager?.phone}
               onPress={
                 manager?.phone
@@ -402,7 +404,7 @@ export default function ProfileScreen() {
             {manager?.phone && manager?.email ? <Divider /> : null}
             <InfoRow
               icon="mail-outline"
-              label="Email"
+              label={tp.labelEmail}
               value={manager?.email}
               onPress={
                 manager?.email
@@ -424,7 +426,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Ionicons name="log-out-outline" size={18} color={T.danger} />
-              <Text style={styles.logoutText}>Sign Out</Text>
+              <Text style={styles.logoutText}>{tp.signOut}</Text>
             </>
           )}
         </Pressable>

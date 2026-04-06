@@ -8,6 +8,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +48,7 @@ function parseLangs(raw: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-// ─── Stats panel (experience · university · language count) ───────────────────
+// ─── Stats panel ──────────────────────────────────────────────────────────────
 
 interface StatsPanelProps {
   experienceYears: number | null | undefined;
@@ -56,10 +57,13 @@ interface StatsPanelProps {
 }
 
 function StatsPanel({ experienceYears, university, langCount }: StatsPanelProps) {
+  const t = useT();
+  const tg = t.guestDashboard;
+
   const cols: { label: string; value: string }[] = [];
-  if (experienceYears) cols.push({ label: "Experience", value: `${experienceYears}+ yrs` });
-  if (university)      cols.push({ label: "Education",  value: university });
-  if (langCount > 0)   cols.push({ label: "Languages",  value: `${langCount} spoken` });
+  if (experienceYears) cols.push({ label: tg.doctorExpLabel, value: tg.doctorExpYrs.replace("{n}", String(experienceYears)) });
+  if (university)      cols.push({ label: tg.doctorEduLabel, value: university });
+  if (langCount > 0)   cols.push({ label: tg.doctorLangLabel, value: tg.doctorLangSpoken.replace("{n}", String(langCount)) });
   if (cols.length === 0) return null;
 
   return (
@@ -80,6 +84,9 @@ function StatsPanel({ experienceYears, university, langCount }: StatsPanelProps)
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyDoctorCard() {
+  const t = useT();
+  const tg = t.guestDashboard;
+
   return (
     <LinearGradient
       colors={["#FFFFFF", "#F0F7FF"]}
@@ -91,18 +98,15 @@ function EmptyDoctorCard() {
       <View style={s.header}>
         <View style={s.chipRow}>
           <Ionicons name="person-outline" size={12} color={T.accent} />
-          <Text style={s.chip}>Doctor</Text>
+          <Text style={s.chip}>{tg.doctorChip}</Text>
         </View>
       </View>
       <View style={s.emptyBody}>
         <View style={s.emptyIconWrap}>
           <Ionicons name="person-outline" size={34} color={T.border} />
         </View>
-        <Text style={s.emptyTitle}>Doctor not assigned yet</Text>
-        <Text style={s.emptySub}>
-          Your doctor's full profile will appear here once they are
-          assigned to your appointment.
-        </Text>
+        <Text style={s.emptyTitle}>{tg.doctorEmpty}</Text>
+        <Text style={s.emptySub}>{tg.doctorEmptySub}</Text>
       </View>
     </LinearGradient>
   );
@@ -114,6 +118,8 @@ function DoctorCardContent({
   doctor,
   isAppointmentDoctor,
 }: Props & { doctor: DoctorCardItem }) {
+  const t = useT();
+  const tg = t.guestDashboard;
   const langs = parseLangs(doctor.languages);
   const visLangs = langs.slice(0, 6);
   const extraLangs = langs.length > 6 ? langs.length - 6 : 0;
@@ -125,30 +131,30 @@ function DoctorCardContent({
       end={{ x: 1, y: 1 }}
       style={s.card}
     >
-      {/* Decorative arc — top right */}
+      {/* Decorative arc */}
       <View style={s.arc} />
 
-      {/* ── Card header: category chip + appointment/certified badge ── */}
+      {/* Card header: category chip + appointment/certified badge */}
       <View style={s.header}>
         <View style={s.chipRow}>
           <Ionicons name="medical-outline" size={12} color={T.accent} />
-          <Text style={s.chip}>Doctor</Text>
+          <Text style={s.chip}>{tg.doctorChip}</Text>
         </View>
 
         {isAppointmentDoctor ? (
           <View style={s.apptBadge}>
             <Ionicons name="calendar-outline" size={11} color={T.accent} />
-            <Text style={s.apptBadgeText}>Your appointment</Text>
+            <Text style={s.apptBadgeText}>{tg.doctorYourAppt}</Text>
           </View>
         ) : doctor.diplomaUrl ? (
           <View style={s.certBadge}>
             <Ionicons name="ribbon-outline" size={11} color="#059669" />
-            <Text style={s.certText}>Certified</Text>
+            <Text style={s.certText}>{tg.doctorCertified}</Text>
           </View>
         ) : null}
       </View>
 
-      {/* ── Hero row: avatar + name + specialty ── */}
+      {/* Hero row: avatar + name + specialty */}
       <View style={s.heroRow}>
         {doctor.photoUrl ? (
           <Image source={{ uri: doctor.photoUrl }} style={s.avatar} />
@@ -163,24 +169,23 @@ function DoctorCardContent({
           {doctor.specialty ? (
             <Text style={s.specialty} numberOfLines={2}>{doctor.specialty}</Text>
           ) : null}
-          {/* Certified badge moved here if appointment is the header badge */}
           {isAppointmentDoctor && doctor.diplomaUrl ? (
             <View style={s.certBadgeInline}>
               <Ionicons name="ribbon-outline" size={10} color="#059669" />
-              <Text style={s.certTextSmall}>Certified</Text>
+              <Text style={s.certTextSmall}>{tg.doctorCertified}</Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      {/* ── Stats panel: experience · university · languages ── */}
+      {/* Stats panel */}
       <StatsPanel
         experienceYears={doctor.experienceYears}
         university={doctor.university}
         langCount={langs.length}
       />
 
-      {/* ── Bio quote ── */}
+      {/* Bio quote */}
       {doctor.bio ? (
         <View style={s.bioWrap}>
           <View style={s.bioBar} />
@@ -188,10 +193,10 @@ function DoctorCardContent({
         </View>
       ) : null}
 
-      {/* ── Languages chips ── */}
+      {/* Languages chips */}
       {langs.length > 0 ? (
         <View style={s.langsSection}>
-          <Text style={s.langsLabel}>Languages</Text>
+          <Text style={s.langsLabel}>{tg.doctorLangLabel}</Text>
           <View style={s.langsRow}>
             {visLangs.map((l) => (
               <View key={l} style={s.langChip}>
@@ -227,7 +232,6 @@ const s = StyleSheet.create({
     padding: T.sp16,
     gap: 14,
     overflow: "hidden",
-    // Shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
@@ -237,8 +241,6 @@ const s = StyleSheet.create({
   cardEmpty: {
     minHeight: 180,
   },
-
-  // Decorative arc (mirrors hotel tile)
   arc: {
     position: "absolute",
     top: -50,
@@ -257,8 +259,6 @@ const s = StyleSheet.create({
     borderRadius: 90,
     backgroundColor: "rgba(3,105,161,0.05)",
   },
-
-  // Header row
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -319,8 +319,6 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: "#059669",
   },
-
-  // Hero row
   heroRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -369,8 +367,6 @@ const s = StyleSheet.create({
     color: T.accent,
     lineHeight: 18,
   },
-
-  // Stats row (mirrors hotel stayRow)
   statsRow: {
     flexDirection: "row",
     backgroundColor: "rgba(3,105,161,0.06)",
@@ -401,8 +397,6 @@ const s = StyleSheet.create({
     height: 30,
     backgroundColor: "rgba(3,105,161,0.15)",
   },
-
-  // Bio
   bioWrap: {
     flexDirection: "row",
     gap: 10,
@@ -424,8 +418,6 @@ const s = StyleSheet.create({
     flex: 1,
     fontStyle: "italic",
   },
-
-  // Languages
   langsSection: {
     gap: 8,
   },
@@ -458,8 +450,6 @@ const s = StyleSheet.create({
   langTextMuted: {
     color: T.textMuted,
   },
-
-  // Empty state
   emptyBody: {
     flex: 1,
     alignItems: "center",

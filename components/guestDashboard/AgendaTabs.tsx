@@ -2,21 +2,11 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
 import type { PatientAppointment } from "@/hooks/guest/useGuestDashboard";
 
 type Tab = "today" | "upcoming" | "completed";
-
-const TABS: { key: Tab; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "upcoming", label: "Upcoming" },
-  { key: "completed", label: "Completed" },
-];
-
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string }> = {
-  SCHEDULED: { label: "Scheduled", bg: T.successBg, text: T.success },
-  DONE: { label: "Done", bg: T.inactiveBg, text: T.inactiveText },
-  CANCELLED: { label: "Cancelled", bg: T.dangerBg, text: T.danger },
-};
 
 interface Props {
   todayList: PatientAppointment[];
@@ -25,9 +15,20 @@ interface Props {
 }
 
 function ApptItem({ appt }: { appt: PatientAppointment }) {
+  const t = useT();
+  const tg = t.guestDashboard;
+  const { locale } = useLanguage();
+
+  const STATUS_CFG: Record<string, { label: string; bg: string; text: string }> = {
+    SCHEDULED: { label: tg.agendaStatusScheduled, bg: T.successBg, text: T.success },
+    DONE: { label: tg.agendaStatusDone, bg: T.inactiveBg, text: T.inactiveText },
+    CANCELLED: { label: tg.agendaStatusCancelled, bg: T.dangerBg, text: T.danger },
+  };
+
   const cfg = STATUS_CFG[appt.status] ?? STATUS_CFG.SCHEDULED;
+  const l = locale === "ru" ? "ru-RU" : "en-US";
   const start = new Date(appt.startAt);
-  const dateLabel = start.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  const dateLabel = start.toLocaleDateString(l, { day: "numeric", month: "short" });
   const timeLabel = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
@@ -39,7 +40,7 @@ function ApptItem({ appt }: { appt: PatientAppointment }) {
       <View style={styles.itemBody}>
         <Text style={styles.itemTitle} numberOfLines={1}>{appt.title}</Text>
         {appt.doctor?.fullName ? (
-          <Text style={styles.itemSub} numberOfLines={1}>Dr. {appt.doctor.fullName}</Text>
+          <Text style={styles.itemSub} numberOfLines={1}>{tg.drPrefix}{appt.doctor.fullName}</Text>
         ) : null}
       </View>
       <View style={[styles.statusPill, { backgroundColor: cfg.bg }]}>
@@ -60,27 +61,36 @@ function EmptyTab({ message }: { message: string }) {
 
 export function AgendaTabs({ todayList, upcomingList, completedList }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("today");
+  const t = useT();
+  const tg = t.guestDashboard;
+
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "today", label: tg.agendaTabToday },
+    { key: "upcoming", label: tg.agendaTabUpcoming },
+    { key: "completed", label: tg.agendaTabCompleted },
+  ];
 
   const list =
     activeTab === "today" ? todayList : activeTab === "upcoming" ? upcomingList : completedList;
+
   const emptyMsg =
     activeTab === "today"
-      ? "No appointments today"
+      ? tg.agendaEmptyToday
       : activeTab === "upcoming"
-      ? "No upcoming appointments"
-      : "No completed appointments";
+      ? tg.agendaEmptyUpcoming
+      : tg.agendaEmptyCompleted;
 
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.tabRow}>
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <Pressable
-            key={t.key}
-            style={[styles.tab, activeTab === t.key && styles.tabActive]}
-            onPress={() => setActiveTab(t.key)}
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === t.key && styles.tabTextActive]}>
-              {t.label}
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
             </Text>
           </Pressable>
         ))}

@@ -5,14 +5,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T } from "@/constants/adminTheme";
 import { useGuestNotifications } from "@/hooks/guest/useGuestNotifications";
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
+import { LanguageSwitcherButton } from "@/components/common/LanguageSwitcherButton";
 
 interface Props {
   patientName?: string;
   onLogout?: () => void;
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString("en-US", {
+function todayLabel(locale: string) {
+  const l = locale === "ru" ? "ru-RU" : "en-US";
+  return new Date().toLocaleDateString(l, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -23,6 +27,13 @@ export function GuestHeader({ patientName, onLogout }: Props) {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { unread } = useGuestNotifications();
+  const { locale } = useLanguage();
+  const t = useT();
+  const tg = t.guestDashboard;
+
+  const greeting = patientName
+    ? tg.greetHello.replace("{name}", patientName.split(" ")[0])
+    : tg.greetWelcome;
 
   function openNotifications() {
     router.push("/(patient)/notifications");
@@ -32,14 +43,16 @@ export function GuestHeader({ patientName, onLogout }: Props) {
     <View style={[styles.container, { paddingTop: topPad + 14 }]}>
       {/* Left: greeting */}
       <View style={styles.left}>
-        <Text style={styles.date}>{todayLabel()}</Text>
+        <Text style={styles.date}>{todayLabel(locale)}</Text>
         <Text style={styles.name} numberOfLines={1}>
-          {patientName ? `Hello, ${patientName.split(" ")[0]}` : "Welcome"}
+          {greeting}
         </Text>
       </View>
 
       {/* Right: actions */}
       <View style={styles.actions}>
+        <LanguageSwitcherButton />
+
         <Pressable
           style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
           hitSlop={10}

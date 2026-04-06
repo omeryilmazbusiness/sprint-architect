@@ -9,6 +9,7 @@ import {
 import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { useAuth } from "@/context/AuthContext";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 import { useGuestDashboard } from "@/hooks/guest/useGuestDashboard";
 import { useGuestAgenda } from "@/hooks/guest/useGuestAgenda";
 import { ErrorView } from "@/components/ErrorView";
@@ -34,6 +35,8 @@ function isSameDay(a: Date, b: Date) {
 export default function PatientDashboard() {
   const { logout } = useAuth();
   const { bottomPadding: tabBarHeight } = useTabBarMetrics();
+  const t = useT();
+  const tg = t.guestDashboard;
 
   const {
     isLoading,
@@ -101,7 +104,7 @@ export default function PatientDashboard() {
 
         {/* Overview carousel: Transport / Hotel / Documents */}
         <View style={styles.section}>
-          <SectionLabel text="Overview" />
+          <SectionLabel text={tg.sectionOverview} />
           <OverviewTileCarousel
             transport={transport}
             hotel={hotel}
@@ -118,7 +121,7 @@ export default function PatientDashboard() {
 
         {/* Calendar + Agenda */}
         <View style={styles.section}>
-          <SectionLabel text="Schedule" />
+          <SectionLabel text={tg.sectionSchedule} />
           <AppointmentsCalendar
             days={agenda.calendarDays}
             monthLabel={agenda.monthLabel}
@@ -136,7 +139,7 @@ export default function PatientDashboard() {
 
         {/* Doctor card */}
         <View style={styles.section}>
-          <SectionLabel text="Your Doctor" />
+          <SectionLabel text={tg.sectionYourDoctor} />
           <GuestDoctorCard
             doctor={primaryDoctor}
             isAppointmentDoctor={isAppointmentDoctor}

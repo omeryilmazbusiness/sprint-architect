@@ -10,45 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { T, cardShadow } from "@/constants/adminTheme";
-
-// ─── Feature definition ───────────────────────────────────────────────────────
-
-const FEATURES: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  label: string;
-  desc: string;
-}[] = [
-  {
-    icon: "sparkles-outline",
-    label: "Premium Hammam & Spa",
-    desc: "Curated thermal baths and traditional wellness treatments",
-  },
-  {
-    icon: "leaf-outline",
-    label: "Private Wellness Experiences",
-    desc: "One-on-one sessions, meditation, and recovery therapies",
-  },
-  {
-    icon: "map-outline",
-    label: "Curated Tours",
-    desc: "Guided city walks, cultural day trips, and scenic excursions",
-  },
-  {
-    icon: "calendar-outline",
-    label: "Priority Reservations",
-    desc: "First access to top restaurants, venues, and events",
-  },
-  {
-    icon: "diamond-outline",
-    label: "Concierge Add-ons",
-    desc: "Personalised services arranged exclusively for you",
-  },
-  {
-    icon: "gift-outline",
-    label: "Exclusive Guest Services",
-    desc: "Handpicked offerings reserved for our medical guests",
-  },
-];
+import { useT } from "@/hooks/useT";
 
 // ─── Feature row ──────────────────────────────────────────────────────────────
 
@@ -79,10 +41,25 @@ function FeatureRow({
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const { bottomPadding: tabBarHeight } = useTabBarMetrics();
+  const t = useT();
+  const te = t.guestExplore;
 
   const topPad = Platform.OS === "web"
     ? Math.max(insets.top, 67)
     : insets.top;
+
+  const FEATURES: {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    label: string;
+    desc: string;
+  }[] = [
+    { icon: "sparkles-outline",  label: te.feature1Label, desc: te.feature1Desc },
+    { icon: "leaf-outline",      label: te.feature2Label, desc: te.feature2Desc },
+    { icon: "map-outline",       label: te.feature3Label, desc: te.feature3Desc },
+    { icon: "calendar-outline",  label: te.feature4Label, desc: te.feature4Desc },
+    { icon: "diamond-outline",   label: te.feature5Label, desc: te.feature5Desc },
+    { icon: "gift-outline",      label: te.feature6Label, desc: te.feature6Desc },
+  ];
 
   return (
     <View style={styles.root}>
@@ -103,23 +80,17 @@ export default function ExploreScreen() {
           </View>
 
           <View style={styles.pill}>
-            <Text style={styles.pillText}>Coming Soon</Text>
+            <Text style={styles.pillText}>{te.comingSoon}</Text>
           </View>
 
-          <Text style={styles.heroTitle}>
-            Curated Premium{"\n"}Experiences
-          </Text>
+          <Text style={styles.heroTitle}>{te.heroTitle}</Text>
 
-          <Text style={styles.heroTagline}>
-            Soon you will be able to enhance your medical journey with
-            thoughtfully arranged services — from wellness and culture
-            to concierge-level care.
-          </Text>
+          <Text style={styles.heroTagline}>{te.heroTagline}</Text>
         </View>
 
         {/* ── Feature card ── */}
         <View style={[styles.card, cardShadow]}>
-          <Text style={styles.cardLabel}>What's Coming</Text>
+          <Text style={styles.cardLabel}>{te.whatsComingLabel}</Text>
           <View style={styles.featureList}>
             {FEATURES.map((f, i) => (
               <React.Fragment key={f.label}>
@@ -133,10 +104,7 @@ export default function ExploreScreen() {
         </View>
 
         {/* ── Footer note ── */}
-        <Text style={styles.footerNote}>
-          These services are being thoughtfully prepared for you.{"\n"}
-          Stay tuned for updates.
-        </Text>
+        <Text style={styles.footerNote}>{te.footerNote}</Text>
       </ScrollView>
     </View>
   );
@@ -153,8 +121,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: T.sp16,
     gap: T.sp20,
   },
-
-  // Hero
   hero: {
     alignItems: "center",
     paddingHorizontal: T.sp16,
@@ -208,8 +174,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
   },
-
-  // Feature card
   card: {
     backgroundColor: T.surface,
     borderRadius: 20,
@@ -261,8 +225,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: T.border,
   },
-
-  // Footer
   footerNote: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,

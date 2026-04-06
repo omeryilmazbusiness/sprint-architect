@@ -928,6 +928,278 @@ export interface FilterSheetDict {
   statusEnded: string;
 }
 
+// ─── Guest side ───────────────────────────────────────────────────────────────
+
+export interface LanguageSwitcherDict {
+  title: string;
+  english: string;
+  russian: string;
+}
+
+export interface GuestTabLabelsDict {
+  myJourney: string;
+  track: string;
+  schedule: string;
+  explore: string;
+  profile: string;
+}
+
+export interface GuestDashboardDict {
+  // Dashboard header greeting
+  greetHello: string;
+  greetWelcome: string;
+  // Section labels
+  sectionOverview: string;
+  sectionSchedule: string;
+  sectionYourDoctor: string;
+  // SupportCard
+  supportTitle: string;
+  supportSub: string;
+  // AgendaTabs
+  agendaTabToday: string;
+  agendaTabUpcoming: string;
+  agendaTabCompleted: string;
+  agendaStatusScheduled: string;
+  agendaStatusDone: string;
+  agendaStatusCancelled: string;
+  agendaEmptyToday: string;
+  agendaEmptyUpcoming: string;
+  agendaEmptyCompleted: string;
+  // TodayAppointmentCard
+  todayCardLabel: string;
+  todayCardEmpty: string;
+  todayStatusScheduled: string;
+  todayStatusDone: string;
+  todayStatusCancelled: string;
+  // GuestBannerCarousel
+  banner0Title: string;
+  banner0Sub: string;
+  banner1Title: string;
+  banner1Sub: string;
+  banner2Title: string;
+  banner2Sub: string;
+  // OverviewTileCarousel — Transport
+  tileTransport: string;
+  tileTransportEmpty: string;
+  tileTransportEmptySub: string;
+  tileDriver: string;
+  tileCallDriver: string;
+  // OverviewTileCarousel — Hotel
+  tileHotel: string;
+  tileHotelEmpty: string;
+  tileHotelEmptySub: string;
+  tileHotelRoom: string;
+  tileHotelCheckIn: string;
+  tileHotelCheckOut: string;
+  tileHotelNights: string;
+  // OverviewTileCarousel — Documents
+  tileDocs: string;
+  tileDocsPendingBadge: string;
+  tileDocsAllDone: string;
+  tileDocsEmpty: string;
+  tileDocsEmptySub: string;
+  tileDocsPending: string;
+  tileDocsReviewing: string;
+  tileDocsApproved: string;
+  tileDocsTotal: string;
+  tileDocsManage: string;
+  // GuestDoctorCard
+  doctorChip: string;
+  doctorYourAppt: string;
+  doctorCertified: string;
+  doctorExpLabel: string;
+  doctorEduLabel: string;
+  doctorLangLabel: string;
+  doctorLangSpoken: string;
+  doctorExpYrs: string;
+  doctorEmpty: string;
+  doctorEmptySub: string;
+  // Phone / call alerts
+  noPhone: string;
+  noPhoneSub: string;
+  cannotCall: string;
+  cannotCallSub: string;
+  // Dr. prefix
+  drPrefix: string;
+}
+
+export interface GuestScheduleDict {
+  pageTitle: string;
+  loadingText: string;
+  errTitle: string;
+  tryAgain: string;
+  // Status labels
+  statusScheduled: string;
+  statusCompleted: string;
+  statusCancelled: string;
+  statusMissed: string;
+  // Filter options
+  filterAll: string;
+  filterUpcoming: string;
+  filterToday: string;
+  filterCompleted: string;
+  filterMissed: string;
+  filterCancelled: string;
+  // Range options
+  rangeAll: string;
+  rangeThisWeek: string;
+  rangeThisMonth: string;
+  // Summary
+  nextApptLabel: string;
+  noUpcoming: string;
+  kpiUpcoming: string;
+  kpiCompleted: string;
+  kpiMissed: string;
+  // Filter bar
+  searchPlaceholder: string;
+  filterByStatus: string;
+  filterByRange: string;
+  clearFilters: string;
+  // Date labels
+  dateToday: string;
+  dateTomorrow: string;
+  // Empty states
+  emptyFiltered: string;
+  emptyFilteredSub: string;
+  emptyClean: string;
+  emptyCleanSub: string;
+  drPrefix: string;
+}
+
+export interface GuestTrackDict {
+  pageTitle: string;
+  tabJourney: string;
+  tabDocuments: string;
+  // Journey steps
+  step1Label: string;
+  step1Sub: string;
+  step2Label: string;
+  step2Sub: string;
+  step3Label: string;
+  step3Sub: string;
+  step4Label: string;
+  step4Sub: string;
+  step5Label: string;
+  step5Sub: string;
+  step6Label: string;
+  step6Sub: string;
+  // Journey state
+  journeyEmpty: string;
+  journeyEmptySub: string;
+  nowBadge: string;
+  // Clinic support
+  clinicSupportFallback: string;
+  clinicSupportSuffix: string;
+  // NextAction card
+  docActionSingular: string;
+  docActionPlural: string;
+  docActionSub: string;
+  docActionCta: string;
+  apptTodayTitle: string;
+  viewSchedule: string;
+  drPrefix: string;
+  // Document status
+  docStatusPending: string;
+  docStatusUnderReview: string;
+  docStatusApproved: string;
+  docStatusRejected: string;
+  // Document summary bar
+  docSumPending: string;
+  docSumUploaded: string;
+  docSumTotal: string;
+  // Document search / empty
+  docSearch: string;
+  docNoResult: string;
+  // Document actions
+  btnUploadPdf: string;
+  btnReupload: string;
+  btnOpenPdf: string;
+  btnRemove: string;
+  // Document alerts
+  alertRemoveTitle: string;
+  alertRemoveBody: string;
+  alertCancel: string;
+  alertRemove: string;
+  alertUploadFailed: string;
+  alertOpenFailed: string;
+  alertRemoveFailed: string;
+  alertTryAgain: string;
+  alertUnexpected: string;
+  // Show more/less
+  showMore: string;
+  showLess: string;
+  // Doc loading/error/empty states
+  docLoading: string;
+  docError: string;
+  docTryAgain: string;
+  docEmpty: string;
+  docEmptySub: string;
+}
+
+export interface GuestNotificationsDict {
+  pageTitle: string;
+  markAllRead: string;
+  emptyTitle: string;
+  emptySub: string;
+  severityWarning: string;
+  severityCritical: string;
+}
+
+export interface GuestProfileDict {
+  pageTitle: string;
+  // Status labels
+  statusPendingApproval: string;
+  statusActive: string;
+  statusApproved: string;
+  statusDischarged: string;
+  statusCancelled: string;
+  // Section headers
+  sectionPersonInfo: string;
+  sectionClinicInfo: string;
+  sectionManager: string;
+  // Info labels
+  labelEmail: string;
+  labelPhone: string;
+  labelArrival: string;
+  labelDeparture: string;
+  labelClinic: string;
+  labelAddress: string;
+  labelWebsite: string;
+  labelManager: string;
+  // Copy badge
+  copy: string;
+  copied: string;
+  // Sign out
+  signOut: string;
+  signOutTitle: string;
+  signOutBody: string;
+  signOutCancel: string;
+  signOutWebMsg: string;
+  // Error
+  errorTitle: string;
+  tryAgain: string;
+}
+
+export interface GuestExploreDict {
+  comingSoon: string;
+  heroTitle: string;
+  heroTagline: string;
+  whatsComingLabel: string;
+  footerNote: string;
+  feature1Label: string;
+  feature1Desc: string;
+  feature2Label: string;
+  feature2Desc: string;
+  feature3Label: string;
+  feature3Desc: string;
+  feature4Label: string;
+  feature4Desc: string;
+  feature5Label: string;
+  feature5Desc: string;
+  feature6Label: string;
+  feature6Desc: string;
+}
+
 // ─── Root dictionary shape ─────────────────────────────────────────────────────
 
 export interface AppDict {
@@ -960,4 +1232,13 @@ export interface AppDict {
   guestDetail: GuestDetailDict;
   createGuest: CreateGuestDict;
   filterSheet: FilterSheetDict;
+  // Guest / patient side
+  languageSwitcher: LanguageSwitcherDict;
+  guestTabLabels: GuestTabLabelsDict;
+  guestDashboard: GuestDashboardDict;
+  guestSchedule: GuestScheduleDict;
+  guestTrack: GuestTrackDict;
+  guestNotifications: GuestNotificationsDict;
+  guestProfile: GuestProfileDict;
+  guestExplore: GuestExploreDict;
 }

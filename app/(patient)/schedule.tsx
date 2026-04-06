@@ -25,48 +25,15 @@ import {
 } from "@/hooks/guest/useGuestScheduleFilters";
 import type { PatientAppointment } from "@/hooks/guest/useGuestDashboard";
 import { T, cardShadow } from "@/constants/adminTheme";
-
-// ─── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_CFG: Record<
-  "SCHEDULED" | "DONE" | "CANCELLED" | "MISSED",
-  { label: string; bg: string; tc: string; icon: string }
-> = {
-  SCHEDULED: { label: "Scheduled",  bg: "#EFF6FF",   tc: T.accent,  icon: "time-outline" },
-  DONE:      { label: "Completed",  bg: T.successBg, tc: T.success, icon: "checkmark-circle-outline" },
-  CANCELLED: { label: "Cancelled",  bg: T.dangerBg,  tc: T.danger,  icon: "close-circle-outline" },
-  MISSED:    { label: "Missed",     bg: "#FEF3C7",   tc: "#D97706", icon: "alert-circle-outline" },
-};
-
-// ─── Dropdown option types ─────────────────────────────────────────────────────
-
-const STATUS_OPTIONS: { key: StatusFilter; label: string; icon: string }[] = [
-  { key: "all",       label: "All Appointments",   icon: "calendar-outline" },
-  { key: "upcoming",  label: "Upcoming",           icon: "calendar-outline" },
-  { key: "today",     label: "Today",              icon: "today-outline" },
-  { key: "completed", label: "Completed",          icon: "checkmark-circle-outline" },
-  { key: "missed",    label: "Missed",             icon: "alert-circle-outline" },
-  { key: "cancelled", label: "Cancelled",          icon: "close-circle-outline" },
-];
-
-const RANGE_OPTIONS: { key: RangeFilter; label: string }[] = [
-  { key: "all",        label: "All Time" },
-  { key: "this_week",  label: "This Week" },
-  { key: "this_month", label: "This Month" },
-];
-
-function statusLabel(k: StatusFilter) {
-  return STATUS_OPTIONS.find((o) => o.key === k)?.label ?? "All";
-}
-function rangeLabel(k: RangeFilter) {
-  return RANGE_OPTIONS.find((o) => o.key === k)?.label ?? "All Time";
-}
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
 
 // ─── Format helpers ────────────────────────────────────────────────────────────
 
-function fmtTime(iso: string) {
+function fmtTime(iso: string, locale: string) {
   try {
-    return new Date(iso).toLocaleTimeString("en-US", {
+    const l = locale === "ru" ? "ru-RU" : "en-US";
+    return new Date(iso).toLocaleTimeString(l, {
       hour: "numeric",
       minute: "2-digit",
     });
@@ -75,16 +42,22 @@ function fmtTime(iso: string) {
   }
 }
 
-function fmtFull(iso: string) {
+function fmtFull(iso: string, todayStr: string, tomorrowStr: string, locale: string) {
   try {
     const d = new Date(iso);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-    const t = new Date(d); t.setHours(0,0,0,0);
-    if (t.getTime() === today.getTime()) return "Today";
-    if (t.getTime() === tomorrow.getTime()) return "Tomorrow";
-    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const t = new Date(d); t.setHours(0, 0, 0, 0);
+    if (t.getTime() === today.getTime()) return todayStr;
+    if (t.getTime() === tomorrow.getTime()) return tomorrowStr;
+    const l = locale === "ru" ? "ru-RU" : "en-US";
+    return d.toLocaleDateString(l, { weekday: "short", month: "short", day: "numeric" });
   } catch { return ""; }
+}
+
+function fmtMon(iso: string, locale: string) {
+  const l = locale === "ru" ? "ru-RU" : "en-US";
+  return new Date(iso).toLocaleDateString(l, { month: "short" });
 }
 
 // ─── Picker Modal ─────────────────────────────────────────────────────────────
@@ -156,14 +129,17 @@ function ScheduleSummary({
   next: PatientAppointment | null;
   counts: Record<string, number>;
 }) {
+  const t = useT();
+  const ts = t.guestSchedule;
+  const { locale } = useLanguage();
+
   return (
     <View style={sum.wrap}>
-      {/* Next appointment card */}
       {next ? (
         <View style={[sum.nextCard, cardShadow]}>
           <View style={sum.nextLabel}>
             <Ionicons name="flash-outline" size={12} color={T.accent} />
-            <Text style={sum.nextLabelText}>NEXT APPOINTMENT</Text>
+            <Text style={sum.nextLabelText}>{ts.nextApptLabel}</Text>
           </View>
           <View style={sum.nextBody}>
             <View style={sum.nextDateBadge}>
@@ -171,19 +147,19 @@ function ScheduleSummary({
                 {new Date(next.startAt).getDate()}
               </Text>
               <Text style={sum.nextDateMon}>
-                {new Date(next.startAt).toLocaleDateString("en-US", { month: "short" })}
+                {fmtMon(next.startAt, locale)}
               </Text>
             </View>
             <View style={sum.nextInfo}>
               <Text style={sum.nextTitle} numberOfLines={2}>{next.title}</Text>
               <View style={sum.nextMeta}>
                 <Ionicons name="time-outline" size={12} color={T.textMuted} />
-                <Text style={sum.nextMetaTxt}>{fmtTime(next.startAt)}</Text>
+                <Text style={sum.nextMetaTxt}>{fmtTime(next.startAt, locale)}</Text>
                 {next.doctor?.fullName ? (
                   <>
                     <Text style={sum.dot}>·</Text>
                     <Text style={sum.nextMetaTxt} numberOfLines={1}>
-                      Dr. {next.doctor.fullName}
+                      {ts.drPrefix}{next.doctor.fullName}
                     </Text>
                   </>
                 ) : null}
@@ -200,15 +176,14 @@ function ScheduleSummary({
       ) : (
         <View style={[sum.nextCard, sum.nextCardEmpty, cardShadow]}>
           <Ionicons name="calendar-outline" size={22} color={T.textMuted} />
-          <Text style={sum.noNextTxt}>No upcoming appointments</Text>
+          <Text style={sum.noNextTxt}>{ts.noUpcoming}</Text>
         </View>
       )}
 
-      {/* KPI row */}
       <View style={sum.kpiRow}>
-        <KpiCard icon="calendar-outline" label="Upcoming" value={counts.upcoming ?? 0} color={T.accent} />
-        <KpiCard icon="checkmark-circle-outline" label="Completed" value={counts.completed ?? 0} color={T.success} />
-        <KpiCard icon="alert-circle-outline" label="Missed" value={counts.missed ?? 0} color="#D97706" />
+        <KpiCard icon="calendar-outline"      label={ts.kpiUpcoming}  value={counts.upcoming ?? 0}  color={T.accent} />
+        <KpiCard icon="checkmark-circle-outline" label={ts.kpiCompleted} value={counts.completed ?? 0} color={T.success} />
+        <KpiCard icon="alert-circle-outline"  label={ts.kpiMissed}    value={counts.missed ?? 0}    color="#D97706" />
       </View>
     </View>
   );
@@ -230,6 +205,7 @@ function FilterBar({
   search, onSearch,
   statusFilter, onOpenStatus,
   rangeFilter, onOpenRange,
+  statusLabel, rangeLabel,
   hasActiveFilters, onClear,
 }: {
   search: string;
@@ -238,17 +214,21 @@ function FilterBar({
   onOpenStatus: () => void;
   rangeFilter: RangeFilter;
   onOpenRange: () => void;
+  statusLabel: string;
+  rangeLabel: string;
   hasActiveFilters: boolean;
   onClear: () => void;
 }) {
+  const t = useT();
+  const ts = t.guestSchedule;
+
   return (
     <View style={fb.wrap}>
-      {/* Search */}
       <View style={fb.searchRow}>
         <Ionicons name="search-outline" size={16} color={T.textMuted} style={fb.searchIcon} />
         <TextInput
           style={fb.searchInput}
-          placeholder="Search doctor or procedure…"
+          placeholder={ts.searchPlaceholder}
           placeholderTextColor={T.textMuted}
           value={search}
           onChangeText={onSearch}
@@ -257,12 +237,11 @@ function FilterBar({
         />
       </View>
 
-      {/* Dropdowns row */}
       <View style={fb.dropRow}>
         <Pressable style={[fb.drop, statusFilter !== "all" && fb.dropActive]} onPress={onOpenStatus}>
           <Ionicons name="funnel-outline" size={13} color={statusFilter !== "all" ? T.accent : T.textSec} />
           <Text style={[fb.dropTxt, statusFilter !== "all" && fb.dropTxtActive]} numberOfLines={1}>
-            {statusLabel(statusFilter)}
+            {statusLabel}
           </Text>
           <Ionicons name="chevron-down" size={12} color={statusFilter !== "all" ? T.accent : T.textSec} />
         </Pressable>
@@ -270,7 +249,7 @@ function FilterBar({
         <Pressable style={[fb.drop, rangeFilter !== "all" && fb.dropActive]} onPress={onOpenRange}>
           <Ionicons name="calendar-outline" size={13} color={rangeFilter !== "all" ? T.accent : T.textSec} />
           <Text style={[fb.dropTxt, rangeFilter !== "all" && fb.dropTxtActive]} numberOfLines={1}>
-            {rangeLabel(rangeFilter)}
+            {rangeLabel}
           </Text>
           <Ionicons name="chevron-down" size={12} color={rangeFilter !== "all" ? T.accent : T.textSec} />
         </Pressable>
@@ -278,7 +257,7 @@ function FilterBar({
         {hasActiveFilters ? (
           <Pressable style={fb.clearBtn} onPress={onClear}>
             <Ionicons name="close-circle" size={14} color={T.danger} />
-            <Text style={fb.clearTxt}>Clear</Text>
+            <Text style={fb.clearTxt}>{ts.clearFilters}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -304,33 +283,44 @@ function DateSectionHeader({ title, count }: { title: string; count: number }) {
 // ─── Appointment Card ──────────────────────────────────────────────────────────
 
 function ApptCard({ appt }: { appt: PatientAppointment }) {
+  const t = useT();
+  const ts = t.guestSchedule;
+  const { locale } = useLanguage();
+
+  const STATUS_CFG: Record<
+    "SCHEDULED" | "DONE" | "CANCELLED" | "MISSED",
+    { label: string; bg: string; tc: string; icon: string }
+  > = {
+    SCHEDULED: { label: ts.statusScheduled,  bg: "#EFF6FF",   tc: T.accent,  icon: "time-outline" },
+    DONE:      { label: ts.statusCompleted,  bg: T.successBg, tc: T.success, icon: "checkmark-circle-outline" },
+    CANCELLED: { label: ts.statusCancelled,  bg: T.dangerBg,  tc: T.danger,  icon: "close-circle-outline" },
+    MISSED:    { label: ts.statusMissed,     bg: "#FEF3C7",   tc: "#D97706", icon: "alert-circle-outline" },
+  };
+
   const eff = getEffectiveStatus(appt);
   const cfg = STATUS_CFG[eff];
   const d = new Date(appt.startAt);
+  const l = locale === "ru" ? "ru-RU" : "en-US";
 
   return (
     <View style={[ac.card, cardShadow]}>
       <View style={ac.dateBadge}>
         <Text style={ac.badgeDay}>{d.getDate()}</Text>
-        <Text style={ac.badgeMon}>
-          {d.toLocaleDateString("en-US", { month: "short" })}
-        </Text>
-        <Text style={ac.badgeWd}>
-          {d.toLocaleDateString("en-US", { weekday: "short" })}
-        </Text>
+        <Text style={ac.badgeMon}>{d.toLocaleDateString(l, { month: "short" })}</Text>
+        <Text style={ac.badgeWd}>{d.toLocaleDateString(l, { weekday: "short" })}</Text>
       </View>
 
       <View style={ac.body}>
         <Text style={ac.title} numberOfLines={2}>{appt.title}</Text>
         <View style={ac.metaRow}>
           <Ionicons name="time-outline" size={12} color={T.textMuted} />
-          <Text style={ac.metaTxt}>{fmtTime(appt.startAt)}</Text>
+          <Text style={ac.metaTxt}>{fmtTime(appt.startAt, locale)}</Text>
           {appt.doctor?.fullName ? (
             <>
               <Text style={ac.dot}>·</Text>
               <Ionicons name="person-outline" size={12} color={T.textMuted} />
               <Text style={ac.metaTxt} numberOfLines={1}>
-                Dr. {appt.doctor.fullName}
+                {ts.drPrefix}{appt.doctor.fullName}
               </Text>
             </>
           ) : null}
@@ -353,6 +343,8 @@ function ApptCard({ appt }: { appt: PatientAppointment }) {
 // ─── Empty State ───────────────────────────────────────────────────────────────
 
 function EmptyList({ hasFilters }: { hasFilters: boolean }) {
+  const t = useT();
+  const ts = t.guestSchedule;
   return (
     <View style={el.wrap}>
       <View style={el.iconWrap}>
@@ -363,12 +355,10 @@ function EmptyList({ hasFilters }: { hasFilters: boolean }) {
         />
       </View>
       <Text style={el.title}>
-        {hasFilters ? "No matching appointments" : "No appointments yet"}
+        {hasFilters ? ts.emptyFiltered : ts.emptyClean}
       </Text>
       <Text style={el.sub}>
-        {hasFilters
-          ? "Try adjusting your filters or search term."
-          : "Your clinic will schedule appointments soon."}
+        {hasFilters ? ts.emptyFilteredSub : ts.emptyCleanSub}
       </Text>
     </View>
   );
@@ -381,6 +371,9 @@ export default function ScheduleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [rangeModalOpen, setRangeModalOpen] = useState(false);
+  const t = useT();
+  const ts = t.guestSchedule;
+  const { locale } = useLanguage();
 
   const {
     statusFilter, setStatusFilter,
@@ -393,6 +386,24 @@ export default function ScheduleScreen() {
   } = useGuestScheduleFilters();
 
   const hasActiveFilters = statusFilter !== "all" || rangeFilter !== "all" || search.trim() !== "";
+
+  const STATUS_OPTIONS: { key: StatusFilter; label: string; icon: string }[] = [
+    { key: "all",       label: ts.filterAll,       icon: "calendar-outline" },
+    { key: "upcoming",  label: ts.filterUpcoming,  icon: "calendar-outline" },
+    { key: "today",     label: ts.filterToday,     icon: "today-outline" },
+    { key: "completed", label: ts.filterCompleted, icon: "checkmark-circle-outline" },
+    { key: "missed",    label: ts.filterMissed,    icon: "alert-circle-outline" },
+    { key: "cancelled", label: ts.filterCancelled, icon: "close-circle-outline" },
+  ];
+
+  const RANGE_OPTIONS: { key: RangeFilter; label: string }[] = [
+    { key: "all",        label: ts.rangeAll },
+    { key: "this_week",  label: ts.rangeThisWeek },
+    { key: "this_month", label: ts.rangeThisMonth },
+  ];
+
+  const currentStatusLabel = STATUS_OPTIONS.find((o) => o.key === statusFilter)?.label ?? ts.filterAll;
+  const currentRangeLabel  = RANGE_OPTIONS.find((o) => o.key === rangeFilter)?.label ?? ts.rangeAll;
 
   async function onRefresh() {
     setRefreshing(true);
@@ -409,10 +420,10 @@ export default function ScheduleScreen() {
   if (isLoading) {
     return (
       <View style={st.root}>
-        <GuestHeader title="Schedule" />
+        <GuestHeader title={ts.pageTitle} />
         <View style={st.center}>
           <ActivityIndicator size="large" color={T.accent} />
-          <Text style={st.centerTxt}>Loading schedule…</Text>
+          <Text style={st.centerTxt}>{ts.loadingText}</Text>
         </View>
       </View>
     );
@@ -421,12 +432,12 @@ export default function ScheduleScreen() {
   if (isError) {
     return (
       <View style={st.root}>
-        <GuestHeader title="Schedule" />
+        <GuestHeader title={ts.pageTitle} />
         <View style={st.center}>
           <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
-          <Text style={st.errTitle}>Couldn't load schedule</Text>
+          <Text style={st.errTitle}>{ts.errTitle}</Text>
           <Pressable onPress={onRefresh} style={st.retryBtn}>
-            <Text style={st.retryTxt}>Try Again</Text>
+            <Text style={st.retryTxt}>{ts.tryAgain}</Text>
           </Pressable>
         </View>
       </View>
@@ -435,7 +446,7 @@ export default function ScheduleScreen() {
 
   return (
     <View style={st.root}>
-      <GuestHeader title="Schedule" />
+      <GuestHeader title={ts.pageTitle} />
 
       <SectionList<PatientAppointment, ScheduleSection>
         sections={sections}
@@ -460,6 +471,8 @@ export default function ScheduleScreen() {
               onOpenStatus={() => setStatusModalOpen(true)}
               rangeFilter={rangeFilter}
               onOpenRange={() => setRangeModalOpen(true)}
+              statusLabel={currentStatusLabel}
+              rangeLabel={currentRangeLabel}
               hasActiveFilters={hasActiveFilters}
               onClear={clearFilters}
             />
@@ -476,7 +489,7 @@ export default function ScheduleScreen() {
 
       <PickerModal<StatusFilter>
         visible={statusModalOpen}
-        title="Filter by Status"
+        title={ts.filterByStatus}
         options={STATUS_OPTIONS}
         value={statusFilter}
         onSelect={(v) => { setStatusFilter(v); setStatusModalOpen(false); }}
@@ -485,7 +498,7 @@ export default function ScheduleScreen() {
 
       <PickerModal<RangeFilter>
         visible={rangeModalOpen}
-        title="Filter by Date Range"
+        title={ts.filterByRange}
         options={RANGE_OPTIONS}
         value={rangeFilter}
         onSelect={(v) => { setRangeFilter(v); setRangeModalOpen(false); }}
@@ -499,7 +512,6 @@ export default function ScheduleScreen() {
 
 const sum = StyleSheet.create({
   wrap: { gap: 12, paddingBottom: 4 },
-
   nextCard: {
     backgroundColor: T.surface,
     borderRadius: 16,
@@ -515,11 +527,7 @@ const sum = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 18,
   },
-  nextLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
+  nextLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
   nextLabelText: {
     fontFamily: "Inter_700Bold",
     fontSize: 10,
@@ -527,11 +535,7 @@ const sum = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  nextBody: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-  },
+  nextBody: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   nextDateBadge: {
     width: 48,
     alignItems: "center",
@@ -540,322 +544,139 @@ const sum = StyleSheet.create({
     paddingVertical: 8,
     gap: 1,
   },
-  nextDateDay: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: "#fff",
-  },
+  nextDateDay: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff" },
   nextDateMon: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.8)",
-    textTransform: "uppercase",
+    fontFamily: "Inter_600SemiBold", fontSize: 10,
+    color: "rgba(255,255,255,0.8)", textTransform: "uppercase",
   },
   nextInfo: { flex: 1, gap: 4 },
   nextTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: T.text,
-    letterSpacing: -0.2,
-    lineHeight: 20,
+    fontFamily: "Inter_700Bold", fontSize: 15, color: T.text,
+    letterSpacing: -0.2, lineHeight: 20,
   },
-  nextMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexWrap: "wrap",
-  },
-  nextMetaTxt: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: T.textMuted,
-  },
+  nextMeta: { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
+  nextMetaTxt: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
   dot: { color: T.border, fontFamily: "Inter_700Bold", fontSize: 12 },
-  noNextTxt: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: T.textMuted,
-  },
-
-  kpiRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
+  noNextTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
+  kpiRow: { flexDirection: "row", gap: 10 },
 });
 
 const kpi = StyleSheet.create({
   card: {
-    flex: 1,
-    backgroundColor: T.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: T.border,
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: 4,
+    flex: 1, backgroundColor: T.surface, borderRadius: 14, borderWidth: 1,
+    borderColor: T.border, alignItems: "center", paddingVertical: 14, gap: 4,
   },
-  value: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    letterSpacing: -0.5,
-  },
-  label: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    color: T.textMuted,
-  },
+  value: { fontFamily: "Inter_700Bold", fontSize: 22, letterSpacing: -0.5 },
+  label: { fontFamily: "Inter_500Medium", fontSize: 11, color: T.textMuted },
 });
 
 const fb = StyleSheet.create({
   wrap: {
-    gap: 10,
-    paddingTop: T.sp12,
-    paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-    marginTop: 4,
+    gap: 10, paddingTop: T.sp12, paddingBottom: 4,
+    borderTopWidth: 1, borderTopColor: T.border, marginTop: 4,
   },
   searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: T.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: T.border,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: T.surface, borderRadius: 12, borderWidth: 1,
+    borderColor: T.border, paddingHorizontal: 12, height: 44, gap: 8,
   },
   searchIcon: { flexShrink: 0 },
-  searchInput: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: T.text,
-    height: 44,
-  },
-  dropRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
+  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.text, height: 44 },
+  dropRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   drop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: T.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: T.border,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    flex: 1,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: T.surface, borderRadius: 10, borderWidth: 1,
+    borderColor: T.border, paddingHorizontal: 12, paddingVertical: 9, flex: 1,
   },
-  dropActive: {
-    borderColor: T.accent,
-    backgroundColor: "rgba(3,105,161,0.05)",
-  },
-  dropTxt: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: T.textSec,
-    flex: 1,
-  },
+  dropActive: { borderColor: T.accent, backgroundColor: "rgba(3,105,161,0.05)" },
+  dropTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec, flex: 1 },
   dropTxtActive: { color: T.accent },
   clearBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 9,
   },
-  clearTxt: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: T.danger,
-  },
+  clearTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.danger },
 });
 
 const sh = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginVertical: 12,
-  },
+  row: { flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 12 },
   line: { flex: 1, height: 1, backgroundColor: T.border },
   text: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    color: T.textSec,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontFamily: "Inter_700Bold", fontSize: 12, color: T.textSec,
+    textTransform: "uppercase", letterSpacing: 0.5,
   },
   badge: {
-    backgroundColor: T.surfaceSubtle,
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: T.border,
+    backgroundColor: T.surfaceSubtle, borderRadius: 10,
+    paddingHorizontal: 7, paddingVertical: 2,
   },
-  badgeTxt: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    color: T.textMuted,
-  },
+  badgeTxt: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: T.textSec },
 });
 
 const ac = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    backgroundColor: T.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: T.border,
-    overflow: "hidden",
+    flexDirection: "row", backgroundColor: T.surface,
+    borderRadius: 14, borderWidth: 1, borderColor: T.border,
+    padding: T.sp12, gap: T.sp12,
   },
   dateBadge: {
-    width: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: T.accent,
-    paddingVertical: 14,
-    gap: 2,
+    width: 46, alignItems: "center", backgroundColor: T.surfaceSubtle,
+    borderRadius: 10, paddingVertical: 8, gap: 1,
   },
-  badgeDay: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff" },
-  badgeMon: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.8)",
-  },
-  badgeWd: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
-  },
-  body: { flex: 1, padding: 14, gap: 5 },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: T.text,
-    letterSpacing: -0.2,
-    lineHeight: 20,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexWrap: "wrap",
-  },
-  metaTxt: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
-  dot: { color: T.border, fontFamily: "Inter_700Bold" },
-  pill: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginTop: 2,
-  },
-  pillTxt: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  badgeDay: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  badgeMon: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: T.accent, textTransform: "uppercase" },
+  badgeWd:  { fontFamily: "Inter_400Regular",  fontSize: 9, color: T.textMuted },
+  body:     { flex: 1, gap: 5 },
+  title:    { fontFamily: "Inter_700Bold", fontSize: 14, color: T.text, lineHeight: 19 },
+  metaRow:  { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
+  metaTxt:  { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
+  dot:      { color: T.border, fontFamily: "Inter_700Bold", fontSize: 11 },
+  pill:     { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, alignSelf: "flex-start" },
+  pillTxt:  { fontFamily: "Inter_600SemiBold", fontSize: 10 },
 });
 
 const el = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingHorizontal: 32,
-    paddingTop: 60,
-  },
+  wrap:    { alignItems: "center", paddingVertical: 48, paddingHorizontal: 32, gap: 12 },
   iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: T.surfaceSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: T.surfaceSubtle, alignItems: "center", justifyContent: "center",
   },
-  title: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
-  sub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: T.textMuted,
-    textAlign: "center",
-    lineHeight: 20,
-  },
+  title:   { fontFamily: "Inter_700Bold",    fontSize: 16, color: T.text,    textAlign: "center" },
+  sub:     { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, textAlign: "center", lineHeight: 19, maxWidth: 260 },
+});
+
+const st = StyleSheet.create({
+  root:    { flex: 1, backgroundColor: T.bg },
+  center:  { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
+  centerTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
+  errTitle:  { fontFamily: "Inter_700Bold",   fontSize: 17, color: T.text },
+  retryBtn:  { backgroundColor: T.accent, paddingHorizontal: 24, paddingVertical: 10, borderRadius: T.r10 },
+  retryTxt:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  listContent: { padding: T.sp16, gap: 0 },
+  listEmpty:   { flex: 1 },
 });
 
 const pm = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
+    flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: T.sp16,
+    backgroundColor: T.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: T.sp20, paddingTop: T.sp16,
   },
   handle: {
-    width: 36,
-    height: 4,
-    backgroundColor: T.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
+    width: 40, height: 4, backgroundColor: T.border,
+    borderRadius: 2, alignSelf: "center", marginBottom: T.sp16,
   },
   title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: T.text,
-    marginBottom: 12,
-    letterSpacing: -0.2,
+    fontFamily: "Inter_700Bold", fontSize: 16,
+    color: T.text, marginBottom: T.sp12,
   },
   option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderRadius: 10,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 13, paddingHorizontal: T.sp4,
+    borderBottomWidth: 1, borderBottomColor: T.border,
   },
-  optionSelected: { backgroundColor: "rgba(3,105,161,0.06)" },
-  optLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: T.text,
-    flex: 1,
-  },
-  optLabelSelected: {
-    fontFamily: "Inter_600SemiBold",
-    color: T.accent,
-  },
-});
-
-const st = StyleSheet.create({
-  root: { flex: 1, backgroundColor: T.bg },
-  listContent: { padding: T.sp16 },
-  listEmpty: { flex: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  centerTxt: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: T.textMuted,
-  },
-  errTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
-  retryBtn: {
-    backgroundColor: T.accent,
-    borderRadius: T.r10,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  retryTxt: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  optionSelected: { backgroundColor: "rgba(3,105,161,0.06)", borderRadius: T.r10, paddingHorizontal: T.sp10 },
+  optLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  optLabelSelected: { fontFamily: "Inter_700Bold", color: T.accent },
 });

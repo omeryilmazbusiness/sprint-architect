@@ -1,19 +1,21 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 export function SupportCard() {
+  const t = useT();
+  const tg = t.guestDashboard;
+
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.iconWrap}>
         <Ionicons name="headset-outline" size={22} color={T.accent} />
       </View>
       <View style={styles.body}>
-        <Text style={styles.title}>Need help?</Text>
-        <Text style={styles.sub}>
-          Contact your clinic coordinator for any questions about your care.
-        </Text>
+        <Text style={styles.title}>{tg.supportTitle}</Text>
+        <Text style={styles.sub}>{tg.supportSub}</Text>
       </View>
     </View>
   );

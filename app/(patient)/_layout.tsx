@@ -12,6 +12,7 @@ import { T } from "@/constants/adminTheme";
 import { TabBarMetricsProvider } from "@/components/layout/TabBarMetricsContext";
 import { apiRequest } from "@/lib/query-client";
 import * as Notifications from "expo-notifications";
+import { useT } from "@/hooks/useT";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -50,28 +51,30 @@ const TAB_RADIUS = 24;
 // the OS reserves the tab bar space automatically — screens need no extra padding.
 
 function NativeTabLayout() {
+  const t = useT();
+  const tl = t.guestTabLabels;
   return (
     <TabBarMetricsProvider mode="native" bottomPadding={0}>
       <NativeTabs>
         <NativeTabs.Trigger name="dashboard">
           <Icon sf={{ default: "house", selected: "house.fill" }} />
-          <Label>My Journey</Label>
+          <Label>{tl.myJourney}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="track">
           <Icon sf={{ default: "map", selected: "map.fill" }} />
-          <Label>Track</Label>
+          <Label>{tl.track}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="schedule">
           <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
-          <Label>Schedule</Label>
+          <Label>{tl.schedule}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="explore">
           <Icon sf={{ default: "safari", selected: "safari.fill" }} />
-          <Label>Explore</Label>
+          <Label>{tl.explore}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="profile">
           <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
-          <Label>Profile</Label>
+          <Label>{tl.profile}</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
     </TabBarMetricsProvider>
@@ -92,6 +95,8 @@ function tabIcon(
 }
 
 function ClassicTabLayout() {
+  const t = useT();
+  const tl = t.guestTabLabels;
   const insets    = useSafeAreaInsets();
   const isIOS     = Platform.OS === "ios";
   const isAndroid = Platform.OS === "android";
@@ -168,23 +173,23 @@ function ClassicTabLayout() {
       >
         <Tabs.Screen
           name="dashboard"
-          options={{ title: "My Journey", tabBarIcon: tabIcon("home-outline", "home") }}
+          options={{ title: tl.myJourney, tabBarIcon: tabIcon("home-outline", "home") }}
         />
         <Tabs.Screen
           name="track"
-          options={{ title: "Track", tabBarIcon: tabIcon("map-outline", "map") }}
+          options={{ title: tl.track, tabBarIcon: tabIcon("map-outline", "map") }}
         />
         <Tabs.Screen
           name="schedule"
-          options={{ title: "Schedule", tabBarIcon: tabIcon("calendar-outline", "calendar") }}
+          options={{ title: tl.schedule, tabBarIcon: tabIcon("calendar-outline", "calendar") }}
         />
         <Tabs.Screen
           name="explore"
-          options={{ title: "Explore", tabBarIcon: tabIcon("compass-outline", "compass") }}
+          options={{ title: tl.explore, tabBarIcon: tabIcon("compass-outline", "compass") }}
         />
         <Tabs.Screen
           name="profile"
-          options={{ title: "Profile", tabBarIcon: tabIcon("person-outline", "person") }}
+          options={{ title: tl.profile, tabBarIcon: tabIcon("person-outline", "person") }}
         />
         <Tabs.Screen
           name="notifications"

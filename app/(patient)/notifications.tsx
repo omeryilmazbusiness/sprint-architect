@@ -12,12 +12,15 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { formatDistanceToNow } from "date-fns";
+import { ru as dateFnsRu } from "date-fns/locale";
 import { GuestHeader } from "@/components/guest/GuestHeader";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
 import { useRouter } from "expo-router";
 import { EmptyState } from "@/components/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
 
 type NotifSeverity = "INFO" | "WARNING" | "CRITICAL";
 type NotifStatus = "UNREAD" | "READ";
@@ -132,10 +135,22 @@ function NotifCard({
   item: GuestNotification;
   onPress: (item: GuestNotification) => void;
 }) {
+  const t = useT();
+  const tn = t.guestNotifications;
+  const { locale } = useLanguage();
+
   const isUnread = item.status === "UNREAD";
   const accentColor = getTypeAccentColor(item.type);
   const severityColor = getSeverityColor(item.severity);
   const navTarget = getNavTarget(item.type);
+
+  const timeAgo = formatDistanceToNow(new Date(item.createdAt), {
+    addSuffix: true,
+    locale: locale === "ru" ? dateFnsRu : undefined,
+  });
+
+  const severityLabel =
+    item.severity === "WARNING" ? tn.severityWarning : tn.severityCritical;
 
   return (
     <Pressable
@@ -172,9 +187,7 @@ function NotifCard({
             {item.title}
           </Text>
           <View style={styles.metaRow}>
-            <Text style={styles.time}>
-              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-            </Text>
+            <Text style={styles.time}>{timeAgo}</Text>
             {navTarget !== null && (
               <Ionicons
                 name="chevron-forward"
@@ -203,7 +216,7 @@ function NotifCard({
           >
             <View style={[styles.severityDot, { backgroundColor: severityColor }]} />
             <Text style={[styles.severityText, { color: severityColor }]}>
-              {item.severity}
+              {severityLabel}
             </Text>
           </View>
         )}
@@ -219,6 +232,8 @@ export default function GuestNotificationsScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const t = useT();
+  const tn = t.guestNotifications;
 
   const {
     data: notifications,
@@ -267,7 +282,7 @@ export default function GuestNotificationsScreen() {
   return (
     <View style={styles.container}>
       <GuestHeader
-        title="Notifications"
+        title={tn.pageTitle}
         onBack={() => router.back()}
         hideNotifications
       />
@@ -306,7 +321,7 @@ export default function GuestNotificationsScreen() {
                 ) : (
                   <Ionicons name="checkmark-done-outline" size={15} color={T.primary} />
                 )}
-                <Text style={styles.markAllText}>Mark all as read</Text>
+                <Text style={styles.markAllText}>{tn.markAllRead}</Text>
               </Pressable>
             ) : null
           }
@@ -315,8 +330,8 @@ export default function GuestNotificationsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              title="No notifications"
-              subtitle="You're all caught up! Notifications about your journey will appear here."
+              title={tn.emptyTitle}
+              subtitle={tn.emptySub}
               icon="notifications-outline"
             />
           }
@@ -342,8 +357,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-
-  // Mark all button
   markAllBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -362,8 +375,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: T.primary,
   },
-
-  // Card
   card: {
     flexDirection: "row",
     backgroundColor: T.surface,
@@ -373,8 +384,6 @@ const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     ...cardShadow,
   },
-
-  // Icon
   iconWrap: {
     width: 44,
     height: 44,
@@ -396,8 +405,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: T.surface,
   },
-
-  // Content
   content: {
     flex: 1,
     gap: 2,
@@ -439,8 +446,6 @@ const styles = StyleSheet.create({
     color: T.textSec,
     lineHeight: 18,
   },
-
-  // Severity badge
   severityPill: {
     marginTop: 6,
     alignSelf: "flex-start",

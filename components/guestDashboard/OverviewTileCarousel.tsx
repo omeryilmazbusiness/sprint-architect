@@ -17,6 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
 import { getBrand } from "@/constants/vehicleBrands";
 import type { PatientTransport, PatientHotel, PatientDocument } from "@/hooks/guest/useGuestDashboard";
 
@@ -25,21 +27,30 @@ const TILE_H = 240;
 const AUTO_MS = 5000;
 const SLIDE_COUNT = 3;
 
-async function tryCall(phone: string | null | undefined, label: string) {
-  if (!phone) { Alert.alert("No phone", `${label} phone is not available.`); return; }
+async function tryCall(
+  phone: string | null | undefined,
+  noPhoneTitle: string,
+  noPhoneBody: string,
+  cannotCallTitle: string,
+  cannotCallBody: string,
+) {
+  if (!phone) { Alert.alert(noPhoneTitle, noPhoneBody); return; }
   const url = `tel:${phone}`;
   if (await Linking.canOpenURL(url)) Linking.openURL(url);
-  else Alert.alert("Cannot call", "Your device cannot make phone calls.");
+  else Alert.alert(cannotCallTitle, cannotCallBody);
 }
 
-function fmt(s: string | null | undefined) {
+function fmt(s: string | null | undefined, locale: string) {
   if (!s) return null;
-  return new Date(s).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  const l = locale === "ru" ? "ru-RU" : "en-US";
+  return new Date(s).toLocaleDateString(l, { day: "numeric", month: "short" });
 }
 
 // ─── Tile: Transport ─────────────────────────────────────────────────────────
 
 function TransportTile({ transport }: { transport: PatientTransport | null }) {
+  const t = useT();
+  const tg = t.guestDashboard;
   const brand = transport ? getBrand(transport.vehicleBrand) : null;
   const vName = transport
     ? [transport.vehicleBrand, transport.vehicleModel].filter(Boolean).join(" ") || transport.vehicleInfo || "Vehicle"
@@ -51,7 +62,7 @@ function TransportTile({ transport }: { transport: PatientTransport | null }) {
       <View style={ts.header}>
         <View style={ts.chipRow}>
           <Ionicons name="car-sport-outline" size={12} color="rgba(255,255,255,0.5)" />
-          <Text style={ts.chipDark}>Transport</Text>
+          <Text style={ts.chipDark}>{tg.tileTransport}</Text>
         </View>
         {brand ? <Image source={brand.logo} style={ts.logo} resizeMode="contain" tintColor="#fff" /> : null}
       </View>
@@ -59,8 +70,8 @@ function TransportTile({ transport }: { transport: PatientTransport | null }) {
       {!transport ? (
         <View style={ts.empty}>
           <Ionicons name="car-outline" size={36} color="rgba(255,255,255,0.2)" />
-          <Text style={ts.emptyTitleDark}>Transport not assigned yet</Text>
-          <Text style={ts.emptySubDark}>Your clinic will update this soon.</Text>
+          <Text style={ts.emptyTitleDark}>{tg.tileTransportEmpty}</Text>
+          <Text style={ts.emptySubDark}>{tg.tileTransportEmptySub}</Text>
         </View>
       ) : (
         <>
@@ -74,7 +85,7 @@ function TransportTile({ transport }: { transport: PatientTransport | null }) {
                 <Ionicons name="person-outline" size={14} color="rgba(255,255,255,0.6)" />
               </View>
               <View>
-                <Text style={ts.driverLbl}>Driver</Text>
+                <Text style={ts.driverLbl}>{tg.tileDriver}</Text>
                 <Text style={ts.driverName}>{transport.driverName ?? "—"}</Text>
               </View>
             </View>
@@ -85,9 +96,18 @@ function TransportTile({ transport }: { transport: PatientTransport | null }) {
               </View>
             ) : null}
           </View>
-          <Pressable style={ts.ctaDark} onPress={() => tryCall(transport.driverPhone, "Driver")}>
+          <Pressable
+            style={ts.ctaDark}
+            onPress={() => tryCall(
+              transport.driverPhone,
+              tg.noPhone,
+              tg.noPhoneSub.replace("{label}", tg.tileDriver),
+              tg.cannotCall,
+              tg.cannotCallSub,
+            )}
+          >
             <Ionicons name="call-outline" size={15} color="#0D1117" />
-            <Text style={ts.ctaDarkTxt}>Call Driver</Text>
+            <Text style={ts.ctaDarkTxt}>{tg.tileCallDriver}</Text>
           </Pressable>
         </>
       )}
@@ -98,13 +118,17 @@ function TransportTile({ transport }: { transport: PatientTransport | null }) {
 // ─── Tile: Hotel ─────────────────────────────────────────────────────────────
 
 function HotelTile({ hotel }: { hotel: PatientHotel | null }) {
+  const t = useT();
+  const tg = t.guestDashboard;
+  const { locale } = useLanguage();
+
   return (
     <LinearGradient colors={["#FFFFFF", "#F0F7FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={ts.tile}>
       <View style={ts.arc} />
       <View style={ts.header}>
         <View style={ts.chipRow}>
           <Ionicons name="bed-outline" size={12} color={T.accent} />
-          <Text style={ts.chipLight}>Hotel</Text>
+          <Text style={ts.chipLight}>{tg.tileHotel}</Text>
         </View>
         <View style={ts.hotelIcon}><Ionicons name="business-outline" size={18} color={T.accent} /></View>
       </View>
@@ -112,8 +136,8 @@ function HotelTile({ hotel }: { hotel: PatientHotel | null }) {
       {!hotel ? (
         <View style={ts.empty}>
           <Ionicons name="bed-outline" size={36} color={T.border} />
-          <Text style={ts.emptyTitleLight}>Hotel not assigned yet</Text>
-          <Text style={ts.emptySubLight}>Your clinic will update this soon.</Text>
+          <Text style={ts.emptyTitleLight}>{tg.tileHotelEmpty}</Text>
+          <Text style={ts.emptySubLight}>{tg.tileHotelEmptySub}</Text>
         </View>
       ) : (
         <>
@@ -122,7 +146,7 @@ function HotelTile({ hotel }: { hotel: PatientHotel | null }) {
             {hotel.roomNo ? (
               <View style={ts.infoRow}>
                 <Ionicons name="key-outline" size={13} color={T.textSec} />
-                <Text style={ts.infoTxt}>Room {hotel.roomNo}</Text>
+                <Text style={ts.infoTxt}>{tg.tileHotelRoom.replace("{no}", hotel.roomNo)}</Text>
               </View>
             ) : null}
             {hotel.address ? (
@@ -135,19 +159,19 @@ function HotelTile({ hotel }: { hotel: PatientHotel | null }) {
           {(hotel.checkInDate || hotel.checkOutDate) ? (
             <View style={ts.stayRow}>
               <View style={ts.stayCol}>
-                <Text style={ts.stayLbl}>Check-in</Text>
-                <Text style={ts.stayVal}>{fmt(hotel.checkInDate) ?? "—"}</Text>
+                <Text style={ts.stayLbl}>{tg.tileHotelCheckIn}</Text>
+                <Text style={ts.stayVal}>{fmt(hotel.checkInDate, locale) ?? "—"}</Text>
               </View>
               <View style={ts.stayDiv} />
               <View style={ts.stayCol}>
-                <Text style={ts.stayLbl}>Check-out</Text>
-                <Text style={ts.stayVal}>{fmt(hotel.checkOutDate) ?? "—"}</Text>
+                <Text style={ts.stayLbl}>{tg.tileHotelCheckOut}</Text>
+                <Text style={ts.stayVal}>{fmt(hotel.checkOutDate, locale) ?? "—"}</Text>
               </View>
               {hotel.stayDays ? (
                 <>
                   <View style={ts.stayDiv} />
                   <View style={ts.stayCol}>
-                    <Text style={ts.stayLbl}>Nights</Text>
+                    <Text style={ts.stayLbl}>{tg.tileHotelNights}</Text>
                     <Text style={[ts.stayVal, { color: T.accent }]}>{hotel.stayDays}</Text>
                   </View>
                 </>
@@ -162,15 +186,11 @@ function HotelTile({ hotel }: { hotel: PatientHotel | null }) {
 
 // ─── Tile: Documents ─────────────────────────────────────────────────────────
 
-const DOC_S: Record<string, { label: string; bg: string; tc: string }> = {
-  ASSIGNED: { label: "Pending",   bg: T.warningBg, tc: T.warning },
-  UPLOADED: { label: "Reviewing", bg: T.successBg, tc: T.success },
-  APPROVED: { label: "Approved",  bg: T.successBg, tc: T.success },
-  REJECTED: { label: "Rejected",  bg: T.dangerBg,  tc: T.danger  },
-};
-
 function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
   const router = useRouter();
+  const t = useT();
+  const tg = t.guestDashboard;
+
   const pending  = documents.filter(d => d.status === "ASSIGNED" || d.status === "REJECTED").length;
   const uploaded = documents.filter(d => d.status === "UPLOADED").length;
   const approved = documents.filter(d => d.status === "APPROVED").length;
@@ -182,11 +202,13 @@ function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
       <View style={ts.header}>
         <View style={ts.chipRow}>
           <Ionicons name="documents-outline" size={12} color={T.accent} />
-          <Text style={ts.chipLight}>Documents</Text>
+          <Text style={ts.chipLight}>{tg.tileDocs}</Text>
         </View>
         <View style={[ts.statusBadge, { backgroundColor: pending > 0 ? T.warningBg : T.successBg }]}>
           <Text style={[ts.statusBadgeTxt, { color: pending > 0 ? T.warning : T.success }]}>
-            {pending > 0 ? `${pending} pending` : "All done"}
+            {pending > 0
+              ? tg.tileDocsPendingBadge.replace("{n}", String(pending))
+              : tg.tileDocsAllDone}
           </Text>
         </View>
       </View>
@@ -196,26 +218,26 @@ function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
         {total === 0 ? (
           <View style={ts.empty}>
             <Ionicons name="documents-outline" size={34} color={T.border} />
-            <Text style={ts.emptyTitleLight}>No documents assigned yet</Text>
-            <Text style={ts.emptySubLight}>Your clinic will add them here.</Text>
+            <Text style={ts.emptyTitleLight}>{tg.tileDocsEmpty}</Text>
+            <Text style={ts.emptySubLight}>{tg.tileDocsEmptySub}</Text>
           </View>
         ) : (
           <View style={ts.docsStats}>
             <View style={[ts.statBox, { backgroundColor: T.warningBg }]}>
               <Text style={[ts.statNum, { color: T.warning }]}>{pending}</Text>
-              <Text style={[ts.statLbl, { color: T.warning }]}>Pending</Text>
+              <Text style={[ts.statLbl, { color: T.warning }]}>{tg.tileDocsPending}</Text>
             </View>
             <View style={[ts.statBox, { backgroundColor: "#EFF6FF" }]}>
               <Text style={[ts.statNum, { color: T.accent }]}>{uploaded}</Text>
-              <Text style={[ts.statLbl, { color: T.accent }]}>Reviewing</Text>
+              <Text style={[ts.statLbl, { color: T.accent }]}>{tg.tileDocsReviewing}</Text>
             </View>
             <View style={[ts.statBox, { backgroundColor: T.successBg }]}>
               <Text style={[ts.statNum, { color: T.success }]}>{approved}</Text>
-              <Text style={[ts.statLbl, { color: T.success }]}>Approved</Text>
+              <Text style={[ts.statLbl, { color: T.success }]}>{tg.tileDocsApproved}</Text>
             </View>
             <View style={[ts.statBox, { backgroundColor: T.surfaceSubtle }]}>
               <Text style={[ts.statNum, { color: T.textSec }]}>{total}</Text>
-              <Text style={[ts.statLbl, { color: T.textSec }]}>Total</Text>
+              <Text style={[ts.statLbl, { color: T.textSec }]}>{tg.tileDocsTotal}</Text>
             </View>
           </View>
         )}
@@ -227,7 +249,7 @@ function DocumentsTile({ documents }: { documents: PatientDocument[] }) {
         onPress={() => router.push({ pathname: "/(patient)/track", params: { tab: "documents" } })}
       >
         <Ionicons name="folder-open-outline" size={15} color={T.accent} />
-        <Text style={ts.ctaLightTxt}>Manage Documents</Text>
+        <Text style={ts.ctaLightTxt}>{tg.tileDocsManage}</Text>
       </Pressable>
     </View>
   );
