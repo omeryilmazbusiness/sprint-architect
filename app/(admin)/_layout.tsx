@@ -9,40 +9,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { AdminThemeProvider } from "@/context/AdminThemeContext";
 import { T } from "@/constants/adminTheme";
 import { useAuth } from "@/context/AuthContext";
-import { apiRequest } from "@/lib/query-client";
 import { useT } from "@/hooks/useT";
-import * as Notifications from "expo-notifications";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
-async function registerPushToken(apiRole: "admin") {
-  try {
-    if (Platform.OS === "web") return;
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== "granted") return;
-
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    const token = tokenData.data;
-    const platform: "ios" | "android" = Platform.OS === "ios" ? "ios" : "android";
-
-    await apiRequest("POST", `/v1/${apiRole}/device-token`, { token, platform });
-    console.log(`[Push] Token registered for ${apiRole}:`, token.slice(0, 20) + "...");
-  } catch (err) {
-    console.warn("[Push] Failed to register push token:", err);
-  }
-}
+import { registerPushToken } from "@/lib/notifications/registerPushToken";
 
 function NativeTabLayout() {
   const t = useT();
@@ -162,7 +130,7 @@ export default function AdminTabLayout() {
 
   useEffect(() => {
     if (user && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
-      registerPushToken("admin");
+      registerPushToken("/v1/admin/device-token");
     }
   }, [user?.id]);
 

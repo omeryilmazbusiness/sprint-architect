@@ -11,6 +11,8 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { SystemErrorProvider, useSystemError } from "@/context/SystemErrorContext";
 import { MaintenanceBottomSheet } from "@/components/system/MaintenanceBottomSheet";
 import { useAppFonts } from "@/lib/fonts/FontLoader";
+import { initNotificationHandler } from "@/lib/notifications/setup";
+import { ensureAndroidChannels } from "@/lib/notifications/channels";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,6 +21,14 @@ function SystemErrorBridge() {
   useEffect(() => {
     setSystemErrorHandler(showSystemError);
   }, [showSystemError]);
+  return null;
+}
+
+function NotificationInit() {
+  useEffect(() => {
+    initNotificationHandler();
+    ensureAndroidChannels();
+  }, []);
   return null;
 }
 
@@ -40,6 +50,7 @@ export default function RootLayout() {
           <KeyboardProvider>
             <LanguageProvider>
               <SystemErrorProvider>
+                <NotificationInit />
                 <SystemErrorBridge />
                 <AuthProvider>
                   <Stack screenOptions={{ headerShown: false, animation: "fade" }}>

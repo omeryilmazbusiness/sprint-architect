@@ -1,0 +1,258 @@
+You are working on an EXISTING Expo / React Native project.
+
+Your job is to inspect the current codebase deeply and then implement two major improvements in the safest, cleanest, most professional, SOLID-compliant, production-ready way:
+
+1. Create a premium black-themed welcome / launch experience when the app first starts
+2. Fix the expo-notifications issue on Android (and ensure iOS is also production-ready)
+
+IMPORTANT RULES
+- Do NOT rebuild the whole app from scratch
+- Do NOT break existing working flows
+- First inspect the real implementation deeply
+- Then directly implement the required improvements
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, platform stability, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT patch symptoms only
+- Find and fix the REAL root cause
+- The result must be production-ready on both Android and iOS
+- Mobile-first polish is critical
+
+PRIMARY GOALS
+
+A) APP START WELCOME EXPERIENCE
+When the app first opens, create a premium black-themed welcome / intro experience.
+This must feel:
+- modern
+- premium
+- elegant
+- smooth
+- high-end
+- black/dark luxury style
+- visually impressive but not noisy
+
+It should look like a polished branded startup/splash/welcome experience, not a raw placeholder.
+
+B) EXPO NOTIFICATIONS ERROR FIX
+There is currently an error around expo-notifications, for example something related to:
+- Notifications.setNotificationHandler
+or a similar Android runtime/setup issue.
+
+You must inspect the real implementation and fix notifications properly for BOTH:
+- Android
+- iOS
+
+The final push/local notification setup must be stable and production-ready.
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand ALL of the following:
+
+1. APP START FLOW
+- current root app entry
+- current splash/loading/startup flow
+- current navigation boot sequence
+- auth/session restore flow
+- whether there is already a splash or intro screen
+- where the best place is to insert the premium welcome experience
+- whether it should appear:
+  - on every cold launch
+  - or only during startup/auth restoration
+- how to avoid making startup feel slow or fake
+
+2. CURRENT NOTIFICATION SETUP
+- current expo-notifications usage
+- where Notifications.setNotificationHandler is called
+- whether it is imported correctly
+- whether it is executed in the correct lifecycle location
+- whether Android-specific channel setup exists
+- whether permissions are requested correctly
+- whether token registration is done correctly
+- whether there are duplicate notification setup files
+- whether setup is being called before app environment is ready
+- whether there is a problem with Expo Go vs development build vs standalone expectations
+
+3. PLATFORM CONFIG
+Inspect:
+- app.json / app.config.*
+- plugins setup
+- notification-related config
+- Android notification channel setup
+- iOS permission/request flow
+- whether expo-notifications is installed/configured correctly
+- whether there are mismatches in package versions
+- whether native rebuild assumptions are being violated
+
+4. CURRENT PUSH TOKEN / DEVICE REGISTRATION FLOW
+- where tokens are requested
+- where tokens are stored / sent to backend
+- whether manager/admin/guest registration flows depend on notification init
+- whether broken notification setup affects the rest of app startup
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — PREMIUM WELCOME / START SCREEN
+1. Inspect the current startup flow
+2. Design and implement a premium black-themed welcome/start experience
+3. Use modern visual treatment:
+   - dark premium background
+   - elegant gradient / glow / subtle motion
+   - refined typography
+   - polished logo/app-name presentation if available
+   - smooth transitions
+   - luxury/minimal visual style
+4. Ensure the screen fits naturally into app startup
+5. Do not make startup annoying or artificially long
+6. Keep mobile performance good
+
+Design direction:
+- premium black theme
+- subtle motion / shimmer / glow
+- tasteful blur/gradient layers
+- modern typography hierarchy
+- smooth loading / transition behavior
+- not overdesigned, not cheap-looking
+
+Acceptance criteria:
+- app starts with a premium black-themed welcome experience
+- visual quality feels high-end
+- startup remains smooth
+- no navigation flicker or broken auth restore flow
+
+PHASE 2 — NOTIFICATIONS ROOT CAUSE FIX
+1. Identify the exact cause of the expo-notifications error
+2. Fix the root cause at the correct layer:
+   - import/setup issue
+   - lifecycle placement issue
+   - Android channel issue
+   - config/plugin issue
+   - Expo environment mismatch
+   - duplicate initialization issue
+3. Ensure Notifications.setNotificationHandler (or equivalent) is placed correctly
+4. Ensure Android and iOS both use a clean unified setup pattern
+
+Acceptance criteria:
+- the current notifications runtime error is gone
+- app starts cleanly on Android
+- app also remains stable on iOS
+
+PHASE 3 — PRODUCTION-READY NOTIFICATION ARCHITECTURE
+Refactor notification setup into a clean, maintainable structure.
+
+Requirements:
+- one centralized notification initialization flow
+- one place for notification handler setup
+- one place for permission request / token fetch
+- one place for Android channel setup
+- no duplicated setup across screens/layouts
+- no app-start crashes if notifications fail
+- safe error handling and logging
+
+Suggested structure direction:
+- notifications/setup.ts
+- notifications/registerPushToken.ts
+- notifications/channels.ts
+- notifications/types.ts
+
+Adjust to the real project structure, but keep it clean.
+
+Acceptance criteria:
+- notification setup is centralized
+- no duplicate init logic remains
+- code is maintainable and production-ready
+
+PHASE 4 — ANDROID HARDENING
+For Android specifically:
+1. Ensure notification channels are created properly
+2. Ensure permissions/request flow is appropriate for platform version
+3. Ensure no runtime calls happen in the wrong order
+4. Ensure the app works outside Expo Go assumptions if needed
+5. Make the Android path robust and stable
+
+Acceptance criteria:
+- Android notification setup runs cleanly
+- no Android-specific startup crash
+- channel setup is correct
+- token registration path remains stable
+
+PHASE 5 — IOS HARDENING
+For iOS specifically:
+1. Ensure permissions are requested cleanly
+2. Ensure notification handler setup does not break startup
+3. Ensure token registration path is correct
+4. Ensure app remains stable even if permission is denied
+
+Acceptance criteria:
+- iOS notification setup is clean
+- permission denied state is handled gracefully
+- startup remains stable
+
+PHASE 6 — SAFE FALLBACKS / UX
+1. If notifications fail to initialize, app should still work
+2. Show safe logs/errors only in developer-facing way if appropriate
+3. Do not block the user from using the app because notification init failed
+4. Keep startup flow resilient
+
+Acceptance criteria:
+- app is usable even if notification registration fails
+- no fatal crash caused by notifications initialization
+
+PHASE 7 — CLEANUP / POLISH
+1. Remove duplicate or outdated notification setup code
+2. Remove dead code related to old notification init attempts
+3. Ensure startup code remains readable
+4. Keep the premium welcome screen integrated cleanly
+5. Ensure no regressions in manager/admin/guest push token registration flows if they exist
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- clean separation of concerns
+- startup UI separated from notification infrastructure
+- notification setup centralized
+- platform-specific logic isolated cleanly
+- no duplicated initialization
+- no brittle hacks
+- leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- Notifications.setNotificationHandler called in wrong place or multiple times
+- expo-notifications installed but native config incomplete
+- Android channel setup missing
+- setup code runs before Expo/native environment is ready
+- Expo Go limitations misunderstood as app bug
+- welcome screen causes navigation/auth flicker
+- welcome screen delays startup too much
+- notification init failure blocks app launch
+- push token registration tied too early to startup
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found for the expo-notifications issue
+2. What you found in the current startup flow
+3. Exact files changed
+4. Why each change was made
+5. Any platform-specific fixes introduced
+6. Manual test steps for Android and iOS
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new premium welcome/start screen
+2. Root cause summary for the notifications error
+3. Final notification setup architecture summary
+4. Confirmation that Android is fixed
+5. Confirmation that iOS is hardened
+6. Exact files changed
+7. Manual QA checklist for:
+   - cold app start
+   - Android startup
+   - iOS startup
+   - notification permission flow
+   - token registration flow
+8. Remaining future improvements if any
+
+START NOW
+First inspect the current app startup flow and the full expo-notifications setup deeply.
+Then implement the premium welcome experience and the production-ready notification fix end-to-end.
