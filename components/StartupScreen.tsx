@@ -8,14 +8,114 @@ import {
   Dimensions,
   StatusBar,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 // ── Timing ────────────────────────────────────────────────────────────────────
-const HOLD_MS = 3200; // visible hold before fade begins
-const FADE_MS = 700;  // fade-out duration
+const HOLD_MS = 3800; // hold before fade begins
+const FADE_MS = 750;  // fade-out duration
+
+// ─── Premium background ───────────────────────────────────────────────────────
+// Four layers stacked on a deep navy-black base:
+//   1. Static diagonal navy gradient — bottom-left to top-right
+//   2. Static inverted bloom — top-right to bottom-left
+//   3. Animated radial glow (navy, breathes)
+//   4. Vignette — darkens edges, keeps center legible
+
+function PremiumBackground({ glowOp, glowSc, pulseSc }: {
+  glowOp:  Animated.Value;
+  glowSc:  Animated.Value;
+  pulseSc: Animated.Value;
+}) {
+  return (
+    <>
+      {/* Layer 1 — diagonal navy gradient sweep from bottom-left */}
+      <LinearGradient
+        colors={["rgba(6,18,58,0.90)", "rgba(2,5,22,0.30)", "transparent"]}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+
+      {/* Layer 2 — soft navy bloom from top-right corner */}
+      <LinearGradient
+        colors={["rgba(12,28,80,0.55)", "rgba(4,10,35,0.20)", "transparent"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.2, y: 0.8 }}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+
+      {/* Layer 3 — animated deep navy radial glow behind the brand area */}
+      <Animated.View
+        style={[
+          bgStyles.radialOuter,
+          {
+            opacity: glowOp,
+            transform: [{ scale: Animated.multiply(glowSc, pulseSc) }],
+          },
+        ]}
+        pointerEvents="none"
+      />
+      <Animated.View
+        style={[bgStyles.radialMid, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
+        pointerEvents="none"
+      />
+      <Animated.View
+        style={[bgStyles.radialCore, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
+        pointerEvents="none"
+      />
+
+      {/* Layer 4 — edge vignette: darkens corners for cinematic depth */}
+      <LinearGradient
+        colors={["rgba(0,0,6,0.85)", "transparent", "transparent", "rgba(0,0,6,0.80)"]}
+        locations={[0, 0.28, 0.72, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+
+      {/* Layer 5 — horizontal side vignette */}
+      <LinearGradient
+        colors={["rgba(0,0,6,0.60)", "transparent", "rgba(0,0,6,0.60)"]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+    </>
+  );
+}
+
+const bgStyles = StyleSheet.create({
+  radialOuter: {
+    position: "absolute",
+    width: width * 1.5,
+    height: width * 1.5,
+    borderRadius: width * 0.75,
+    backgroundColor: "rgba(8,24,80,0.22)",
+  },
+  radialMid: {
+    position: "absolute",
+    width: width * 0.88,
+    height: width * 0.88,
+    borderRadius: width * 0.44,
+    backgroundColor: "rgba(14,38,110,0.32)",
+  },
+  radialCore: {
+    position: "absolute",
+    width: width * 0.42,
+    height: width * 0.42,
+    borderRadius: width * 0.21,
+    backgroundColor: "rgba(20,52,140,0.40)",
+  },
+});
 
 // ─── Progress line ─────────────────────────────────────────────────────────────
 
@@ -46,13 +146,13 @@ const progressStyles = StyleSheet.create({
   track: {
     width: "52%",
     height: 2,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderRadius: 1,
     overflow: "hidden",
   },
   bar: {
     height: "100%",
-    backgroundColor: "rgba(255,255,255,0.48)",
+    backgroundColor: "rgba(120,160,255,0.55)",
     borderRadius: 1,
   },
 });
@@ -69,7 +169,7 @@ function Feature({ icon, title, desc }: FeatureProps) {
   return (
     <View style={featureStyles.row}>
       <View style={featureStyles.iconBox}>
-        <Ionicons name={icon} size={14} color="rgba(255,255,255,0.40)" />
+        <Ionicons name={icon} size={14} color="rgba(140,175,255,0.55)" />
       </View>
       <View style={featureStyles.textCol}>
         <Text style={featureStyles.title}>{title}</Text>
@@ -90,8 +190,8 @@ const featureStyles = StyleSheet.create({
     height: 26,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(80,120,220,0.12)",
+    backgroundColor: "rgba(30,60,140,0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
@@ -103,13 +203,13 @@ const featureStyles = StyleSheet.create({
   title: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
-    color: "rgba(255,255,255,0.70)",
+    color: "rgba(200,215,255,0.72)",
     letterSpacing: 0.1,
   },
   desc: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.28)",
+    color: "rgba(160,180,230,0.30)",
     lineHeight: 15,
   },
 });
@@ -122,7 +222,7 @@ export default function StartupScreen() {
   const screenOp  = useRef(new Animated.Value(1)).current;
   const pulseSc   = useRef(new Animated.Value(1)).current;
 
-  // Entrance animation values (useNativeDriver: true)
+  // Entrance animation values
   const glowOp   = useRef(new Animated.Value(0)).current;
   const glowSc   = useRef(new Animated.Value(0.6)).current;
   const logoOp   = useRef(new Animated.Value(0)).current;
@@ -135,40 +235,39 @@ export default function StartupScreen() {
   const bottomOp = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Sequential entrance — each stage waits for the previous
     Animated.sequence([
-      // Stage 1 — glow blooms (700ms)
+      // Stage 1 — background glow blooms (750ms)
       Animated.parallel([
-        Animated.timing(glowOp, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.spring(glowSc, { toValue: 1, tension: 32, friction: 8, useNativeDriver: true }),
+        Animated.timing(glowOp, { toValue: 1, duration: 750, useNativeDriver: true }),
+        Animated.spring(glowSc, { toValue: 1, tension: 30, friction: 8, useNativeDriver: true }),
       ]),
-      // Stage 2 — logo springs in (530ms)
+      // Stage 2 — logo springs in (560ms)
       Animated.parallel([
         Animated.spring(logoSc, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true }),
-        Animated.timing(logoOp, { toValue: 1, duration: 420, useNativeDriver: true }),
+        Animated.timing(logoOp, { toValue: 1, duration: 440, useNativeDriver: true }),
       ]),
-      // Stage 3 — brand name slides up (480ms)
+      // Stage 3 — brand name slides up (500ms)
       Animated.parallel([
-        Animated.timing(nameOp, { toValue: 1, duration: 450, useNativeDriver: true }),
-        Animated.timing(nameY,  { toValue: 0, duration: 500, useNativeDriver: true }),
+        Animated.timing(nameOp, { toValue: 1, duration: 460, useNativeDriver: true }),
+        Animated.timing(nameY,  { toValue: 0, duration: 510, useNativeDriver: true }),
       ]),
-      // Stage 4 — features fade in (440ms)
+      // Stage 4 — features fade in (460ms)
       Animated.parallel([
-        Animated.timing(featOp, { toValue: 1, duration: 420, useNativeDriver: true }),
-        Animated.timing(featY,  { toValue: 0, duration: 460, useNativeDriver: true }),
+        Animated.timing(featOp, { toValue: 1, duration: 430, useNativeDriver: true }),
+        Animated.timing(featY,  { toValue: 0, duration: 470, useNativeDriver: true }),
       ]),
-      // Stage 5 — welcome copy + bottom bar (380ms)
+      // Stage 5 — welcome copy + bottom bar (400ms)
       Animated.parallel([
-        Animated.timing(copyOp,   { toValue: 1, duration: 360, useNativeDriver: true }),
-        Animated.timing(bottomOp, { toValue: 1, duration: 380, useNativeDriver: true }),
+        Animated.timing(copyOp,   { toValue: 1, duration: 380, useNativeDriver: true }),
+        Animated.timing(bottomOp, { toValue: 1, duration: 400, useNativeDriver: true }),
       ]),
     ]).start();
 
-    // Continuous ambient glow breathe
+    // Slow ambient glow breathe
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseSc, { toValue: 1.07, duration: 2400, useNativeDriver: true }),
-        Animated.timing(pulseSc, { toValue: 1.00, duration: 2400, useNativeDriver: true }),
+        Animated.timing(pulseSc, { toValue: 1.08, duration: 2800, useNativeDriver: true }),
+        Animated.timing(pulseSc, { toValue: 1.00, duration: 2800, useNativeDriver: true }),
       ])
     ).start();
 
@@ -192,24 +291,13 @@ export default function StartupScreen() {
     <Animated.View style={[styles.overlay, { opacity: screenOp, pointerEvents: "none" }]}>
       {Platform.OS === "ios" && <StatusBar barStyle="light-content" />}
 
-      {/* ── Ambient glow: three stacked radial circles ── */}
-      <Animated.View
-        style={[
-          styles.glowOuter,
-          { opacity: glowOp, transform: [{ scale: Animated.multiply(glowSc, pulseSc) }] },
-        ]}
-      />
-      <Animated.View
-        style={[styles.glowMid, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
-      />
-      <Animated.View
-        style={[styles.glowCore, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
-      />
+      {/* ── Premium background layers ── */}
+      <PremiumBackground glowOp={glowOp} glowSc={glowSc} pulseSc={pulseSc} />
 
       {/* ── Center content column ── */}
       <View style={styles.content}>
 
-        {/* Logo — concentric rings */}
+        {/* Logo — double ring */}
         <Animated.View
           style={[styles.logoWrap, { opacity: logoOp, transform: [{ scale: logoSc }] }]}
         >
@@ -232,7 +320,7 @@ export default function StartupScreen() {
           </View>
         </Animated.View>
 
-        {/* Thin section separator */}
+        {/* Section separator */}
         <Animated.View style={[styles.sectionSep, { opacity: featOp }]} />
 
         {/* Feature rows */}
@@ -270,7 +358,7 @@ export default function StartupScreen() {
       <Animated.View
         style={[styles.bottomBlock, { opacity: bottomOp, paddingBottom: bottomPad + 22 }]}
       >
-        <ProgressLine duration={HOLD_MS - 180} />
+        <ProgressLine duration={HOLD_MS - 200} />
         <Text style={styles.bottomLabel}>Healory · Secure Health Tourism Platform</Text>
       </Animated.View>
     </Animated.View>
@@ -279,40 +367,13 @@ export default function StartupScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const GLOW_OUTER = "rgba(3,105,161,0.07)";
-const GLOW_MID   = "rgba(3,105,161,0.13)";
-const GLOW_CORE  = "rgba(3,105,161,0.22)";
-
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
-    backgroundColor: "#000000",
+    backgroundColor: "#02030F",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  // ── Glow ─────────────────────────────────────────────────────────────────────
-  glowOuter: {
-    position: "absolute",
-    width: width * 1.6,
-    height: width * 1.6,
-    borderRadius: width * 0.8,
-    backgroundColor: GLOW_OUTER,
-  },
-  glowMid: {
-    position: "absolute",
-    width: width * 0.92,
-    height: width * 0.92,
-    borderRadius: width * 0.46,
-    backgroundColor: GLOW_MID,
-  },
-  glowCore: {
-    position: "absolute",
-    width: width * 0.44,
-    height: width * 0.44,
-    borderRadius: width * 0.22,
-    backgroundColor: GLOW_CORE,
   },
 
   // ── Content ────────────────────────────────────────────────────────────────
@@ -334,8 +395,8 @@ const styles = StyleSheet.create({
     height: 92,
     borderRadius: 46,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.09)",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    borderColor: "rgba(80,120,220,0.18)",
+    backgroundColor: "rgba(15,35,100,0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -344,8 +405,8 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 34,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(100,140,240,0.14)",
+    backgroundColor: "rgba(20,50,130,0.22)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -371,13 +432,13 @@ const styles = StyleSheet.create({
   ruler: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.09)",
+    backgroundColor: "rgba(80,120,220,0.18)",
     maxWidth: 32,
   },
   tagline: {
     fontFamily: "Inter_500Medium",
     fontSize: 8.5,
-    color: "rgba(255,255,255,0.25)",
+    color: "rgba(140,170,240,0.35)",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
@@ -386,7 +447,7 @@ const styles = StyleSheet.create({
   sectionSep: {
     width: "72%",
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(60,100,200,0.12)",
     borderRadius: 1,
     marginBottom: 22,
   },
@@ -410,14 +471,14 @@ const styles = StyleSheet.create({
   copyLine1: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "rgba(255,255,255,0.40)",
+    color: "rgba(170,190,255,0.38)",
     letterSpacing: 0.1,
     textAlign: "center",
   },
   copyLine2: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    color: "rgba(255,255,255,0.70)",
+    color: "rgba(200,215,255,0.72)",
     letterSpacing: 0.1,
     textAlign: "center",
   },
@@ -435,7 +496,7 @@ const styles = StyleSheet.create({
   bottomLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 10,
-    color: "rgba(255,255,255,0.16)",
+    color: "rgba(120,150,220,0.22)",
     letterSpacing: 0.3,
     textAlign: "center",
   },

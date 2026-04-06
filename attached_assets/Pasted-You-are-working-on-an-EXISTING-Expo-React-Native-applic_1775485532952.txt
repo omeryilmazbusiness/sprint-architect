@@ -1,0 +1,164 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to further improve the startup / welcome screen so it feels significantly more premium, more immersive, and slightly longer in duration, while keeping the implementation clean, professional, SOLID-compliant, and production-ready.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break the current startup, login, or navigation flow
+- First inspect the current welcome/start implementation
+- Then directly improve it
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, visual quality, startup consistency, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT make it look cheap, generic, or overdone
+- The result must feel luxury, modern, dark, elegant, and mobile-first
+
+PRIMARY REQUESTS
+
+1) MAKE THE WELCOME SCREEN STAY VISIBLE A LITTLE LONGER
+Required behavior:
+- Increase the welcome screen duration slightly
+- It should feel more intentional and premium
+- It must not disappear too quickly
+- But it must also not feel annoyingly slow
+- Tune the timing carefully so the screen feels polished
+
+2) MAKE THE BACKGROUND MUCH MORE PREMIUM AND DETAILED
+Required behavior:
+- Upgrade the welcome screen background into a more advanced premium visual design
+- Use a black + deep navy / dark blue luxury palette
+- The result should feel elegant, cinematic, and high-end
+- It must be more visually rich than a flat dark background
+- It must still remain tasteful and not noisy
+
+DESIGN DIRECTION
+The welcome screen should feel like a premium black / navy luxury startup screen.
+
+Visual direction:
+- deep black base
+- navy / midnight blue gradients
+- subtle premium glow accents
+- layered dark visual depth
+- elegant light falloff
+- refined modern composition
+- luxury but minimal
+- no clutter
+- no childish bright colors
+
+Possible style elements:
+- layered radial gradients
+- soft moving glow/light bloom
+- subtle navy highlights
+- elegant background depth
+- premium glow around brand/title area
+- tasteful bottom loading line
+
+The background should feel:
+- richer
+- more immersive
+- more expensive
+- more complete
+- more branded
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand:
+1. current welcome/start screen implementation
+2. current timing duration and transition flow
+3. current background design layers
+4. current animation/motion setup
+5. how the welcome screen transitions to login
+6. whether there are reusable gradient/blur/glow primitives already in the project
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — TUNE THE WELCOME SCREEN DURATION
+1. Inspect current timing logic
+2. Increase the duration slightly so the experience feels more premium
+3. Keep the timing intentional and balanced
+4. Ensure no awkward delay or perceived slowness
+5. Keep cleanup/timer logic safe
+
+Acceptance criteria:
+- welcome screen stays visible longer than before
+- duration feels polished and deliberate
+- login transition remains smooth
+- no flicker or broken startup flow
+
+PHASE 2 — REDESIGN THE BACKGROUND TO A PREMIUM BLACK + NAVY LOOK
+1. Replace/improve the current background treatment
+2. Use a black + dark navy luxury palette
+3. Add more visual depth and sophistication
+4. Use layered gradients, glow, or subtle premium effects
+5. Keep text readability strong
+6. Ensure the design remains elegant, not overdesigned
+
+Acceptance criteria:
+- background feels noticeably more premium
+- black/navy palette is clearly visible
+- visual depth is richer than before
+- design remains clean and high-end
+
+PHASE 3 — PRESERVE THE OVERALL PREMIUM WELCOME EXPERIENCE
+1. Ensure title/logo/app intro still feels premium on top of the new background
+2. Ensure bottom line loading indicator still looks elegant
+3. Ensure composition, spacing, and readability remain excellent
+4. Ensure Android and iOS both render the design well
+5. Keep performance smooth
+
+Acceptance criteria:
+- entire welcome screen feels more premium as a whole
+- background, typography, and loading line work together cleanly
+- performance remains smooth on mobile
+
+PHASE 4 — CLEANUP / HARDENING
+1. Keep startup code maintainable
+2. Avoid duplicated visual layers or animation hacks
+3. Ensure timers and animations are cleaned up properly
+4. Keep the startup/login flow stable
+5. Leave the codebase cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- startup timing logic separated from presentation
+- background design implemented cleanly, not as random style clutter
+- reusable style primitives if appropriate
+- no fragile animation hacks
+- premium result with maintainable code
+
+YOU MUST CHECK FOR THESE RISKS
+- making the duration too long and annoying
+- overdesigning the background so readability suffers
+- using too many layers/animations and hurting performance
+- transition to login becoming awkward
+- bottom loading line feeling disconnected from the new background
+- black/navy palette becoming muddy instead of luxurious
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current welcome screen
+2. Exact files changed
+3. Why each change was made
+4. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the longer welcome duration
+2. Summary of the new premium black + navy background design
+3. Exact files changed
+4. Manual QA checklist for Android and iOS
+5. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is not complete unless:
+- the welcome screen is visibly a bit longer than before
+- the background is clearly more premium and detailed
+- the color direction is black + dark navy luxury
+- the final result feels more immersive and high-end
+
+START NOW
+First inspect the current welcome/start screen deeply.
+Then improve the duration and redesign the background end-to-end.
