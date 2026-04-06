@@ -14,6 +14,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { Card, SectionHeader, ListRow, Divider, StatusPill } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/hooks/useT";
 
 interface ClinicInfo {
   id: string;
@@ -23,6 +24,8 @@ interface ClinicInfo {
 
 export default function ManagerSettingsScreen() {
   const { user, logout } = useAuth();
+  const t = useT();
+  const ts = t.managerSettings;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: clinic, isLoading } = useQuery<ClinicInfo>({
@@ -36,7 +39,7 @@ export default function ManagerSettingsScreen() {
 
   return (
     <View style={styles.root}>
-      <ManagerHeader title="Settings" subtitle={clinic?.name} onLogout={handleLogout} />
+      <ManagerHeader title={ts.pageTitle} subtitle={clinic?.name} onLogout={handleLogout} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
@@ -61,7 +64,7 @@ export default function ManagerSettingsScreen() {
           <ActivityIndicator color={T.accent} />
         ) : clinic ? (
           <>
-            <SectionHeader label="Clinic" />
+            <SectionHeader label={ts.clinicSection} />
             <Card>
               <View style={styles.clinicRow}>
                 <View style={[styles.clinicIcon, { backgroundColor: T.primary + "15" }]}>
@@ -76,61 +79,59 @@ export default function ManagerSettingsScreen() {
               {clinic.status === "SUSPENDED" && (
                 <View style={styles.suspendedNote}>
                   <Ionicons name="warning-outline" size={16} color={T.dangerText} />
-                  <Text style={styles.suspendedText}>
-                    Your clinic is suspended. Please settle any outstanding invoices or contact support.
-                  </Text>
+                  <Text style={styles.suspendedText}>{ts.suspendedNote}</Text>
                 </View>
               )}
             </Card>
           </>
         ) : null}
 
-        <SectionHeader label="Account" style={styles.sectionGap} />
+        <SectionHeader label={ts.accountSection} style={styles.sectionGap} />
         <Card noPad>
           <ListRow
             icon="document-text-outline"
-            label="Invoices"
-            subtitle="View billing history"
+            label={ts.rowInvoices}
+            subtitle={ts.rowInvoicesSub}
             onPress={() => router.push("/(manager-tabs)/invoices")}
           />
           <Divider inset={56} />
           <ListRow
             icon="people-outline"
-            label="Guests"
-            subtitle="Manage your patients"
+            label={ts.rowGuests}
+            subtitle={ts.rowGuestsSub}
             onPress={() => router.push("/(manager-tabs)/users")}
           />
           <Divider inset={56} />
           <ListRow
             icon="layers-outline"
-            label="Services"
-            subtitle="Doctors, hotels, transports"
+            label={ts.rowServices}
+            subtitle={ts.rowServicesSub}
             onPress={() => router.push("/(manager-tabs)/services")}
           />
         </Card>
 
-        <SectionHeader label="Support" style={styles.sectionGap} />
+        <SectionHeader label={ts.supportSection} style={styles.sectionGap} />
         <Card noPad>
           <ListRow
             icon="help-circle-outline"
-            label="Help & Support"
-            subtitle="Contact the support team"
+            label={ts.rowHelpSupport}
+            subtitle={ts.rowHelpSupportSub}
             onPress={() => {}}
           />
           <Divider inset={56} />
           <ListRow
             icon="shield-outline"
-            label="Privacy Policy"
-            subtitle="How we handle your data"
+            label={ts.rowPrivacy}
+            subtitle={ts.rowPrivacySub}
             onPress={() => {}}
           />
         </Card>
 
-        <SectionHeader label="Session" style={styles.sectionGap} />
+        <SectionHeader label={ts.sessionSection} style={styles.sectionGap} />
         <Card noPad>
           <ListRow
             icon="log-out-outline"
-            label="Sign Out"
+            label={ts.rowSignOut}
             danger
             onPress={handleLogout}
           />

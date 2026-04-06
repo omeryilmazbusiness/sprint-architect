@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import type { ManagerDashboardData } from "@/hooks/useManagerDashboard";
+import { useT } from "@/hooks/useT";
 
 interface KpiCardProps {
   label: string;
@@ -17,6 +18,7 @@ interface KpiCardProps {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   subtitle: string;
+  badgeLabel?: string;
   highlight?: boolean;
   onPress?: () => void;
 }
@@ -27,6 +29,7 @@ function KpiCard({
   icon,
   color,
   subtitle,
+  badgeLabel,
   highlight,
   onPress,
 }: KpiCardProps) {
@@ -55,7 +58,7 @@ function KpiCard({
       {highlight && (
         <View style={[styles.badge, { backgroundColor: color + "18" }]}>
           <Ionicons name="chevron-forward" size={10} color={color} />
-          <Text style={[styles.badgeText, { color }]}>View</Text>
+          <Text style={[styles.badgeText, { color }]}>{badgeLabel}</Text>
         </View>
       )}
     </Pressable>
@@ -77,6 +80,8 @@ interface Props {
 }
 
 export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Props) {
+  const t = useT();
+  const td = t.managerDashboard;
   const { kpis, upcomingNext7Days } = data;
 
   if (isLoading) {
@@ -92,36 +97,40 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
   return (
     <View style={styles.grid}>
       <KpiCard
-        label="Active Guests"
+        label={td.kpiActiveGuests}
         value={kpis.activeGuests}
         icon="people-outline"
         color={T.primary}
-        subtitle="approved / in progress"
+        subtitle={td.kpiSubActiveGuests}
+        badgeLabel={td.kpiView}
         onPress={() => router.push("/(manager-tabs)/users")}
       />
       <KpiCard
-        label="Appts Today"
+        label={td.kpiApptToday}
         value={kpis.appointmentsToday}
         icon="calendar-outline"
         color={T.accent}
-        subtitle="tap to view list"
+        subtitle={td.kpiSubApptToday}
+        badgeLabel={td.kpiView}
         highlight
         onPress={onAppointmentsTodayPress}
       />
       <KpiCard
-        label="Upcoming 7 Days"
+        label={td.kpiUpcoming7}
         value={upcomingNext7Days}
         icon="time-outline"
         color="#2ECF8F"
-        subtitle="scheduled appointments"
+        subtitle={td.kpiSubUpcoming7}
+        badgeLabel={td.kpiView}
         onPress={() => router.push("/(manager-tabs)/users")}
       />
       <KpiCard
-        label="Pending Docs"
+        label={td.kpiPendingDocs}
         value={kpis.pendingDocuments}
         icon="document-text-outline"
         color={T.warning}
-        subtitle="awaiting patient upload"
+        subtitle={td.kpiSubPendingDocs}
+        badgeLabel={td.kpiView}
         highlight={kpis.pendingDocuments > 0}
         onPress={() =>
           router.push({

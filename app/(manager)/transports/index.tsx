@@ -22,6 +22,7 @@ import {
   type TransportFormData,
   type TransportFormItem,
 } from "@/components/managerTransports/TransportFormSheet";
+import { useT } from "@/hooks/useT";
 
 interface TransportsResponse {
   rows: TransportItem[];
@@ -30,6 +31,8 @@ interface TransportsResponse {
 export default function TransportsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const t = useT();
+  const tt = t.managerTransports;
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<TransportFormItem | null>(null);
@@ -55,9 +58,9 @@ export default function TransportsScreen() {
       qc.invalidateQueries({ queryKey: ["/v1/manager/transports"] });
       setSheetVisible(false);
       setEditingItem(null);
-      showToast("Transport added");
+      showToast(tt.toastAdded);
     },
-    onError: (e: any) => showToast(e?.message ?? "Failed to save", "error"),
+    onError: (e: any) => showToast(e?.message ?? tt.toastFailedSave, "error"),
   });
 
   const updateMutation = useMutation({
@@ -69,9 +72,9 @@ export default function TransportsScreen() {
       qc.invalidateQueries({ queryKey: ["/v1/manager/transports"] });
       setSheetVisible(false);
       setEditingItem(null);
-      showToast("Transport updated");
+      showToast(tt.toastUpdated);
     },
-    onError: (e: any) => showToast(e?.message ?? "Failed to update", "error"),
+    onError: (e: any) => showToast(e?.message ?? tt.toastFailedUpdate, "error"),
   });
 
   const deleteMutation = useMutation({
@@ -80,9 +83,9 @@ export default function TransportsScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/v1/manager/transports"] });
-      showToast("Transport removed");
+      showToast(tt.toastRemoved);
     },
-    onError: (e: any) => showToast(e?.message ?? "Failed to delete", "error"),
+    onError: (e: any) => showToast(e?.message ?? tt.toastFailedDelete, "error"),
   });
 
   const handleOpenCreate = () => {
@@ -116,7 +119,7 @@ export default function TransportsScreen() {
   return (
     <View style={styles.root}>
       <ManagerHeader
-        title="Transports"
+        title={tt.title}
         backButton
         onBack={() => router.back()}
         right={
@@ -133,12 +136,12 @@ export default function TransportsScreen() {
       {isLoading ? (
         <View style={styles.loader}>
           <ActivityIndicator color={T.accent} size="large" />
-          <Text style={styles.loadingText}>Loading transports…</Text>
+          <Text style={styles.loadingText}>{tt.loading}</Text>
         </View>
       ) : (
         <FlatList
           data={transports}
-          keyExtractor={(t) => t.id}
+          keyExtractor={(tr) => tr.id}
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingTop: 16,
@@ -152,16 +155,14 @@ export default function TransportsScreen() {
               <View style={styles.emptyIconWrap}>
                 <Ionicons name="car-sport-outline" size={40} color={T.textMuted} />
               </View>
-              <Text style={styles.emptyTitle}>No transports yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Add your first transport to start assigning drivers to guests.
-              </Text>
+              <Text style={styles.emptyTitle}>{tt.emptyTitle}</Text>
+              <Text style={styles.emptySubtitle}>{tt.emptySubtitle}</Text>
               <Pressable
                 style={({ pressed }) => [styles.emptyCta, { opacity: pressed ? 0.7 : 1 }]}
                 onPress={handleOpenCreate}
               >
                 <Ionicons name="add" size={16} color="#FFF" style={{ marginRight: 6 }} />
-                <Text style={styles.emptyCtaText}>Add Transport</Text>
+                <Text style={styles.emptyCtaText}>{tt.btnAddTransport}</Text>
               </Pressable>
             </View>
           }

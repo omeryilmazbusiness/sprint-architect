@@ -17,10 +17,10 @@ import { ManagerScheduleSection } from "@/components/managerSchedule/ManagerSche
 import { ManagerBannerCarousel } from "@/components/managerDashboard/ManagerBannerCarousel";
 import { ManagerKpiGrid } from "@/components/managerDashboard/ManagerKpiGrid";
 import { ManagerQuickActions } from "@/components/managerDashboard/ManagerQuickActions";
-
 import { AppointmentsTodaySheet } from "@/components/managerDashboard/AppointmentsTodaySheet";
 import { PendingDocumentsSection } from "@/components/managerDashboard/PendingDocumentsSection";
 import { useManagerDashboard } from "@/hooks/useManagerDashboard";
+import { useT } from "@/hooks/useT";
 
 interface ClinicInfo {
   id: string;
@@ -51,6 +51,8 @@ function SectionLabel({
 
 export default function ManagerDashboard() {
   const { logout } = useAuth();
+  const t = useT();
+  const td = t.managerDashboard;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -65,10 +67,14 @@ export default function ManagerDashboard() {
     router.replace("/(auth)/login");
   }
 
+  const pendingTotal = data.kpis.pendingDocuments > 0
+    ? td.pendingDocsTotal.replace("{count}", String(data.kpis.pendingDocuments))
+    : undefined;
+
   return (
     <View style={styles.root}>
       <ManagerHeader
-        title="Dashboard"
+        title={td.title}
         subtitle={clinic?.name}
         onLogout={handleLogout}
       />
@@ -90,28 +96,28 @@ export default function ManagerDashboard() {
 
         {/* Padded body */}
         <View style={styles.body}>
-          <SectionLabel label="Overview" />
+          <SectionLabel label={td.sectionOverview} />
           <ManagerKpiGrid
             data={data}
             isLoading={isLoading}
             onAppointmentsTodayPress={() => setSheetOpen(true)}
           />
 
-          <SectionLabel label="Quick Actions" />
+          <SectionLabel label={td.sectionQuickActions} />
           <View style={styles.quickWrap}>
             <ManagerQuickActions />
           </View>
 
           <SectionLabel
-            label="Pending Documents"
-            action={data.kpis.pendingDocuments > 0 ? `${data.kpis.pendingDocuments} total` : undefined}
+            label={td.sectionPendingDocs}
+            action={pendingTotal}
           />
           <PendingDocumentsSection
             items={data.pendingGuestDocs}
             isLoading={isLoading}
           />
 
-          <SectionLabel label="Monthly Schedule" />
+          <SectionLabel label={td.sectionSchedule} />
           <ManagerScheduleSection />
         </View>
       </ScrollView>

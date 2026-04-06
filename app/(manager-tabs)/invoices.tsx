@@ -17,6 +17,7 @@ import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useT } from "@/hooks/useT";
 
 interface Invoice {
   id: string;
@@ -43,21 +44,23 @@ function formatPeriod(period: string) {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-function statusLabel(s: Invoice["status"]) {
-  if (s === "PENDING") return "PENDING";
-  if (s === "UNPAID") return "OVERDUE";
-  return "PAID";
-}
-
 function statusColor(s: Invoice["status"]) {
   if (s === "PAID") return { bg: T.successBg, border: T.successBorder, text: T.successText };
   if (s === "UNPAID") return { bg: T.dangerBg, border: T.dangerBorder, text: T.dangerText };
   return { bg: T.warningBg, border: T.warningBorder, text: T.warningText };
 }
 
-function InvoiceCard({ invoice }: { invoice: Invoice }) {
+function InvoiceCard({ invoice, ti }: { invoice: Invoice; ti: ReturnType<typeof useT>["managerInvoices"] }) {
   const [expanded, setExpanded] = useState(false);
   const sc = statusColor(invoice.status);
+
+  function getStatusLabel(s: Invoice["status"]): string {
+    if (s === "PENDING") return ti.statusPending;
+    if (s === "UNPAID") return ti.statusOverdue;
+    return ti.statusPaid;
+  }
+
+  const guestsLabel = invoice.patientCount === 1 ? ti.guestsSingular : ti.guestsPlural;
 
   return (
     <Pressable
@@ -70,7 +73,7 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
           <Text style={styles.period}>{formatPeriod(invoice.period)}</Text>
         </View>
         <View style={[styles.statusPill, { backgroundColor: sc.bg, borderColor: sc.border }]}>
-          <Text style={[styles.statusText, { color: sc.text }]}>{statusLabel(invoice.status)}</Text>
+          <Text style={[styles.statusText, { color: sc.text }]}>{getStatusLabel(invoice.status)}</Text>
         </View>
       </View>
 
@@ -78,27 +81,27 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
         <Text style={styles.totalAmount}>
           {invoice.currency} {parseFloat(invoice.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </Text>
-        <Text style={styles.patientCount}>{invoice.patientCount} guests</Text>
+        <Text style={styles.patientCount}>{invoice.patientCount} {guestsLabel}</Text>
       </View>
 
       {expanded && (
         <View style={styles.breakdown}>
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Unit price</Text>
+            <Text style={styles.breakdownLabel}>{ti.breakdownUnitPrice}</Text>
             <Text style={styles.breakdownValue}>{invoice.currency} {parseFloat(invoice.unitPrice).toFixed(2)}</Text>
           </View>
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Guests</Text>
+            <Text style={styles.breakdownLabel}>{ti.breakdownGuests}</Text>
             <Text style={styles.breakdownValue}>× {invoice.patientCount}</Text>
           </View>
           <View style={[styles.breakdownRow, styles.breakdownTotal]}>
-            <Text style={styles.breakdownLabel}>Total</Text>
+            <Text style={styles.breakdownLabel}>{ti.breakdownTotal}</Text>
             <Text style={[styles.breakdownValue, styles.breakdownTotalValue]}>
               {invoice.currency} {parseFloat(invoice.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
           <Text style={styles.issuedAt}>
-            Created {new Date(invoice.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            {new Date(invoice.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
           </Text>
         </View>
       )}
@@ -117,6 +120,8 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
 export default function InvoicesScreen() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const { logout } = useAuth();
+  const t = useT();
+  const ti = t.managerInvoices;
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -147,16 +152,21 @@ export default function InvoicesScreen() {
     router.replace("/(auth)/login");
   }
 
+  function getChipLabel(opt: string): string {
+    if (opt === "ALL") return ti.filterAll;
+    if (opt === "PENDING") return ti.statusPending;
+    if (opt === "UNPAID") return ti.statusOverdue;
+    return ti.statusPaid;
+  }
+
   return (
     <View style={styles.root}>
-      <ManagerHeader title="Invoices" subtitle={clinic?.name} onLogout={handleLogout} />
+      <ManagerHeader title={ti.pageTitle} subtitle={clinic?.name} onLogout={handleLogout} />
 
       {suspended && (
         <View style={styles.suspendedBanner}>
           <Ionicons name="warning-outline" size={18} color={T.dangerText} />
-          <Text style={styles.suspendedText}>
-            Clinic suspended due to unpaid invoice. Contact support to resolve.
-          </Text>
+          <Text style={styles.suspendedText}>{ti.suspendedBanner}</Text>
         </View>
       )}
 
@@ -177,7 +187,7 @@ export default function InvoicesScreen() {
                 statusFilter === opt && styles.filterChipTextActive,
               ]}
             >
-              {opt === "ALL" ? "All" : statusLabel(opt as Invoice["status"])}
+              {getChipLabel(opt)}
             </Text>
           </Pressable>
         ))}
@@ -191,10 +201,10 @@ export default function InvoicesScreen() {
         <FlatList
           data={invoices ?? []}
           keyExtractor={(inv) => inv.id}
-          contentContainerStyle={{ 
-            padding: T.sp16, 
-            gap: T.sp12 as number, 
-            paddingBottom: bottomPad + 80 
+          contentContainerStyle={{
+            padding: T.sp16,
+            gap: T.sp12 as number,
+            paddingBottom: bottomPad + 80,
           }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />
@@ -202,10 +212,10 @@ export default function InvoicesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="document-text-outline" size={36} color={T.textMuted} />
-              <Text style={styles.emptyText}>No invoices found.</Text>
+              <Text style={styles.emptyText}>{ti.emptyText}</Text>
             </View>
           }
-          renderItem={({ item }) => <InvoiceCard invoice={item} />}
+          renderItem={({ item }) => <InvoiceCard invoice={item} ti={ti} />}
         />
       )}
     </View>

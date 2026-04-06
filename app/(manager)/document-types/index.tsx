@@ -23,6 +23,7 @@ import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
+import { useT } from "@/hooks/useT";
 
 const SCREEN_H = Dimensions.get("window").height;
 const QK = ["/v1/manager/document-types"] as const;
@@ -42,6 +43,9 @@ interface ListResponse {
 export default function DocumentTypesScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const t = useT();
+  const tdt = t.managerDocTypes;
+
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<DocumentTypeItem | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -66,7 +70,7 @@ export default function DocumentTypesScreen() {
       qc.invalidateQueries({ queryKey: QK });
       setShowForm(false);
       setFormError(null);
-      showToast("Document type created", "success");
+      showToast(tdt.toastCreated, "success");
     },
     onError: (e: any) => {
       setFormError(e.message ?? "Something went wrong");
@@ -87,7 +91,7 @@ export default function DocumentTypesScreen() {
       qc.invalidateQueries({ queryKey: QK });
       setEditingItem(null);
       setFormError(null);
-      showToast("Document type updated", "success");
+      showToast(tdt.toastUpdated, "success");
     },
     onError: (e: any) => {
       setFormError(e.message ?? "Something went wrong");
@@ -101,9 +105,9 @@ export default function DocumentTypesScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK });
-      showToast("Document type removed", "success");
+      showToast(tdt.toastRemoved, "success");
     },
-    onError: () => showToast("Failed to delete document type", "error"),
+    onError: () => showToast(tdt.toastFailedDelete, "error"),
   });
 
   const showToast = (msg: string, type: "success" | "error") => {
@@ -141,7 +145,7 @@ export default function DocumentTypesScreen() {
   return (
     <View style={styles.root}>
       <ManagerHeader
-        title="Document Types"
+        title={tdt.title}
         backButton
         onBack={() => router.back()}
         right={
@@ -162,9 +166,9 @@ export default function DocumentTypesScreen() {
       ) : isError ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={40} color={T.textMuted} />
-          <Text style={styles.errorText}>Could not load document types</Text>
+          <Text style={styles.errorText}>{tdt.errorText}</Text>
           <Pressable style={styles.retryBtn} onPress={() => refetch()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{tdt.retry}</Text>
           </Pressable>
         </View>
       ) : (
@@ -181,7 +185,7 @@ export default function DocumentTypesScreen() {
                 <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search document types…"
+                  placeholder={tdt.searchPlaceholder}
                   placeholderTextColor={T.textMuted}
                   value={searchText}
                   onChangeText={setSearchText}
@@ -200,24 +204,22 @@ export default function DocumentTypesScreen() {
             searchText.trim() ? (
               <View style={styles.empty}>
                 <Ionicons name="search-outline" size={32} color={T.textMuted} />
-                <Text style={styles.emptyTitle}>No results</Text>
-                <Text style={styles.emptySubtitle}>No document types match "{searchText}"</Text>
+                <Text style={styles.emptyTitle}>{tdt.emptySearchTitle}</Text>
+                <Text style={styles.emptySubtitle}>{tdt.emptySearchSub.replace("{q}", searchText)}</Text>
               </View>
             ) : (
               <View style={styles.empty}>
                 <View style={styles.emptyIconWrap}>
                   <Ionicons name="document-attach-outline" size={32} color={T.accent} />
                 </View>
-                <Text style={styles.emptyTitle}>No document types yet</Text>
-                <Text style={styles.emptySubtitle}>
-                  Create document types for your clinic. They will be used to track guest documentation.
-                </Text>
+                <Text style={styles.emptyTitle}>{tdt.emptyTitle}</Text>
+                <Text style={styles.emptySubtitle}>{tdt.emptySubtitle}</Text>
                 <Pressable
                   style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
                   onPress={() => { setFormError(null); setShowForm(true); }}
                 >
                   <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.emptyBtnText}>Add Document Type</Text>
+                  <Text style={styles.emptyBtnText}>{tdt.btnAddDocType}</Text>
                 </Pressable>
               </View>
             )
@@ -225,6 +227,7 @@ export default function DocumentTypesScreen() {
           renderItem={({ item }) => (
             <DocumentTypeCard
               item={item}
+              tdt={tdt}
               onEdit={() => handleEdit(item)}
               onDelete={() => handleDelete(item)}
             />
@@ -234,6 +237,7 @@ export default function DocumentTypesScreen() {
 
       <DocumentTypeFormSheet
         visible={showForm}
+        tdt={tdt}
         onClose={() => setShowForm(false)}
         onSubmit={(d) => createMutation.mutate(d)}
         isLoading={createMutation.isPending}
@@ -242,6 +246,7 @@ export default function DocumentTypesScreen() {
 
       <DocumentTypeFormSheet
         visible={editingItem !== null}
+        tdt={tdt}
         editingItem={editingItem}
         onClose={() => { setEditingItem(null); setFormError(null); }}
         onSubmit={(d) => {
@@ -258,10 +263,12 @@ export default function DocumentTypesScreen() {
 
 function DocumentTypeCard({
   item,
+  tdt,
   onEdit,
   onDelete,
 }: {
   item: DocumentTypeItem;
+  tdt: ReturnType<typeof useT>["managerDocTypes"];
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -279,9 +286,9 @@ function DocumentTypeCard({
           {item.note ? (
             <Text style={styles.cardNote} numberOfLines={2}>{item.note}</Text>
           ) : (
-            <Text style={styles.cardNotePlaceholder}>No description</Text>
+            <Text style={styles.cardNotePlaceholder}>{tdt.noDescription}</Text>
           )}
-          <Text style={styles.cardDate}>Added {created}</Text>
+          <Text style={styles.cardDate}>{tdt.addedDate.replace("{date}", created)}</Text>
         </View>
       </View>
       <View style={styles.cardActions}>
@@ -298,6 +305,7 @@ function DocumentTypeCard({
 
 interface FormSheetProps {
   visible: boolean;
+  tdt: ReturnType<typeof useT>["managerDocTypes"];
   onClose: () => void;
   onSubmit: (data: { name: string; note?: string }) => void;
   isLoading: boolean;
@@ -305,7 +313,7 @@ interface FormSheetProps {
   editingItem?: DocumentTypeItem | null;
 }
 
-function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMessage, editingItem }: FormSheetProps) {
+function DocumentTypeFormSheet({ visible, tdt, onClose, onSubmit, isLoading, errorMessage, editingItem }: FormSheetProps) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [name, setName] = useState("");
@@ -340,7 +348,7 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
             <View style={styles.handle} />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{isEditing ? "Edit Document Type" : "Add Document Type"}</Text>
+              <Text style={styles.sheetTitle}>{isEditing ? tdt.formTitleEdit : tdt.formTitleAdd}</Text>
               <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
                 <Ionicons name="close" size={22} color={T.text} />
               </Pressable>
@@ -354,12 +362,12 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
               )}
               <View style={styles.field}>
                 <Text style={[styles.label, !!nameError && { color: T.danger }]}>
-                  Name {nameError ? `— ${nameError}` : ""}
+                  {tdt.labelName} {nameError ? `— ${nameError}` : ""}
                   {!nameError && <Text style={styles.required}> *</Text>}
                 </Text>
                 <TextInput
                   style={[styles.input, !!nameError && styles.inputError]}
-                  placeholder="e.g. Passport Copy, Medical Report"
+                  placeholder={tdt.fieldNamePlaceholder}
                   placeholderTextColor={T.textMuted}
                   value={name}
                   onChangeText={(v) => { setName(v); if (nameError) setNameError(""); }}
@@ -370,11 +378,11 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
               </View>
               <View style={styles.field}>
                 <Text style={styles.label}>
-                  Description <Text style={styles.optional}>(optional)</Text>
+                  {tdt.labelDescription} <Text style={styles.optional}>{tdt.labelDescriptionOptional}</Text>
                 </Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  placeholder="Brief description of what this document is for"
+                  placeholder={tdt.fieldDescPlaceholder}
                   placeholderTextColor={T.textMuted}
                   value={note}
                   onChangeText={setNote}
@@ -389,7 +397,7 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
             </ScrollView>
             <View style={styles.sheetActions}>
               <Pressable style={({ pressed }) => [styles.btnSecondary, { opacity: pressed ? 0.7 : 1 }]} onPress={onClose}>
-                <Text style={styles.btnSecondaryText}>Cancel</Text>
+                <Text style={styles.btnSecondaryText}>{tdt.btnCancel}</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [styles.btnPrimary, { opacity: pressed || isLoading ? 0.75 : 1 }]}
@@ -397,7 +405,7 @@ function DocumentTypeFormSheet({ visible, onClose, onSubmit, isLoading, errorMes
                 disabled={isLoading}
                 testID="btn-save-doc-type"
               >
-                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>{isEditing ? "Update" : "Save"}</Text>}
+                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>{isEditing ? tdt.btnUpdate : tdt.btnSave}</Text>}
               </Pressable>
             </View>
           </KeyboardAvoidingView>

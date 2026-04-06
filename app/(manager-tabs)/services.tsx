@@ -13,6 +13,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
+import { useT } from "@/hooks/useT";
 
 interface ClinicInfo {
   id: string;
@@ -28,39 +29,10 @@ interface ServiceCard {
   route: string;
 }
 
-const SERVICES: ServiceCard[] = [
-  {
-    icon: "medkit-outline",
-    label: "Doctors",
-    description: "Medical staff & specialists",
-    color: "#6366F1",
-    route: "/(manager)/doctors",
-  },
-  {
-    icon: "bed-outline",
-    label: "Hotels",
-    description: "Accommodation partners",
-    color: "#0369A1",
-    route: "/(manager)/hotels",
-  },
-  {
-    icon: "car-outline",
-    label: "Transports",
-    description: "Transfer services",
-    color: "#059669",
-    route: "/(manager)/transports",
-  },
-  {
-    icon: "document-attach-outline",
-    label: "Document Types",
-    description: "Required patient documents",
-    color: "#D97706",
-    route: "/(manager)/document-types",
-  },
-];
-
 export default function ServicesScreen() {
   const { logout } = useAuth();
+  const t = useT();
+  const ts = t.managerServices;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: clinic } = useQuery<ClinicInfo>({
@@ -72,17 +44,46 @@ export default function ServicesScreen() {
     router.replace("/(auth)/login");
   }
 
+  const SERVICES: ServiceCard[] = [
+    {
+      icon: "medkit-outline",
+      label: ts.svcDoctorsLabel,
+      description: ts.svcDoctorsDesc,
+      color: "#6366F1",
+      route: "/(manager)/doctors",
+    },
+    {
+      icon: "bed-outline",
+      label: ts.svcHotelsLabel,
+      description: ts.svcHotelsDesc,
+      color: "#0369A1",
+      route: "/(manager)/hotels",
+    },
+    {
+      icon: "car-outline",
+      label: ts.svcTransportsLabel,
+      description: ts.svcTransportsDesc,
+      color: "#059669",
+      route: "/(manager)/transports",
+    },
+    {
+      icon: "document-attach-outline",
+      label: ts.svcDocTypesLabel,
+      description: ts.svcDocTypesDesc,
+      color: "#D97706",
+      route: "/(manager)/document-types",
+    },
+  ];
+
   return (
     <View style={styles.root}>
-      <ManagerHeader title="Services" subtitle={clinic?.name} onLogout={handleLogout} />
+      <ManagerHeader title={ts.pageTitle} subtitle={clinic?.name} onLogout={handleLogout} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.intro}>
-          Manage the resources used in your clinic's care plans.
-        </Text>
+        <Text style={styles.intro}>{ts.intro}</Text>
         <View style={styles.grid}>
           {SERVICES.map((svc) => (
             <Pressable

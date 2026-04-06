@@ -24,6 +24,7 @@ import { T } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
 import DoctorListCard, { Doctor } from "@/components/managerDoctors/DoctorListCard";
+import { useT } from "@/hooks/useT";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -92,6 +93,8 @@ const sectionStyles = StyleSheet.create({
 export default function DoctorsScreen() {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const t = useT();
+  const td = t.managerDoctors;
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -110,8 +113,8 @@ export default function DoctorsScreen() {
   }
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
@@ -139,7 +142,7 @@ export default function DoctorsScreen() {
       const res = await apiRequest(method, path, body);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Request failed" }));
-        throw new Error((err as { message?: string }).message ?? "Failed to save doctor");
+        throw new Error((err as { message?: string }).message ?? td.toastFailedSave);
       }
       return res.json();
     },
@@ -148,9 +151,9 @@ export default function DoctorsScreen() {
       setShowForm(false);
       setEditingItem(null);
       setForm(EMPTY_FORM);
-      showToast(editingItem ? "Doctor updated" : "Doctor added");
+      showToast(editingItem ? td.toastDoctorUpdated : td.toastDoctorAdded);
     },
-    onError: (e: Error) => showToast(e.message ?? "Failed to save doctor", "error"),
+    onError: (e: Error) => showToast(e.message ?? td.toastFailedSave, "error"),
   });
 
   const deleteMutation = useMutation({
@@ -159,14 +162,14 @@ export default function DoctorsScreen() {
     },
     onSuccess: (_data, id) => {
       setDeletedIds((prev) => new Set(prev).add(id));
-      showToast("Doctor removed");
+      showToast(td.toastDoctorRemoved);
       qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
     },
     onError: (e: Error & { code?: string }) => {
       if (e?.code === "DOC-DEL-001") {
-        showToast("Doctor has appointments — cannot delete", "error");
+        showToast(td.toastHasAppointments, "error");
       } else {
-        showToast(e.message ?? "Failed to delete doctor", "error");
+        showToast(e.message ?? td.toastFailedDelete, "error");
       }
     },
   });
@@ -218,7 +221,7 @@ export default function DoctorsScreen() {
   return (
     <View style={styles.root}>
       <ManagerHeader
-        title="Doctors"
+        title={td.title}
         backButton
         onBack={() => router.back()}
         right={
@@ -235,7 +238,7 @@ export default function DoctorsScreen() {
         <Ionicons name="search-outline" size={16} color={T.textMuted} style={{ marginRight: 6 }} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search doctors..."
+          placeholder={td.searchPlaceholder}
           placeholderTextColor={T.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -271,8 +274,8 @@ export default function DoctorsScreen() {
           ListHeaderComponent={
             (data?.total ?? 0) > 0 ? (
               <Text style={styles.listCount}>
-                {data!.total} {data!.total === 1 ? "Doctor" : "Doctors"}
-                {debouncedSearch ? ` matching "${debouncedSearch}"` : ""}
+                {data!.total} {data!.total === 1 ? td.countSingular : td.countPlural}
+                {debouncedSearch ? ` ${td.countMatching.replace("{q}", debouncedSearch)}` : ""}
               </Text>
             ) : null
           }
@@ -280,10 +283,10 @@ export default function DoctorsScreen() {
             <View style={styles.empty}>
               <Ionicons name="medkit-outline" size={40} color={T.border} />
               <Text style={styles.emptyTitle}>
-                {debouncedSearch ? "No results found" : "No doctors yet"}
+                {debouncedSearch ? td.emptyTitleSearch : td.emptyTitle}
               </Text>
               <Text style={styles.emptyText}>
-                {debouncedSearch ? "Try a different search" : "Tap + to add your first doctor"}
+                {debouncedSearch ? td.emptyTextSearch : td.emptyText}
               </Text>
             </View>
           }
@@ -297,7 +300,6 @@ export default function DoctorsScreen() {
         />
       )}
 
-      {/* ─── Bottom Sheet Form ─── */}
       <Modal
         visible={showForm}
         transparent
@@ -317,17 +319,15 @@ export default function DoctorsScreen() {
                 { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 16 },
               ]}
             >
-              {/* Handle pill */}
               <View style={styles.sheetHandle} />
 
-              {/* Header */}
               <View style={styles.sheetHeader}>
                 <View>
                   <Text style={styles.sheetTitle}>
-                    {editingItem ? "Edit Doctor" : "Add Doctor"}
+                    {editingItem ? td.formTitleEdit : td.formTitleAdd}
                   </Text>
                   <Text style={styles.sheetSubtitle}>
-                    {editingItem ? "Update doctor information" : "Fill in the doctor's details"}
+                    {editingItem ? td.formSubEdit : td.formSubAdd}
                   </Text>
                 </View>
                 <Pressable onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
@@ -337,27 +337,25 @@ export default function DoctorsScreen() {
                 </Pressable>
               </View>
 
-              {/* Scrollable form body */}
               <ScrollView
                 style={{ flexShrink: 1 }}
                 contentContainerStyle={styles.sheetBody}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                {/* ── Identity ── */}
                 <View style={styles.section}>
-                  <SectionLabel icon="person-outline" title="Identity" />
+                  <SectionLabel icon="person-outline" title={td.sectionIdentity} />
                   <View style={styles.sectionContent}>
                     <View style={styles.field}>
                       <Text style={styles.fieldLabel}>
-                        Full Name <Text style={styles.required}>*</Text>
+                        {td.fieldFullName} <Text style={styles.required}>*</Text>
                       </Text>
                       <TextInput
                         style={[
                           styles.fieldInput,
                           nameError && styles.fieldInputError,
                         ]}
-                        placeholder="Dr. Jane Smith"
+                        placeholder={td.fieldFullNamePlaceholder}
                         placeholderTextColor={T.textMuted}
                         value={form.fullName}
                         onChangeText={(v) => {
@@ -367,16 +365,16 @@ export default function DoctorsScreen() {
                         returnKeyType="next"
                       />
                       {nameError && (
-                        <Text style={styles.errorText}>Full name is required</Text>
+                        <Text style={styles.errorText}>{td.fieldFullNameRequired}</Text>
                       )}
                     </View>
 
                     <View style={styles.fieldRow}>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Specialty</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldSpecialty}</Text>
                         <TextInput
                           style={styles.fieldInput}
-                          placeholder="Cardiology"
+                          placeholder={td.fieldSpecialtyPlaceholder}
                           placeholderTextColor={T.textMuted}
                           value={form.specialty}
                           onChangeText={(v) => setForm((f) => ({ ...f, specialty: v }))}
@@ -384,10 +382,10 @@ export default function DoctorsScreen() {
                         />
                       </View>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Languages</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldLanguages}</Text>
                         <TextInput
                           style={styles.fieldInput}
-                          placeholder="EN, TR..."
+                          placeholder={td.fieldLanguagesPlaceholder}
                           placeholderTextColor={T.textMuted}
                           value={form.languages}
                           onChangeText={(v) => setForm((f) => ({ ...f, languages: v }))}
@@ -398,13 +396,12 @@ export default function DoctorsScreen() {
                   </View>
                 </View>
 
-                {/* ── Contact ── */}
                 <View style={styles.section}>
-                  <SectionLabel icon="call-outline" title="Contact" />
+                  <SectionLabel icon="call-outline" title={td.sectionContact} />
                   <View style={styles.sectionContent}>
                     <View style={styles.fieldRow}>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Phone</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldPhone}</Text>
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="+1..."
@@ -416,7 +413,7 @@ export default function DoctorsScreen() {
                         />
                       </View>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Email</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldEmail}</Text>
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="dr@clinic.com"
@@ -432,15 +429,14 @@ export default function DoctorsScreen() {
                   </View>
                 </View>
 
-                {/* ── Education ── */}
                 <View style={styles.section}>
-                  <SectionLabel icon="school-outline" title="Education" />
+                  <SectionLabel icon="school-outline" title={td.sectionEducation} />
                   <View style={styles.sectionContent}>
                     <View style={styles.field}>
-                      <Text style={styles.fieldLabel}>University</Text>
+                      <Text style={styles.fieldLabel}>{td.fieldUniversity}</Text>
                       <TextInput
                         style={styles.fieldInput}
-                        placeholder="Medical School Name"
+                        placeholder={td.fieldUniversityPlaceholder}
                         placeholderTextColor={T.textMuted}
                         value={form.university}
                         onChangeText={(v) => setForm((f) => ({ ...f, university: v }))}
@@ -449,7 +445,7 @@ export default function DoctorsScreen() {
                     </View>
                     <View style={styles.fieldRow}>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Grad. Year</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldGradYear}</Text>
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="2010"
@@ -461,7 +457,7 @@ export default function DoctorsScreen() {
                         />
                       </View>
                       <View style={[styles.field, { flex: 1 }]}>
-                        <Text style={styles.fieldLabel}>Exp. Years</Text>
+                        <Text style={styles.fieldLabel}>{td.fieldExpYears}</Text>
                         <TextInput
                           style={styles.fieldInput}
                           placeholder="12"
@@ -474,10 +470,10 @@ export default function DoctorsScreen() {
                       </View>
                     </View>
                     <View style={styles.field}>
-                      <Text style={styles.fieldLabel}>Certifications</Text>
+                      <Text style={styles.fieldLabel}>{td.fieldCertifications}</Text>
                       <TextInput
                         style={[styles.fieldInput, styles.textArea]}
-                        placeholder="List certifications..."
+                        placeholder={td.fieldCertificationsPlaceholder}
                         placeholderTextColor={T.textMuted}
                         value={form.certifications}
                         onChangeText={(v) => setForm((f) => ({ ...f, certifications: v }))}
@@ -489,14 +485,13 @@ export default function DoctorsScreen() {
                   </View>
                 </View>
 
-                {/* ── Bio ── */}
                 <View style={[styles.section, { marginBottom: 0 }]}>
-                  <SectionLabel icon="document-text-outline" title="Bio" />
+                  <SectionLabel icon="document-text-outline" title={td.sectionBio} />
                   <View style={styles.sectionContent}>
                     <View style={styles.field}>
                       <TextInput
                         style={[styles.fieldInput, styles.textAreaTall]}
-                        placeholder="Doctor's background, expertise, approach..."
+                        placeholder={td.fieldBioPlaceholder}
                         placeholderTextColor={T.textMuted}
                         value={form.bio}
                         onChangeText={(v) => setForm((f) => ({ ...f, bio: v }))}
@@ -509,13 +504,12 @@ export default function DoctorsScreen() {
                 </View>
               </ScrollView>
 
-              {/* ── Sticky actions ── */}
               <View style={styles.sheetActions}>
                 <Pressable
                   style={({ pressed }) => [styles.btnCancel, { opacity: pressed ? 0.7 : 1 }]}
                   onPress={handleClose}
                 >
-                  <Text style={styles.btnCancelText}>Cancel</Text>
+                  <Text style={styles.btnCancelText}>{td.btnCancel}</Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [
@@ -535,7 +529,7 @@ export default function DoctorsScreen() {
                         color="#fff"
                       />
                       <Text style={styles.btnSaveText}>
-                        {editingItem ? "Save Changes" : "Add Doctor"}
+                        {editingItem ? td.btnSaveChanges : td.btnAddDoctor}
                       </Text>
                     </>
                   )}
@@ -546,7 +540,6 @@ export default function DoctorsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ─── Toast ─── */}
       <Modal visible={!!toast} transparent animationType="none" statusBarTranslucent onRequestClose={() => {}}>
         <View style={styles.toastOverlay} pointerEvents="none" testID="doctors-screen-toast">
           <View
@@ -616,52 +609,41 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   skeletonRow: { flexDirection: "row", alignItems: "center", gap: T.sp12 },
-  skeletonAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.border, flexShrink: 0 },
+  skeletonAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.border },
   skeletonLine: { height: 13, backgroundColor: T.border, borderRadius: 6 },
 
-  // ── Sheet ──
   sheetOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.48)",
   },
   sheetContainer: {
-    backgroundColor: T.bg,
+    backgroundColor: T.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: SCREEN_HEIGHT * 0.92,
+    maxHeight: "92%",
     overflow: "hidden",
   },
   sheetHandle: {
     width: 36,
     height: 4,
-    backgroundColor: T.borderStrong,
     borderRadius: 2,
+    backgroundColor: T.border,
     alignSelf: "center",
     marginTop: 10,
     marginBottom: 2,
   },
   sheetHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: T.sp20,
-    paddingTop: T.sp16,
-    paddingBottom: T.sp16,
+    paddingVertical: T.sp12,
     borderBottomWidth: 1,
     borderBottomColor: T.border,
   },
-  sheetTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: T.text,
-  },
-  sheetSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: T.textMuted,
-    marginTop: 2,
-  },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  sheetSubtitle: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
   sheetCloseBtn: { padding: 4 },
   sheetCloseWrap: {
     width: 30,
@@ -670,88 +652,47 @@ const styles = StyleSheet.create({
     backgroundColor: T.surfaceSubtle,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: T.border,
   },
+  sheetBody: { padding: T.sp16, gap: T.sp8, paddingBottom: 8 },
 
-  sheetBody: {
-    padding: T.sp20,
-    paddingBottom: 12,
-    gap: 0,
-  },
-
-  // ── Sections ──
   section: {
-    marginBottom: T.sp20,
+    marginBottom: T.sp16,
   },
   sectionContent: {
-    backgroundColor: T.surface,
-    borderRadius: T.r12,
-    borderWidth: 1,
-    borderColor: T.border,
-    padding: T.sp16,
-    gap: T.sp16,
+    gap: T.sp12,
   },
-
-  // ── Fields ──
   field: { gap: T.sp4 },
   fieldRow: { flexDirection: "row", gap: T.sp12 },
-  fieldLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    color: T.textSec,
-    marginBottom: 2,
-  },
-  required: {
-    color: T.danger,
-    fontFamily: "Inter_600SemiBold" as any,
-  },
+  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.textMuted, letterSpacing: 0.3 },
+  required: { color: T.danger },
   fieldInput: {
     backgroundColor: T.bg,
     borderWidth: 1,
     borderColor: T.border,
     borderRadius: T.r10,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === "ios" ? 11 : 9,
+    paddingHorizontal: 14,
+    paddingVertical: T.sp12,
     fontFamily: "Inter_400Regular",
-    fontSize: 14,
+    fontSize: 15,
     color: T.text,
   },
-  fieldInputError: {
-    borderColor: T.danger,
-    backgroundColor: T.danger + "06",
-  },
-  errorText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: T.danger,
-    marginTop: 2,
-  },
-  textArea: {
-    height: 76,
-    textAlignVertical: "top",
-    paddingTop: Platform.OS === "ios" ? 11 : 9,
-  },
-  textAreaTall: {
-    height: 96,
-    textAlignVertical: "top",
-    paddingTop: Platform.OS === "ios" ? 11 : 9,
-  },
+  fieldInputError: { borderColor: T.danger },
+  errorText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.danger },
+  textArea: { height: 72, textAlignVertical: "top" },
+  textAreaTall: { height: 96, textAlignVertical: "top" },
 
-  // ── Actions ──
   sheetActions: {
     flexDirection: "row",
-    paddingHorizontal: T.sp20,
+    paddingHorizontal: T.sp16,
     paddingTop: T.sp12,
-    paddingBottom: Platform.OS === "web" ? 34 : T.sp8,
+    paddingBottom: 4,
     gap: T.sp12,
     borderTopWidth: 1,
     borderTopColor: T.border,
-    backgroundColor: T.bg,
   },
   btnCancel: {
     flex: 1,
-    height: 48,
+    height: 46,
     borderRadius: T.r10,
     borderWidth: 1,
     borderColor: T.border,
@@ -759,41 +700,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: T.surface,
   },
-  btnCancelText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: T.textSec,
-  },
+  btnCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
   btnSave: {
     flex: 2,
-    height: 48,
+    height: 46,
     borderRadius: T.r10,
     backgroundColor: T.primary,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
     gap: 6,
   },
-  btnSaveText: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 15,
-    color: "#fff",
-  },
+  btnSaveText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
 
-  // ── Toast ──
   toastOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    paddingHorizontal: 16,
+    paddingHorizontal: T.sp16,
     paddingBottom: Platform.OS === "web" ? 54 : 34,
   },
   toastBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: T.sp16,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: T.r10,
   },
   toastBarSuccess: { backgroundColor: T.success },
   toastBarError: { backgroundColor: T.danger },

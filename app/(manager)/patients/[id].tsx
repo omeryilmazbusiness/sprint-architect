@@ -28,6 +28,7 @@ import { AssignTransportSheet } from "@/components/guestDetail/AssignTransportSh
 import { AssignHotelSheet } from "@/components/guestDetail/AssignHotelSheet";
 import { AssignDocTypeSheet } from "@/components/guestDetail/AssignDocTypeSheet";
 import { CreateAppointmentSheet } from "@/components/guestDetail/CreateAppointmentSheet";
+import { useT } from "@/hooks/useT";
 
 interface GuestDetail {
   patient: {
@@ -118,6 +119,8 @@ export default function GuestDetailScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { accessToken } = useAuth();
+  const t = useT();
+  const tp = t.managerPatient;
 
   const [showTransportSheet, setShowTransportSheet] = useState(false);
   const [showHotelSheet, setShowHotelSheet] = useState(false);
@@ -262,12 +265,12 @@ export default function GuestDetailScreen() {
       }
     } else {
       Alert.alert(
-        "Cancel Appointment",
-        `Cancel "${title || "appointment"}"?`,
+        tp.cancelApptTitle,
+        tp.cancelApptConfirm,
         [
-          { text: "Keep", style: "cancel" },
+          { text: tp.cancelApptKeep, style: "cancel" },
           {
-            text: "Cancel Appointment",
+            text: tp.cancelApptAction,
             style: "destructive",
             onPress: () => cancelAppointmentMutation.mutate(apptId),
           },
@@ -305,7 +308,7 @@ export default function GuestDetailScreen() {
     return (
       <View style={[styles.centerBox, { paddingTop: topPad }]}>
         <ActivityIndicator size="large" color={T.accent} />
-        <Text style={styles.loadingText}>Loading guest…</Text>
+        <Text style={styles.loadingText}>{tp.loading}</Text>
       </View>
     );
   }
@@ -314,10 +317,10 @@ export default function GuestDetailScreen() {
     return (
       <View style={[styles.centerBox, { paddingTop: topPad }]}>
         <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
-        <Text style={styles.errorTitle}>Couldn't load guest</Text>
-        <Text style={styles.errorSub}>Check connection and try again</Text>
+        <Text style={styles.errorTitle}>{tp.errorTitle}</Text>
+        <Text style={styles.errorSub}>{tp.errorSub}</Text>
         <Pressable onPress={() => refetch()} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Try Again</Text>
+          <Text style={styles.retryText}>{tp.tryAgain}</Text>
         </Pressable>
       </View>
     );
@@ -335,12 +338,12 @@ export default function GuestDetailScreen() {
       }
     } else {
       Alert.alert(
-        "Approve Guest",
-        `Approve ${patient.fullName} and begin their journey?`,
+        tp.approveGuestTitle,
+        tp.approveGuestConfirm,
         [
-          { text: "Cancel", style: "cancel" },
+          { text: tp.approveGuestCancel, style: "cancel" },
           {
-            text: "Approve",
+            text: tp.approveGuestAction,
             style: "default",
             onPress: () => approveMutation.mutate(),
           },
@@ -406,7 +409,7 @@ export default function GuestDetailScreen() {
           <View style={[styles.apptCard, cardShadow]}>
             <View style={styles.apptHeaderRow}>
               <Ionicons name="calendar-outline" size={14} color={T.success} />
-              <Text style={styles.apptBadge}>Next Appointment</Text>
+              <Text style={styles.apptBadge}>{tp.nextAppt}</Text>
               <View style={styles.apptHeaderActions}>
                 <Pressable
                   onPress={() => setShowApptSheet(true)}
@@ -452,14 +455,14 @@ export default function GuestDetailScreen() {
                 size={20}
                 color={T.textMuted}
               />
-              <Text style={styles.apptEmptyText}>No upcoming appointments</Text>
+              <Text style={styles.apptEmptyText}>{tp.noUpcomingAppts}</Text>
             </View>
             <Pressable
               onPress={() => setShowApptSheet(true)}
               style={styles.apptCreateBtn}
             >
               <Ionicons name="add" size={14} color="#fff" />
-              <Text style={styles.apptCreateBtnText}>Schedule</Text>
+              <Text style={styles.apptCreateBtnText}>{tp.schedule}</Text>
             </Pressable>
           </View>
         )}
@@ -470,7 +473,7 @@ export default function GuestDetailScreen() {
           updating={trackingMutation.isPending}
         />
 
-        <Text style={styles.sectionLabel}>Assignments</Text>
+        <Text style={styles.sectionLabel}>{tp.sectionAssignments}</Text>
 
         <TransportAssignmentCard
           transport={assignments.transport}
@@ -492,9 +495,8 @@ export default function GuestDetailScreen() {
           }}
         />
 
-        {/* Danger zone */}
         <View style={styles.dangerZone}>
-          <Text style={styles.dangerZoneLabel}>Device Management</Text>
+          <Text style={styles.dangerZoneLabel}>{tp.sectionDeviceMgmt}</Text>
           <Pressable
             style={[styles.dangerBtn, resetDeviceMutation.isPending && { opacity: 0.6 }]}
             onPress={() => {
@@ -524,13 +526,11 @@ export default function GuestDetailScreen() {
             ) : (
               <>
                 <Ionicons name="phone-portrait-outline" size={16} color={T.danger} />
-                <Text style={styles.dangerBtnText}>Reset Device Binding</Text>
+                <Text style={styles.dangerBtnText}>{tp.resetDeviceBtn}</Text>
               </>
             )}
           </Pressable>
-          <Text style={styles.dangerBtnHint}>
-            Use this if the guest can't log in because their key is bound to an old device.
-          </Text>
+          <Text style={styles.dangerBtnHint}>{tp.resetDeviceHint}</Text>
         </View>
       </ScrollView>
 
@@ -732,11 +732,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: T.textMuted,
+    marginTop: 4,
+    textAlign: "center",
   },
   retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: T.sp24,
-    paddingVertical: 12,
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     borderRadius: T.r10,
     backgroundColor: T.accent,
   },
@@ -746,36 +748,35 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   dangerZone: {
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: T.sp16,
     padding: T.sp16,
     backgroundColor: T.surface,
     borderRadius: T.r16,
     borderWidth: 1,
-    borderColor: T.dangerBorder,
+    borderColor: T.danger + "30",
+    gap: T.sp8,
+    ...cardShadow,
   },
   dangerZoneLabel: {
     fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    color: T.danger,
+    fontSize: 12,
+    color: T.textMuted,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 10,
+    letterSpacing: 0.8,
   },
   dangerBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: T.dangerBg,
+    gap: T.sp8,
+    paddingVertical: 10,
+    paddingHorizontal: T.sp12,
+    borderRadius: T.r8,
     borderWidth: 1,
-    borderColor: T.dangerBorder,
-    borderRadius: T.r10,
-    paddingVertical: 12,
-    paddingHorizontal: T.sp16,
-    justifyContent: "center",
+    borderColor: T.danger + "40",
+    backgroundColor: T.danger + "08",
   },
   dangerBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: T.danger,
   },
@@ -783,7 +784,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: T.textMuted,
-    marginTop: 8,
-    lineHeight: 16,
+    lineHeight: 17,
   },
 });

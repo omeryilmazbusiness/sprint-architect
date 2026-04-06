@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, softShadow } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 interface ActionItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -38,10 +39,13 @@ function ActionChip({ icon, label, color, bgColor, onPress }: ActionItem) {
 }
 
 export function ManagerQuickActions() {
+  const t = useT();
+  const td = t.managerDashboard;
+
   const actions: ActionItem[] = [
     {
       icon: "person-add-outline",
-      label: "New Guest",
+      label: td.qaNewGuest,
       color: "#6366F1",
       bgColor: "#6366F115",
       onPress: () =>
@@ -52,28 +56,28 @@ export function ManagerQuickActions() {
     },
     {
       icon: "document-text-outline",
-      label: "Doc Types",
+      label: td.qaDocTypes,
       color: T.warning,
       bgColor: T.warning + "15",
       onPress: () => router.push("/(manager)/document-types"),
     },
     {
       icon: "people-outline",
-      label: "All Guests",
+      label: td.qaAllGuests,
       color: T.primary,
       bgColor: T.primary + "14",
       onPress: () => router.push("/(manager-tabs)/users"),
     },
     {
       icon: "layers-outline",
-      label: "Services",
+      label: td.qaServices,
       color: "#2ECF8F",
       bgColor: "#2ECF8F15",
       onPress: () => router.push("/(manager-tabs)/services"),
     },
     {
       icon: "receipt-outline",
-      label: "Invoices",
+      label: td.qaInvoices,
       color: "#E3485B",
       bgColor: "#E3485B15",
       onPress: () => router.push("/(manager-tabs)/invoices"),

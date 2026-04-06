@@ -20,6 +20,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
+import { useT } from "@/hooks/useT";
 
 interface Hotel {
   id: string;
@@ -34,6 +35,9 @@ interface Hotel {
 }
 
 export default function HotelsScreen() {
+  const t = useT();
+  const th = t.managerHotels;
+
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Hotel | null>(null);
   const [form, setForm] = useState({
@@ -130,7 +134,7 @@ export default function HotelsScreen() {
   return (
     <View style={styles.root}>
       <ManagerHeader
-        title="Hotels"
+        title={th.title}
         backButton
         onBack={() => router.back()}
         right={
@@ -154,7 +158,7 @@ export default function HotelsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="bed-outline" size={36} color={T.textMuted} />
-              <Text style={styles.emptyText}>No hotels yet. Add your first hotel.</Text>
+              <Text style={styles.emptyText}>{th.emptyText}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -189,27 +193,27 @@ export default function HotelsScreen() {
       <Modal visible={showForm} animationType="slide" presentationStyle="formSheet">
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingItem ? "Edit Hotel" : "Add Hotel"}</Text>
+            <Text style={styles.modalTitle}>{editingItem ? th.formTitleEdit : th.formTitleAdd}</Text>
             <Pressable onPress={() => setShowForm(false)} hitSlop={10}>
               <Ionicons name="close" size={24} color={T.text} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Hotel Name *</Text>
+              <Text style={styles.fieldLabel}>{th.fieldHotelName}</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="Grand Palace Hotel"
+                placeholder={th.fieldHotelNamePlaceholder}
                 placeholderTextColor={T.textMuted}
                 value={form.name}
                 onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Address</Text>
+              <Text style={styles.fieldLabel}>{th.fieldAddress}</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="123 Main St, City"
+                placeholder={th.fieldAddressPlaceholder}
                 placeholderTextColor={T.textMuted}
                 value={form.address}
                 onChangeText={(v) => setForm((f) => ({ ...f, address: v }))}
@@ -217,7 +221,7 @@ export default function HotelsScreen() {
             </View>
             <View style={styles.fieldRow}>
               <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Phone</Text>
+                <Text style={styles.fieldLabel}>{th.fieldPhone}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="+1..."
@@ -228,7 +232,7 @@ export default function HotelsScreen() {
                 />
               </View>
               <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Stars (1-5)</Text>
+                <Text style={styles.fieldLabel}>{th.fieldStars}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="5"
@@ -240,7 +244,7 @@ export default function HotelsScreen() {
               </View>
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel}>{th.fieldEmail}</Text>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="info@hotel.com"
@@ -252,7 +256,7 @@ export default function HotelsScreen() {
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Website</Text>
+              <Text style={styles.fieldLabel}>{th.fieldWebsite}</Text>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="https://..."
@@ -263,10 +267,10 @@ export default function HotelsScreen() {
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Notes</Text>
+              <Text style={styles.fieldLabel}>{th.fieldNotes}</Text>
               <TextInput
                 style={[styles.fieldInput, styles.textArea]}
-                placeholder="Additional info..."
+                placeholder={th.fieldNotesPlaceholder}
                 placeholderTextColor={T.textMuted}
                 value={form.notes}
                 onChangeText={(v) => setForm((f) => ({ ...f, notes: v }))}
@@ -277,7 +281,7 @@ export default function HotelsScreen() {
           </ScrollView>
           <View style={styles.modalActions}>
             <Pressable style={styles.btnSecondary} onPress={() => setShowForm(false)}>
-              <Text style={styles.btnSecondaryText}>Cancel</Text>
+              <Text style={styles.btnSecondaryText}>{th.btnCancel}</Text>
             </Pressable>
             <Pressable
               style={[styles.btnPrimary, { opacity: !form.name.trim() || mutation.isPending ? 0.6 : 1 }]}
@@ -286,7 +290,7 @@ export default function HotelsScreen() {
             >
               {mutation.isPending
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.btnPrimaryText}>{editingItem ? "Save Changes" : "Add Hotel"}</Text>
+                : <Text style={styles.btnPrimaryText}>{editingItem ? th.btnSaveChanges : th.btnAddHotel}</Text>
               }
             </Pressable>
           </View>

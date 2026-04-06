@@ -30,6 +30,7 @@ import {
   DEFAULT_GUEST_FILTERS,
 } from "@/components/filters/ManagerFilterSheet";
 import { ActiveFilterChips, type ActiveChip } from "@/components/filters/ActiveFilterChips";
+import { useT } from "@/hooks/useT";
 
 type TabType = "Guests" | "Doctors" | "Pending Docs";
 
@@ -139,6 +140,9 @@ const skeletonStyles = StyleSheet.create({
 
 function GuestsTab() {
   const params = useLocalSearchParams<{ openCreate?: string }>();
+  const t = useT();
+  const tu = t.managerUsers;
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState<GuestFilterState>(DEFAULT_GUEST_FILTERS);
@@ -218,7 +222,7 @@ function GuestsTab() {
             <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search guests..."
+              placeholder={tu.searchGuestsPlaceholder}
               placeholderTextColor={T.textMuted}
               value={search}
               onChangeText={setSearch}
@@ -254,7 +258,7 @@ function GuestsTab() {
           ListHeaderComponent={
             data?.totalCount != null ? (
               <Text style={styles.listCount}>
-                Guests ({data.totalCount})
+                {tu.guestsCountLabel.replace("{n}", String(data.totalCount))}
               </Text>
             ) : null
           }
@@ -262,16 +266,14 @@ function GuestsTab() {
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={40} color={T.border} />
               <Text style={styles.emptyTitle}>
-                {search || hasActiveFilters ? "No guests found" : "No guests yet"}
+                {search || hasActiveFilters ? tu.emptyGuestsTitle : tu.emptyGuestsTitleNoData}
               </Text>
               <Text style={styles.emptyText}>
-                {search || hasActiveFilters
-                  ? "Try adjusting your search or filters"
-                  : "Tap the + button to add your first guest"}
+                {search || hasActiveFilters ? tu.emptyGuestsSub : tu.emptyGuestsSubNoData}
               </Text>
               {hasActiveFilters && (
                 <Pressable onPress={clearAllFilters} style={styles.clearFiltersBtn}>
-                  <Text style={styles.clearFiltersBtnText}>Clear filters</Text>
+                  <Text style={styles.clearFiltersBtnText}>{tu.clearFilters}</Text>
                 </Pressable>
               )}
             </View>
@@ -296,7 +298,6 @@ function GuestsTab() {
 
       <CreateGuestSheet visible={showCreate} onClose={() => setShowCreate(false)} />
 
-
       <ManagerFilterSheet
         visible={showFilterSheet}
         current={filters}
@@ -308,6 +309,10 @@ function GuestsTab() {
 }
 
 function DoctorsTab() {
+  const t = useT();
+  const tu = t.managerUsers;
+  const td = t.managerDoctors;
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -348,13 +353,13 @@ function DoctorsTab() {
     onSuccess: (_data, id) => {
       setDeletedIds((prev) => new Set(prev).add(id));
       qc.invalidateQueries({ queryKey: ["/v1/manager/doctors"], exact: false });
-      setTimeout(() => showToast("Doctor removed"), 50);
+      setTimeout(() => showToast(td.toastDoctorRemoved), 50);
     },
     onError: (e: any) => {
       if (e?.code === "DOC-DEL-001") {
-        showToast("Doctor has appointments — cannot delete", "error");
+        showToast(td.toastHasAppointments, "error");
       } else {
-        showToast(e.message ?? "Failed to delete doctor", "error");
+        showToast(e.message ?? td.toastFailedDelete, "error");
       }
     },
   });
@@ -371,7 +376,7 @@ function DoctorsTab() {
             <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search doctors..."
+              placeholder={tu.searchDoctorsPlaceholder}
               placeholderTextColor={T.textMuted}
               value={search}
               onChangeText={setSearch}
@@ -404,15 +409,19 @@ function DoctorsTab() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
           ListHeaderComponent={
             rows.length > 0 ? (
-              <Text style={styles.listCount}>Doctors ({rows.length})</Text>
+              <Text style={styles.listCount}>
+                {tu.doctorsCountLabel.replace("{n}", String(rows.length))}
+              </Text>
             ) : null
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="medical-outline" size={40} color={T.border} />
-              <Text style={styles.emptyTitle}>No doctors yet</Text>
+              <Text style={styles.emptyTitle}>
+                {debouncedSearch ? tu.emptyDoctorsTitle : td.emptyTitle}
+              </Text>
               <Text style={styles.emptyText}>
-                {debouncedSearch ? "Try a different search" : "Tap + to add your first doctor"}
+                {debouncedSearch ? tu.emptyDoctorsSub : tu.emptyDoctorsSubNoSearch}
               </Text>
               {!debouncedSearch && (
                 <Pressable
@@ -420,7 +429,7 @@ function DoctorsTab() {
                   style={({ pressed }) => [styles.emptyAddBtn, { opacity: pressed ? 0.8 : 1 }]}
                 >
                   <Ionicons name="add-circle-outline" size={18} color={T.primary} />
-                  <Text style={styles.emptyAddBtnText}>Add Doctor</Text>
+                  <Text style={styles.emptyAddBtnText}>{tu.addDoctor}</Text>
                 </Pressable>
               )}
             </View>
@@ -462,13 +471,6 @@ function DoctorsTab() {
   );
 }
 
-const DOC_FILTER_OPTIONS: { label: string; value: DocFilter }[] = [
-  { label: "All", value: "ALL" },
-  { label: "Pending", value: "HAS_PENDING" },
-  { label: "Uploaded", value: "FULLY_UPLOADED" },
-  { label: "Rejected", value: "HAS_REJECTED" },
-];
-
 function DocStatusBadge({ count, color, label }: { count: number; color: string; label: string }) {
   if (count === 0) return null;
   return (
@@ -479,15 +481,25 @@ function DocStatusBadge({ count, color, label }: { count: number; color: string;
 }
 
 function PendingDocsTab() {
+  const t = useT();
+  const tu = t.managerUsers;
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [docFilter, setDocFilter] = useState<DocFilter>("HAS_PENDING");
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
   }, [search]);
+
+  const DOC_FILTER_OPTIONS: { label: string; value: DocFilter }[] = [
+    { label: tu.docFilterAll, value: "ALL" },
+    { label: tu.docFilterPending, value: "HAS_PENDING" },
+    { label: tu.docFilterUploaded, value: "FULLY_UPLOADED" },
+    { label: tu.docFilterRejected, value: "HAS_REJECTED" },
+  ];
 
   const { data, isLoading, isRefetching, refetch } = useQuery<DocSummaryItem[]>({
     queryKey: ["/v1/manager/patients/doc-summaries", debouncedSearch, docFilter],
@@ -518,7 +530,6 @@ function PendingDocsTab() {
         ]}
         onPress={() => router.push(`/(manager)/patients/${item.patientId}` as any)}
       >
-        {/* Top row */}
         <View style={docStyles.cardTop}>
           <View style={[docStyles.avatar, { backgroundColor: hasPending ? T.warning + "18" : T.accent + "14" }]}>
             <Text style={[docStyles.avatarText, { color: hasPending ? T.warning : T.accent }]}>
@@ -532,15 +543,13 @@ function PendingDocsTab() {
           <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
         </View>
 
-        {/* Status badges */}
         <View style={docStyles.badgeRow}>
-          <DocStatusBadge count={item.pending} color={T.warning} label="pending" />
-          <DocStatusBadge count={item.uploaded} color={T.accent} label="uploaded" />
-          <DocStatusBadge count={item.approved} color={T.success} label="approved" />
-          <DocStatusBadge count={item.rejected} color={T.danger} label="rejected" />
+          <DocStatusBadge count={item.pending} color={T.warning} label={tu.docBadgePending} />
+          <DocStatusBadge count={item.uploaded} color={T.accent} label={tu.docBadgeUploaded} />
+          <DocStatusBadge count={item.approved} color={T.success} label={tu.docBadgeApproved} />
+          <DocStatusBadge count={item.rejected} color={T.danger} label={tu.docBadgeRejected} />
         </View>
 
-        {/* Pending doc names */}
         {item.pendingDocNames.length > 0 && (
           <View style={docStyles.chipRow}>
             {item.pendingDocNames.slice(0, 3).map((name, i) => (
@@ -558,15 +567,20 @@ function PendingDocsTab() {
     );
   }
 
+  const docSuffix =
+    docFilter === "HAS_PENDING" ? tu.docSuffixWithPending :
+    docFilter === "FULLY_UPLOADED" ? tu.docSuffixWithUploaded :
+    docFilter === "HAS_REJECTED" ? tu.docSuffixWithRejected :
+    tu.docSuffixAll;
+
   return (
     <View style={{ flex: 1 }}>
-      {/* Search + filter bar */}
       <View style={styles.filterBar}>
         <View style={[styles.searchBar, { marginHorizontal: T.sp16, marginBottom: T.sp12 }]}>
           <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search guests..."
+            placeholder={tu.searchDocsPlaceholder}
             placeholderTextColor={T.textMuted}
             value={search}
             onChangeText={setSearch}
@@ -610,10 +624,7 @@ function PendingDocsTab() {
           ListHeaderComponent={
             items.length > 0 ? (
               <Text style={styles.listCount}>
-                {items.length} guest{items.length !== 1 ? "s" : ""}
-                {docFilter === "HAS_PENDING" ? " with pending docs" :
-                  docFilter === "FULLY_UPLOADED" ? " with uploaded docs" :
-                  docFilter === "HAS_REJECTED" ? " with rejected docs" : ""}
+                {items.length} {items.length !== 1 ? tu.guestPlural : tu.guestSingular}{docSuffix}
               </Text>
             ) : null
           }
@@ -625,13 +636,10 @@ function PendingDocsTab() {
                 color={T.border}
               />
               <Text style={styles.emptyTitle}>
-                {docFilter === "HAS_PENDING" ? "No pending documents" :
-                  docFilter === "FULLY_UPLOADED" ? "No uploaded documents" :
-                  docFilter === "HAS_REJECTED" ? "No rejected documents" :
-                  "No document records"}
+                {debouncedSearch ? tu.docEmptySearchTitle : tu.docEmptyTitle}
               </Text>
               <Text style={styles.emptyText}>
-                {debouncedSearch ? "Try a different search" : "All guests are up to date"}
+                {debouncedSearch ? tu.docEmptySearchSub : tu.docEmptySub}
               </Text>
             </View>
           }
@@ -645,19 +653,21 @@ function PendingDocsTab() {
 const docStyles = StyleSheet.create({
   card: {
     backgroundColor: T.surface,
-    borderRadius: T.r12,
+    borderRadius: T.r16,
+    padding: T.sp16,
     borderWidth: 1,
     borderColor: T.border,
-    padding: T.sp16,
-    gap: T.sp8,
+    gap: T.sp12,
   },
   cardPending: {
     borderColor: T.warning + "50",
-    backgroundColor: T.warningBg,
+    borderLeftWidth: 3,
+    borderLeftColor: T.warning,
   },
   cardRejected: {
     borderColor: T.danger + "50",
-    backgroundColor: T.dangerBg,
+    borderLeftWidth: 3,
+    borderLeftColor: T.danger,
   },
   cardTop: {
     flexDirection: "row",
@@ -665,16 +675,15 @@ const docStyles = StyleSheet.create({
     gap: T.sp12,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
   },
   avatarText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 16,
+    fontSize: 15,
   },
   name: {
     fontFamily: "Inter_600SemiBold" as any,
@@ -685,7 +694,7 @@ const docStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: T.textMuted,
-    marginTop: 1,
+    marginTop: 2,
   },
   badgeRow: {
     flexDirection: "row",
@@ -695,7 +704,7 @@ const docStyles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
   },
   badgeText: {
@@ -734,10 +743,18 @@ const docStyles = StyleSheet.create({
 
 export default function UsersScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
+  const t = useT();
+  const tu = t.managerUsers;
+
   const [activeTab, setActiveTab] = useState<TabType>("Guests");
   const { logout } = useAuth();
 
-  // Auto-switch tab from URL param (e.g., from KPI card navigation)
+  const tabLabels: Record<TabType, string> = {
+    "Guests": tu.tabGuests,
+    "Doctors": tu.tabDoctors,
+    "Pending Docs": tu.tabPendingDocs,
+  };
+
   useEffect(() => {
     if (params.tab === "Pending Docs") {
       setActiveTab("Pending Docs");
@@ -751,7 +768,7 @@ export default function UsersScreen() {
 
   return (
     <View style={styles.root}>
-      <ManagerHeader title="Users" onLogout={handleLogout} />
+      <ManagerHeader title={t.managerTabLabels.users} onLogout={handleLogout} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -765,7 +782,7 @@ export default function UsersScreen() {
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab}
+              {tabLabels[tab]}
             </Text>
           </Pressable>
         ))}
@@ -907,36 +924,6 @@ const styles = StyleSheet.create({
   filterPillActive: { backgroundColor: T.primary, borderColor: T.primary },
   filterPillText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
   filterPillTextActive: { color: "#fff" },
-  missingFilters: {
-    paddingHorizontal: T.sp16,
-    paddingBottom: T.sp12,
-    gap: T.sp8,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: T.r6,
-    backgroundColor: T.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  filterChipActive: { backgroundColor: T.primary + "10", borderColor: T.primary },
-  filterChipWarnActive: { backgroundColor: T.warningBg, borderColor: T.warningBorder },
-  filterChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.textSec },
-  filterChipTextActive: { color: T.primary },
-  filterChipTextWarn: { color: T.warning },
-  clearChip: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: T.r6,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    gap: 4,
-  },
-  clearChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.danger },
   clearFiltersBtn: {
     marginTop: 12,
     paddingHorizontal: 20,
@@ -947,81 +934,6 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
   },
   clearFiltersBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
-  activeFiltersRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: T.sp16,
-    paddingBottom: T.sp12,
-    gap: T.sp8,
-  },
-  activeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: T.primary + "15",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-    gap: 6,
-  },
-  activeChipText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 11, color: T.primary },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp16,
-    backgroundColor: T.surface,
-    gap: T.sp16,
-  },
-  rowTopLine: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
-  missingTag: {
-    backgroundColor: T.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  missingTagWarn: {
-    backgroundColor: T.warningBg,
-    borderColor: T.warningBorder,
-  },
-  missingTagText: { fontFamily: "Inter_500Medium", fontSize: 10, color: T.textMuted },
-  missingTagTextWarn: { color: T.warning },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 16 },
-  rowInfo: { flex: 1 },
-  rowName: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 16,
-    color: T.text,
-    flex: 1,
-    marginRight: 8,
-  },
-  rowMeta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted },
-  doctorCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp16,
-    backgroundColor: T.surface,
-    gap: T.sp16,
-  },
-  doctorInfo: { flex: 1 },
-  doctorName: { fontFamily: "Inter_700Bold", fontSize: 16, color: T.text, marginBottom: 2 },
-  doctorSpecialty: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.primary, marginBottom: 4 },
-  doctorPhone: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted },
   listCount: {
     fontFamily: "Inter_600SemiBold" as any,
     fontSize: 13,
@@ -1051,205 +963,6 @@ const styles = StyleSheet.create({
     ...cardShadow,
     elevation: 6,
   },
-  modal: { flex: 1, backgroundColor: T.bg },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: T.sp20,
-    paddingTop: T.sp24,
-    paddingBottom: T.sp16,
-    backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  stepBadge: {
-    backgroundColor: T.primary + "15",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  stepText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 12, color: T.primary },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: T.sp24,
-    paddingVertical: T.sp12,
-    backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  stepDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: T.border,
-  },
-  stepDotActive: { backgroundColor: T.primary },
-  stepLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: T.border,
-    marginHorizontal: 4,
-  },
-  stepLineActive: { backgroundColor: T.primary },
-  stepTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: T.text,
-    marginBottom: T.sp4,
-  },
-  modalScroll: { flex: 1 },
-  modalContent: { padding: T.sp20, gap: T.sp16, paddingBottom: 40 },
-  sectionDivider: {
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-    paddingTop: T.sp12,
-    marginTop: T.sp4,
-  },
-  sectionDividerText: {
-    fontFamily: "Inter_600SemiBold" as any,
-    fontSize: 12,
-    color: T.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  field: { gap: T.sp4 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.textMuted, letterSpacing: 0.3 },
-  fieldInput: {
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.r10,
-    paddingHorizontal: 14,
-    paddingVertical: T.sp12,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: T.text,
-  },
-  pickerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.r10,
-    paddingHorizontal: 14,
-    paddingVertical: T.sp12,
-    height: 48,
-  },
-  pickerBtnText: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
-  pickerBtnPlaceholder: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.textMuted },
-  phoneRow: {
-    flexDirection: "row",
-    gap: T.sp8,
-  },
-  dialCodeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.r10,
-    paddingHorizontal: 12,
-    height: 48,
-    gap: 6,
-  },
-  dialCodeText: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
-  phoneInput: {
-    flex: 1,
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.r10,
-    paddingHorizontal: 14,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: T.text,
-    height: 48,
-  },
-  formError: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: T.danger,
-    textAlign: "center",
-    paddingVertical: T.sp8,
-  },
-  modalActions: {
-    flexDirection: "row",
-    padding: T.sp20,
-    gap: T.sp12,
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-    backgroundColor: T.surface,
-    ...(Platform.OS === "web" ? { paddingBottom: 34 } : {}),
-  },
-  btnSecondary: {
-    flex: 1,
-    height: 46,
-    borderRadius: T.r10,
-    borderWidth: 1,
-    borderColor: T.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: T.surface,
-  },
-  btnSecondaryText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
-  btnPrimary: {
-    flex: 1,
-    height: 46,
-    borderRadius: T.r10,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnPrimaryText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
-
-  cpModal: { flex: 1, backgroundColor: T.bg },
-  cpHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: T.sp20,
-    paddingTop: T.sp24,
-    paddingBottom: T.sp12,
-    backgroundColor: T.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  cpTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  cpSearch: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: T.sp16,
-    marginVertical: T.sp12,
-    backgroundColor: T.surfaceSubtle,
-    borderRadius: T.r10,
-    paddingHorizontal: T.sp12,
-    borderWidth: 1,
-    borderColor: T.border,
-    height: 42,
-  },
-  cpSearchInput: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: T.text,
-    height: 42,
-  },
-  cpRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: T.sp16,
-    paddingVertical: T.sp12,
-    backgroundColor: T.surface,
-    gap: T.sp12,
-  },
-  cpFlag: { fontSize: 22 },
-  cpName: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
-  cpDial: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
   toastOverlay: {
     flex: 1,
     justifyContent: "flex-end",

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Keyboard,
   Modal,
   Platform,
@@ -19,6 +18,7 @@ import { format, parseISO } from "date-fns";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { StatusPill, Divider } from "@/components/ui";
+import { useT } from "@/hooks/useT";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +126,8 @@ interface Props {
 
 export function AppointmentsTodaySheet({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
+  const t = useT();
+  const ta = t.appointmentsToday;
   const [search, setSearch] = useState("");
 
   const {
@@ -160,6 +162,8 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const todayLabel = getTodayLabel();
 
+  const countText = `${filtered.length} ${filtered.length === 1 ? ta.apptSingular : ta.apptPlural} ${search.length > 0 ? ta.countSuffixFound : ta.countSuffixToday}`;
+
   return (
     <Modal
       visible={visible}
@@ -185,7 +189,7 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
           {/* Sticky Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle}>Today's Appointments</Text>
+              <Text style={styles.headerTitle}>{ta.sheetTitle}</Text>
               <Text style={styles.headerSub}>{todayLabel}</Text>
             </View>
             <Pressable
@@ -205,7 +209,7 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
             <Ionicons name="search-outline" size={16} color={T.textMuted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search patient, doctor or procedure..."
+              placeholder={ta.searchPlaceholder}
               placeholderTextColor={T.textMuted}
               value={search}
               onChangeText={setSearch}
@@ -236,13 +240,13 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
                 <View style={[styles.emptyIcon, { backgroundColor: T.dangerBg }]}>
                   <Ionicons name="alert-circle-outline" size={24} color={T.danger} />
                 </View>
-                <Text style={styles.emptyTitle}>Unable to load appointments</Text>
-                <Text style={styles.emptyBody}>Check your connection and try again.</Text>
+                <Text style={styles.emptyTitle}>{ta.errorTitle}</Text>
+                <Text style={styles.emptyBody}>{ta.errorBody}</Text>
                 <Pressable
                   style={({ pressed }) => [styles.retryBtn, { opacity: pressed ? 0.8 : 1 }]}
                   onPress={() => refetch()}
                 >
-                  <Text style={styles.retryText}>Retry</Text>
+                  <Text style={styles.retryText}>{ta.retry}</Text>
                 </Pressable>
               </View>
             ) : filtered.length === 0 ? (
@@ -251,14 +255,10 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
                   <Ionicons name="calendar-outline" size={24} color={T.textMuted} />
                 </View>
                 <Text style={styles.emptyTitle}>
-                  {search.length > 0
-                    ? "No results for your search"
-                    : "No appointments scheduled for today"}
+                  {search.length > 0 ? ta.emptySearch : ta.emptyToday}
                 </Text>
                 {search.length === 0 && (
-                  <Text style={styles.emptyBody}>
-                    Appointments you create for today will appear here.
-                  </Text>
+                  <Text style={styles.emptyBody}>{ta.emptyTodayBody}</Text>
                 )}
               </View>
             ) : (
@@ -269,10 +269,7 @@ export function AppointmentsTodaySheet({ visible, onClose }: Props) {
               >
                 {/* Count badge */}
                 <View style={styles.countRow}>
-                  <Text style={styles.countText}>
-                    {filtered.length} appointment{filtered.length !== 1 ? "s" : ""}
-                    {search.length > 0 ? " found" : " today"}
-                  </Text>
+                  <Text style={styles.countText}>{countText}</Text>
                 </View>
                 {filtered.map((item, i) => (
                   <React.Fragment key={item.id}>

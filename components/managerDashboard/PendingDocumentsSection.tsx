@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import type { PendingGuestDocSummary } from "@/hooks/useManagerDashboard";
+import { useT } from "@/hooks/useT";
 
 const SCREEN_W = Dimensions.get("window").width;
 const CARD_W = Math.min(260, SCREEN_W * 0.68);
@@ -47,7 +48,12 @@ function SkeletonCard() {
   );
 }
 
-function GuestDocCard({ item }: { item: PendingGuestDocSummary }) {
+function GuestDocCard({ item, viewGuestLabel, pendingLabel, uploadedLabel }: {
+  item: PendingGuestDocSummary;
+  viewGuestLabel: string;
+  pendingLabel: string;
+  uploadedLabel: string;
+}) {
   const u = urgencyOf(item.pending);
   const color = urgencyColor(u);
 
@@ -90,9 +96,13 @@ function GuestDocCard({ item }: { item: PendingGuestDocSummary }) {
 
       {/* Summary line */}
       <Text style={styles.summaryLine}>
-        <Text style={[styles.summaryBold, { color }]}>{item.pending} pending</Text>
+        <Text style={[styles.summaryBold, { color }]}>
+          {pendingLabel.replace("{n}", String(item.pending))}
+        </Text>
         {item.uploaded > 0 ? (
-          <Text style={styles.summaryMuted}> · {item.uploaded} uploaded</Text>
+          <Text style={styles.summaryMuted}>
+            {" · "}{uploadedLabel.replace("{n}", String(item.uploaded))}
+          </Text>
         ) : null}
       </Text>
 
@@ -117,7 +127,7 @@ function GuestDocCard({ item }: { item: PendingGuestDocSummary }) {
 
       {/* CTA arrow */}
       <View style={styles.cta}>
-        <Text style={[styles.ctaText, { color }]}>View guest</Text>
+        <Text style={[styles.ctaText, { color }]}>{viewGuestLabel}</Text>
         <Ionicons name="arrow-forward" size={12} color={color} />
       </View>
     </Pressable>
@@ -125,6 +135,9 @@ function GuestDocCard({ item }: { item: PendingGuestDocSummary }) {
 }
 
 export function PendingDocumentsSection({ items, isLoading }: Props) {
+  const t = useT();
+  const td = t.managerDashboard;
+
   if (isLoading) {
     return (
       <View style={styles.skeletonRow}>
@@ -142,8 +155,8 @@ export function PendingDocumentsSection({ items, isLoading }: Props) {
           <Ionicons name="checkmark-circle" size={24} color={T.success} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.allClearTitle}>All clear</Text>
-          <Text style={styles.allClearSub}>No guests with pending documents</Text>
+          <Text style={styles.allClearTitle}>{td.pendingAllClear}</Text>
+          <Text style={styles.allClearSub}>{td.pendingAllClearSub}</Text>
         </View>
       </View>
     );
@@ -159,7 +172,14 @@ export function PendingDocumentsSection({ items, isLoading }: Props) {
       decelerationRate="fast"
       contentContainerStyle={styles.carouselContent}
       ItemSeparatorComponent={() => <View style={{ width: CARD_GAP }} />}
-      renderItem={({ item }) => <GuestDocCard item={item} />}
+      renderItem={({ item }) => (
+        <GuestDocCard
+          item={item}
+          viewGuestLabel={td.pendingViewGuest}
+          pendingLabel={td.pendingSummaryPending}
+          uploadedLabel={td.pendingSummaryUploaded}
+        />
+      )}
       scrollEnabled={!!items.length}
     />
   );

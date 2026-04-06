@@ -17,6 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { GUEST_BANNERS } from "@/constants/guestBanners";
 import { T } from "@/constants/adminTheme";
 import type { ManagerDashboardData } from "@/hooks/useManagerDashboard";
+import { useT } from "@/hooks/useT";
+import type { ManagerBannerDict } from "@/i18n/types";
 
 // ─── Sizing (mirrors GuestBannerCarousel exactly) ─────────────────────────────
 
@@ -29,11 +31,11 @@ const SLIDE_COUNT = 3;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeGreeting(): string {
+function timeGreeting(strings: ManagerBannerDict): string {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return strings.greetingMorning;
+  if (h < 17) return strings.greetingAfternoon;
+  return strings.greetingEvening;
 }
 
 function monthLabel(): string {
@@ -58,37 +60,38 @@ interface SlideConfig {
 function buildSlides(
   data: ManagerDashboardData,
   clinicName: string | undefined,
+  strings: ManagerBannerDict,
 ): SlideConfig[] {
   return [
     {
       imageIndex: 0,
-      contextLabel: "Daily Briefing",
+      contextLabel: strings.slide0Context,
       title: clinicName ?? "Dashboard",
-      subtitle: timeGreeting(),
+      subtitle: timeGreeting(strings),
       stats: [
-        { value: data.kpis.appointmentsToday, label: "Appts Today" },
-        { value: data.kpis.activeGuests, label: "Active Guests" },
+        { value: data.kpis.appointmentsToday, label: strings.statApptToday },
+        { value: data.kpis.activeGuests, label: strings.statActiveGuests },
       ],
     },
     {
       imageIndex: 1,
-      contextLabel: "Operations",
-      title: "Upcoming Week",
-      subtitle: "Schedule, assignments & pending items",
+      contextLabel: strings.slide1Context,
+      title: strings.slide1Title,
+      subtitle: strings.slide1Subtitle,
       stats: [
-        { value: data.upcomingNext7Days, label: "Next 7 Days" },
-        { value: data.kpis.missingAssignments, label: "Missing Plans" },
-        { value: data.kpis.pendingDocuments, label: "Pending Docs" },
+        { value: data.upcomingNext7Days, label: strings.statNext7Days },
+        { value: data.kpis.missingAssignments, label: strings.statMissingPlans },
+        { value: data.kpis.pendingDocuments, label: strings.statPendingDocs },
       ],
     },
     {
       imageIndex: 2,
       contextLabel: monthLabel(),
-      title: "Monthly View",
-      subtitle: "Arrivals and appointments this month",
+      title: strings.slide2Title,
+      subtitle: strings.slide2Subtitle,
       stats: [
-        { value: data.arrivingThisMonth, label: "Arriving" },
-        { value: data.monthAppointments.length, label: "Appts" },
+        { value: data.arrivingThisMonth, label: strings.statArriving },
+        { value: data.monthAppointments.length, label: strings.statAppts },
       ],
     },
   ];
@@ -164,6 +167,9 @@ interface Props {
 }
 
 export function ManagerBannerCarousel({ data, isLoading, clinicName }: Props) {
+  const t = useT();
+  const strings = t.managerBanner;
+
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -215,7 +221,7 @@ export function ManagerBannerCarousel({ data, isLoading, clinicName }: Props) {
     [startTimer],
   );
 
-  const slides = buildSlides(data, clinicName);
+  const slides = buildSlides(data, clinicName, strings);
 
   return (
     <View style={ss.wrapper}>

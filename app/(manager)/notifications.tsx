@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useRouter } from "expo-router";
 import { EmptyState } from "@/components/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useT } from "@/hooks/useT";
 
 type NotifSeverity = "INFO" | "WARNING" | "CRITICAL";
 type NotifStatus = "UNREAD" | "READ";
@@ -94,32 +95,18 @@ function getTypeAccentColor(type: string): string {
 function getNavTarget(item: ManagerNotification): string | null {
   const meta = item.metadata as Record<string, string> | null | undefined;
 
-  // Appointment notifications carry patientId in metadata
-  if (
-    item.relatedType === "appointment" &&
-    meta?.patientId
-  ) {
+  if (item.relatedType === "appointment" && meta?.patientId) {
     return `/(manager)/patients/${meta.patientId}`;
   }
-
-  // Document notifications: may carry patientId in metadata
-  if (
-    item.relatedType === "patient_document" &&
-    meta?.patientId
-  ) {
+  if (item.relatedType === "patient_document" && meta?.patientId) {
     return `/(manager)/patients/${meta.patientId}`;
   }
-
-  // Direct patient relation
   if (item.relatedType === "patient" && item.relatedId) {
     return `/(manager)/patients/${item.relatedId}`;
   }
-
-  // Invoice relation
   if (item.relatedType === "invoice" && item.relatedId) {
     return `/(manager)/invoices/${item.relatedId}`;
   }
-
   return null;
 }
 
@@ -138,10 +125,7 @@ function NotifCard({
   const borderColor = isUnread ? severityColor : "transparent";
   const navTarget = getNavTarget(item);
 
-  // Unread cards get a tinted background from the accent
-  const cardBg = isUnread
-    ? accentColor + "08"
-    : T.surface;
+  const cardBg = isUnread ? accentColor + "08" : T.surface;
 
   return (
     <Pressable
@@ -220,6 +204,8 @@ function NotifCard({
 export default function ManagerNotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useT();
+  const tn = t.managerNotifications;
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -269,7 +255,7 @@ export default function ManagerNotificationsScreen() {
   return (
     <View style={styles.container}>
       <ManagerHeader
-        title="Notifications"
+        title={tn.pageTitle}
         backButton
         onBack={() => router.back()}
         right={
@@ -287,7 +273,7 @@ export default function ManagerNotificationsScreen() {
               ) : (
                 <Ionicons name="checkmark-done-outline" size={14} color={T.primary} />
               )}
-              <Text style={styles.markAllText}>Mark all read</Text>
+              <Text style={styles.markAllText}>{tn.markAllRead}</Text>
             </Pressable>
           ) : undefined
         }
@@ -317,8 +303,8 @@ export default function ManagerNotificationsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              title="No notifications"
-              subtitle="You're all caught up! Updates about your clinic will appear here."
+              title={tn.emptyTitle}
+              subtitle={tn.emptySubtitle}
               icon="notifications-outline"
             />
           }
