@@ -1,0 +1,279 @@
+You are working on an EXISTING project.
+
+Your job is to extend the already-established professional i18n system across ALL ADMIN pages and admin-related UI, and add full high-quality Russian localization in the cleanest, safest, most scalable, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the i18n system from scratch if a good one is already in place
+- First inspect the current i18n architecture that was already introduced
+- Reuse and extend it properly
+- Do NOT create a second parallel translation system
+- Do NOT break existing admin flows
+- Do NOT leave mixed-language admin UI
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random hardcoded translations inside page components
+- Keep the architecture scalable to the whole project
+- The final result must feel like a real enterprise multilingual admin panel
+
+PRIMARY GOAL
+Take the existing professional i18n foundation and fully localize the ENTIRE ADMIN SIDE into Russian, while keeping the current default language support intact.
+
+This includes:
+- all admin pages
+- all admin layouts
+- all admin headers
+- all admin tabs/menus/navigation
+- all tables
+- all cards
+- all filters
+- all buttons
+- all labels
+- all forms
+- all placeholders
+- all validation messages shown in admin UI
+- all empty states
+- all loading/error states
+- all modal/dialog text
+- all badges, chips, status labels
+- all notification/credential request/admin system event UI
+- all admin settings/profile related screens
+- all reusable admin components
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. EXISTING I18N SYSTEM
+- current language provider/context
+- translation resource structure
+- translation hook/helper
+- language persistence behavior
+- admin header language switcher
+- current admin dashboard translation setup
+- naming conventions for translation keys
+- whether there are any inconsistencies already in the current i18n implementation
+
+2. FULL ADMIN SURFACE AREA
+You must scan ALL admin-related pages, layouts, and reusable components.
+Identify:
+- all admin routes/pages
+- all shared admin components
+- all string-heavy components
+- all filters/tables/forms/dialogs
+- all status labels
+- all header/sidebar/menu strings
+- all toast/error/success messages visible in admin flows
+
+3. STRING SOURCES
+Find:
+- hardcoded strings still inside admin pages/components
+- derived labels
+- enum-to-label mappings
+- placeholder strings
+- validation/help text
+- modal confirmation text
+- empty-state content
+- button labels
+- search/filter labels
+
+Then directly implement the localization rollout.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — I18N AUDIT + KEY STRATEGY
+1. Inspect the current i18n architecture
+2. Confirm whether it is good enough to extend
+3. Define/continue a consistent translation key strategy for admin
+4. Organize admin translation resources cleanly
+5. Avoid messy flat uncontrolled key growth
+
+Recommended organization style:
+- admin.common.*
+- admin.header.*
+- admin.dashboard.*
+- admin.notifications.*
+- admin.users.*
+- admin.invoices.*
+- admin.settings.*
+- admin.forms.*
+- admin.status.*
+- admin.errors.*
+- admin.empty.*
+Adjust to the real project structure if needed, but keep it consistent and scalable.
+
+Acceptance criteria:
+- one consistent admin translation key architecture exists
+- no parallel i18n system is introduced
+- future admin pages can be localized easily using the same structure
+
+PHASE 2 — FULL ADMIN PAGE LOCALIZATION
+Localize ALL admin pages completely.
+
+Requirements:
+- move visible strings into the i18n system
+- no mixed-language UI remains
+- no important admin screen left partially localized
+- every admin page should react instantly to language change
+- preserve layout and UX quality in both languages
+
+You must localize all of these kinds of UI where they exist:
+- page titles
+- section headings
+- cards
+- summary labels
+- KPI labels
+- filters
+- search bars
+- tabs
+- table column names
+- action button text
+- dropdown labels
+- form labels
+- placeholders
+- empty states
+- confirmation dialogs
+- toasts
+- banners
+- warnings
+- error messages shown to users
+- status text
+- pagination labels
+- admin notification center UI
+
+Acceptance criteria:
+- all admin pages are fully localizable
+- switching language updates all visible UI correctly
+- no visible hardcoded admin strings remain
+
+PHASE 3 — RUSSIAN TRANSLATION QUALITY
+Add professional Russian translations for the full admin surface.
+
+Requirements:
+- translations must be natural and product-quality
+- terminology must be consistent
+- wording must feel professional for SaaS/admin use
+- avoid awkward literal machine translation
+- use concise, UI-appropriate Russian
+- keep a consistent tone across the whole admin panel
+
+Special attention:
+- billing terms
+- guest/patient terminology
+- clinic/admin/system language
+- approval/rejection language
+- notification language
+- scheduling terminology
+- status labels
+- buttons and confirmations
+
+Acceptance criteria:
+- Russian feels native and professional
+- terminology is consistent across admin
+- the UI does not feel machine-translated
+
+PHASE 4 — ENUM / STATUS / BADGE LOCALIZATION
+Inspect all enum-to-label mappings on the admin side and localize them properly.
+
+Examples:
+- invoice statuses
+- request statuses
+- notification severities
+- document statuses
+- clinic statuses
+- generic system statuses
+
+Requirements:
+- centralize label mapping where practical
+- avoid duplicated status text logic
+- ensure badges/chips/tables use localized labels consistently
+- keep color semantics unchanged while translating the text
+
+Acceptance criteria:
+- status labels are fully localized
+- no inconsistent status wording remains
+- no duplicated scattered label mapping mess
+
+PHASE 5 — VALIDATION / ERROR / EMPTY STATE LOCALIZATION
+Localize all user-facing admin messaging:
+- validation errors shown in admin UI
+- empty states
+- no-data messages
+- confirmation dialogs
+- success toasts
+- warning toasts
+- fallback text
+
+Requirements:
+- do not localize raw backend internals blindly
+- localize user-facing UI messages cleanly
+- ensure error messages remain understandable and professional
+
+Acceptance criteria:
+- admin UI messaging is localized
+- no mixed fallback text remains
+- empty and error states feel polished in Russian
+
+PHASE 6 — HEADER / NAVIGATION / GLOBAL ADMIN CHROME
+Ensure the full admin frame is localized:
+- header
+- language switcher labels if any
+- menus
+- sidebar / tabs
+- quick actions
+- top-level navigation
+- profile/settings labels
+
+Acceptance criteria:
+- entire admin shell is language-aware
+- switching language updates both page content and navigation chrome
+
+PHASE 7 — HARDENING / CLEANUP
+1. Remove remaining hardcoded admin strings where they should be localized
+2. Refactor duplicated translation usage if found
+3. Ensure no runtime regressions from missing keys
+4. Ensure Russian text expansion does not break layouts
+5. Keep dark/light/admin styles stable
+6. Keep the translation architecture maintainable
+7. Leave the codebase cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- Reuse the established professional i18n system
+- No duplicate translation providers
+- Centralized translation resources
+- Clean key naming
+- Reusable translation helpers/hooks
+- Minimal page-level translation clutter
+- Admin rollout should make future manager/guest rollout easier, not harder
+- Keep the solution enterprise-grade and scalable
+
+YOU MUST CHECK FOR THESE RISKS
+- some admin strings may live in deeply nested shared components
+- translation keys may become inconsistent if not organized
+- enum labels may still remain hardcoded in utility files
+- Russian strings may be longer and break narrow layouts
+- some admin toasts/modals may bypass the current translation layer
+- status chips/tables may use raw API values directly
+- there may be hidden admin screens/dialogs that are easy to miss
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current admin i18n setup
+2. Which admin pages/components were localized
+3. Exact files changed
+4. Why each change was made
+5. Any architecture refinements introduced
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the final admin i18n architecture
+2. Summary of full admin Russian localization coverage
+3. Confirmation that all admin pages are now language-aware
+4. Exact files changed
+5. Manual QA checklist
+6. Any remaining untranslated edge cases if found
+7. Recommended next rollout order for manager and guest localization
+
+START NOW
+First inspect the existing i18n foundation and all admin pages/components deeply.
+Then implement the full Russian localization rollout across the entire admin side.

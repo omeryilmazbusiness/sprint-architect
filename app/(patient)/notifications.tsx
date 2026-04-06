@@ -67,15 +67,30 @@ function getSeverityColor(severity: NotifSeverity): string {
   }
 }
 
+function getNavTarget(type: NotifType): string | null {
+  if (type.startsWith("APPOINTMENT")) return "/(patient)/schedule";
+  if (type.startsWith("DOCUMENT")) return "/(patient)/profile";
+  if (
+    type === "HOTEL_ASSIGNED" ||
+    type === "TRANSPORT_ASSIGNED" ||
+    type === "DOCTOR_ASSIGNED" ||
+    type === "JOURNEY_UPDATED"
+  ) {
+    return "/(patient)/dashboard";
+  }
+  return null;
+}
+
 function NotifCard({
   item,
-  onMarkRead,
+  onPress,
 }: {
   item: GuestNotification;
-  onMarkRead: (id: string) => void;
+  onPress: (item: GuestNotification) => void;
 }) {
   const isUnread = item.status === "UNREAD";
   const iconColor = isUnread ? getSeverityColor(item.severity) : T.textMuted;
+  const navTarget = getNavTarget(item.type);
 
   return (
     <Pressable
@@ -84,9 +99,7 @@ function NotifCard({
         isUnread && styles.unreadCard,
         { opacity: pressed ? 0.82 : 1 },
       ]}
-      onPress={() => {
-        if (isUnread) onMarkRead(item.id);
-      }}
+      onPress={() => onPress(item)}
     >
       <View style={[styles.iconWrap, { borderColor: iconColor + "33" }]}>
         <Ionicons name={getIcon(item.type)} size={22} color={iconColor} />
@@ -98,9 +111,14 @@ function NotifCard({
           <Text style={[styles.title, isUnread && styles.unreadTitle]} numberOfLines={1}>
             {item.title}
           </Text>
-          <Text style={styles.time}>
-            {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.time}>
+              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+            </Text>
+            {navTarget !== null && (
+              <Ionicons name="chevron-forward" size={13} color={T.textMuted} style={styles.chevron} />
+            )}
+          </View>
         </View>
         <Text style={styles.body} numberOfLines={3}>
           {item.body}
@@ -136,6 +154,17 @@ export default function GuestNotificationsScreen() {
   });
 
   const unreadCount = notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
+
+  function handleCardPress(item: GuestNotification) {
+    if (item.status === "UNREAD") {
+      markReadMutation.mutate(item.id);
+    }
+    const target = getNavTarget(item.type);
+    if (target) {
+      router.back();
+      router.push(target as any);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -175,7 +204,7 @@ export default function GuestNotificationsScreen() {
           renderItem={({ item }) => (
             <NotifCard
               item={item}
-              onMarkRead={(id) => markReadMutation.mutate(id)}
+              onPress={handleCardPress}
             />
           )}
           ListEmptyComponent={
@@ -262,12 +291,21 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 3,
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 0,
+  },
+  chevron: {
+    marginTop: 1,
+  },
   title: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: T.textSec,
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   unreadTitle: {
     fontFamily: "Inter_700Bold",

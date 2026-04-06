@@ -62,17 +62,28 @@ function getSeverityBg(severity: NotifSeverity): string {
   }
 }
 
+function getNavTarget(item: ManagerNotification): string | null {
+  if (item.relatedType === "patient" && item.relatedId) {
+    return `/(manager)/patients/${item.relatedId}`;
+  }
+  if (item.relatedType === "invoice" && item.relatedId) {
+    return `/(manager)/invoices/${item.relatedId}`;
+  }
+  return null;
+}
+
 function NotifCard({
   item,
-  onMarkRead,
+  onPress,
 }: {
   item: ManagerNotification;
-  onMarkRead: (id: string) => void;
+  onPress: (item: ManagerNotification) => void;
 }) {
   const isUnread = item.status === "UNREAD";
   const iconColor = getSeverityColor(item.severity);
   const bgColor = isUnread ? getSeverityBg(item.severity) : T.surface;
   const borderColor = isUnread ? iconColor : "transparent";
+  const navTarget = getNavTarget(item);
 
   return (
     <Pressable
@@ -81,9 +92,7 @@ function NotifCard({
         { backgroundColor: bgColor, borderLeftColor: borderColor },
         { opacity: pressed ? 0.82 : 1 },
       ]}
-      onPress={() => {
-        if (isUnread) onMarkRead(item.id);
-      }}
+      onPress={() => onPress(item)}
     >
       <View style={[styles.iconWrap, { borderColor: iconColor + "30" }]}>
         <Ionicons name={getIcon(item.type)} size={21} color={iconColor} />
@@ -95,9 +104,14 @@ function NotifCard({
           <Text style={[styles.cardTitle, isUnread && { color: T.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
             {item.title}
           </Text>
-          <Text style={styles.time}>
-            {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.time}>
+              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+            </Text>
+            {navTarget !== null && (
+              <Ionicons name="chevron-forward" size={13} color={T.textMuted} style={styles.chevron} />
+            )}
+          </View>
         </View>
         <Text style={styles.body} numberOfLines={3}>
           {item.body}
@@ -141,6 +155,16 @@ export default function ManagerNotificationsScreen() {
 
   const unreadCount = notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
 
+  function handleCardPress(item: ManagerNotification) {
+    if (item.status === "UNREAD") {
+      markReadMutation.mutate(item.id);
+    }
+    const target = getNavTarget(item);
+    if (target) {
+      router.push(target as any);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <ManagerHeader
@@ -173,7 +197,7 @@ export default function ManagerNotificationsScreen() {
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.primary} />
           }
           renderItem={({ item }) => (
-            <NotifCard item={item} onMarkRead={(id) => markReadMutation.mutate(id)} />
+            <NotifCard item={item} onPress={handleCardPress} />
           )}
           ListEmptyComponent={
             <EmptyState
@@ -246,12 +270,21 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 2,
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 0,
+  },
+  chevron: {
+    marginTop: 1,
+  },
   cardTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: T.textSec,
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   time: {
     fontFamily: "Inter_400Regular",
