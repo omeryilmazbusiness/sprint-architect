@@ -1,0 +1,250 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current guest-side codebase deeply and then implement the following guest UX improvements in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing working guest flows
+- First inspect the real implementation deeply
+- Then directly implement the requested improvements
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No placeholder-quality UI
+- Mobile-first quality is critical
+- The result must feel modern, premium, elegant, and polished
+
+PRIMARY REQUESTS
+
+1) EXPLORE SCREEN MUST BE A LOCKED “COMING SOON” EXPERIENCE
+Required behavior:
+- When the user opens the Explore page/tab, the Coming Soon experience must appear directly on that page
+- It must not be a dismissible popup anymore
+- User must NOT be able to close it
+- The page should show only this Coming Soon experience
+- The Explore page should feel intentionally locked / reserved for future premium features
+- It must not feel broken or unfinished
+- The design must be high-end and premium
+
+Important UX rule:
+- Do NOT show a close button
+- Do NOT allow dismissing it
+- Do NOT show unrelated underlying Explore content
+- The page itself should be the polished Coming Soon state
+
+Content direction:
+The page should elegantly communicate future premium services such as:
+- Premium Hammam
+- Spa Reservations
+- Tour Experiences
+- Priority Reservations
+- Concierge Add-ons
+- Exclusive Guest Services
+- More curated experiences coming soon
+
+2) GUEST DASHBOARD — DOCTOR CARD MUST BE REDESIGNED TO A PREMIUM, DETAILED, MODERN UX
+Required behavior:
+- On the guest dashboard, redesign the Doctor card into a truly premium, modern, detailed card
+- The guest must NOT be able to search for doctors
+- The guest must ONLY view doctor information
+- If the guest has an appointment assigned to a doctor, the doctor shown on the dashboard card must be the doctor assigned to that appointment
+- The card must feel premium, trustworthy, and polished
+- The card must present doctor information in a clean, high-quality layout
+
+DOCTOR CARD REQUIREMENTS
+The card should display rich but elegant information where available, such as:
+- Doctor full name
+- Specialty
+- Profile image if available
+- Short professional summary / bio
+- Education / university if available
+- Experience years if available
+- Languages if available
+- Certifications or expertise tags if available
+- Contact/display info only if appropriate in current guest UX
+- Appointment relationship context if applicable (for example: “Your upcoming appointment doctor”)
+
+IMPORTANT BUSINESS RULE
+- The source of truth must be correct:
+  - if the guest has an appointment assigned to a doctor, show that doctor
+  - do not show an unrelated doctor
+  - do not allow searching/selecting from guest side
+- This is view-only from guest side
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. EXPLORE SCREEN
+- current Explore tab/page implementation
+- whether it currently uses a popup/modal/sheet
+- how the Explore tab is mounted
+- what is the cleanest way to convert it into a dedicated full-page Coming Soon experience
+- whether there is any underlying content that should be removed/hidden
+
+2. GUEST DASHBOARD
+- current dashboard layout
+- current doctor card implementation
+- current data source for guest doctor info
+- whether doctor info currently comes from:
+  - patient plan
+  - appointment
+  - assigned doctor
+  - another DTO
+- whether there are conflicting doctor sources
+- how appointment doctor data is fetched
+- whether the guest has one upcoming appointment doctor or multiple appointments
+- what the best fallback should be if there is no appointment doctor
+
+3. DATA SHAPING
+- inspect the guest dashboard backend DTO/use case
+- determine whether it already contains enough doctor information
+- if not, extend the backend response cleanly
+- ensure the dashboard doctor card receives the right doctor object without messy frontend hacks
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — EXPLORE PAGE LOCKED COMING SOON EXPERIENCE
+1. Inspect current Explore implementation
+2. Remove the dismissible popup approach
+3. Convert Explore into a dedicated full-page premium Coming Soon state
+4. Make it visually premium and intentional
+5. Do not allow dismissing it
+6. Keep it mobile-first and elegant
+7. Use beautiful spacing, typography, subtle premium visual hierarchy, and strong composition
+
+Acceptance criteria:
+- opening Explore shows only the Coming Soon page/state
+- there is no close button
+- user cannot dismiss it
+- no broken/empty feel
+- page looks premium and polished
+
+PHASE 2 — EXPLORE PAGE CONTENT / PREMIUM COPY
+Create refined premium copy for the Explore page.
+Keep it concise, elegant, and aspirational.
+
+Suggested content direction:
+Title:
+- Coming Soon
+
+Subtitle/body:
+- Soon you’ll be able to enhance your medical journey with curated premium experiences.
+
+Premium feature blocks/cards:
+- Premium Hammam & Spa
+- Curated Tours
+- Priority Reservations
+- Private Wellness Experiences
+- Concierge Add-ons
+- More Exclusive Services
+
+The content should feel like a luxury hospitality/medical tourism product, not a placeholder.
+
+Acceptance criteria:
+- copy feels premium
+- page communicates future value clearly
+- no generic rough placeholder text
+
+PHASE 3 — GUEST DASHBOARD DOCTOR CARD DATA LOGIC
+1. Inspect current doctor card data source
+2. Determine the correct source of truth:
+   - if there is an appointment doctor, use that doctor
+   - otherwise use the most relevant assigned doctor fallback only if appropriate
+3. Refactor backend or frontend data mapping cleanly so the card always receives the correct doctor info
+4. Avoid frontend guesswork if backend can return a proper DTO
+5. Keep logic maintainable and explicit
+
+Acceptance criteria:
+- guest doctor card shows the doctor tied to the appointment when one exists
+- guest cannot search/select doctors
+- no unrelated doctor appears by mistake
+
+PHASE 4 — PREMIUM DOCTOR CARD REDESIGN
+1. Redesign the guest dashboard doctor card into a premium, detailed card
+2. Make it feel elegant, trustworthy, and modern
+3. Present doctor information clearly with strong hierarchy
+4. Include rich details when available without clutter
+5. Handle missing fields gracefully
+6. Keep it fully responsive and mobile-first
+
+Design direction:
+- premium profile presentation
+- refined avatar/image treatment
+- elegant typography
+- subtle badges/tags
+- soft card surfaces/shadows/radius
+- clean sections for expertise, experience, languages, education
+- contextual label if doctor is tied to the upcoming appointment
+- no search field
+- no selection controls
+
+Acceptance criteria:
+- doctor card looks significantly better
+- doctor details are rich and useful
+- card feels premium and modern
+- mobile readability is excellent
+
+PHASE 5 — EMPTY / FALLBACK STATE
+If the guest does not yet have a doctor tied to an appointment:
+- show a polished empty/informational state inside the card area
+- do not make it feel broken
+- explain that doctor details will appear once an appointment or assignment is confirmed
+- keep the design premium and calm
+
+Acceptance criteria:
+- no broken empty card
+- fallback state is clear and polished
+- UX remains premium
+
+PHASE 6 — HARDENING / CLEANUP
+1. Ensure Explore page is maintainable and not built as a fragile modal hack
+2. Ensure doctor card data mapping is clean and typed
+3. Ensure no duplicate doctor-selection logic remains on guest side
+4. Ensure dashboard still performs well
+5. Ensure no layout regressions on phone
+6. Keep dark/light mode support consistent if already present
+
+ARCHITECTURE EXPECTATIONS
+- Keep components focused on presentation
+- Keep navigation logic clean
+- Keep doctor data shaping in service/DTO layers where appropriate
+- Avoid duplicated doctor mapping logic
+- Avoid mixing appointment business rules into presentation if a backend DTO can solve it cleanly
+- Keep Explore page implementation simple, intentional, and maintainable
+- Leave the guest experience cleaner and more premium than before
+
+YOU MUST CHECK FOR THESE RISKS
+- Explore page still rendering hidden underlying content
+- old popup/modal state still mounted unnecessarily
+- doctor card currently reading wrong doctor source
+- appointment doctor and assigned plan doctor conflicting
+- dashboard DTO missing required doctor fields
+- premium card becomes too dense or cluttered on phone
+- missing doctor image/bio/education causing broken layout
+- search UI remnants still visible on guest side
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current Explore and guest dashboard implementations
+2. Root cause / architecture observations
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new Explore full-page Coming Soon experience
+2. Final premium copy used on Explore
+3. Summary of doctor card data-source logic
+4. Summary of doctor card UX redesign
+5. Exact files changed
+6. Manual QA checklist for phone/mobile
+7. Remaining future improvements if any
+
+START NOW
+First inspect the current Explore page implementation and the guest dashboard doctor card/data flow deeply.
+Then implement the requested changes end-to-end in the order above.

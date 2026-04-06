@@ -21,7 +21,7 @@ import { AgendaTabs } from "@/components/guestDashboard/AgendaTabs";
 import { SectionLabel } from "@/components/guestDashboard/SectionLabel";
 import { SupportCard } from "@/components/guestDashboard/SupportCard";
 import { OverviewTileCarousel } from "@/components/guestDashboard/OverviewTileCarousel";
-import { DoctorsCarousel } from "@/components/guestDashboard/DoctorsCarousel";
+import { GuestDoctorCard } from "@/components/guestDashboard/GuestDoctorCard";
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -58,6 +58,23 @@ export default function PatientDashboard() {
       ) ?? null
     );
   }, [appointments]);
+
+  // ── Primary doctor logic ───────────────────────────────────────────────────
+  // Source of truth: doctor tied to the next upcoming SCHEDULED appointment.
+  // Fallback: first doctor in the plan list if no appointment doctor exists.
+  const { primaryDoctor, isAppointmentDoctor } = useMemo(() => {
+    const nextApptWithDoctor = appointments.find(
+      (a) => a.status === "SCHEDULED" && a.doctor?.id,
+    );
+    const apptDoctorId = nextApptWithDoctor?.doctor?.id ?? null;
+    const resolved = apptDoctorId
+      ? (doctors.find((d) => d.id === apptDoctorId) ?? null)
+      : (doctors[0] ?? null);
+    return {
+      primaryDoctor: resolved,
+      isAppointmentDoctor: !!apptDoctorId && resolved?.id === apptDoctorId,
+    };
+  }, [appointments, doctors]);
 
   if (isLoading) return <GuestDashboardSkeleton />;
   if (isError) return <ErrorView onRetry={refetch} />;
@@ -117,10 +134,13 @@ export default function PatientDashboard() {
           />
         </View>
 
-        {/* Doctors carousel */}
+        {/* Doctor card */}
         <View style={styles.section}>
-          <SectionLabel text="Doctors" />
-          <DoctorsCarousel doctors={doctors} />
+          <SectionLabel text="Your Doctor" />
+          <GuestDoctorCard
+            doctor={primaryDoctor}
+            isAppointmentDoctor={isAppointmentDoctor}
+          />
         </View>
 
         {/* Support */}
