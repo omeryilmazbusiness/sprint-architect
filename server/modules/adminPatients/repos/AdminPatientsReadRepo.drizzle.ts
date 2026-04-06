@@ -2,7 +2,7 @@ import { db } from "../../../db";
 import { patients, clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import type { PatientSummaryDto } from "../schemas/adminPatients.schemas";
-import { generateGuestKey } from "../../../utils/generateTempPassword";
+import { generatePatientKey, MAX_KEY_ATTEMPTS } from "../../../utils/patientKey";
 import { patientRepo } from "../../../repositories/patientRepo";
 import { authRepo } from "../../../repositories/authRepo";
 
@@ -71,13 +71,13 @@ export const adminPatientsReadRepo = {
   async regenerateAccessKey(
     patientId: string,
   ): Promise<string> {
-    let newKey = generateGuestKey();
+    let newKey = generatePatientKey();
     let attempts = 0;
-    while (attempts < 5) {
+    while (attempts < MAX_KEY_ATTEMPTS) {
       const existing = await patientRepo.findByKey(newKey);
       if (!existing) break;
-      newKey = generateGuestKey();
-      attempts++;
+      if (++attempts >= MAX_KEY_ATTEMPTS) throw new Error("Failed to generate unique patient key after max attempts");
+      newKey = generatePatientKey();
     }
 
     await db

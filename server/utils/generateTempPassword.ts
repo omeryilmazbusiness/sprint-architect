@@ -30,10 +30,3 @@ export function generateTempPassword(): string {
   return chars.join("");
 }
 
-export function generateGuestKey(): string {
-  const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const buf = randomBytes(16);
-  const part = (offset: number, len: number) =>
-    Array.from({ length: len }, (_, i) => CHARS[buf[offset + i] % CHARS.length]).join("");
-  return `GUEST-${part(0, 4)}-${part(4, 4)}`;
-}

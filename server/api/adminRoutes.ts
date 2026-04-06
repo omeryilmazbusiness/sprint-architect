@@ -18,7 +18,8 @@ import { verifyPassword, hashPassword } from "../auth/password";
 import { authRepo } from "../repositories/authRepo";
 import { validatePasswordPolicy } from "../auth/passwordPolicy";
 import rateLimit from "express-rate-limit";
-import { generateTempPassword, generateGuestKey } from "../utils/generateTempPassword";
+import { generateTempPassword } from "../utils/generateTempPassword";
+import { generatePatientKey, MAX_KEY_ATTEMPTS } from "../utils/patientKey";
 import { getEmailProvider } from "../email/getEmailProvider";
 import {
   managerPasswordResetEmailHtml,
@@ -279,13 +280,13 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
         throw new AppError("NOT_FOUND", "Target patient account no longer exists", 404);
       }
 
-      let newKey = generateGuestKey();
+      let newKey = generatePatientKey();
       let attempts = 0;
-      while (attempts < 5) {
+      while (attempts < MAX_KEY_ATTEMPTS) {
         const existing = await patientRepo.findByKey(newKey);
         if (!existing) break;
-        newKey = generateGuestKey();
-        attempts++;
+        if (++attempts >= MAX_KEY_ATTEMPTS) throw new AppError("INTERNAL", "Failed to generate unique patient key", 500);
+        newKey = generatePatientKey();
       }
 
       await db.update(patients)

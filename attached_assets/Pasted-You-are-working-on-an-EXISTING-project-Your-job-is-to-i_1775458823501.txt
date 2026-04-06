@@ -1,0 +1,265 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase deeply and then fix and harden the following areas in the safest, cleanest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing working flows unless they conflict with the required business rules
+- First inspect the current implementation deeply
+- Then directly implement the required changes
+- Preserve good architecture where possible
+- Refactor only where needed for correctness, maintainability, security, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake UI-only fixes for backend/domain problems
+- Fix root causes, not symptoms
+- Mobile-first behavior is critical
+- Keep the codebase cleaner than before
+
+PRIMARY GOALS
+
+1) MANAGER > ADD DOCTOR FORM POPUP / BOTTOM SHEET UX IS BROKEN
+Current problem:
+- In manager screens, the Add Doctor form popup/bottom sheet is not rendering in the correct format
+- The screen shifts, layout breaks, or the popup behaves poorly on phone
+- Keyboard/safe area/scroll/submit visibility may be wrong
+
+Required outcome:
+- Redesign/refactor the Add Doctor flow into a truly professional, production-ready mobile UX
+- The Add Doctor experience must feel like a premium bottom popup page / bottom sheet form
+- It must be stable, keyboard-safe, scroll-safe, and easy to submit
+- It must work correctly on phone
+
+2) MANAGER + PATIENT LOGIN / KEY GENERATION / KEY-BASED LOGIN MUST BECOME PRODUCTION-READY
+Current problem:
+- Manager and patient profile login / key generation / key-based login flow is not fully reliable or clean enough
+- Guest/patient keys must be generated predictably and work immediately
+- The key format should follow a clear consistent standard
+- Every guest must be able to log in with their generated key
+- The auth flow must be secure, correct, and maintainable
+
+Required outcome:
+- Manager authentication flow must be production-ready
+- Patient/guest authentication flow must be production-ready
+- New guest creation by manager must always generate a new login key
+- The key must follow a clear standard format
+- Each guest must log in using that key successfully
+- The overall key lifecycle must be robust and understandable
+
+BUSINESS RULES TO IMPLEMENT
+
+A. ADD DOCTOR UX
+- Add Doctor must open in a correct bottom popup/page format
+- It must not visually break the screen
+- It must not be blocked by keyboard
+- The submit CTA must remain reachable
+- Validation errors must be clearly visible
+- Loading, success, and failure states must be professional
+- After successful creation, doctor list must update correctly
+
+B. GUEST/PATIENT KEY SYSTEM
+- When manager creates a new guest, a new access/login key must always be generated
+- The generated key must follow a clear standard format
+- The format must be human-usable but still robust enough for real use
+- The system must avoid collisions
+- The key must be stored and resolved correctly
+- The newly created guest must be able to log in with that key
+- Key generation, persistence, lookup, and login validation must all be audited and corrected if needed
+
+C. AUTH HARDENING
+- Inspect manager login flow
+- Inspect patient/guest login flow
+- Inspect token/session/device binding behavior if present
+- Ensure there is no conflict between guest active status and login eligibility
+- Ensure newly created guest can log in immediately if that is the intended business rule
+- Ensure auth errors are meaningful and safe
+- Ensure the system remains secure and clinic-scoped
+
+FIRST TASK — FULL ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand all of the following:
+
+1. ADD DOCTOR FLOW
+- current manager doctor create screen/component
+- current popup/bottom sheet implementation
+- modal/sheet providers
+- safe area handling
+- keyboard avoidance logic
+- scroll container behavior
+- form validation flow
+- submit button positioning
+- mutation, loading, success, and invalidation flow
+- mobile-only layout problems
+
+2. MANAGER AUTH FLOW
+- login route
+- token generation
+- refresh flow
+- session persistence
+- role detection
+- clinic scope handling
+
+3. GUEST / PATIENT KEY FLOW
+- guest creation backend flow
+- where and how key/accessKey/patientKey is generated
+- current key format
+- collision prevention
+- where key is stored
+- how login resolves key to patient
+- what status is required to allow login
+- whether device binding or other auth checks break the first login
+- whether newly generated keys are actually usable immediately
+- whether there are duplicate or conflicting old flows
+
+4. RELATED DATA / DOMAIN RULES
+- guest creation lifecycle
+- guest status lifecycle
+- login eligibility logic
+- audit logging
+- any route duplication or shadowed endpoints
+- any dead code related to old key generation/auth flows
+
+Then directly implement the fixes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ADD DOCTOR UX REBUILD
+1. Audit the current Add Doctor popup flow
+2. Identify the exact root cause of layout breaking / screen shifting
+3. Refactor it into a professional bottom popup page / bottom sheet form
+4. Ensure:
+   - keyboard-safe layout
+   - safe area support
+   - proper scrolling
+   - sticky or always-reachable submit action if appropriate
+   - clear validation messages
+   - polished loading and success states
+5. Ensure successful creation refreshes the doctor list automatically
+
+Acceptance criteria:
+- Add Doctor opens correctly on phone
+- Screen no longer shifts/breaks badly
+- Form is easy to fill
+- Submit is reliable
+- Doctor appears in list after success
+- UX feels premium and production-ready
+
+PHASE 2 — GUEST KEY GENERATION SYSTEM HARDENING
+1. Audit the current guest creation flow end-to-end
+2. Audit current key generation logic
+3. Define and implement a clear standard key format
+4. Ensure key generation is centralized in one place
+5. Ensure collision-safe generation
+6. Ensure key is persisted correctly
+7. Ensure key is returned/presented correctly to manager
+8. Ensure no duplicate/conflicting key generators remain
+
+Key format requirements:
+- human-readable
+- consistent standard
+- not fragile
+- safe for repeated use
+- easy to communicate to guest
+- collision-resistant
+
+Acceptance criteria:
+- every new guest gets a key
+- all keys follow one standard format
+- key generation is centralized and maintainable
+- no duplicate/conflicting logic remains
+
+PHASE 3 — GUEST KEY LOGIN FLOW FIX
+1. Audit patient/guest login route and validation logic
+2. Fix all issues preventing valid keys from working
+3. Ensure a newly created guest can log in with the generated key
+4. Verify status requirements and active/login rules
+5. Verify any device binding logic does not wrongly block first login
+6. Improve auth error handling and messages
+
+Acceptance criteria:
+- newly created guest can log in with generated key
+- invalid key is rejected cleanly
+- valid key works reliably
+- no conflicting approval/status logic blocks correct login
+- auth flow is stable and production-ready
+
+PHASE 4 — MANAGER AUTH / PROFILE HARDENING
+1. Audit manager login and session persistence flow
+2. Ensure manager auth flow is clean and production-ready
+3. Verify role, clinic scope, token persistence, and refresh behavior
+4. Fix any weak/error-prone points found during the audit
+5. Keep the architecture clean and minimal-risk
+
+Acceptance criteria:
+- manager login remains stable
+- session restore works
+- no role/scope regression
+- login errors remain safe and clear
+
+PHASE 5 — DOMAIN CLEANUP + ARCHITECTURE CLEANUP
+1. Remove or isolate duplicate old auth/key code paths
+2. Keep route/controller thin
+3. Put business rules in services/use cases
+4. Put persistence in repositories
+5. Centralize key generation and auth rules cleanly
+6. Ensure no dead code remains around old flows if safe to remove
+7. Add structured logging where helpful for:
+   - guest creation
+   - key generation
+   - guest login
+   - manager login
+   - doctor creation
+
+ARCHITECTURE EXPECTATIONS
+- Thin routes/controllers
+- Business rules in service/use case layer
+- Repository/data layer separated
+- Shared validation with Zod or existing schema approach
+- Centralized key generation utility/service
+- No duplicated auth logic
+- No duplicated popup logic
+- No fragile mobile modal hacks
+- Keep components focused on presentation and interaction
+- Leave the codebase more maintainable than before
+
+YOU MUST CHECK FOR THESE RISKS
+- doctor popup rendered inside wrong container
+- keyboard pushes layout incorrectly
+- bottom sheet missing safe area / portal / snap config
+- submit button hidden on phone
+- create succeeds but list doesn’t refresh
+- guest key generated in more than one place
+- guest login checks wrong field
+- guest login blocked by status mismatch
+- first login blocked by device binding incorrectly
+- key format inconsistent across old/new records
+- duplicate auth routes or shadowed code paths
+- manager and guest auth state handling diverges in unsafe ways
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found for each major issue
+2. Exact files changed
+3. Why each fix was necessary
+4. Any architecture improvement made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for Add Doctor popup issue
+2. Final Add Doctor UX summary
+3. Final guest key format definition
+4. Root cause summary for guest key login issues
+5. Final auth/login flow summary for manager and guest
+6. Exact files changed
+7. Manual QA checklist for:
+   - manager login
+   - guest creation
+   - key generation
+   - guest login with key
+   - Add Doctor on phone
+8. Remaining future improvements if any
+
+START NOW
+First inspect the existing doctor create popup flow and the full manager/guest auth + key generation + key login flow deeply.
+Then implement the fixes end-to-end in the order above.

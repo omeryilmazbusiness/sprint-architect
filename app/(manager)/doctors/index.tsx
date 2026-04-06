@@ -13,8 +13,8 @@ import {
   RefreshControl,
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -305,12 +305,12 @@ export default function DoctorsScreen() {
         onRequestClose={handleClose}
         statusBarTranslucent
       >
-        <View style={styles.sheetOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ width: "100%" }}
-          >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.sheetOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
             <Animated.View
               style={[
                 styles.sheetContainer,
@@ -339,7 +339,7 @@ export default function DoctorsScreen() {
 
               {/* Scrollable form body */}
               <ScrollView
-                style={{ flex: 1 }}
+                style={{ flexShrink: 1 }}
                 contentContainerStyle={styles.sheetBody}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
@@ -542,8 +542,8 @@ export default function DoctorsScreen() {
                 </Pressable>
               </View>
             </Animated.View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ─── Toast ─── */}
@@ -622,14 +622,14 @@ const styles = StyleSheet.create({
   // ── Sheet ──
   sheetOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.48)",
     justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.48)",
   },
   sheetContainer: {
     backgroundColor: T.bg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "92%",
+    maxHeight: SCREEN_HEIGHT * 0.92,
     overflow: "hidden",
   },
   sheetHandle: {
