@@ -25,7 +25,7 @@ function NotificationBell() {
     <Pressable
       style={styles.iconBtn}
       hitSlop={10}
-      onPress={() => {}}
+      onPress={() => router.push("/(patient)/notifications")}
     >
       <Ionicons name="notifications-outline" size={21} color={T.text} />
       {unread > 0 ? (

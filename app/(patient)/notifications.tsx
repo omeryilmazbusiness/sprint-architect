@@ -7,11 +7,12 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { formatDistanceToNow } from "date-fns";
-import { ManagerHeader } from "@/components/manager/ManagerHeader";
+import { GuestHeader } from "@/components/guest/GuestHeader";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
 import { useRouter } from "expo-router";
@@ -20,12 +21,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type NotifSeverity = "INFO" | "WARNING" | "CRITICAL";
 type NotifStatus = "UNREAD" | "READ";
+type NotifType =
+  | "APPOINTMENT_CREATED"
+  | "APPOINTMENT_UPDATED"
+  | "APPOINTMENT_CANCELLED"
+  | "DOCUMENT_ASSIGNED"
+  | "DOCUMENT_APPROVED"
+  | "DOCUMENT_REJECTED"
+  | "JOURNEY_UPDATED"
+  | "HOTEL_ASSIGNED"
+  | "TRANSPORT_ASSIGNED"
+  | "DOCTOR_ASSIGNED"
+  | "WELCOME"
+  | string;
 
-interface ManagerNotification {
+interface GuestNotification {
   id: string;
   title: string;
   body: string;
-  type: string;
+  type: NotifType;
   severity: NotifSeverity;
   status: NotifStatus;
   relatedId?: string;
@@ -34,15 +48,14 @@ interface ManagerNotification {
   readAt?: string | null;
 }
 
-function getIcon(type: string): React.ComponentProps<typeof Ionicons>["name"] {
+function getIcon(type: NotifType): React.ComponentProps<typeof Ionicons>["name"] {
   if (type.startsWith("APPOINTMENT")) return "calendar";
   if (type.startsWith("DOCUMENT")) return "document-text";
-  if (type === "GUEST_CREATED") return "person-add";
-  if (type === "GUEST_APPROVED") return "checkmark-circle";
-  if (type === "GUEST_STATUS_CHANGED") return "person";
-  if (type === "INVOICE_GENERATED" || type === "INVOICE_OVERDUE") return "receipt";
-  if (type === "CLINIC_SUSPENDED") return "ban";
-  if (type === "SCHEDULER_FAILED" || type === "BILLING_JOB_FAILED") return "alert-circle";
+  if (type === "JOURNEY_UPDATED") return "map";
+  if (type === "HOTEL_ASSIGNED") return "bed";
+  if (type === "TRANSPORT_ASSIGNED") return "car";
+  if (type === "DOCTOR_ASSIGNED") return "medical";
+  if (type === "WELCOME") return "heart";
   return "notifications";
 }
 
@@ -50,15 +63,7 @@ function getSeverityColor(severity: NotifSeverity): string {
   switch (severity) {
     case "CRITICAL": return T.danger;
     case "WARNING":  return T.warning;
-    default:         return T.primary;
-  }
-}
-
-function getSeverityBg(severity: NotifSeverity): string {
-  switch (severity) {
-    case "CRITICAL": return T.dangerBg ?? "#FEF2F2";
-    case "WARNING":  return T.warningBg ?? "#FFFBEB";
-    default:         return T.bg;
+    default:         return T.accent;
   }
 }
 
@@ -66,33 +71,31 @@ function NotifCard({
   item,
   onMarkRead,
 }: {
-  item: ManagerNotification;
+  item: GuestNotification;
   onMarkRead: (id: string) => void;
 }) {
   const isUnread = item.status === "UNREAD";
-  const iconColor = getSeverityColor(item.severity);
-  const bgColor = isUnread ? getSeverityBg(item.severity) : T.surface;
-  const borderColor = isUnread ? iconColor : "transparent";
+  const iconColor = isUnread ? getSeverityColor(item.severity) : T.textMuted;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: bgColor, borderLeftColor: borderColor },
+        isUnread && styles.unreadCard,
         { opacity: pressed ? 0.82 : 1 },
       ]}
       onPress={() => {
         if (isUnread) onMarkRead(item.id);
       }}
     >
-      <View style={[styles.iconWrap, { borderColor: iconColor + "30" }]}>
-        <Ionicons name={getIcon(item.type)} size={21} color={iconColor} />
+      <View style={[styles.iconWrap, { borderColor: iconColor + "33" }]}>
+        <Ionicons name={getIcon(item.type)} size={22} color={iconColor} />
         {isUnread && <View style={[styles.unreadDot, { backgroundColor: iconColor }]} />}
       </View>
 
       <View style={styles.content}>
         <View style={styles.row}>
-          <Text style={[styles.cardTitle, isUnread && { color: T.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
+          <Text style={[styles.title, isUnread && styles.unreadTitle]} numberOfLines={1}>
             {item.title}
           </Text>
           <Text style={styles.time}>
@@ -102,40 +105,33 @@ function NotifCard({
         <Text style={styles.body} numberOfLines={3}>
           {item.body}
         </Text>
-        {item.severity !== "INFO" && (
-          <View style={[styles.severityPill, { backgroundColor: iconColor + "18" }]}>
-            <Text style={[styles.severityText, { color: iconColor }]}>
-              {item.severity}
-            </Text>
-          </View>
-        )}
       </View>
     </Pressable>
   );
 }
 
-export default function ManagerNotificationsScreen() {
+export default function GuestNotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
 
-  const { data: notifications, isLoading, isRefetching, refetch } = useQuery<ManagerNotification[]>({
-    queryKey: ["/v1/manager/notifications"],
+  const { data: notifications, isLoading, isRefetching, refetch } = useQuery<GuestNotification[]>({
+    queryKey: ["/v1/patient/notifications"],
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("PUT", `/v1/manager/notifications/${id}/read`),
+    mutationFn: (id: string) => apiRequest("PUT", `/v1/patient/notifications/${id}/read`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications/unread-count"] });
     },
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => apiRequest("PUT", "/v1/manager/notifications/read-all"),
+    mutationFn: () => apiRequest("PUT", "/v1/patient/notifications/read-all"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications/unread-count"] });
     },
   });
 
@@ -143,21 +139,10 @@ export default function ManagerNotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <ManagerHeader
+      <GuestHeader
         title="Notifications"
-        backButton
         onBack={() => router.back()}
-        right={
-          unreadCount > 0 ? (
-            <Pressable
-              onPress={() => markAllReadMutation.mutate()}
-              disabled={markAllReadMutation.isPending}
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-            >
-              <Text style={styles.markAllText}>Mark all read</Text>
-            </Pressable>
-          ) : undefined
-        }
+        hideNotifications
       />
 
       {isLoading ? (
@@ -168,17 +153,35 @@ export default function ManagerNotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.primary} />
           }
+          ListHeaderComponent={
+            unreadCount > 0 ? (
+              <Pressable
+                style={({ pressed }) => [styles.markAllBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => markAllReadMutation.mutate()}
+                disabled={markAllReadMutation.isPending}
+              >
+                <Ionicons name="checkmark-done" size={16} color={T.primary} />
+                <Text style={styles.markAllText}>Mark all as read</Text>
+              </Pressable>
+            ) : null
+          }
           renderItem={({ item }) => (
-            <NotifCard item={item} onMarkRead={(id) => markReadMutation.mutate(id)} />
+            <NotifCard
+              item={item}
+              onMarkRead={(id) => markReadMutation.mutate(id)}
+            />
           )}
           ListEmptyComponent={
             <EmptyState
               title="No notifications"
-              subtitle="You're all caught up!"
+              subtitle="You're all caught up! Notifications about your journey will appear here."
               icon="notifications-outline"
             />
           }
@@ -202,9 +205,20 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  markAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-end",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: T.primary + "12",
+    borderRadius: 20,
+  },
   markAllText: {
-    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
     color: T.primary,
   },
   card: {
@@ -212,15 +226,18 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
     borderRadius: 14,
     padding: 14,
-    borderLeftWidth: 3,
     ...cardShadow,
+  },
+  unreadCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: T.accent,
   },
   iconWrap: {
     width: 42,
     height: 42,
     borderRadius: 21,
     borderWidth: 1,
-    backgroundColor: T.surface,
+    backgroundColor: T.bg,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -238,20 +255,23 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    gap: 2,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 2,
+    marginBottom: 3,
   },
-  cardTitle: {
+  title: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: T.textSec,
     flex: 1,
     marginRight: 8,
+  },
+  unreadTitle: {
+    fontFamily: "Inter_700Bold",
+    color: T.text,
   },
   time: {
     fontFamily: "Inter_400Regular",
@@ -263,17 +283,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: T.textSec,
     lineHeight: 18,
-  },
-  severityPill: {
-    marginTop: 6,
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  severityText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 0.5,
   },
 });

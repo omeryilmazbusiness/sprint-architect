@@ -327,6 +327,24 @@ router.put("/patients/:id/tracking", async (req, res, next) => {
       .set({ currentStep, updatedAt: new Date() })
       .where(and(eq(patientPlans.patientId, id), eq(patientPlans.clinicId, clinicId)));
 
+    const stepLabels: Record<string, string> = {
+      PRE_ARRIVAL: "Pre-Arrival Preparation",
+      ARRIVAL_TRANSFER: "Arrival & Transfer",
+      HOTEL_CHECKIN: "Hotel Check-In",
+      TREATMENT: "Treatment",
+      FOLLOWUP: "Follow-Up",
+      DEPARTURE: "Departure",
+    };
+    notificationService.emitGuestNotification(id, clinicId, {
+      type: "JOURNEY_UPDATED",
+      title: "Journey Updated",
+      body: `Your current status has been updated to: ${stepLabels[currentStep] ?? currentStep}.`,
+      severity: "INFO",
+      relatedId: id,
+      relatedType: "patient",
+      metadata: { currentStep },
+    }).catch(() => {});
+
     res.json({ currentStep });
   } catch (err) {
     next(err);
@@ -383,6 +401,18 @@ router.put("/patients/:id/status", async (req, res, next) => {
       }).catch(() => {});
     }
 
+    if (status === "APPROVED") {
+      notificationService.emitGuestNotification(id, clinicId, {
+        type: "WELCOME",
+        title: "Welcome to Your Journey",
+        body: "Your account is now active. Your care team is ready to assist you.",
+        severity: "INFO",
+        relatedId: id,
+        relatedType: "patient",
+        metadata: { clinicId },
+      }).catch(() => {});
+    }
+
     res.json(patient);
   } catch (e) { next(e); }
 });
@@ -425,6 +455,20 @@ router.put("/patients/:id/assign-hotel", async (req, res, next) => {
       checkInDate: body.checkInDate ?? null,
       checkOutDate: body.checkOutDate ?? null,
     });
+
+    if (body.hotelId) {
+      const hotelName = hotel?.name ?? "your hotel";
+      notificationService.emitGuestNotification(req.params.id, clinicId, {
+        type: "HOTEL_ASSIGNED",
+        title: "Hotel Assigned",
+        body: `Your accommodation has been arranged at ${hotelName}${body.checkInDate ? ` — check-in ${body.checkInDate}` : ""}.`,
+        severity: "INFO",
+        relatedId: body.hotelId,
+        relatedType: "hotel",
+        metadata: { hotelId: body.hotelId, checkInDate: body.checkInDate ?? null },
+      }).catch(() => {});
+    }
+
     res.json(plan);
   } catch (e) { next(e); }
 });
@@ -450,6 +494,21 @@ router.put("/patients/:id/assign-transport", async (req, res, next) => {
       clinicId,
       transportId: body.transportId ?? null,
     });
+
+    if (body.transportId) {
+      const transport = await transportRepo.findById(body.transportId, clinicId);
+      const driverInfo = transport?.driverName ? ` — driver: ${transport.driverName}` : "";
+      notificationService.emitGuestNotification(req.params.id, clinicId, {
+        type: "TRANSPORT_ASSIGNED",
+        title: "Transport Arranged",
+        body: `Your transport has been arranged${driverInfo}. Check the Track tab for details.`,
+        severity: "INFO",
+        relatedId: body.transportId,
+        relatedType: "transport",
+        metadata: { transportId: body.transportId },
+      }).catch(() => {});
+    }
+
     res.json(plan);
   } catch (e) { next(e); }
 });
@@ -475,6 +534,22 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
       clinicId,
       doctorId: body.doctorId ?? null,
     });
+
+    if (body.doctorId) {
+      const assignedDoctor = await doctorRepo.findById(body.doctorId, clinicId);
+      const doctorName = assignedDoctor?.fullName ?? "your doctor";
+      const specialty = assignedDoctor?.specialty ? ` (${assignedDoctor.specialty})` : "";
+      notificationService.emitGuestNotification(req.params.id, clinicId, {
+        type: "DOCTOR_ASSIGNED",
+        title: "Doctor Assigned",
+        body: `${doctorName}${specialty} has been assigned to your care.`,
+        severity: "INFO",
+        relatedId: body.doctorId,
+        relatedType: "doctor",
+        metadata: { doctorId: body.doctorId },
+      }).catch(() => {});
+    }
+
     res.json(plan);
   } catch (e) { next(e); }
 });
@@ -532,6 +607,19 @@ router.post("/patients/:id/assign-documents", async (req, res, next) => {
       }
     }
 
+    // Notify guest for each newly assigned document
+    for (const doc of results) {
+      notificationService.emitGuestNotification(req.params.id, clinicId, {
+        type: "DOCUMENT_ASSIGNED",
+        title: "Document Requested",
+        body: "Your clinic has requested a document. Please upload it as soon as possible.",
+        severity: "INFO",
+        relatedId: doc.id,
+        relatedType: "patient_document",
+        metadata: { documentId: doc.id, patientId: req.params.id },
+      }).catch(() => {});
+    }
+
     res.json(results);
   } catch (e) { next(e); }
 });
@@ -565,6 +653,31 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
       startAt: new Date(body.startAt),
       endAt: body.endAt ? new Date(body.endAt) : undefined,
     });
+
+    const apptDateStr = new Date(body.startAt).toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+
+    notificationService.emitGuestNotification(req.params.id, clinicId, {
+      type: "APPOINTMENT_CREATED",
+      title: "New Appointment Scheduled",
+      body: `Your appointment "${body.title}" is scheduled for ${apptDateStr}.`,
+      severity: "INFO",
+      relatedId: appt.id,
+      relatedType: "appointment",
+      metadata: { appointmentId: appt.id, startAt: body.startAt },
+    }).catch(() => {});
+
+    notificationService.emitManagerNotification(clinicId, {
+      type: "APPOINTMENT_CREATED",
+      title: "Appointment Scheduled",
+      body: `${patient!.fullName} — "${body.title}" on ${apptDateStr}.`,
+      severity: "INFO",
+      relatedId: appt.id,
+      relatedType: "appointment",
+      metadata: { patientId: req.params.id, appointmentId: appt.id },
+    }).catch(() => {});
+
     res.status(201).json(appt);
   } catch (e) { next(e); }
 });
@@ -609,6 +722,23 @@ router.put("/appointments/:appointmentId", async (req, res, next) => {
       endAt: body.endAt !== undefined ? (body.endAt ? new Date(body.endAt) : null) : undefined,
     });
     if (!appt) notFound("Appointment");
+
+    if (appt && appt.patientId) {
+      const updatedDateStr = appt.startAt
+        ? new Date(appt.startAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+        : "";
+
+      notificationService.emitGuestNotification(appt.patientId, clinicId, {
+        type: "APPOINTMENT_UPDATED",
+        title: "Appointment Updated",
+        body: `Your appointment "${appt.title}" has been updated${updatedDateStr ? ` — now on ${updatedDateStr}` : ""}.`,
+        severity: "WARNING",
+        relatedId: appt.id,
+        relatedType: "appointment",
+        metadata: { appointmentId: appt.id, startAt: appt.startAt },
+      }).catch(() => {});
+    }
+
     res.json(appt);
   } catch (e) { next(e); }
 });
@@ -618,6 +748,29 @@ router.delete("/appointments/:appointmentId", async (req, res, next) => {
     const clinicId = getClinicId(req);
     const appt = await appointmentRepo.cancel(req.params.appointmentId, clinicId);
     if (!appt) notFound("Appointment");
+
+    if (appt && appt.patientId) {
+      notificationService.emitGuestNotification(appt.patientId, clinicId, {
+        type: "APPOINTMENT_CANCELLED",
+        title: "Appointment Cancelled",
+        body: `Your appointment "${appt.title}" has been cancelled. Please contact your clinic for details.`,
+        severity: "WARNING",
+        relatedId: appt.id,
+        relatedType: "appointment",
+        metadata: { appointmentId: appt.id },
+      }).catch(() => {});
+
+      notificationService.emitManagerNotification(clinicId, {
+        type: "APPOINTMENT_CANCELLED",
+        title: "Appointment Cancelled",
+        body: `Appointment "${appt.title}" was cancelled.`,
+        severity: "WARNING",
+        relatedId: appt.id,
+        relatedType: "appointment",
+        metadata: { patientId: appt.patientId, appointmentId: appt.id },
+      }).catch(() => {});
+    }
+
     res.json({ success: true });
   } catch (e) { next(e); }
 });
@@ -782,10 +935,24 @@ router.put("/documents/:id", async (req, res, next) => {
           ? `A document has been approved and marked ready.`
           : `A document was rejected. Reason: ${(body as any).rejectionReason ?? "Not specified"}`,
         severity: body.status === "REJECTED" ? "WARNING" : "INFO",
-        relatedId: doc.id,
+        relatedId: doc!.id,
         relatedType: "patient_document",
-        metadata: { clinicId, documentId: doc.id },
+        metadata: { clinicId, documentId: doc!.id },
       }).catch(() => {});
+
+      if (doc!.patientId) {
+        notificationService.emitGuestNotification(doc!.patientId, clinicId, {
+          type: body.status === "APPROVED" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
+          title: body.status === "APPROVED" ? "Document Approved" : "Document Needs Attention",
+          body: body.status === "APPROVED"
+            ? "Your document has been reviewed and approved."
+            : `Your document was rejected. Reason: ${(body as any).rejectionReason ?? "Please re-upload a clearer file."}`,
+          severity: body.status === "REJECTED" ? "WARNING" : "INFO",
+          relatedId: doc!.id,
+          relatedType: "patient_document",
+          metadata: { documentId: doc!.id },
+        }).catch(() => {});
+      }
     }
 
     res.json(doc);

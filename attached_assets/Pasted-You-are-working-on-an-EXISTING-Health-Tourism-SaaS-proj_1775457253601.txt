@@ -1,0 +1,359 @@
+You are working on an EXISTING Health Tourism SaaS project.
+
+Your task is to inspect the current codebase deeply and then DESIGN + IMPLEMENT a production-ready notification system for BOTH Manager and Guest roles in the cleanest, safest, most professional, SOLID-compliant way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing working flows
+- First inspect the real implementation deeply
+- Reuse the current notification infrastructure where it is good
+- Extend it properly for Manager and Guest
+- Keep architecture clean and scalable
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No duplicated notification logic scattered across random files
+- Do NOT create fake notifications with static/demo data
+- Build a real event-driven notification flow
+- Keep mobile push support in mind from the beginning
+- Production-ready, not prototype quality
+
+PRIMARY GOAL
+Manager and Guest must receive the MOST IMPORTANT notifications they actually need in daily usage.
+
+Notifications must work:
+- inside the app
+- in notification center/inbox screens
+- with unread count
+- with mark-as-read behavior
+- with clean severity/priority treatment
+- with mobile push notification support
+- even when the app is closed, where push is available
+
+FIRST TASK — ANALYZE CURRENT SYSTEM
+Before changing anything, inspect and understand:
+
+1. existing notifications table/schema
+2. existing device token registration flow
+3. existing admin notification implementation
+4. existing manager notification endpoints and UI
+5. current guest notification stub or missing parts
+6. existing notificationRepo / notification service / push service
+7. where business events already happen in:
+   - guest creation
+   - guest approval
+   - document assignment
+   - document upload
+   - document approval/rejection
+   - appointment creation/update/cancel
+   - journey/tracking updates
+   - clinic suspension / billing events
+8. current manager and guest header bell/unread count logic
+9. current manager notifications screen
+10. current guest notifications screen or missing feature
+11. any dead code, duplicate logic, or seed-only fake notifications
+
+Then directly implement the requested system.
+
+REQUIRED DESIGN PRINCIPLES
+Use a clean architecture approach:
+
+- thin route/controller layer
+- notification business rules in services/use cases
+- persistence in repository layer
+- shared notification creation service
+- shared type-safe schemas/enums
+- role-specific UI separated cleanly
+- no duplicated hardcoded notification messages across random endpoints
+- use domain-style event triggers or centralized notification helpers where appropriate
+
+CORE REQUIREMENT
+Build the notification system around REAL BUSINESS EVENTS.
+
+MANAGER — REQUIRED NOTIFICATIONS
+Manager should receive the following important notifications at minimum:
+
+1. Guest uploaded a required document
+- because manager needs to review it
+
+2. Guest document was rejected / needs re-upload
+- if manager action or system state requires follow-up
+
+3. New guest created / registered
+- if this is relevant in the current workflow and helps operations
+
+4. Guest approved / activated
+- if the flow still contains approval or active-state transition
+
+5. Appointment created
+- especially if it affects daily operations
+
+6. Appointment updated
+- if schedule changes matter operationally
+
+7. Appointment cancelled
+- manager must know operational schedule changed
+
+8. Upcoming appointment today / soon
+- useful reminder-type manager notification if supported cleanly
+
+9. Missing document / pending documents attention event
+- if a guest has required docs not uploaded and manager should act
+
+10. Guest journey step updated
+- only if this is useful operationally and not noisy
+
+11. Clinic billing warning / suspended status
+- critical for manager visibility
+
+GUEST — REQUIRED NOTIFICATIONS
+Guest should receive the following important notifications at minimum:
+
+1. Welcome / access ready
+- after guest account/access key becomes usable
+
+2. New appointment scheduled
+- guest must know when/where
+
+3. Appointment updated
+- guest must know changes immediately
+
+4. Appointment cancelled
+- guest must know it is no longer valid
+
+5. Document requested
+- manager assigned a required document
+
+6. Document approved
+- guest knows the file is accepted
+
+7. Document rejected
+- guest knows they must re-upload, with reason if available
+
+8. Journey/status step updated
+- guest track/progress changed
+
+9. Hotel assigned
+- if this is visible and meaningful to guest
+
+10. Transport assigned
+- if this is visible and meaningful to guest
+
+11. Doctor assigned
+- if this is visible and meaningful to guest
+
+12. Billing/payment/account warning only if actually relevant in guest experience
+- do not spam guest with internal admin-only finance data
+
+NOTIFICATION QUALITY RULES
+Only create notifications that are genuinely useful.
+Avoid noisy spam.
+Every notification must answer:
+- What happened?
+- Why does this user care?
+- Is action required?
+- Where should the user go next?
+
+Each notification should have:
+- id
+- targetRole
+- targetUserId or targetPatientId as appropriate
+- clinicId where applicable
+- type
+- title
+- body
+- severity (INFO | WARNING | CRITICAL)
+- status (UNREAD | READ)
+- relatedId
+- relatedType
+- metadata (json/jsonb)
+- createdAt
+- readAt
+
+SUGGESTED NOTIFICATION CATEGORIES
+Use structured categories such as:
+- APPOINTMENT
+- DOCUMENT
+- JOURNEY
+- GUEST
+- BILLING
+- SYSTEM
+- ASSIGNMENT
+
+Do not overcomplicate, but keep it extensible.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — BACKEND AUDIT + MODEL CLEANUP
+1. Audit the current notification schema and code paths
+2. Remove or isolate fake/seed notification behavior if it conflicts
+3. Ensure notification model supports manager + guest properly
+4. Add missing fields only if truly needed
+5. Keep backward compatibility where reasonable
+
+PHASE 2 — CENTRAL NOTIFICATION SERVICE
+Create or refactor to a central notification service.
+
+Requirements:
+- one clean entry point to create notifications
+- typed payloads
+- reusable helper methods for common events
+- no duplicated title/body logic everywhere
+- easy to call from use cases and route handlers
+
+Example style:
+- notifyManagerDocumentUploaded(...)
+- notifyGuestDocumentRequested(...)
+- notifyGuestAppointmentUpdated(...)
+- notifyManagerClinicSuspended(...)
+
+PHASE 3 — HOOK INTO REAL BUSINESS FLOWS
+Add notification triggers to the real operational flows.
+At minimum inspect and wire these:
+
+Manager-facing triggers:
+- guest create
+- guest approval/activation
+- guest document upload
+- document status review
+- appointment create/update/cancel
+- billing warning / suspension
+- pending document attention signal if applicable
+
+Guest-facing triggers:
+- guest account/access ready
+- appointment create/update/cancel
+- document assigned
+- document approved/rejected
+- journey step changed
+- doctor/hotel/transport assigned if appropriate
+
+PHASE 4 — PUSH NOTIFICATIONS
+Use the existing push/device token architecture if already present.
+If not complete, finish it cleanly.
+
+Requirements:
+- manager push works
+- guest push works
+- token registration works for both roles
+- notification send failure does not crash main business flow
+- push sending is fire-and-forget or safely isolated
+- structured logging for send success/failure
+
+PHASE 5 — MANAGER UI
+Implement or improve manager notification UI.
+
+Requirements:
+- notification bell with unread count
+- notification list screen
+- severity styling
+- clear grouping/order
+- mark single as read
+- mark all as read
+- tap behavior to navigate to relevant place where practical
+- clean empty/loading/error states
+- mobile-first UX
+- no clutter
+
+PHASE 6 — GUEST UI
+Implement or improve guest notification UI.
+
+Requirements:
+- guest header/bell unread count
+- guest notifications screen
+- list of notifications grouped/ordered cleanly
+- mark single as read
+- mark all as read
+- good empty/loading/error states
+- mobile-friendly
+- clear, simple, reassuring tone
+
+PHASE 7 — DEEP LINK / NAVIGATION BEHAVIOR
+When practical, tapping a notification should take the user to the related screen:
+- appointment details or schedule
+- documents screen
+- guest detail (manager)
+- track page
+- billing warning screen if applicable
+
+Do not overengineer if navigation structure makes this too risky, but implement the most valuable routes cleanly.
+
+PHASE 8 — PRODUCTION HARDENING
+Ensure:
+- unread counts are correct
+- notifications are role-safe
+- guest never sees another guest’s data
+- manager only sees clinic-scoped relevant notifications
+- no duplicate notification spam
+- consistent error handling
+- structured logs exist
+- pagination/limit strategy is reasonable
+- no major performance regressions
+- no inconsistent enum usage
+
+UX STANDARDS
+Manager notifications should feel:
+- operational
+- actionable
+- concise
+- priority-aware
+
+Guest notifications should feel:
+- clear
+- calm
+- simple
+- user-friendly
+- not overly technical
+
+Severity guidance:
+- INFO = normal updates
+- WARNING = follow-up needed
+- CRITICAL = urgent operational issue or suspension/payment/system problem
+
+EXAMPLES OF GOOD NOTIFICATIONS
+
+Manager:
+- "Document uploaded" — John Smith uploaded Passport Copy. Review required.
+- "Appointment cancelled" — Eye consultation for Maria Ivanova was cancelled.
+- "Clinic warning" — Your clinic has an unpaid invoice and may be suspended.
+
+Guest:
+- "New appointment" — Your eye consultation is scheduled for 24 Aug at 14:00.
+- "Document rejected" — Passport Copy was rejected. Please upload a clearer file.
+- "Journey updated" — Your current treatment status is now 'Preparation'.
+
+YOU MUST CHECK FOR THESE RISKS
+- duplicate notification creation in multiple code paths
+- seed/demo notifications polluting real data
+- push token stored but never used for guest
+- unread count not matching actual list
+- notification routes leaking cross-clinic data
+- guest notification API still stubbed
+- document/appointment events firing twice
+- notification wording too technical or too noisy
+- UI lists becoming cluttered with low-value events
+- broken relatedId/relatedType navigation mapping
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current notification system
+2. Which manager notifications were added
+3. Which guest notifications were added
+4. Exact files changed
+5. Why each change was made
+6. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Full list of Manager notifications now supported
+2. Full list of Guest notifications now supported
+3. Which business flows now trigger notifications
+4. Exact files changed
+5. Push support summary
+6. UI summary for manager + guest
+7. Manual QA checklist
+8. Remaining future improvements if any
+
+START NOW
+First inspect the current notification infrastructure and all relevant manager/guest business flows.
+Then implement the full professional notification system end-to-end.

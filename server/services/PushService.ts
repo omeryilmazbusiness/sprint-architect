@@ -37,7 +37,8 @@ async function sendBatch(tokens: string[], payload: PushPayload): Promise<void> 
       console.error(`[PushService] Expo push API error ${res.status}: ${text}`);
     } else {
       const result = await res.json().catch(() => null);
-      const failures = result?.data?.filter((r: any) => r.status === "error") ?? [];
+      const failures = (result?.data as Array<{ status: string }> | undefined)
+        ?.filter((r) => r.status === "error") ?? [];
       if (failures.length > 0) {
         console.warn(`[PushService] ${failures.length}/${tokens.length} push(es) failed:`, failures);
       } else {
@@ -69,6 +70,17 @@ export const pushService = {
       }
     } catch (err) {
       console.error("[PushService] sendToClinicRole error:", err);
+    }
+  },
+
+  async sendToUser(userId: string, payload: PushPayload): Promise<void> {
+    try {
+      const rows = await deviceTokenRepo.findByUserId(userId);
+      if (rows.length > 0) {
+        await sendBatch(rows.map((r) => r.token), payload);
+      }
+    } catch (err) {
+      console.error("[PushService] sendToUser error:", err);
     }
   },
 };

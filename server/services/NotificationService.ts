@@ -14,8 +14,15 @@ export type NotificationEventType =
   | "DOCUMENT_UPLOADED"
   | "DOCUMENT_APPROVED"
   | "DOCUMENT_REJECTED"
+  | "DOCUMENT_ASSIGNED"
   | "APPOINTMENT_CREATED"
+  | "APPOINTMENT_UPDATED"
   | "APPOINTMENT_CANCELLED"
+  | "JOURNEY_UPDATED"
+  | "HOTEL_ASSIGNED"
+  | "TRANSPORT_ASSIGNED"
+  | "DOCTOR_ASSIGNED"
+  | "WELCOME"
   | "SCHEDULER_FAILED"
   | "EMAIL_SEND_FAILED";
 
@@ -54,7 +61,7 @@ export const notificationService = {
           relatedType: event.relatedType ?? null,
           severity: event.severity,
         },
-      }).catch((err) => console.error("[NotificationService] push failed:", err));
+      }).catch((err) => console.error("[NotificationService] admin push failed:", err));
     } catch (err) {
       console.error("[NotificationService] emitAdminNotification failed:", err);
     }
@@ -84,9 +91,44 @@ export const notificationService = {
           relatedType: event.relatedType ?? null,
           severity: event.severity,
         },
-      }).catch((err) => console.error("[NotificationService] push failed:", err));
+      }).catch((err) => console.error("[NotificationService] manager push failed:", err));
     } catch (err) {
       console.error("[NotificationService] emitManagerNotification failed:", err);
+    }
+  },
+
+  async emitGuestNotification(
+    patientId: string,
+    clinicId: string,
+    event: NotificationEvent,
+  ): Promise<void> {
+    try {
+      const notification = await notificationRepo.create({
+        clinicId,
+        targetRole: "PATIENT",
+        targetPatientId: patientId,
+        title: event.title,
+        body: event.body,
+        type: event.type,
+        severity: event.severity,
+        relatedId: event.relatedId,
+        relatedType: event.relatedType,
+        metadata: event.metadata,
+      });
+
+      pushService.sendToUser(patientId, {
+        title: event.title,
+        body: event.body,
+        data: {
+          type: event.type,
+          notificationId: notification.id,
+          relatedId: event.relatedId ?? null,
+          relatedType: event.relatedType ?? null,
+          severity: event.severity,
+        },
+      }).catch((err) => console.error("[NotificationService] guest push failed:", err));
+    } catch (err) {
+      console.error("[NotificationService] emitGuestNotification failed:", err);
     }
   },
 };

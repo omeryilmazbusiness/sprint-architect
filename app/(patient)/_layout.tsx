@@ -1,13 +1,45 @@
+import { useEffect } from "react";
+import { Platform } from "react-native";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs, Redirect } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { T } from "@/constants/adminTheme";
 import { TabBarMetricsProvider } from "@/components/layout/TabBarMetricsContext";
+import { apiRequest } from "@/lib/query-client";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+async function registerPatientPushToken() {
+  try {
+    if (Platform.OS === "web") return;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") return;
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const token = tokenData.data;
+    const platform: "ios" | "android" = Platform.OS === "ios" ? "ios" : "android";
+    await apiRequest("POST", "/v1/patient/device-token", { token, platform });
+    console.log("[Push] Patient token registered:", token.slice(0, 20) + "...");
+  } catch (err) {
+    console.warn("[Push] Failed to register patient push token:", err);
+  }
+}
 
 const TAB_H      = 68;
 const TAB_SIDE   = 14;
@@ -154,6 +186,10 @@ function ClassicTabLayout() {
           name="profile"
           options={{ title: "Profile", tabBarIcon: tabIcon("person-outline", "person") }}
         />
+        <Tabs.Screen
+          name="notifications"
+          options={{ href: null }}
+        />
       </Tabs>
     </TabBarMetricsProvider>
   );
@@ -163,6 +199,12 @@ function ClassicTabLayout() {
 
 export default function PatientLayout() {
   const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (user && user.role === "PATIENT") {
+      registerPatientPushToken();
+    }
+  }, [user?.id]);
 
   if (isLoading) return null;
   if (!user || user.role !== "PATIENT") return <Redirect href="/(auth)/login" />;

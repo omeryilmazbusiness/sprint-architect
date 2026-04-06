@@ -394,6 +394,7 @@ export const notifications = pgTable("notifications", {
     .default(sql`gen_random_uuid()`),
   clinicId: varchar("clinic_id").references(() => clinics.id),
   targetRole: text("target_role").notNull(),
+  targetPatientId: varchar("target_patient_id"),
   title: text("title").notNull(),
   body: text("body").notNull(),
   type: text("type").notNull().default("INFO"),

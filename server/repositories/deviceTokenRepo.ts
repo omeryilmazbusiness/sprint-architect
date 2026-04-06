@@ -46,6 +46,12 @@ export const deviceTokenRepo = {
     });
   },
 
+  async findByUserId(userId: string): Promise<DeviceToken[]> {
+    return db.query.deviceTokens.findMany({
+      where: eq(deviceTokens.userId, userId),
+    });
+  },
+
   async delete(token: string): Promise<void> {
     await db.delete(deviceTokens).where(eq(deviceTokens.token, token));
   },

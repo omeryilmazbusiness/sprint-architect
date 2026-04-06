@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authMiddleware, requireRole } from "../auth/middleware";
 import { AppError } from "../auth/errors";
 import { patientRepo } from "../repositories/patientRepo";
@@ -6,15 +7,106 @@ import { planRepo } from "../repositories/planRepo";
 import { appointmentRepo } from "../repositories/appointmentRepo";
 import { documentRepo } from "../repositories/documentRepo";
 import { doctorRepo } from "../repositories/doctorRepo";
+import { notificationRepo } from "../repositories/notificationRepo";
+import { deviceTokenRepo } from "../repositories/deviceTokenRepo";
 import { db } from "../db";
 import { clinics, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const router = Router();
 
-router.get("/notifications/unread-count", authMiddleware, requireRole("PATIENT"), async (_req, res) => {
-  res.json({ unread: 0 });
+function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const msg = result.error.errors.map((e) => e.message).join("; ");
+    throw new AppError("VALIDATION_ERROR", msg, 400);
+  }
+  return result.data;
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+router.get("/notifications/unread-count", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const actor = req.actor;
+    if (!actor || actor.type !== "patient") {
+      throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
+    }
+    const unread = await notificationRepo.getPatientUnreadCount(actor.sub);
+    res.json({ unread });
+  } catch (e) { next(e); }
 });
+
+router.get("/notifications", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const actor = req.actor;
+    if (!actor || actor.type !== "patient") {
+      throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
+    }
+    const { limit } = req.query as Record<string, string>;
+    const list = await notificationRepo.listForPatient(
+      actor.sub,
+      limit ? Number(limit) : undefined,
+    );
+    res.json(list);
+  } catch (e) { next(e); }
+});
+
+router.put("/notifications/read-all", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const actor = req.actor;
+    if (!actor || actor.type !== "patient") {
+      throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
+    }
+    await notificationRepo.markAllPatientRead(actor.sub);
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+router.put("/notifications/:id/read", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const actor = req.actor;
+    if (!actor || actor.type !== "patient") {
+      throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
+    }
+    const notification = await notificationRepo.markPatientRead(req.params.id, actor.sub);
+    if (!notification) throw new AppError("NOT_FOUND", "Notification not found", 404);
+    res.json(notification);
+  } catch (e) { next(e); }
+});
+
+// ─── Device token ───────────────────────────────────────────────────────────
+
+router.post("/device-token", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const actor = req.actor;
+    if (!actor || actor.type !== "patient") {
+      throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
+    }
+    const { token, platform } = validateBody(
+      z.object({ token: z.string().min(1), platform: z.enum(["ios", "android", "web"]) }),
+      req.body,
+    );
+    await deviceTokenRepo.upsert({
+      userId: actor.sub,
+      role: "PATIENT",
+      clinicId: actor.clinicId ?? null,
+      token,
+      platform,
+    });
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+router.delete("/device-token", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
+  try {
+    const { token } = validateBody(z.object({ token: z.string().min(1) }), req.body);
+    await deviceTokenRepo.delete(token);
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+// ─── Dashboard ──────────────────────────────────────────────────────────────
 
 router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res, next) => {
   try {
@@ -56,7 +148,19 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
     appts.filter(a => a.doctorId).forEach(a => doctorIdSet.add(a.doctorId as string));
     if (plan?.doctorId) doctorIdSet.add(plan.doctorId);
 
-    let uniqueDoctors: any[] = [];
+    let uniqueDoctors: Array<{
+      id: string;
+      fullName: string;
+      specialty?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      photoUrl?: string | null;
+      university?: string | null;
+      experienceYears?: number | null;
+      languages?: string | null;
+      diplomaUrl?: string | null;
+      bio?: string | null;
+    }> = [];
     if (doctorIdSet.size > 0) {
       const allDoctors = await doctorRepo.list(clinicId);
       uniqueDoctors = allDoctors.rows.filter(d => doctorIdSet.has(d.id));

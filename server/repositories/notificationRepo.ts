@@ -3,6 +3,8 @@ import { notifications, type Notification } from "@shared/schema";
 import { eq, and, desc, count, isNull } from "drizzle-orm";
 
 export const notificationRepo = {
+  // ─── Manager ──────────────────────────────────────────────────────────────
+
   async getUnreadCount(clinicId: string): Promise<number> {
     const [result] = await db
       .select({ value: count() })
@@ -12,20 +14,6 @@ export const notificationRepo = {
           eq(notifications.clinicId, clinicId),
           eq(notifications.status, "UNREAD"),
           eq(notifications.targetRole, "MANAGER"),
-        ),
-      );
-    return result.value;
-  },
-
-  async getAdminUnreadCount(): Promise<number> {
-    const [result] = await db
-      .select({ value: count() })
-      .from(notifications)
-      .where(
-        and(
-          isNull(notifications.clinicId),
-          eq(notifications.status, "UNREAD"),
-          eq(notifications.targetRole, "ADMIN"),
         ),
       );
     return result.value;
@@ -48,18 +36,6 @@ export const notificationRepo = {
     });
   },
 
-  async listAdmin(limit?: number, offset?: number): Promise<Notification[]> {
-    return db.query.notifications.findMany({
-      where: and(
-        isNull(notifications.clinicId),
-        eq(notifications.targetRole, "ADMIN"),
-      ),
-      orderBy: [desc(notifications.createdAt)],
-      limit: limit ?? 50,
-      offset: offset ?? 0,
-    });
-  },
-
   async markRead(id: string, clinicId: string): Promise<Notification | null> {
     const [updated] = await db
       .update(notifications)
@@ -72,22 +48,7 @@ export const notificationRepo = {
         ),
       )
       .returning();
-    return updated || null;
-  },
-
-  async markAdminRead(id: string): Promise<Notification | null> {
-    const [updated] = await db
-      .update(notifications)
-      .set({ status: "READ", readAt: new Date() })
-      .where(
-        and(
-          eq(notifications.id, id),
-          isNull(notifications.clinicId),
-          eq(notifications.targetRole, "ADMIN"),
-        ),
-      )
-      .returning();
-    return updated || null;
+    return updated ?? null;
   },
 
   async markAllRead(clinicId: string): Promise<void> {
@@ -102,6 +63,49 @@ export const notificationRepo = {
       );
   },
 
+  // ─── Admin ─────────────────────────────────────────────────────────────────
+
+  async getAdminUnreadCount(): Promise<number> {
+    const [result] = await db
+      .select({ value: count() })
+      .from(notifications)
+      .where(
+        and(
+          isNull(notifications.clinicId),
+          eq(notifications.status, "UNREAD"),
+          eq(notifications.targetRole, "ADMIN"),
+        ),
+      );
+    return result.value;
+  },
+
+  async listAdmin(limit?: number, offset?: number): Promise<Notification[]> {
+    return db.query.notifications.findMany({
+      where: and(
+        isNull(notifications.clinicId),
+        eq(notifications.targetRole, "ADMIN"),
+      ),
+      orderBy: [desc(notifications.createdAt)],
+      limit: limit ?? 50,
+      offset: offset ?? 0,
+    });
+  },
+
+  async markAdminRead(id: string): Promise<Notification | null> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ status: "READ", readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.id, id),
+          isNull(notifications.clinicId),
+          eq(notifications.targetRole, "ADMIN"),
+        ),
+      )
+      .returning();
+    return updated ?? null;
+  },
+
   async markAllAdminRead(): Promise<void> {
     await db
       .update(notifications)
@@ -114,9 +118,66 @@ export const notificationRepo = {
       );
   },
 
+  // ─── Guest / Patient ───────────────────────────────────────────────────────
+
+  async getPatientUnreadCount(patientId: string): Promise<number> {
+    const [result] = await db
+      .select({ value: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.targetRole, "PATIENT"),
+          eq(notifications.targetPatientId, patientId),
+          eq(notifications.status, "UNREAD"),
+        ),
+      );
+    return result.value;
+  },
+
+  async listForPatient(patientId: string, limit?: number): Promise<Notification[]> {
+    return db.query.notifications.findMany({
+      where: and(
+        eq(notifications.targetRole, "PATIENT"),
+        eq(notifications.targetPatientId, patientId),
+      ),
+      orderBy: [desc(notifications.createdAt)],
+      limit: limit ?? 50,
+    });
+  },
+
+  async markPatientRead(id: string, patientId: string): Promise<Notification | null> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ status: "READ", readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.id, id),
+          eq(notifications.targetRole, "PATIENT"),
+          eq(notifications.targetPatientId, patientId),
+        ),
+      )
+      .returning();
+    return updated ?? null;
+  },
+
+  async markAllPatientRead(patientId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ status: "READ", readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.targetRole, "PATIENT"),
+          eq(notifications.targetPatientId, patientId),
+        ),
+      );
+  },
+
+  // ─── Shared ────────────────────────────────────────────────────────────────
+
   async create(data: {
     clinicId?: string | null;
     targetRole: string;
+    targetPatientId?: string | null;
     title: string;
     body: string;
     type: string;
@@ -130,13 +191,14 @@ export const notificationRepo = {
       .values({
         clinicId: data.clinicId ?? null,
         targetRole: data.targetRole,
+        targetPatientId: data.targetPatientId ?? null,
         title: data.title,
         body: data.body,
         type: data.type,
         severity: data.severity ?? "INFO",
         relatedId: data.relatedId,
         relatedType: data.relatedType,
-        metadata: data.metadata as any,
+        metadata: data.metadata as Record<string, unknown>,
       })
       .returning();
     return inserted;
