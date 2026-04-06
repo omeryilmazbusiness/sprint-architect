@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 export type GuestStatusFilter =
   | "ALL"
@@ -36,15 +37,6 @@ export const DEFAULT_GUEST_FILTERS: GuestFilterState = {
   todayAppt: false,
 };
 
-const STATUS_OPTIONS: { label: string; value: GuestStatusFilter }[] = [
-  { label: "All", value: "ALL" },
-  { label: "Waiting Approval", value: "WAITING_APPROVAL" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Approved", value: "APPROVED" },
-  { label: "Active", value: "ACTIVE" },
-  { label: "Ended", value: "ENDED" },
-];
-
 interface Props {
   visible: boolean;
   current: GuestFilterState;
@@ -58,6 +50,17 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [draft, setDraft] = useState<GuestFilterState>(current);
+  const t = useT();
+  const tf = t.filterSheet;
+
+  const statusOptions: { label: string; value: GuestStatusFilter }[] = [
+    { label: tf.statusAll, value: "ALL" },
+    { label: tf.statusWaitingApproval, value: "WAITING_APPROVAL" },
+    { label: tf.statusPending, value: "PENDING" },
+    { label: tf.statusApproved, value: "APPROVED" },
+    { label: tf.statusActive, value: "ACTIVE" },
+    { label: tf.statusEnded, value: "ENDED" },
+  ];
 
   useEffect(() => {
     if (visible) {
@@ -93,6 +96,10 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
     (draft.pendingDocs ? 1 : 0) +
     (draft.todayAppt ? 1 : 0);
 
+  const applyLabel = activeCount > 0
+    ? tf.applyWithCount.replace("{n}", String(activeCount))
+    : tf.apply;
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -110,7 +117,7 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
 
           <View style={styles.header}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={styles.title}>Filters</Text>
+              <Text style={styles.title}>{tf.title}</Text>
               {activeCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{activeCount}</Text>
@@ -128,9 +135,9 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
             keyboardShouldPersistTaps="handled"
           >
             {/* — Status — */}
-            <Text style={styles.sectionLabel}>Guest Status</Text>
+            <Text style={styles.sectionLabel}>{tf.sectionGuestStatus}</Text>
             <View style={styles.statusGrid}>
-              {STATUS_OPTIONS.map(({ label, value }) => {
+              {statusOptions.map(({ label, value }) => {
                 const active = draft.status === value;
                 return (
                   <Pressable
@@ -163,8 +170,8 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
                   <Ionicons name="document-outline" size={16} color={T.warning} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.toggleLabel}>Pending Documents</Text>
-                  <Text style={styles.toggleSub}>Show guests with missing docs</Text>
+                  <Text style={styles.toggleLabel}>{tf.pendingDocsLabel}</Text>
+                  <Text style={styles.toggleSub}>{tf.pendingDocsSub}</Text>
                 </View>
               </View>
               <Switch
@@ -184,8 +191,8 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
                   <Ionicons name="calendar-outline" size={16} color={T.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.toggleLabel}>Today's Appointments</Text>
-                  <Text style={styles.toggleSub}>Show guests with appts today</Text>
+                  <Text style={styles.toggleLabel}>{tf.todayApptLabel}</Text>
+                  <Text style={styles.toggleSub}>{tf.todayApptSub}</Text>
                 </View>
               </View>
               <Switch
@@ -203,15 +210,13 @@ export function ManagerFilterSheet({ visible, current, onApply, onClose }: Props
               onPress={handleClear}
               style={({ pressed }) => [styles.btnClear, { opacity: pressed ? 0.7 : 1 }]}
             >
-              <Text style={styles.btnClearText}>Clear All</Text>
+              <Text style={styles.btnClearText}>{tf.clearAll}</Text>
             </Pressable>
             <Pressable
               onPress={handleApply}
               style={({ pressed }) => [styles.btnApply, { opacity: pressed ? 0.85 : 1 }]}
             >
-              <Text style={styles.btnApplyText}>
-                Apply{activeCount > 0 ? ` (${activeCount})` : ""}
-              </Text>
+              <Text style={styles.btnApplyText}>{applyLabel}</Text>
             </Pressable>
           </View>
         </Animated.View>

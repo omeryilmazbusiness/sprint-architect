@@ -483,6 +483,11 @@ export const ru: AppDict = {
     guestPlural: "гостей",
     apptSingular: "приём",
     apptPlural: "приёмов",
+    noTravelDates: "Даты не указаны",
+    arrivingDate: "Приезд {date}",
+    keyPrefix: "Ключ:",
+    tagDocsPending: "Докум. ожидают",
+    tagTodayAppt: "Приём сегодня",
   },
 
   managerServices: {
@@ -682,5 +687,23 @@ export const ru: AppDict = {
     countSuffixFound: "найдено",
     apptSingular: "приём",
     apptPlural: "приёмов",
+  },
+
+  filterSheet: {
+    title: "Фильтры",
+    sectionGuestStatus: "Статус гостя",
+    pendingDocsLabel: "Незаверш. документы",
+    pendingDocsSub: "Гости с недостающими документами",
+    todayApptLabel: "Приёмы сегодня",
+    todayApptSub: "Гости с приёмами на сегодня",
+    clearAll: "Сбросить",
+    apply: "Применить",
+    applyWithCount: "Применить ({n})",
+    statusAll: "Все",
+    statusWaitingApproval: "Ожидает подтвержд.",
+    statusPending: "Ожидает",
+    statusApproved: "Одобрен",
+    statusActive: "Активный",
+    statusEnded: "Завершён",
   },
 };

@@ -483,6 +483,11 @@ export const en: AppDict = {
     guestPlural: "guests",
     apptSingular: "appointment",
     apptPlural: "appointments",
+    noTravelDates: "No travel dates",
+    arrivingDate: "Arriving {date}",
+    keyPrefix: "Key:",
+    tagDocsPending: "Docs Pending",
+    tagTodayAppt: "Appt Today",
   },
 
   managerServices: {
@@ -682,5 +687,23 @@ export const en: AppDict = {
     countSuffixFound: "found",
     apptSingular: "appointment",
     apptPlural: "appointments",
+  },
+
+  filterSheet: {
+    title: "Filters",
+    sectionGuestStatus: "Guest Status",
+    pendingDocsLabel: "Pending Documents",
+    pendingDocsSub: "Show guests with missing docs",
+    todayApptLabel: "Today's Appointments",
+    todayApptSub: "Show guests with appointments today",
+    clearAll: "Clear All",
+    apply: "Apply",
+    applyWithCount: "Apply ({n})",
+    statusAll: "All",
+    statusWaitingApproval: "Waiting Approval",
+    statusPending: "Pending",
+    statusApproved: "Approved",
+    statusActive: "Active",
+    statusEnded: "Ended",
   },
 };

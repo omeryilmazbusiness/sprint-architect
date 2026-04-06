@@ -88,17 +88,6 @@ interface DoctorListResponse {
   rows: Doctor[];
 }
 
-type StatusFilterType = "ALL" | "WAITING_APPROVAL" | "PENDING" | "APPROVED" | "ENDED" | "ACTIVE" | "INACTIVE";
-
-const STATUS_FILTERS: { label: string; value: StatusFilterType }[] = [
-  { label: "All", value: "ALL" },
-  { label: "Waiting", value: "WAITING_APPROVAL" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Approved", value: "APPROVED" },
-  { label: "Ended", value: "ENDED" },
-];
-
-
 function formatDate(s?: string) {
   if (!s) return "—";
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -183,16 +172,20 @@ function GuestsTab() {
     setFilters(DEFAULT_GUEST_FILTERS);
   }
 
-  const STATUS_CHIP_LABELS: Record<string, string> = {
-    WAITING_APPROVAL: "Waiting Approval", PENDING: "Pending", APPROVED: "Approved",
-    ACTIVE: "Active", INACTIVE: "Inactive", ENDED: "Ended",
+  const tf = t.filterSheet;
+  const statusChipLabels: Record<string, string> = {
+    WAITING_APPROVAL: tf.statusWaitingApproval,
+    PENDING: tf.statusPending,
+    APPROVED: tf.statusApproved,
+    ACTIVE: tf.statusActive,
+    ENDED: tf.statusEnded,
   };
 
   const activeChips: ActiveChip[] = [];
   if (filters.status !== "ALL") {
     activeChips.push({
       key: "status",
-      label: `Status: ${STATUS_CHIP_LABELS[filters.status] ?? filters.status}`,
+      label: statusChipLabels[filters.status] ?? filters.status,
       variant: "primary",
       onRemove: () => setFilters((f) => ({ ...f, status: "ALL" })),
     });
@@ -200,7 +193,7 @@ function GuestsTab() {
   if (filters.pendingDocs) {
     activeChips.push({
       key: "pendingDocs",
-      label: "Docs Pending",
+      label: tu.tagDocsPending,
       variant: "warn",
       onRemove: () => setFilters((f) => ({ ...f, pendingDocs: false })),
     });
@@ -208,7 +201,7 @@ function GuestsTab() {
   if (filters.todayAppt) {
     activeChips.push({
       key: "todayAppt",
-      label: "Today Appt",
+      label: tu.tagTodayAppt,
       variant: "accent",
       onRemove: () => setFilters((f) => ({ ...f, todayAppt: false })),
     });
