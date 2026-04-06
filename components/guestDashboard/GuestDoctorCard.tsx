@@ -4,9 +4,6 @@ import {
   Text,
   StyleSheet,
   Image,
-  Pressable,
-  Linking,
-  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,8 +20,6 @@ export interface DoctorCardItem {
   experienceYears?: number | null;
   languages?: string | null;
   diplomaUrl?: string | null;
-  phone?: string | null;
-  email?: string | null;
   bio?: string | null;
 }
 
@@ -50,17 +45,6 @@ function parseLangs(raw: string | null | undefined): string[] {
     .split(/[,;]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-}
-
-async function tryCall(phone: string | null | undefined) {
-  if (!phone) {
-    Alert.alert("No phone", "Doctor phone number is not available.");
-    return;
-  }
-  const url = `tel:${phone}`;
-  const ok = await Linking.canOpenURL(url);
-  if (ok) Linking.openURL(url);
-  else Alert.alert("Cannot call", "Your device cannot make phone calls.");
 }
 
 // ─── Stats panel (experience · university · language count) ───────────────────
@@ -133,7 +117,6 @@ function DoctorCardContent({
   const langs = parseLangs(doctor.languages);
   const visLangs = langs.slice(0, 6);
   const extraLangs = langs.length > 6 ? langs.length - 6 : 0;
-  const hasPhone = !!doctor.phone;
 
   return (
     <LinearGradient
@@ -222,19 +205,6 @@ function DoctorCardContent({
             ) : null}
           </View>
         </View>
-      ) : null}
-
-      {/* ── CTA: Call ── */}
-      {hasPhone ? (
-        <Pressable
-          style={({ pressed }) => [s.cta, { opacity: pressed ? 0.82 : 1 }]}
-          onPress={() => tryCall(doctor.phone)}
-          accessibilityRole="button"
-          accessibilityLabel="Call doctor"
-        >
-          <Ionicons name="call-outline" size={16} color={T.accent} />
-          <Text style={s.ctaText}>Call Doctor</Text>
-        </Pressable>
       ) : null}
     </LinearGradient>
   );
@@ -487,24 +457,6 @@ const s = StyleSheet.create({
   },
   langTextMuted: {
     color: T.textMuted,
-  },
-
-  // CTA (mirrors hotel ctaLight)
-  cta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: T.accent,
-    borderRadius: T.r10,
-    paddingVertical: 13,
-    backgroundColor: "rgba(3,105,161,0.04)",
-  },
-  ctaText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-    color: T.accent,
   },
 
   // Empty state

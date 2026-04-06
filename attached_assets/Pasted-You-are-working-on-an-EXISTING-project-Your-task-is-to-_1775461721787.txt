@@ -1,0 +1,118 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current guest-side Doctor card implementation and make the following targeted improvements in the safest, cleanest, most professional, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the card from scratch unless truly necessary
+- First inspect the current implementation
+- Then directly apply the requested improvements
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Preserve the current premium design direction
+- Keep the result mobile-first, elegant, and maintainable
+
+PRIMARY REQUESTS
+
+1) REMOVE THE “CALL DOCTOR” OPTION FROM THE CARD
+Required behavior:
+- Remove the “Call Doctor” action/button/option from the doctor card
+- Remove any related UI, action handler, unused props, and dead code connected to this feature
+- Make sure the card still looks balanced and premium after removal
+- Do not leave awkward empty spacing or broken layout
+
+2) ADD IMPORTANT DOCTOR DETAILS SUCH AS EDUCATION AND EXPERIENCE
+Required behavior:
+- Enrich the doctor card with meaningful professional doctor details
+- Focus on high-value information such as:
+  - education / university
+  - specialty
+  - years of experience
+  - certifications / expertise if available
+  - languages if available
+  - short professional summary / bio if available
+- Present this information in a clean, premium, highly readable layout
+- Keep the card detailed but not cluttered
+- Handle missing fields gracefully
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before making changes, inspect and understand:
+- the current doctor card component
+- where the “Call Doctor” button/action is rendered
+- whether call-related logic exists in shared button/action code
+- what doctor data fields are already available in the current DTO
+- whether education / experience / certifications already exist in backend/frontend data
+- whether any backend DTO enhancement is needed to expose richer doctor details
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — REMOVE CALL DOCTOR
+1. Inspect current doctor card action area
+2. Remove the “Call Doctor” UI/action cleanly
+3. Remove unused handlers/props/imports if no longer needed
+4. Rebalance the card layout after removal
+
+Acceptance criteria:
+- no “Call Doctor” option remains
+- layout still feels premium and complete
+- no dead code remains around the removed action
+
+PHASE 2 — ADD EDUCATION / EXPERIENCE / IMPORTANT DETAILS
+1. Inspect current doctor data available to the guest card
+2. If needed, extend the backend/frontend data flow cleanly
+3. Add important doctor details to the card:
+   - education / university
+   - experience years
+   - specialty
+   - certifications / expertise
+   - languages
+   - bio if available
+4. Organize the information in a refined, premium layout
+5. Use graceful fallbacks when some data is missing
+
+Acceptance criteria:
+- doctor card now shows richer professional information
+- education and experience are visible when available
+- card remains elegant and readable
+- no clutter or broken spacing on mobile
+
+PHASE 3 — POLISH / CLEANUP
+1. Ensure dark/light styling still looks good if supported
+2. Ensure card stays aligned with hotel/driver premium design level
+3. Remove unused call-related code
+4. Keep component clean and maintainable
+
+ARCHITECTURE EXPECTATIONS
+- Keep component focused on presentation
+- Keep data shaping in the correct layer
+- Avoid duplicated doctor-field mapping logic
+- Keep types strict and maintainable
+- Leave the code cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- “Call Doctor” logic may still exist in shared CTA/action config
+- education/experience fields may exist in backend but not exposed in guest DTO
+- removing CTA may leave broken spacing
+- adding too much info may make the card cluttered on mobile
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current doctor card
+2. Exact files changed
+3. Why each change was made
+4. Any backend/data changes introduced
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of removed call action
+2. Summary of added doctor details
+3. Exact files changed
+4. Manual QA checklist for phone/mobile
+5. Remaining future improvements if any
+
+START NOW
+First inspect the current doctor card and the data it receives.
+Then implement the requested improvements end-to-end.
