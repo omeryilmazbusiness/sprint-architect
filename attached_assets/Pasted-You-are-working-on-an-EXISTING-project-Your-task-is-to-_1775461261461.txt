@@ -1,0 +1,192 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current guest dashboard doctor card and redesign it into a truly premium, detailed, modern card — similar in richness and presentation quality to the driver card or hotel card.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing guest flows
+- First inspect the real current implementation deeply
+- Then directly implement the requested redesign
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake placeholder-quality UI
+- Mobile-first quality is critical
+- The result must feel premium, elegant, trustworthy, detailed, and polished
+
+PRIMARY GOAL
+The guest-side Doctor card on the dashboard must become as rich, premium, and informative as the hotel card or driver card.
+
+The doctor card must:
+- feel high-end and trustworthy
+- show comprehensive doctor information
+- be visually premium and modern
+- be easy to scan on mobile
+- contain well-structured, detailed content
+- handle missing information gracefully
+- remain view-only (guest cannot search or edit doctors)
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before making changes, inspect and understand all of the following:
+
+1. Current doctor card implementation
+- component structure
+- styling
+- data source
+- current UX weaknesses
+- why it feels weaker than driver/hotel cards
+
+2. Driver / hotel card reference quality
+- inspect how driver and hotel cards are designed
+- identify what makes them feel richer/premium
+- compare spacing, hierarchy, metadata presentation, badges, sections, image handling, and fallback states
+
+3. Doctor data source
+- where doctor data comes from on guest side
+- whether it comes from patient plan, appointment, or another DTO
+- whether backend DTO already includes all needed doctor fields
+- whether backend must be extended cleanly
+- whether the correct doctor is the appointment doctor, assigned doctor, or fallback doctor
+
+Then directly implement the redesign.
+
+DESIGN REQUIREMENTS
+The doctor card should be designed with a premium hospitality/medical aesthetic.
+
+It should include as much useful data as available, such as:
+- doctor full name
+- specialty
+- profile image/avatar
+- short professional summary / bio
+- university / education
+- years of experience
+- spoken languages
+- certifications / expertise areas
+- appointment relationship label if relevant (for example: “Your appointment doctor”)
+- optional working area / clinic context if appropriate
+- optional tags/badges for expertise
+
+The layout should feel:
+- premium
+- modern
+- detailed
+- elegant
+- reassuring
+- highly readable
+
+VISUAL / UX EXPECTATIONS
+- Use layered premium card styling
+- Strong but clean hierarchy
+- Refined typography
+- Premium avatar/image presentation
+- Soft shadows / radius / card surface
+- Elegant chips/badges for expertise or language
+- Well-spaced sections
+- Informational richness without clutter
+- Mobile-first responsive layout
+- Polished empty/fallback states
+- If some doctor fields are missing, the layout must still look complete and intentional
+
+BUSINESS RULES
+- Guest cannot search doctors
+- Guest cannot change doctor
+- This card is view-only
+- If the guest has an appointment doctor, show that doctor
+- If not, use the most appropriate assigned-doctor fallback only if the current domain logic supports it
+- The source of truth must be correct
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ANALYZE CURRENT STATE
+1. Inspect current doctor card
+2. Inspect hotel/driver cards
+3. Identify the exact design and data gaps
+4. Identify if backend DTO/data needs improvement
+
+PHASE 2 — DATA SHAPING
+1. Ensure the doctor card gets the right doctor data
+2. If current backend response is insufficient, extend it cleanly
+3. Keep the correct source of truth explicit
+4. Avoid frontend guesswork if backend can provide a proper DTO
+
+Acceptance criteria:
+- doctor card receives the correct doctor
+- sufficient doctor details are available for a rich UI
+- no incorrect doctor selection logic remains
+
+PHASE 3 — PREMIUM CARD REDESIGN
+1. Redesign the doctor card to match the richness level of hotel/driver cards
+2. Build a highly polished premium card
+3. Add structured detail sections where appropriate
+4. Use elegant fallback handling for missing fields
+5. Keep the card highly readable on mobile
+
+Suggested sections if data exists:
+- Header: avatar, doctor name, specialty, appointment label
+- Summary: short bio/professional intro
+- Expertise / certifications tags
+- Experience + education row(s)
+- Languages section
+- Optional contextual note (for example: assigned for your upcoming visit)
+
+Acceptance criteria:
+- doctor card looks significantly more premium
+- card feels rich and informative
+- visual quality is clearly improved
+- mobile UX is excellent
+- no clutter
+
+PHASE 4 — EMPTY / FALLBACK STATE
+If no doctor is currently assigned:
+- show a calm, polished, premium placeholder state
+- explain that doctor details will appear once assignment/appointment is confirmed
+- avoid a broken or empty-looking card
+
+Acceptance criteria:
+- no ugly empty state
+- placeholder feels intentional and premium
+
+PHASE 5 — POLISH / CLEANUP
+1. Ensure consistent styling with hotel/driver cards
+2. Keep dark/light mode compatibility if already supported
+3. Avoid duplicated styling logic where possible
+4. Keep component maintainable and well-structured
+5. Ensure no guest-side doctor search/select UI remains
+
+ARCHITECTURE EXPECTATIONS
+- Keep component focused on presentation
+- Keep doctor data shaping in the correct layer
+- Avoid duplicated doctor mapping logic
+- Avoid mixing business logic into pure UI unnecessarily
+- Keep types strict and clean
+- Leave the codebase more maintainable than before
+
+YOU MUST CHECK FOR THESE RISKS
+- doctor card using the wrong doctor source
+- appointment doctor and assigned doctor conflicting
+- backend DTO missing enough fields for premium design
+- missing image/bio/education/languages causing broken layout
+- over-design making mobile too dense
+- inconsistent styling compared to hotel/driver cards
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current doctor card and hotel/driver reference cards
+2. Exact files changed
+3. Why each change was made
+4. Any backend/data changes introduced
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the doctor card redesign
+2. Summary of doctor data-source logic
+3. Exact files changed
+4. Manual QA checklist for phone/mobile
+5. Remaining future improvements if any
+
+START NOW
+First inspect the current guest dashboard doctor card and compare it against the hotel and driver cards.
+Then implement the premium detailed redesign end-to-end.

@@ -6,9 +6,11 @@ import {
   Image,
   Pressable,
   Linking,
+  Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { T, cardShadow } from "@/constants/adminTheme";
+import { T } from "@/constants/adminTheme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,44 +52,118 @@ function parseLangs(raw: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+async function tryCall(phone: string | null | undefined) {
+  if (!phone) {
+    Alert.alert("No phone", "Doctor phone number is not available.");
+    return;
+  }
+  const url = `tel:${phone}`;
+  const ok = await Linking.canOpenURL(url);
+  if (ok) Linking.openURL(url);
+  else Alert.alert("Cannot call", "Your device cannot make phone calls.");
+}
 
-function EmptyDoctorCard() {
+// ─── Stats panel (experience · university · language count) ───────────────────
+
+interface StatsPanelProps {
+  experienceYears: number | null | undefined;
+  university: string | null | undefined;
+  langCount: number;
+}
+
+function StatsPanel({ experienceYears, university, langCount }: StatsPanelProps) {
+  const cols: { label: string; value: string }[] = [];
+  if (experienceYears) cols.push({ label: "Experience", value: `${experienceYears}+ yrs` });
+  if (university)      cols.push({ label: "Education",  value: university });
+  if (langCount > 0)   cols.push({ label: "Languages",  value: `${langCount} spoken` });
+  if (cols.length === 0) return null;
+
   return (
-    <View style={[s.card, s.emptyCard, cardShadow]}>
-      <View style={s.emptyIconWrap}>
-        <Ionicons name="person-outline" size={28} color={T.textMuted} />
-      </View>
-      <View style={s.emptyText}>
-        <Text style={s.emptyTitle}>Doctor details will appear here</Text>
-        <Text style={s.emptySub}>
-          Once a doctor is assigned to your appointment, their full profile
-          will be shown.
-        </Text>
-      </View>
+    <View style={s.statsRow}>
+      {cols.map((c, i) => (
+        <React.Fragment key={c.label}>
+          <View style={s.statsCol}>
+            <Text style={s.statsVal} numberOfLines={1}>{c.value}</Text>
+            <Text style={s.statsLbl}>{c.label}</Text>
+          </View>
+          {i < cols.length - 1 ? <View style={s.statsDivider} /> : null}
+        </React.Fragment>
+      ))}
     </View>
   );
 }
 
-// ─── Doctor card ──────────────────────────────────────────────────────────────
+// ─── Empty state ──────────────────────────────────────────────────────────────
 
-function DoctorCardContent({ doctor, isAppointmentDoctor }: Props & { doctor: DoctorCardItem }) {
+function EmptyDoctorCard() {
+  return (
+    <LinearGradient
+      colors={["#FFFFFF", "#F0F7FF"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[s.card, s.cardEmpty]}
+    >
+      <View style={s.arcEmpty} />
+      <View style={s.header}>
+        <View style={s.chipRow}>
+          <Ionicons name="person-outline" size={12} color={T.accent} />
+          <Text style={s.chip}>Doctor</Text>
+        </View>
+      </View>
+      <View style={s.emptyBody}>
+        <View style={s.emptyIconWrap}>
+          <Ionicons name="person-outline" size={34} color={T.border} />
+        </View>
+        <Text style={s.emptyTitle}>Doctor not assigned yet</Text>
+        <Text style={s.emptySub}>
+          Your doctor's full profile will appear here once they are
+          assigned to your appointment.
+        </Text>
+      </View>
+    </LinearGradient>
+  );
+}
+
+// ─── Doctor card (populated) ──────────────────────────────────────────────────
+
+function DoctorCardContent({
+  doctor,
+  isAppointmentDoctor,
+}: Props & { doctor: DoctorCardItem }) {
   const langs = parseLangs(doctor.languages);
-  const visLangs = langs.slice(0, 5);
-  const extraLangs = langs.length > 5 ? langs.length - 5 : 0;
+  const visLangs = langs.slice(0, 6);
+  const extraLangs = langs.length > 6 ? langs.length - 6 : 0;
   const hasPhone = !!doctor.phone;
-  const hasEmail = !!doctor.email;
-  const hasContact = hasPhone || hasEmail;
 
   return (
-    <View style={[s.card, cardShadow]}>
-      {/* ── Appointment context banner ── */}
-      {isAppointmentDoctor ? (
-        <View style={s.apptBanner}>
-          <Ionicons name="calendar-outline" size={13} color={T.accent} />
-          <Text style={s.apptBannerText}>Your upcoming appointment doctor</Text>
+    <LinearGradient
+      colors={["#FFFFFF", "#EFF6FF"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.card}
+    >
+      {/* Decorative arc — top right */}
+      <View style={s.arc} />
+
+      {/* ── Card header: category chip + appointment/certified badge ── */}
+      <View style={s.header}>
+        <View style={s.chipRow}>
+          <Ionicons name="medical-outline" size={12} color={T.accent} />
+          <Text style={s.chip}>Doctor</Text>
         </View>
-      ) : null}
+
+        {isAppointmentDoctor ? (
+          <View style={s.apptBadge}>
+            <Ionicons name="calendar-outline" size={11} color={T.accent} />
+            <Text style={s.apptBadgeText}>Your appointment</Text>
+          </View>
+        ) : doctor.diplomaUrl ? (
+          <View style={s.certBadge}>
+            <Ionicons name="ribbon-outline" size={11} color="#059669" />
+            <Text style={s.certText}>Certified</Text>
+          </View>
+        ) : null}
+      </View>
 
       {/* ── Hero row: avatar + name + specialty ── */}
       <View style={s.heroRow}>
@@ -100,60 +176,36 @@ function DoctorCardContent({ doctor, isAppointmentDoctor }: Props & { doctor: Do
         )}
 
         <View style={s.heroInfo}>
-          <Text style={s.name} numberOfLines={2}>
-            {doctor.fullName}
-          </Text>
+          <Text style={s.name} numberOfLines={2}>{doctor.fullName}</Text>
           {doctor.specialty ? (
-            <View style={s.specialtyRow}>
-              <Ionicons name="medical-outline" size={12} color={T.accent} />
-              <Text style={s.specialty} numberOfLines={1}>
-                {doctor.specialty}
-              </Text>
-            </View>
+            <Text style={s.specialty} numberOfLines={2}>{doctor.specialty}</Text>
           ) : null}
-          {doctor.diplomaUrl ? (
-            <View style={s.certBadge}>
-              <Ionicons name="ribbon-outline" size={11} color="#059669" />
-              <Text style={s.certText}>Certified</Text>
+          {/* Certified badge moved here if appointment is the header badge */}
+          {isAppointmentDoctor && doctor.diplomaUrl ? (
+            <View style={s.certBadgeInline}>
+              <Ionicons name="ribbon-outline" size={10} color="#059669" />
+              <Text style={s.certTextSmall}>Certified</Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      {/* ── Meta: university + experience ── */}
-      {(doctor.university || doctor.experienceYears) ? (
-        <View style={s.metaSection}>
-          {doctor.university ? (
-            <View style={s.metaRow}>
-              <View style={s.metaIconWrap}>
-                <Ionicons name="school-outline" size={14} color={T.textMuted} />
-              </View>
-              <Text style={s.metaText} numberOfLines={1}>
-                {doctor.university}
-              </Text>
-            </View>
-          ) : null}
-          {doctor.experienceYears ? (
-            <View style={s.metaRow}>
-              <View style={s.metaIconWrap}>
-                <Ionicons name="time-outline" size={14} color={T.textMuted} />
-              </View>
-              <Text style={s.metaText}>
-                {doctor.experienceYears}+ years of experience
-              </Text>
-            </View>
-          ) : null}
+      {/* ── Stats panel: experience · university · languages ── */}
+      <StatsPanel
+        experienceYears={doctor.experienceYears}
+        university={doctor.university}
+        langCount={langs.length}
+      />
+
+      {/* ── Bio quote ── */}
+      {doctor.bio ? (
+        <View style={s.bioWrap}>
+          <View style={s.bioBar} />
+          <Text style={s.bioText} numberOfLines={3}>{doctor.bio}</Text>
         </View>
       ) : null}
 
-      {/* ── Bio ── */}
-      {doctor.bio ? (
-        <Text style={s.bio} numberOfLines={3}>
-          {doctor.bio}
-        </Text>
-      ) : null}
-
-      {/* ── Languages ── */}
+      {/* ── Languages chips ── */}
       {langs.length > 0 ? (
         <View style={s.langsSection}>
           <Text style={s.langsLabel}>Languages</Text>
@@ -164,42 +216,27 @@ function DoctorCardContent({ doctor, isAppointmentDoctor }: Props & { doctor: Do
               </View>
             ))}
             {extraLangs > 0 ? (
-              <View style={[s.langChip, s.langChipExtra]}>
-                <Text style={s.langText}>+{extraLangs}</Text>
+              <View style={[s.langChip, s.langChipMuted]}>
+                <Text style={[s.langText, s.langTextMuted]}>+{extraLangs}</Text>
               </View>
             ) : null}
           </View>
         </View>
       ) : null}
 
-      {/* ── Contact ── */}
-      {hasContact ? (
-        <View style={s.contactRow}>
-          {hasPhone ? (
-            <Pressable
-              style={({ pressed }) => [s.contactBtn, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => Linking.openURL(`tel:${doctor.phone}`)}
-              accessibilityRole="button"
-              accessibilityLabel="Call doctor"
-            >
-              <Ionicons name="call-outline" size={14} color={T.accent} />
-              <Text style={s.contactBtnText}>Call</Text>
-            </Pressable>
-          ) : null}
-          {hasEmail ? (
-            <Pressable
-              style={({ pressed }) => [s.contactBtn, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => Linking.openURL(`mailto:${doctor.email}`)}
-              accessibilityRole="button"
-              accessibilityLabel="Email doctor"
-            >
-              <Ionicons name="mail-outline" size={14} color={T.accent} />
-              <Text style={s.contactBtnText}>Email</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {/* ── CTA: Call ── */}
+      {hasPhone ? (
+        <Pressable
+          style={({ pressed }) => [s.cta, { opacity: pressed ? 0.82 : 1 }]}
+          onPress={() => tryCall(doctor.phone)}
+          accessibilityRole="button"
+          accessibilityLabel="Call doctor"
+        >
+          <Ionicons name="call-outline" size={16} color={T.accent} />
+          <Text style={s.ctaText}>Call Doctor</Text>
+        </Pressable>
       ) : null}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -212,54 +249,128 @@ export function GuestDoctorCard({ doctor, isAppointmentDoctor }: Props) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const AVATAR_SIZE = 80;
+
 const s = StyleSheet.create({
   card: {
-    backgroundColor: T.surface,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: T.border,
-    padding: T.sp20,
+    padding: T.sp16,
     gap: 14,
+    overflow: "hidden",
+    // Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardEmpty: {
+    minHeight: 180,
   },
 
-  // Appointment banner
-  apptBanner: {
+  // Decorative arc (mirrors hotel tile)
+  arc: {
+    position: "absolute",
+    top: -50,
+    right: -50,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(3,105,161,0.07)",
+  },
+  arcEmpty: {
+    position: "absolute",
+    top: -50,
+    right: -50,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(3,105,161,0.05)",
+  },
+
+  // Header row
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    alignSelf: "flex-start",
+    justifyContent: "space-between",
   },
-  apptBannerText: {
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  chip: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
+    fontSize: 11,
+    color: T.accent,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  apptBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#DBEAFE",
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  apptBadgeText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
     color: T.accent,
   },
+  certBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#D1FAE5",
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  certText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    color: "#059669",
+  },
+  certBadgeInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    backgroundColor: "#D1FAE5",
+    borderRadius: 20,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  certTextSmall: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 9,
+    color: "#059669",
+  },
 
-  // Hero
+  // Hero row
   heroRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 16,
+    gap: 14,
   },
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 2.5,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 3,
     borderColor: T.accent,
     flexShrink: 0,
   },
   avatarFallback: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "rgba(3,105,161,0.09)",
-    borderWidth: 2.5,
-    borderColor: "rgba(3,105,161,0.18)",
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: "rgba(3,105,161,0.1)",
+    borderWidth: 3,
+    borderColor: "rgba(3,105,161,0.22)",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -272,8 +383,8 @@ const s = StyleSheet.create({
   },
   heroInfo: {
     flex: 1,
-    gap: 6,
-    paddingTop: 2,
+    gap: 5,
+    paddingTop: 4,
   },
   name: {
     fontFamily: "Inter_700Bold",
@@ -282,60 +393,65 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
     lineHeight: 23,
   },
-  specialtyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
   specialty: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_500Medium",
     fontSize: 13,
     color: T.accent,
-    flex: 1,
-  },
-  certBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-start",
-    backgroundColor: "#D1FAE5",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  certText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    color: "#059669",
+    lineHeight: 18,
   },
 
-  // Meta
-  metaSection: {
-    gap: 6,
-  },
-  metaRow: {
+  // Stats row (mirrors hotel stayRow)
+  statsRow: {
     flexDirection: "row",
+    backgroundColor: "rgba(3,105,161,0.06)",
+    borderRadius: T.r12,
+    padding: T.sp12,
     alignItems: "center",
-    gap: 8,
   },
-  metaIconWrap: {
-    width: 22,
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  metaText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: T.textSec,
+  statsCol: {
     flex: 1,
+    alignItems: "center",
+    gap: 3,
+  },
+  statsVal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    color: T.text,
+    textAlign: "center",
+  },
+  statsLbl: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 10,
+    color: T.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  statsDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "rgba(3,105,161,0.15)",
   },
 
   // Bio
-  bio: {
+  bioWrap: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  bioBar: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: T.accent,
+    opacity: 0.35,
+    alignSelf: "stretch",
+    flexShrink: 0,
+  },
+  bioText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 20,
+    flex: 1,
     fontStyle: "italic",
   },
 
@@ -345,7 +461,7 @@ const s = StyleSheet.create({
   },
   langsLabel: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 10,
     color: T.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.6,
@@ -356,73 +472,69 @@ const s = StyleSheet.create({
     gap: 6,
   },
   langChip: {
-    backgroundColor: "rgba(3,105,161,0.08)",
+    backgroundColor: "rgba(3,105,161,0.09)",
     borderRadius: 20,
     paddingHorizontal: 11,
-    paddingVertical: 4,
+    paddingVertical: 5,
   },
-  langChipExtra: {
-    backgroundColor: T.surfaceSubtle,
+  langChipMuted: {
+    backgroundColor: "rgba(0,0,0,0.04)",
   },
   langText: {
     fontFamily: "Inter_500Medium",
     fontSize: 11,
     color: T.accent,
   },
-
-  // Contact
-  contactRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
+  langTextMuted: {
+    color: T.textMuted,
   },
-  contactBtn: {
-    flex: 1,
+
+  // CTA (mirrors hotel ctaLight)
+  cta: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: "rgba(3,105,161,0.07)",
-    borderRadius: 10,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "rgba(3,105,161,0.14)",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: T.accent,
+    borderRadius: T.r10,
+    paddingVertical: 13,
+    backgroundColor: "rgba(3,105,161,0.04)",
   },
-  contactBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+  ctaText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
     color: T.accent,
   },
 
   // Empty state
-  emptyCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    borderStyle: "dashed",
-  },
-  emptyIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: T.surfaceSubtle,
+  emptyBody: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    paddingVertical: T.sp16,
+    gap: T.sp8,
   },
-  emptyText: {
-    flex: 1,
-    gap: 4,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(3,105,161,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: T.text,
+    fontSize: 15,
+    color: T.textMuted,
+    textAlign: "center",
   },
   emptySub: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: T.textMuted,
+    textAlign: "center",
     lineHeight: 18,
+    maxWidth: 260,
   },
 });
