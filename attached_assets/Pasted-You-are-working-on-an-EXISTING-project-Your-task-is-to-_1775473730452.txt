@@ -1,0 +1,207 @@
+You are working on an EXISTING project.
+
+Your task is to deeply inspect and professionally fix the issue where, on the MANAGER side, tapping the flag/language icon and selecting Russian does NOT actually change the language.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing manager flows
+- First inspect the real implementation deeply
+- Then directly implement the fix
+- Preserve good architecture where possible
+- Refactor only where needed for correctness, maintainability, state consistency, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT apply a fake UI-only fix
+- Find and fix the REAL root cause
+- The final result must be production-ready, scalable, and clean
+
+PRIMARY PROBLEM
+On the manager side:
+- there is a flag/language icon in the header
+- user selects Russian
+- but the visible manager UI does not switch language correctly
+
+This means one or more parts of the language switching system are broken.
+
+YOUR GOAL
+Find the real root cause and fix the manager language switching flow end-to-end so that:
+
+- selecting Russian from the manager header actually changes the manager UI to Russian immediately
+- all visible manager strings react properly
+- the chosen language persists
+- switching back also works
+- no stale or mixed-language UI remains
+- the implementation remains aligned with a clean scalable i18n architecture
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand ALL of the following:
+
+1. MANAGER HEADER LANGUAGE ICON / SWITCHER
+- current manager header implementation
+- how the flag/language selector is rendered
+- what event fires when a language is chosen
+- whether the selection callback is actually executed
+- whether the manager header is using the correct i18n context/provider
+
+2. CURRENT I18N ARCHITECTURE
+- existing language provider/context/store/hook
+- where the source of truth for selected language lives
+- whether admin/guest/manager use the same i18n system or different ones
+- whether the manager side is accidentally disconnected from the provider
+- whether translations are loaded from dictionaries/resources correctly
+- whether language persistence exists and is working
+
+3. REACTIVITY / STATE FLOW
+- what happens in code when Russian is selected
+- whether selected language state actually updates
+- whether manager components subscribe/react to that state
+- whether translations are memoized incorrectly
+- whether stale props, cached labels, or static objects prevent rerender
+- whether some manager pages still use hardcoded strings or derived labels outside the translation layer
+
+4. LAYOUT / PROVIDER BOUNDARY
+- whether the manager layout is wrapped by the correct i18n provider
+- whether the header is inside or outside the provider boundary
+- whether there are multiple providers causing state mismatch
+- whether the manager stack/tab layout is mounted in a way that blocks correct language updates
+
+5. PERSISTENCE
+- whether selected language is stored correctly
+- whether language selection survives navigation/reload
+- whether manager reads the persisted language correctly on mount
+
+6. TRANSLATION COVERAGE
+- whether the language is changing but manager strings are still hardcoded
+- whether some labels come from enums/utilities instead of translation keys
+- whether only part of the screen is language-aware
+
+Then directly implement the fix.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ROOT CAUSE IDENTIFICATION
+Find the exact reason why selecting Russian in the manager header does not change the language.
+
+Possible root causes to inspect carefully:
+- header switcher updates local UI state only, not global i18n state
+- manager screens are not subscribed to the language context
+- manager layout is outside provider
+- multiple i18n providers are conflicting
+- selected language is stored but not applied
+- language keys exist but manager strings remain hardcoded
+- enum/status labels are not translation-aware
+- memoization/static config prevents rerender
+- wrong hook/context imported in manager area
+- flag selector UI changes visual selection only, not actual app language
+
+Acceptance criteria:
+- you identify the real root cause(s), not just patch symptoms
+
+PHASE 2 — FIX MANAGER LANGUAGE SWITCHING
+Implement the proper fix so that:
+- selecting Russian updates the true i18n source of truth
+- the manager UI rerenders immediately
+- current screen updates without requiring manual reload
+- header, tabs, cards, labels, sections, forms, statuses, and manager-visible text respond correctly
+- switching back works too
+
+Acceptance criteria:
+- manager selects Russian → manager UI becomes Russian immediately
+- manager selects default language → UI returns correctly
+- no stale mixed-language screen remains
+
+PHASE 3 — FIX PROVIDER / ARCHITECTURE ISSUES IF PRESENT
+If the root cause is architectural:
+- fix the provider placement
+- unify duplicated language state if needed
+- remove conflicting translation contexts if necessary
+- ensure one clean source of truth for selected language on the manager side
+
+Acceptance criteria:
+- manager side uses a clean, reliable language architecture
+- no conflicting language states remain
+
+PHASE 4 — PERSISTENCE AND NAVIGATION CONSISTENCY
+Ensure that:
+- selected language persists after navigation
+- selected language persists after refresh/app reopen if this behavior exists in the project
+- manager tab navigation does not reset language
+- manager stack screens also respect the selected language
+
+Acceptance criteria:
+- language survives navigation correctly
+- language state remains consistent across all manager screens
+
+PHASE 5 — HARDEN TRANSLATION REACTIVITY
+Inspect all manager-visible text and fix any parts that do not react to language changes because of:
+- hardcoded strings
+- static label maps
+- enum mapping outside i18n
+- stale memoized objects
+- improperly localized shared components
+
+Do NOT do a full new localization rollout unless necessary.
+Only fix the non-reactive/problematic pieces required for the manager switcher to work correctly and consistently.
+
+Acceptance criteria:
+- all manager-visible text that is supposed to be localized actually updates when language changes
+- no “header changes but page stays old language” issue
+- no “some cards change, some don’t” issue
+
+PHASE 6 — UX POLISH
+Ensure the language switch UX feels professional:
+- flag/language selector state reflects the current language correctly
+- switching language is immediate and reliable
+- no awkward flicker or broken intermediate state
+- header remains premium and balanced on mobile
+
+Acceptance criteria:
+- language switcher feels reliable and polished
+- current selected language is visually clear
+
+ARCHITECTURE EXPECTATIONS
+- Keep one reusable i18n system
+- Keep one source of truth for selected language
+- Keep manager layout and screens properly connected to the provider
+- Avoid duplicated state
+- Avoid translation hacks inside individual components
+- Keep the codebase cleaner than before
+- Ensure this solution scales to the whole project
+
+YOU MUST CHECK FOR THESE RISKS
+- manager header switcher changes only local component state
+- manager screens import wrong translation hook/context
+- provider mounted in admin/guest but not manager
+- nested providers causing stale values
+- persisted language not read back on manager mount
+- some strings translated but enum/badge/status labels not
+- some manager tabs/screens mounted with cached labels that never rerender
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found
+2. Exact files changed
+3. Why each fix was necessary
+4. Any architecture cleanup performed
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for why manager language was not changing
+2. Summary of the final fix
+3. Confirmation that selecting Russian now updates manager UI immediately
+4. Confirmation that switching back also works
+5. Exact files changed
+6. Manual QA checklist
+7. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- selecting Russian from the manager header actually changes the visible manager UI
+- the current manager screen rerenders correctly
+- navigation does not reset the language unexpectedly
+
+START NOW
+First inspect the manager header language switcher, the manager i18n provider/state flow, and all relevant manager layout boundaries deeply.
+Then fix the problem end-to-end professionally.

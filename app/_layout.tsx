@@ -7,6 +7,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, setSystemErrorHandler } from "@/lib/query-client";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import { SystemErrorProvider, useSystemError } from "@/context/SystemErrorContext";
 import { MaintenanceBottomSheet } from "@/components/system/MaintenanceBottomSheet";
 import { useAppFonts } from "@/lib/fonts/FontLoader";
@@ -37,22 +38,24 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
-            <SystemErrorProvider>
-              <SystemErrorBridge />
-              <AuthProvider>
-                <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(patient)" />
-                  <Stack.Screen name="(guest)" />
-                  <Stack.Screen name="(manager)" />
-                  <Stack.Screen name="(manager-tabs)" />
-                  <Stack.Screen name="(admin)" />
-                </Stack>
-              </AuthProvider>
-              <MaintenanceBottomSheet />
-            </SystemErrorProvider>
+            <LanguageProvider>
+              <SystemErrorProvider>
+                <SystemErrorBridge />
+                <AuthProvider>
+                  <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(patient)" />
+                    <Stack.Screen name="(guest)" />
+                    <Stack.Screen name="(manager)" />
+                    <Stack.Screen name="(manager-tabs)" />
+                    <Stack.Screen name="(admin)" />
+                  </Stack>
+                </AuthProvider>
+                <MaintenanceBottomSheet />
+              </SystemErrorProvider>
+            </LanguageProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>

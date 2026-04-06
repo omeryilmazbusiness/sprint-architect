@@ -7,7 +7,6 @@ import { BlurView } from "expo-blur";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AdminThemeProvider } from "@/context/AdminThemeContext";
-import { LanguageProvider } from "@/context/LanguageContext";
 import { T } from "@/constants/adminTheme";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/query-client";
@@ -172,10 +171,8 @@ export default function AdminTabLayout() {
 
   const Layout = isLiquidGlassAvailable() ? NativeTabLayout : ClassicTabLayout;
   return (
-    <LanguageProvider>
-      <AdminThemeProvider>
-        <Layout />
-      </AdminThemeProvider>
-    </LanguageProvider>
+    <AdminThemeProvider>
+      <Layout />
+    </AdminThemeProvider>
   );
 }
