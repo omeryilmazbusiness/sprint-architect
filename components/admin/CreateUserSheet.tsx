@@ -18,6 +18,7 @@ import { T } from "@/constants/adminTheme";
 import { TextField } from "@/components/ui";
 import { createUser, AdminUserCreated } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
+import { useT } from "@/hooks/useT";
 
 export interface CreateUserSheetProps {
   visible: boolean;
@@ -32,6 +33,9 @@ const ROLE_OPTIONS = [
   { value: "MANAGER" as const, label: "Manager", icon: "briefcase-outline" as const, color: T.primary },
   { value: "ADMIN" as const, label: "Admin", icon: "shield-outline" as const, color: "#7C3AED" },
 ];
+
+// ─── Module-level helper components ───────────────────────────────────────────
+// IMPORTANT: These are at module level to prevent keyboard focus loss.
 
 function SegmentedControl({
   value,
@@ -79,11 +83,7 @@ const seg = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 8,
   },
-  label: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: T.textSec,
-  },
+  label: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec },
   activeLabel: { color: "#fff" },
 });
 
@@ -92,11 +92,13 @@ function ClinicPickerRow({
   label,
   onPress,
   disabled,
+  placeholder,
 }: {
   value: string | null;
   label: string | null;
   onPress: () => void;
   disabled?: boolean;
+  placeholder: string;
 }) {
   return (
     <Pressable
@@ -106,11 +108,8 @@ function ClinicPickerRow({
       <View style={cpick.icon}>
         <Ionicons name="business-outline" size={14} color={T.accent} />
       </View>
-      <Text
-        style={[cpick.text, !label && cpick.placeholder]}
-        numberOfLines={1}
-      >
-        {label ?? "Select clinic…"}
+      <Text style={[cpick.text, !label && cpick.placeholder]} numberOfLines={1}>
+        {label ?? placeholder}
       </Text>
       {!disabled && <Ionicons name="chevron-down" size={14} color={T.textMuted} />}
       {disabled && <Ionicons name="lock-closed-outline" size={13} color={T.textMuted} />}
@@ -172,15 +171,12 @@ function ToggleRow({
 }
 
 const tog = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 4,
-  },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
   label: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
   sub: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 2 },
 });
+
+// ─── ClinicSelectorModal ───────────────────────────────────────────────────────
 
 function ClinicSelectorModal({
   visible,
@@ -193,6 +189,8 @@ function ClinicSelectorModal({
   onSelect: (id: string, name: string) => void;
   clinicsData?: ClinicListResponse;
 }) {
+  const t = useT();
+  const tcu = t.adminCreateUser;
   const clinics = clinicsData?.rows ?? [];
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -202,7 +200,7 @@ function ClinicSelectorModal({
         <View style={[csel.sheet, { paddingBottom: bottomPad + 8 }]}>
           <View style={csel.handle} />
           <View style={csel.header}>
-            <Text style={csel.title}>Select Clinic</Text>
+            <Text style={csel.title}>{tcu.selectClinicTitle}</Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Ionicons name="close" size={22} color={T.textSec} />
             </Pressable>
@@ -228,7 +226,7 @@ function ClinicSelectorModal({
               </Pressable>
             ))}
             {clinics.length === 0 && (
-              <Text style={csel.empty}>No active clinics found</Text>
+              <Text style={csel.empty}>{tcu.noActiveClinics}</Text>
             )}
           </ScrollView>
         </View>
@@ -264,6 +262,8 @@ const csel = StyleSheet.create({
   empty: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center", paddingVertical: 24 },
 });
 
+// ─── OtpModal ─────────────────────────────────────────────────────────────────
+
 function OtpModal({
   visible,
   password,
@@ -275,6 +275,8 @@ function OtpModal({
   email: string;
   onDone: () => void;
 }) {
+  const t = useT();
+  const tcu = t.adminCreateUser;
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -290,24 +292,24 @@ function OtpModal({
           <View style={otp.iconWrap}>
             <Ionicons name="key-outline" size={28} color={T.success} />
           </View>
-          <Text style={otp.title}>User Created</Text>
+          <Text style={otp.title}>{tcu.userCreatedTitle}</Text>
           <Text style={otp.sub}>
-            Save this one-time password for{" "}
-            <Text style={{ fontFamily: "Inter_600SemiBold", color: T.text }}>{email}</Text>.
-            It will not be shown again.
+            {tcu.userCreatedSub.split("{email}")[0]}
+            <Text style={{ fontFamily: "Inter_600SemiBold", color: T.text }}>{email}</Text>
+            {tcu.userCreatedSub.split("{email}")[1] ?? ""}
           </Text>
           <Pressable style={otp.pwBox} onPress={handleCopy}>
             <Text style={otp.pwText} selectable>{password}</Text>
             <View style={otp.copyBtn}>
               <Ionicons name={copied ? "checkmark-outline" : "copy-outline"} size={15} color={copied ? T.success : T.accent} />
-              <Text style={[otp.copyLabel, copied && { color: T.success }]}>{copied ? "Copied!" : "Copy"}</Text>
+              <Text style={[otp.copyLabel, copied && { color: T.success }]}>
+                {copied ? tcu.copied : tcu.copyLabel}
+              </Text>
             </View>
           </Pressable>
-          <Text style={otp.note}>
-            The user must change their password on first login.
-          </Text>
+          <Text style={otp.note}>{tcu.otpNote}</Text>
           <Pressable style={otp.doneBtn} onPress={onDone}>
-            <Text style={otp.doneBtnText}>Done</Text>
+            <Text style={otp.doneBtnText}>{tcu.done}</Text>
           </Pressable>
         </View>
       </View>
@@ -364,6 +366,8 @@ const otp = StyleSheet.create({
   doneBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });
 
+// ─── Main sheet ───────────────────────────────────────────────────────────────
+
 export default function CreateUserSheet({
   visible,
   onClose,
@@ -372,6 +376,8 @@ export default function CreateUserSheet({
   preselectedClinicId,
   preselectedClinicName,
 }: CreateUserSheetProps) {
+  const t = useT();
+  const tcu = t.adminCreateUser;
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const isPrefilled = !!preselectedClinicId;
@@ -451,7 +457,7 @@ export default function CreateUserSheet({
             <View style={styles.handle} />
 
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Create User</Text>
+              <Text style={styles.title}>{tcu.sheetTitle}</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <Ionicons name="close" size={22} color={T.textSec} />
               </Pressable>
@@ -462,56 +468,57 @@ export default function CreateUserSheet({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.sectionLabel}>ROLE</Text>
+              <Text style={styles.sectionLabel}>{tcu.roleSection}</Text>
               <SegmentedControl
                 value={role}
                 onChange={(v) => { setRole(v); if (v === "ADMIN") { setClinicId(""); setClinicName(""); } }}
                 disabled={isPrefilled}
               />
 
-              <Text style={[styles.sectionLabel, { marginTop: 20 }]}>IDENTITY</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 20 }]}>{tcu.identitySection}</Text>
               <View style={styles.fields}>
                 <TextField
-                  label="Full Name *"
+                  label={tcu.fullNameLabel}
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="e.g. Ayşe Kara"
+                  placeholder={tcu.fullNamePlaceholder}
                   autoCapitalize="words"
                 />
                 <TextField
-                  label="Email *"
+                  label={tcu.emailLabel}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="name@example.com"
+                  placeholder={tcu.emailPlaceholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
                 <TextField
-                  label="Phone (optional)"
+                  label={tcu.phoneLabel}
                   value={phone}
                   onChangeText={setPhone}
-                  placeholder="+90 555 123 4567"
+                  placeholder={tcu.phonePlaceholder}
                   keyboardType="phone-pad"
                 />
               </View>
 
               {role === "MANAGER" && (
                 <>
-                  <Text style={[styles.sectionLabel, { marginTop: 20 }]}>CLINIC *</Text>
+                  <Text style={[styles.sectionLabel, { marginTop: 20 }]}>{tcu.clinicSection}</Text>
                   <ClinicPickerRow
                     value={clinicId || null}
                     label={clinicName || null}
                     onPress={() => setShowClinicPicker(true)}
                     disabled={isPrefilled}
+                    placeholder={tcu.selectClinicPlaceholder}
                   />
                   {!clinicId && (
-                    <Text style={styles.fieldHint}>Manager must be linked to a clinic</Text>
+                    <Text style={styles.fieldHint}>{tcu.clinicRequiredHint}</Text>
                   )}
 
                   <View style={[styles.toggleSection, { marginTop: 16 }]}>
                     <ToggleRow
-                      label="Set as primary manager"
-                      sublabel="This manager will appear on the clinic card"
+                      label={tcu.setPrimaryLabel}
+                      sublabel={tcu.setPrimarySub}
                       value={setAsPrimary}
                       onChange={setSetAsPrimary}
                     />
@@ -522,7 +529,7 @@ export default function CreateUserSheet({
               {role === "ADMIN" && (
                 <View style={styles.infoBanner}>
                   <Ionicons name="information-circle-outline" size={16} color={T.accent} />
-                  <Text style={styles.infoText}>Admin accounts are not linked to a specific clinic and have full platform access.</Text>
+                  <Text style={styles.infoText}>{tcu.adminInfoBanner}</Text>
                 </View>
               )}
 
@@ -539,7 +546,7 @@ export default function CreateUserSheet({
                 ) : (
                   <>
                     <Ionicons name="person-add-outline" size={18} color="#fff" />
-                    <Text style={styles.submitText}>Create User</Text>
+                    <Text style={styles.submitText}>{tcu.createUserBtn}</Text>
                   </>
                 )}
               </Pressable>

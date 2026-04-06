@@ -1,0 +1,204 @@
+You are working on an EXISTING project.
+
+THIS IS A STRICT, NON-NEGOTIABLE REQUIREMENT.
+
+The ADMIN panel MUST behave as a FULLY multilingual system.
+
+WHEN ANY LANGUAGE IS SELECTED:
+EVERY SINGLE VISIBLE TEXT in the ADMIN interface MUST switch to that language.
+
+NO EXCEPTIONS.
+NO PARTIAL TRANSLATION.
+NO MIXED LANGUAGE.
+ZERO tolerance for untranslated content.
+
+HARD REQUIREMENT
+
+If Russian is selected:
+- ALL text must be Russian
+
+If another language is selected:
+- ALL text must be that language
+
+This includes EVERYTHING visible to the admin user:
+- page titles
+- tabs
+- menus
+- headers
+- navigation
+- section titles
+- card titles
+- KPI labels
+- table headers
+- table cell labels
+- filters
+- search placeholders
+- buttons
+- dropdowns
+- form labels
+- helper text
+- validation messages (shown in UI)
+- modal/dialog text
+- confirmation messages
+- empty states
+- loading states
+- error messages shown to UI
+- badges/chips
+- status labels
+- notifications UI
+- settings/profile UI
+- header labels
+- sidebar labels
+- ANY reusable component text
+- ANY string rendered in admin UI
+
+THERE MUST BE:
+- ZERO hardcoded strings in admin UI
+- ZERO fallback to default language
+- ZERO mixed-language screens
+
+IF ONE WORD REMAINS UNTRANSLATED → THIS TASK IS FAILED.
+
+---
+
+IMPLEMENTATION RULES
+
+- DO NOT create a second i18n system
+- USE and EXTEND the existing i18n architecture
+- If current system is weak → refactor it properly (without breaking the app)
+- ALL admin-visible strings MUST come from translation resources
+- NO inline translation hacks
+- NO partial fixes
+- NO exceptions for “small text”
+
+---
+
+PHASE 1 — FULL ADMIN STRING EXTRACTION
+
+Scan the ENTIRE admin surface and extract ALL strings.
+
+You MUST inspect:
+- all admin pages
+- all admin layouts
+- admin header
+- admin navigation/sidebar
+- all admin tabs
+- all tables
+- all forms
+- all modals/dialogs
+- all reusable components used in admin
+- all notification UI
+- all status labels
+- all empty/error/loading states
+
+Find:
+- hardcoded UI strings
+- enum label mappings
+- placeholders
+- toasts/messages
+- fallback strings
+- button labels
+- confirmation dialogs
+- table headers
+- tab names
+
+MOVE EVERYTHING into the i18n system.
+
+---
+
+PHASE 2 — COMPLETE TRANSLATION COVERAGE
+
+For ALL extracted keys:
+- provide Russian translations
+- ensure consistency
+- ensure professional wording
+
+NO key should exist without translation.
+
+---
+
+PHASE 3 — ENUM / STATUS / BADGE SYSTEM
+
+ALL status labels must be translated:
+- invoice statuses
+- request statuses
+- notification severities
+- approval states
+- system statuses
+
+NO raw enum values must appear in UI.
+
+---
+
+PHASE 4 — FORCE FULL LANGUAGE SWITCH
+
+When language changes:
+- the ENTIRE admin UI must re-render in the selected language
+- header, layout, pages, components — ALL must update
+
+NO stale UI allowed.
+
+---
+
+PHASE 5 — RUSSIAN QUALITY (CRITICAL)
+
+Translations MUST be:
+- natural
+- professional
+- UI-appropriate
+- consistent across all pages
+
+NO machine-garbage translations.
+
+---
+
+PHASE 6 — HARD VALIDATION (MANDATORY)
+
+After implementation:
+
+You MUST verify:
+- go through EVERY admin screen
+- switch to Russian
+- visually confirm EVERYTHING is Russian
+
+If ANY:
+- English
+- Turkish
+- mixed string
+remains → FIX IT.
+
+---
+
+FAIL CONDITIONS (NOT ALLOWED)
+
+- Mixed language UI
+- Hardcoded strings in admin
+- Missing translations
+- Partially translated pages
+- Components not reacting to language change
+
+---
+
+OUTPUT REQUIRED
+
+When finished, provide:
+
+1. Full list of admin areas scanned
+2. Confirmation that ALL admin-visible text is now language-controlled
+3. Confirmation that switching language updates EVERYTHING
+4. Files changed
+5. Any edge cases fixed
+
+---
+
+FINAL RULE
+
+Treat this as a production-critical requirement.
+
+The admin panel must behave like a global SaaS product.
+
+No shortcuts.
+No assumptions.
+No partial work.
+
+START NOW.

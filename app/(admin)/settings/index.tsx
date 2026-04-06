@@ -21,6 +21,7 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { Card, SectionHeader, Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
 import { fetchDiagnostics, type DiagnosticsResult } from "@/lib/api/adminDiagnostics";
+import { useT } from "@/hooks/useT";
 
 const APP_VERSION = "1.0.0";
 
@@ -38,7 +39,7 @@ function formatDate(isoDate: string | null | undefined): string {
   }
 }
 
-// ─── Small components ─────────────────────────────────────────────────────────
+// ─── Small module-level components ────────────────────────────────────────────
 
 function StatusBadge({ ok, labelOk = "OK", labelFail = "FAIL" }: { ok: boolean; labelOk?: string; labelFail?: string }) {
   return (
@@ -199,7 +200,9 @@ const sr = StyleSheet.create({
   badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.3 },
 });
 
-function SectionRefreshBtn({ onPress, loading }: { onPress: () => void; loading: boolean }) {
+function SectionRefreshBtn({ onPress, loading, labelRefresh, labelRefreshing }: {
+  onPress: () => void; loading: boolean; labelRefresh: string; labelRefreshing: string;
+}) {
   return (
     <Pressable onPress={onPress} style={rb.btn} hitSlop={8}>
       {loading ? (
@@ -207,7 +210,7 @@ function SectionRefreshBtn({ onPress, loading }: { onPress: () => void; loading:
       ) : (
         <Ionicons name="refresh-outline" size={13} color={T.accent} />
       )}
-      <Text style={rb.label}>{loading ? "Refreshing…" : "Refresh"}</Text>
+      <Text style={rb.label}>{loading ? labelRefreshing : labelRefresh}</Text>
     </Pressable>
   );
 }
@@ -216,11 +219,15 @@ const rb = StyleSheet.create({
   label: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.accent },
 });
 
-function SectionHeaderWithRefresh({ label, onRefresh, loading }: { label: string; onRefresh: () => void; loading: boolean }) {
+function SectionHeaderWithRefresh({
+  label, onRefresh, loading, labelRefresh, labelRefreshing,
+}: {
+  label: string; onRefresh: () => void; loading: boolean; labelRefresh: string; labelRefreshing: string;
+}) {
   return (
     <View style={sh2.row}>
       <Text style={sh2.label}>{label}</Text>
-      <SectionRefreshBtn onPress={onRefresh} loading={loading} />
+      <SectionRefreshBtn onPress={onRefresh} loading={loading} labelRefresh={labelRefresh} labelRefreshing={labelRefreshing} />
     </View>
   );
 }
@@ -229,38 +236,11 @@ const sh2 = StyleSheet.create({
   label: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: T.textMuted, letterSpacing: 0.8 },
 });
 
-// ─── Static billing policy rows ───────────────────────────────────────────────
-
-const BILLING_RULES = [
-  {
-    icon: "calendar-outline" as const,
-    color: T.accent,
-    label: "Invoice creation",
-    sub: "Last day of month at 09:00 (Istanbul)",
-  },
-  {
-    icon: "time-outline" as const,
-    color: T.warning,
-    label: "Pending → Unpaid",
-    sub: "PENDING invoices roll over daily at 00:00 if unpaid",
-  },
-  {
-    icon: "close-circle-outline" as const,
-    color: T.danger,
-    label: "Unpaid → Suspension",
-    sub: "Clinic suspended; manager & patient access blocked",
-  },
-  {
-    icon: "checkmark-circle-outline" as const,
-    color: T.success,
-    label: "Paid → Reactivation",
-    sub: "Clinic and users restored immediately on payment",
-  },
-];
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function AdminSettings() {
+  const t = useT();
+  const ts = t.adminSettings;
   const { user, logout } = useAuth();
   const [showLogout, setShowLogout] = useState(false);
   const [showLogoutAll, setShowLogoutAll] = useState(false);
@@ -271,6 +251,13 @@ export default function AdminSettings() {
 
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : "AD";
   const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+
+  const BILLING_RULES = [
+    { icon: "calendar-outline" as const, color: T.accent, label: ts.billingRuleInvoiceCreation, sub: ts.billingRuleInvoiceCreationSub },
+    { icon: "time-outline" as const, color: T.warning, label: ts.billingRulePendingToUnpaid, sub: ts.billingRulePendingToUnpaidSub },
+    { icon: "close-circle-outline" as const, color: T.danger, label: ts.billingRuleUnpaidToSuspension, sub: ts.billingRuleUnpaidToSuspensionSub },
+    { icon: "checkmark-circle-outline" as const, color: T.success, label: ts.billingRulePaidToReactivation, sub: ts.billingRulePaidToReactivationSub },
+  ];
 
   const {
     data: diagData,
@@ -342,7 +329,7 @@ export default function AdminSettings() {
 
   return (
     <View style={s.root}>
-      <AdminHeader title="Settings" userEmail={user?.email} onLogout={() => setShowLogout(true)} />
+      <AdminHeader title={ts.pageTitle} userEmail={user?.email} onLogout={() => setShowLogout(true)} />
 
       <ScrollView
         contentContainerStyle={[s.content, { paddingBottom: bottomPad + 100 }]}
@@ -367,7 +354,10 @@ export default function AdminSettings() {
                 <Ionicons name="shield-outline" size={10} color={T.primary} />
                 <Text style={[s.badgeText, { color: T.primary }]}>{user?.role ?? "ADMIN"}</Text>
               </View>
-              <View style={[s.badge, { backgroundColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "15", borderColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "30" }]}>
+              <View style={[s.badge, {
+                backgroundColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "15",
+                borderColor: (diagData?.env.nodeEnv === "production" ? T.success : T.warning) + "30",
+              }]}>
                 <Text style={[s.badgeText, { color: diagData?.env.nodeEnv === "production" ? T.success : T.warning }]}>
                   {diagData?.env.nodeEnv === "production" ? "PROD" : "DEV"}
                 </Text>
@@ -376,43 +366,45 @@ export default function AdminSettings() {
             <View style={s.lastLoginRow}>
               <Ionicons name="time-outline" size={12} color={T.textMuted} />
               <Text style={s.lastLoginText}>
-                {user?.lastLoginAt ? `Last login: ${formatDate(user.lastLoginAt)}` : "Last login: not recorded"}
+                {user?.lastLoginAt
+                  ? `${ts.lastLogin} ${formatDate(user.lastLoginAt)}`
+                  : ts.notRecorded}
               </Text>
             </View>
           </View>
         </Card>
 
         {/* ─── Security ──────────────────────────────────────────── */}
-        <SectionHeader label="Security" style={s.sectionGap} />
+        <SectionHeader label={ts.securitySection} style={s.sectionGap} />
         <Card noPad>
           <SettingsRow
             icon="lock-closed-outline"
-            label="Change Password"
-            subtitle="Update credentials with policy enforcement"
+            label={ts.changePassword}
+            subtitle={ts.changePasswordSub}
             onPress={() => router.push("/(admin)/settings/change-password")}
           />
           <Divider inset={64} />
           <SettingsRow
             icon="phone-portrait-outline"
             iconColor={T.textSec}
-            label="Two-Factor Authentication"
-            subtitle="Enhanced login security"
-            badge="Soon"
+            label={ts.twoFactor}
+            subtitle={ts.twoFactorSub}
+            badge={ts.comingSoon}
             disabled
           />
           <Divider inset={64} />
           <SettingsRow
             icon="wifi-outline"
             iconColor={T.warning}
-            label="Logout All Devices"
-            subtitle="Revoke all active sessions across every device"
+            label={ts.logoutAllDevices}
+            subtitle={ts.logoutAllDevicesSub}
             onPress={() => setShowLogoutAll(true)}
           />
           <Divider inset={64} />
           <SettingsRow
             icon="log-out-outline"
-            label="Sign Out"
-            subtitle="Revoke current session"
+            label={ts.signOut}
+            subtitle={ts.signOutSub}
             danger
             onPress={() => setShowLogout(true)}
           />
@@ -421,26 +413,26 @@ export default function AdminSettings() {
         {/* ─── Administration ────────────────────────────────────── */}
         {isAdmin && (
           <>
-            <SectionHeader label="Administration" style={s.sectionGap} />
+            <SectionHeader label={ts.administrationSection} style={s.sectionGap} />
             <Card noPad>
               <SettingsRow
                 icon="business-outline"
-                label="Manage Clinics"
-                subtitle="Create, edit and suspend clinics"
+                label={ts.manageClinics}
+                subtitle={ts.manageClinicsSubtitle}
                 onPress={() => router.push("/(admin)/clinics")}
               />
               <Divider inset={64} />
               <SettingsRow
                 icon="people-outline"
-                label="Manage Users & Patients"
-                subtitle="Staff accounts and patient records"
+                label={ts.manageUsers}
+                subtitle={ts.manageUsersSub}
                 onPress={() => router.push("/(admin)/users")}
               />
               <Divider inset={64} />
               <SettingsRow
                 icon="document-text-outline"
-                label="Manage Invoices"
-                subtitle="Billing history and payment status"
+                label={ts.manageInvoices}
+                subtitle={ts.manageInvoicesSub}
                 onPress={() => router.push("/(admin)/invoices")}
               />
             </Card>
@@ -449,41 +441,43 @@ export default function AdminSettings() {
 
         {/* ─── Diagnostics ───────────────────────────────────────── */}
         <SectionHeaderWithRefresh
-          label="DIAGNOSTICS"
+          label={ts.diagnosticsSection}
           onRefresh={() => refetchDiag()}
           loading={diagRefreshing}
+          labelRefresh={ts.refresh}
+          labelRefreshing={ts.refreshing}
         />
         {diagLoading ? (
           <CardSkeleton rows={4} />
         ) : diagError ? (
-          <CardError message="Could not load diagnostics. Retry." onRetry={() => refetchDiag()} />
+          <CardError message={ts.couldNotLoadDiagnostics} onRetry={() => refetchDiag()} />
         ) : (
           <Card noPad>
             <MetricRow
               icon="server-outline"
               iconColor={diagData?.api.ok ? T.success : T.danger}
-              label="API Connectivity"
+              label={ts.apiConnectivity}
               sub={`${diagData?.api.latencyMs ?? 0} ms`}
               right={<StatusBadge ok={diagData?.api.ok ?? true} />}
             />
             <MetricRow
               icon="layers-outline"
               iconColor={diagData?.db.ok ? T.success : T.danger}
-              label="DB Connectivity"
+              label={ts.dbConnectivity}
               sub={`${diagData?.db.latencyMs ?? 0} ms`}
               right={<StatusBadge ok={diagData?.db.ok ?? false} />}
             />
             <MetricRow
               icon="globe-outline"
               iconColor={T.accent}
-              label="Environment"
+              label={ts.environment}
               sub={diagData?.env.timezone ?? "—"}
               right={<EnvBadge env={diagData?.env.nodeEnv ?? "development"} />}
             />
             <MetricRow
               icon="code-slash-outline"
               iconColor={T.textMuted}
-              label="Version"
+              label={ts.versionLabel}
               right={<Text style={s.versionText}>v{diagData?.server.version ?? APP_VERSION}</Text>}
               last
             />
@@ -497,7 +491,7 @@ export default function AdminSettings() {
                 ) : (
                   <Ionicons name="refresh-outline" size={14} color={T.accent} />
                 )}
-                <Text style={s.diagBtnText}>Run Diagnostics</Text>
+                <Text style={s.diagBtnText}>{ts.runDiagnostics}</Text>
               </Pressable>
               <View style={s.diagBtnDivider} />
               <Pressable
@@ -510,7 +504,7 @@ export default function AdminSettings() {
                   color={copiedDiag ? T.success : T.accent}
                 />
                 <Text style={[s.diagBtnText, copiedDiag && { color: T.success }]}>
-                  {copiedDiag ? "Copied!" : "Copy Diagnostics"}
+                  {copiedDiag ? ts.copied : ts.copyDiagnostics}
                 </Text>
               </Pressable>
             </View>
@@ -518,7 +512,7 @@ export default function AdminSettings() {
         )}
 
         {/* ─── Billing Policy ────────────────────────────────────── */}
-        <SectionHeader label="Billing Policy" style={s.sectionGap} />
+        <SectionHeader label={ts.billingPolicySection} style={s.sectionGap} />
         <Card noPad>
           {BILLING_RULES.map((rule, idx) => (
             <MetricRow
@@ -536,47 +530,47 @@ export default function AdminSettings() {
             onPress={() => router.push("/(admin)/invoices")}
           >
             <Ionicons name="receipt-outline" size={15} color={T.accent} />
-            <Text style={s.cardActionText}>Open Invoices</Text>
+            <Text style={s.cardActionText}>{ts.openInvoices}</Text>
             <Ionicons name="chevron-forward" size={13} color={T.accent} />
           </Pressable>
         </Card>
 
         {/* ─── Support ───────────────────────────────────────────── */}
-        <SectionHeader label="Support" style={s.sectionGap} />
+        <SectionHeader label={ts.supportSection} style={s.sectionGap} />
         <Card noPad>
           <SettingsRow
             icon="mail-outline"
             iconColor={T.primary}
-            label="Report an Issue"
-            subtitle="Opens a pre-filled email draft"
+            label={ts.reportIssue}
+            subtitle={ts.reportIssueSub}
             onPress={handleReportIssue}
           />
           <Divider inset={64} />
           <SettingsRow
             icon={copiedSupport ? "checkmark-circle-outline" : "clipboard-outline"}
             iconColor={copiedSupport ? T.success : T.accent}
-            label={copiedSupport ? "Copied!" : "Copy Support Code"}
-            subtitle="Includes your email, version, and diagnostics"
+            label={copiedSupport ? ts.copied : ts.copySupportCode}
+            subtitle={ts.copySupportCodeSub}
             onPress={handleCopySupport}
             rightElement={<View />}
           />
         </Card>
 
         {/* ─── Data Management ───────────────────────────────────── */}
-        <SectionHeader label="Data Management" style={s.sectionGap} />
+        <SectionHeader label={ts.dataManagementSection} style={s.sectionGap} />
         <Card noPad>
           <MetricRow
             icon="archive-outline"
             iconColor={T.textMuted}
-            label="Audit Log Retention"
-            sub="Not configured — all records kept indefinitely"
+            label={ts.auditLogRetention}
+            sub={ts.auditLogRetentionSub}
             right={null}
           />
           <MetricRow
             icon="document-text-outline"
             iconColor={T.textMuted}
-            label="Patient Records"
-            sub="Retained per clinic — no auto-expiry"
+            label={ts.patientRecords}
+            sub={ts.patientRecordsSub}
             right={null}
             last
           />
@@ -585,14 +579,14 @@ export default function AdminSettings() {
             onPress={() => router.push("/(admin)/invoices")}
           >
             <Ionicons name="download-outline" size={15} color={T.accent} />
-            <Text style={s.cardActionText}>Open Exports</Text>
+            <Text style={s.cardActionText}>{ts.openExports}</Text>
             <Ionicons name="chevron-forward" size={13} color={T.accent} />
           </Pressable>
         </Card>
 
         {/* ─── Footer ────────────────────────────────────────────── */}
         <View style={s.infoRow}>
-          <Text style={s.infoLabel}>Version</Text>
+          <Text style={s.infoLabel}>{ts.versionLabel}</Text>
           <Text style={s.infoValue}>v{APP_VERSION}</Text>
         </View>
         <Text style={s.brand}>HealthTour Operations Platform · v{APP_VERSION}</Text>
@@ -605,14 +599,14 @@ export default function AdminSettings() {
             <View style={[s.modalIcon, { backgroundColor: T.dangerBg }]}>
               <Ionicons name="log-out-outline" size={28} color={T.danger} />
             </View>
-            <Text style={s.modalTitle}>Sign Out</Text>
-            <Text style={s.modalSub}>Your current session will be revoked. You'll need to log in again.</Text>
+            <Text style={s.modalTitle}>{ts.logoutTitle}</Text>
+            <Text style={s.modalSub}>{ts.logoutBody}</Text>
             <View style={s.modalBtns}>
               <Pressable style={[s.modalBtn, { borderColor: T.border }]} onPress={() => setShowLogout(false)}>
-                <Text style={[s.modalBtnText, { color: T.textSec }]}>Cancel</Text>
+                <Text style={[s.modalBtnText, { color: T.textSec }]}>{ts.cancel}</Text>
               </Pressable>
               <Pressable style={[s.modalBtn, { backgroundColor: T.danger, borderColor: T.danger }]} onPress={handleLogout}>
-                <Text style={[s.modalBtnText, { color: "#fff" }]}>Sign Out</Text>
+                <Text style={[s.modalBtnText, { color: "#fff" }]}>{ts.confirmSignOut}</Text>
               </Pressable>
             </View>
           </View>
@@ -626,13 +620,11 @@ export default function AdminSettings() {
             <View style={[s.modalIcon, { backgroundColor: T.warning + "20" }]}>
               <Ionicons name="wifi-outline" size={28} color={T.warning} />
             </View>
-            <Text style={s.modalTitle}>Logout All Devices</Text>
-            <Text style={s.modalSub}>
-              This will immediately revoke all active sessions across every device, including this one. You will be redirected to the login screen.
-            </Text>
+            <Text style={s.modalTitle}>{ts.logoutAllTitle}</Text>
+            <Text style={s.modalSub}>{ts.logoutAllBody}</Text>
             <View style={s.modalBtns}>
               <Pressable style={[s.modalBtn, { borderColor: T.border }]} onPress={() => setShowLogoutAll(false)} disabled={logoutAllLoading}>
-                <Text style={[s.modalBtnText, { color: T.textSec }]}>Cancel</Text>
+                <Text style={[s.modalBtnText, { color: T.textSec }]}>{ts.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[s.modalBtn, { backgroundColor: T.warning, borderColor: T.warning, opacity: logoutAllLoading ? 0.7 : 1 }]}
@@ -642,7 +634,7 @@ export default function AdminSettings() {
                 {logoutAllLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={[s.modalBtnText, { color: "#fff" }]}>Logout All</Text>
+                  <Text style={[s.modalBtnText, { color: "#fff" }]}>{ts.confirmLogoutAll}</Text>
                 )}
               </Pressable>
             </View>

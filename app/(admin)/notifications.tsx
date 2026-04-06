@@ -19,6 +19,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/query-client";
+import { useT } from "@/hooks/useT";
 
 type RequestKind = "MANAGER_PASSWORD" | "GUEST_ACCESS_KEY";
 type RequestStatus = "PENDING" | "COMPLETED" | "REJECTED";
@@ -54,9 +55,8 @@ interface SystemNotification {
   metadata: Record<string, unknown> | null;
 }
 
-function kindLabel(kind: RequestKind) {
-  return kind === "MANAGER_PASSWORD" ? "Password Reset" : "New Access Key";
-}
+// ─── Pure helpers (no i18n needed) ────────────────────────────────────────────
+
 function kindColor(kind: RequestKind) {
   return kind === "MANAGER_PASSWORD" ? T.primary : T.accent;
 }
@@ -74,7 +74,6 @@ function formatTime(iso: string) {
   if (diffH < 24) return `${diffH}h ago`;
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
-
 function severityColor(s: NotifSeverity) {
   if (s === "CRITICAL") return "#DC2626";
   if (s === "WARNING") return "#D97706";
@@ -84,11 +83,6 @@ function severityBg(s: NotifSeverity) {
   if (s === "CRITICAL") return "#FEF2F2";
   if (s === "WARNING") return "#FFFBEB";
   return "#EFF6FF";
-}
-function severityIcon(s: NotifSeverity): any {
-  if (s === "CRITICAL") return "alert-circle-outline";
-  if (s === "WARNING") return "warning-outline";
-  return "information-circle-outline";
 }
 function eventTypeIcon(type: string): any {
   if (type === "INVOICE_GENERATED" || type === "INVOICE_OVERDUE") return "document-text-outline";
@@ -105,6 +99,8 @@ function eventTypeIcon(type: string): any {
   return "notifications-outline";
 }
 
+// ─── CredentialModal ──────────────────────────────────────────────────────────
+
 function CredentialModal({
   visible,
   kind,
@@ -116,11 +112,15 @@ function CredentialModal({
   credential: string;
   onClose: () => void;
 }) {
-  const label = kind === "MANAGER_PASSWORD" ? "Temporary Password" : "New Access Key";
+  const t = useT();
+  const tn = t.adminNotifications;
+  const label = kind === "MANAGER_PASSWORD" ? tn.tempPasswordLabel : tn.newAccessKeyDisplayLabel;
+
   function copy() {
     if (Clipboard?.setString) Clipboard.setString(credential);
-    Alert.alert("Copied", `${label} copied to clipboard.`);
+    Alert.alert(tn.copied, `${label} ${tn.copy}.`);
   }
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={credStyles.overlay} onPress={onClose}>
@@ -132,33 +132,31 @@ function CredentialModal({
               color={kindColor(kind)}
             />
           </View>
-          <Text style={credStyles.title}>{label} Generated</Text>
-          <Text style={credStyles.subtitle}>
-            This credential was sent by email. Shown once — copy it now.
-          </Text>
+          <Text style={credStyles.title}>{label}</Text>
+          <Text style={credStyles.subtitle}>{tn.credentialShownOnce}</Text>
           <View style={credStyles.credBox}>
             <Text style={credStyles.credText}>{credential}</Text>
           </View>
           <View style={credStyles.actions}>
             <Pressable style={credStyles.copyBtn} onPress={copy}>
               <Ionicons name="copy-outline" size={16} color="#fff" />
-              <Text style={credStyles.copyBtnText}>Copy</Text>
+              <Text style={credStyles.copyBtnText}>{tn.copy}</Text>
             </Pressable>
             <Pressable style={credStyles.doneBtn} onPress={onClose}>
-              <Text style={credStyles.doneBtnText}>Done</Text>
+              <Text style={credStyles.doneBtnText}>{tn.done}</Text>
             </Pressable>
           </View>
           <View style={credStyles.warningBox}>
             <Ionicons name="warning-outline" size={14} color="#B45309" />
-            <Text style={credStyles.warningText}>
-              This credential cannot be retrieved again after closing this window.
-            </Text>
+            <Text style={credStyles.warningText}>{tn.copyWarning}</Text>
           </View>
         </Pressable>
       </Pressable>
     </Modal>
   );
 }
+
+// ─── CredentialRequestCard ────────────────────────────────────────────────────
 
 function CredentialRequestCard({
   item,
@@ -171,18 +169,20 @@ function CredentialRequestCard({
   onReject: (id: string) => void;
   isAnyMutating: boolean;
 }) {
+  const t = useT();
+  const tn = t.adminNotifications;
   const [confirmState, setConfirmState] = useState<"none" | "resolve" | "reject">("none");
   const [loading, setLoading] = useState(false);
   const isPending = item.status === "PENDING";
+
+  const kindLabel = item.kind === "MANAGER_PASSWORD" ? tn.passwordResetLabel : tn.newAccessKeyLabel;
 
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.cardTop}>
         <View style={[styles.kindBadge, { backgroundColor: kindColor(item.kind) + "18" }]}>
           <Ionicons name={kindIcon(item.kind)} size={12} color={kindColor(item.kind)} />
-          <Text style={[styles.kindText, { color: kindColor(item.kind) }]}>
-            {kindLabel(item.kind)}
-          </Text>
+          <Text style={[styles.kindText, { color: kindColor(item.kind) }]}>{kindLabel}</Text>
         </View>
         <View style={[
           styles.statusBadge,
@@ -229,7 +229,7 @@ function CredentialRequestCard({
         {item.sentToEmail && !isPending && (
           <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={13} color={T.textMuted} />
-            <Text style={styles.infoText}>Sent to: {item.sentToEmail}</Text>
+            <Text style={styles.infoText}>{tn.sentTo} {item.sentToEmail}</Text>
           </View>
         )}
       </View>
@@ -242,7 +242,7 @@ function CredentialRequestCard({
             disabled={isAnyMutating}
           >
             <Ionicons name="close-outline" size={15} color="#DC2626" />
-            <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Reject</Text>
+            <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>{tn.reject}</Text>
           </Pressable>
           <Pressable
             style={[styles.actionBtn, styles.actionBtnGenerate, { opacity: isAnyMutating ? 0.5 : 1 }]}
@@ -250,7 +250,7 @@ function CredentialRequestCard({
             disabled={isAnyMutating}
           >
             <Ionicons name="flash-outline" size={15} color="#fff" />
-            <Text style={[styles.actionBtnText, { color: "#fff" }]}>Generate & Send</Text>
+            <Text style={[styles.actionBtnText, { color: "#fff" }]}>{tn.generateAndSend}</Text>
           </Pressable>
         </View>
       )}
@@ -258,7 +258,7 @@ function CredentialRequestCard({
       {isPending && confirmState === "resolve" && (
         <View style={styles.confirmBox}>
           <Text style={styles.confirmWarning}>
-            This will generate a new {kindLabel(item.kind).toLowerCase()} and send it by email.
+            {tn.confirmGenerateText.replace("{type}", kindLabel.toLowerCase())}
           </Text>
           <View style={styles.confirmActions}>
             <Pressable
@@ -266,7 +266,7 @@ function CredentialRequestCard({
               onPress={() => setConfirmState("none")}
               disabled={loading}
             >
-              <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Cancel</Text>
+              <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>{tn.cancel}</Text>
             </Pressable>
             <Pressable
               style={[styles.actionBtn, styles.actionBtnGenerate, { flex: 1, opacity: loading ? 0.6 : 1 }]}
@@ -278,7 +278,7 @@ function CredentialRequestCard({
               ) : (
                 <>
                   <Ionicons name="flash-outline" size={15} color="#fff" />
-                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>Confirm</Text>
+                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>{tn.confirm}</Text>
                 </>
               )}
             </Pressable>
@@ -288,16 +288,14 @@ function CredentialRequestCard({
 
       {isPending && confirmState === "reject" && (
         <View style={styles.confirmBox}>
-          <Text style={styles.confirmWarning}>
-            Reject this credential request? The person will need to submit a new one.
-          </Text>
+          <Text style={styles.confirmWarning}>{tn.confirmRejectText}</Text>
           <View style={styles.confirmActions}>
             <Pressable
               style={[styles.actionBtn, styles.actionBtnReject, { flex: 1 }]}
               onPress={() => setConfirmState("none")}
               disabled={loading}
             >
-              <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Cancel</Text>
+              <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>{tn.cancel}</Text>
             </Pressable>
             <Pressable
               style={[styles.actionBtn, { flex: 1, backgroundColor: "#DC2626", opacity: loading ? 0.6 : 1 }]}
@@ -307,7 +305,7 @@ function CredentialRequestCard({
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={[styles.actionBtnText, { color: "#fff" }]}>Reject</Text>
+                <Text style={[styles.actionBtnText, { color: "#fff" }]}>{tn.reject}</Text>
               )}
             </Pressable>
           </View>
@@ -316,6 +314,9 @@ function CredentialRequestCard({
     </View>
   );
 }
+
+// ─── SystemEventCard ──────────────────────────────────────────────────────────
+// No translatable strings — title and body come from server data.
 
 function SystemEventCard({
   item,
@@ -345,15 +346,11 @@ function SystemEventCard({
           <View style={[styles.severityDot, { backgroundColor: sColor, opacity: isUnread ? 1 : 0 }]} />
         </View>
 
-        <Text style={styles.eventBody} numberOfLines={2}>
-          {item.body}
-        </Text>
+        <Text style={styles.eventBody} numberOfLines={2}>{item.body}</Text>
 
         <View style={styles.eventMeta}>
           <View style={[styles.severityTag, { backgroundColor: sBg, borderColor: sColor + "40" }]}>
-            <Text style={[styles.severityTagText, { color: sColor }]}>
-              {item.severity}
-            </Text>
+            <Text style={[styles.severityTagText, { color: sColor }]}>{item.severity}</Text>
           </View>
           <Text style={styles.eventTime}>{formatTime(item.createdAt)}</Text>
         </View>
@@ -362,7 +359,11 @@ function SystemEventCard({
   );
 }
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function NotificationsScreen() {
+  const t = useT();
+  const tn = t.adminNotifications;
   const { user, logout } = useAuth();
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -473,14 +474,13 @@ export default function NotificationsScreen() {
 
   const events = eventsData ?? [];
   const hasUnreadEvents = events.some((e) => e.status === "UNREAD");
-
   const actionsTabCount = (credData ?? []).filter((r) => r.status === "PENDING").length;
   const eventsTabCount = events.filter((e) => e.status === "UNREAD").length;
 
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="Notifications"
+        title={tn.pageTitle}
         userEmail={user?.email}
         onLogout={handleLogout}
         backButton
@@ -493,7 +493,7 @@ export default function NotificationsScreen() {
           onPress={() => setActiveTab("actions")}
         >
           <Text style={[styles.tabText, activeTab === "actions" && styles.tabTextActive]}>
-            Actions
+            {tn.tabActions}
           </Text>
           {actionsTabCount > 0 && (
             <View style={styles.tabBadge}>
@@ -507,7 +507,7 @@ export default function NotificationsScreen() {
           onPress={() => setActiveTab("events")}
         >
           <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>
-            System Events
+            {tn.tabEvents}
           </Text>
           {eventsTabCount > 0 && (
             <View style={[styles.tabBadge, { backgroundColor: "#DC2626" }]}>
@@ -525,7 +525,7 @@ export default function NotificationsScreen() {
               onPress={() => setShowAll(false)}
             >
               <Text style={[styles.filterToggleText, !showAll && styles.filterToggleTextActive]}>
-                Pending
+                {tn.pending}
               </Text>
             </Pressable>
             <Pressable
@@ -533,7 +533,7 @@ export default function NotificationsScreen() {
               onPress={() => setShowAll(true)}
             >
               <Text style={[styles.filterToggleText, showAll && styles.filterToggleTextActive]}>
-                All
+                {tn.all}
               </Text>
             </Pressable>
           </View>
@@ -545,13 +545,13 @@ export default function NotificationsScreen() {
           ) : credError ? (
             <View style={styles.center}>
               <Ionicons name="alert-circle-outline" size={40} color={T.danger} />
-              <Text style={styles.emptyText}>Failed to load requests.</Text>
+              <Text style={styles.emptyText}>{tn.loadingFailed}</Text>
             </View>
           ) : (credData ?? []).length === 0 ? (
             <View style={styles.center}>
               <Ionicons name="notifications-off-outline" size={40} color={T.textMuted} />
               <Text style={styles.emptyText}>
-                {showAll ? "No credential requests found." : "No pending requests."}
+                {showAll ? tn.noRequestsAll : tn.noRequestsPending}
               </Text>
             </View>
           ) : (
@@ -592,7 +592,7 @@ export default function NotificationsScreen() {
                 disabled={markAllReadMutation.isPending}
               >
                 <Ionicons name="checkmark-done-outline" size={14} color={T.primary} />
-                <Text style={styles.markAllText}>Mark all as read</Text>
+                <Text style={styles.markAllText}>{tn.markAllRead}</Text>
               </Pressable>
             </View>
           )}
@@ -604,15 +604,13 @@ export default function NotificationsScreen() {
           ) : eventsError ? (
             <View style={styles.center}>
               <Ionicons name="alert-circle-outline" size={40} color={T.danger} />
-              <Text style={styles.emptyText}>Failed to load events.</Text>
+              <Text style={styles.emptyText}>{tn.eventLoadingFailed}</Text>
             </View>
           ) : events.length === 0 ? (
             <View style={styles.center}>
               <Ionicons name="pulse-outline" size={40} color={T.textMuted} />
-              <Text style={styles.emptyText}>No system events yet.</Text>
-              <Text style={styles.emptySubtext}>
-                Events appear here when billing, guest, or document actions occur.
-              </Text>
+              <Text style={styles.emptyText}>{tn.noEvents}</Text>
+              <Text style={styles.emptySubtext}>{tn.noEventsSubtext}</Text>
             </View>
           ) : (
             <FlatList

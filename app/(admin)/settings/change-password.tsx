@@ -16,15 +16,9 @@ import { T } from "@/constants/adminTheme";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useT } from "@/hooks/useT";
 
-const POLICY_ITEMS = [
-  "At least 12 characters",
-  "1 uppercase letter (A–Z)",
-  "1 lowercase letter (a–z)",
-  "1 number (0–9)",
-  "1 special character (!@#$%^&*…)",
-  "Must not contain your email",
-];
+// ─── PasswordField (module-level to preserve keyboard focus) ──────────────────
 
 function PasswordField({
   label,
@@ -73,7 +67,11 @@ const pf = StyleSheet.create({
   errorText: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.danger },
 });
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ChangePasswordScreen() {
+  const t = useT();
+  const tc = t.adminChangePassword;
   const insets = useSafeAreaInsets();
   const { accessToken, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -86,21 +84,30 @@ export default function ChangePasswordScreen() {
   const [nextError, setNextError] = useState("");
   const [confirmError, setConfirmError] = useState("");
 
+  const POLICY_ITEMS = [
+    tc.policyItem1,
+    tc.policyItem2,
+    tc.policyItem3,
+    tc.policyItem4,
+    tc.policyItem5,
+    tc.policyItem6,
+  ];
+
   function validate(): boolean {
     let ok = true;
     setCurrentError("");
     setNextError("");
     setConfirmError("");
 
-    if (!current) { setCurrentError("Current password is required"); ok = false; }
-    if (!next) { setNextError("New password is required"); ok = false; }
-    if (next && next.length < 12) { setNextError("Must be at least 12 characters"); ok = false; }
-    if (next && !/[A-Z]/.test(next)) { setNextError("Must contain at least one uppercase letter"); ok = false; }
-    if (next && !/[a-z]/.test(next)) { setNextError("Must contain at least one lowercase letter"); ok = false; }
-    if (next && !/[0-9]/.test(next)) { setNextError("Must contain at least one number"); ok = false; }
-    if (next && !/[^A-Za-z0-9]/.test(next)) { setNextError("Must contain at least one special character"); ok = false; }
-    if (next && confirm && next !== confirm) { setConfirmError("Passwords do not match"); ok = false; }
-    if (!confirm) { setConfirmError("Please confirm your new password"); ok = false; }
+    if (!current) { setCurrentError(tc.currentRequired); ok = false; }
+    if (!next) { setNextError(tc.newRequired); ok = false; }
+    if (next && next.length < 12) { setNextError(tc.minLength); ok = false; }
+    if (next && !/[A-Z]/.test(next)) { setNextError(tc.mustUppercase); ok = false; }
+    if (next && !/[a-z]/.test(next)) { setNextError(tc.mustLowercase); ok = false; }
+    if (next && !/[0-9]/.test(next)) { setNextError(tc.mustNumber); ok = false; }
+    if (next && !/[^A-Za-z0-9]/.test(next)) { setNextError(tc.mustSpecial); ok = false; }
+    if (next && confirm && next !== confirm) { setConfirmError(tc.passwordMismatch); ok = false; }
+    if (!confirm) { setConfirmError(tc.confirmRequired); ok = false; }
     return ok;
   }
 
@@ -110,20 +117,20 @@ export default function ChangePasswordScreen() {
     try {
       await apiRequest("POST", "/v1/admin/auth/change-password", { currentPassword: current, newPassword: next });
       Alert.alert(
-        "Password Changed",
-        "Your password was updated successfully. All devices have been signed out. Please log in again.",
-        [{ text: "Sign In", onPress: async () => { await logout(); router.replace("/(auth)/login"); } }],
+        tc.passwordChangedTitle,
+        tc.passwordChangedBody,
+        [{ text: tc.signIn, onPress: async () => { await logout(); router.replace("/(auth)/login"); } }],
         { cancelable: false },
       );
     } catch (err: any) {
       const code = err.code ?? "";
       const msg = err.message ?? "Failed to change password";
       if (code === "AUTH_INVALID_CREDENTIALS") {
-        setCurrentError("Current password is incorrect");
+        setCurrentError(tc.currentPasswordIncorrect);
       } else if (code === "PASSWORD_POLICY_VIOLATION") {
         setNextError(msg);
       } else if (code === "TOO_MANY_ATTEMPTS") {
-        Alert.alert("Too Many Attempts", "You have exceeded the maximum number of password change attempts. Please try again in 10 minutes.");
+        Alert.alert(tc.tooManyAttemptsTitle, tc.tooManyAttemptsBody);
       } else {
         Alert.alert("Error", msg);
       }
@@ -132,23 +139,21 @@ export default function ChangePasswordScreen() {
     }
   }
 
-  const strengthColor = (() => {
-    const score = [
-      next.length >= 12,
-      /[A-Z]/.test(next),
-      /[a-z]/.test(next),
-      /[0-9]/.test(next),
-      /[^A-Za-z0-9]/.test(next),
-    ].filter(Boolean).length;
-    if (score <= 2) return T.danger;
-    if (score <= 3) return T.warning;
-    if (score === 4) return T.accent;
-    return T.success;
-  })();
-  const strengthWidth = (() => {
-    const score = [next.length >= 12, /[A-Z]/.test(next), /[a-z]/.test(next), /[0-9]/.test(next), /[^A-Za-z0-9]/.test(next)].filter(Boolean).length;
-    return `${(score / 5) * 100}%`;
-  })();
+  const score = [
+    next.length >= 12,
+    /[A-Z]/.test(next),
+    /[a-z]/.test(next),
+    /[0-9]/.test(next),
+    /[^A-Za-z0-9]/.test(next),
+  ].filter(Boolean).length;
+
+  const strengthColor = score <= 2 ? T.danger : score <= 3 ? T.warning : score === 4 ? T.accent : T.success;
+  const strengthWidth = `${(score / 5) * 100}%`;
+  const strengthLabel =
+    score >= 5 ? tc.strengthStrong
+    : score === 4 ? tc.strengthGood
+    : score === 3 ? tc.strengthFair
+    : tc.strengthWeak;
 
   return (
     <View style={[s.root, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
@@ -156,7 +161,7 @@ export default function ChangePasswordScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={T.text} />
         </Pressable>
-        <Text style={s.headerTitle}>Change Password</Text>
+        <Text style={s.headerTitle}>{tc.pageTitle}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -168,7 +173,7 @@ export default function ChangePasswordScreen() {
         <View style={s.policyCard}>
           <View style={s.policyHeader}>
             <Ionicons name="shield-checkmark-outline" size={18} color={T.accent} />
-            <Text style={s.policyTitle}>Password Requirements</Text>
+            <Text style={s.policyTitle}>{tc.policyTitle}</Text>
           </View>
           {POLICY_ITEMS.map((item) => (
             <View key={item} style={s.policyRow}>
@@ -180,18 +185,18 @@ export default function ChangePasswordScreen() {
 
         <View style={s.form}>
           <PasswordField
-            label="CURRENT PASSWORD"
+            label={tc.currentPasswordLabel}
             value={current}
             onChangeText={setCurrent}
-            placeholder="Enter your current password"
+            placeholder={tc.currentPasswordPlaceholder}
             error={currentError}
           />
 
           <PasswordField
-            label="NEW PASSWORD"
+            label={tc.newPasswordLabel}
             value={next}
             onChangeText={(v) => { setNext(v); setNextError(""); }}
-            placeholder="At least 12 characters"
+            placeholder={tc.newPasswordPlaceholder}
             error={nextError}
           />
 
@@ -200,26 +205,22 @@ export default function ChangePasswordScreen() {
               <View style={s.strengthBar}>
                 <View style={[s.strengthFill, { width: strengthWidth as any, backgroundColor: strengthColor }]} />
               </View>
-              <Text style={[s.strengthLabel, { color: strengthColor }]}>
-                {strengthWidth === "100%" ? "Strong" : strengthWidth === "80%" ? "Good" : strengthWidth === "60%" ? "Fair" : "Weak"}
-              </Text>
+              <Text style={[s.strengthLabel, { color: strengthColor }]}>{strengthLabel}</Text>
             </View>
           )}
 
           <PasswordField
-            label="CONFIRM NEW PASSWORD"
+            label={tc.confirmPasswordLabel}
             value={confirm}
             onChangeText={(v) => { setConfirm(v); setConfirmError(""); }}
-            placeholder="Re-enter your new password"
+            placeholder={tc.confirmPasswordPlaceholder}
             error={confirmError}
           />
         </View>
 
         <View style={s.warningCard}>
           <Ionicons name="information-circle-outline" size={18} color={T.warning} />
-          <Text style={s.warningText}>
-            Changing your password will immediately revoke all active sessions across all devices. You will be logged out after this action.
-          </Text>
+          <Text style={s.warningText}>{tc.warningText}</Text>
         </View>
 
         <Pressable
@@ -232,7 +233,7 @@ export default function ChangePasswordScreen() {
           ) : (
             <>
               <Ionicons name="lock-closed-outline" size={18} color="#fff" />
-              <Text style={s.submitText}>Update Password</Text>
+              <Text style={s.submitText}>{tc.updatePassword}</Text>
             </>
           )}
         </Pressable>

@@ -19,6 +19,7 @@ import {
   Card, SectionHeader, StatusPill, Divider, LoadingState, ErrorState,
 } from "@/components/ui";
 import { getAdminInvoice, markInvoicePaid, AdminInvoice } from "@/lib/api/adminInvoices";
+import { useT } from "@/hooks/useT";
 
 function fmt(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -32,6 +33,8 @@ function statusAccent(status: string): string {
 }
 
 export default function InvoiceDetailScreen() {
+  const t = useT();
+  const ti = t.adminInvoices;
   const { id } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -53,19 +56,19 @@ export default function InvoiceDetailScreen() {
     },
     onError: (err: any) => {
       setShowConfirm(false);
-      Alert.alert("Error", err.message || "Failed to mark invoice as paid");
+      Alert.alert("Error", err.message || ti.errorMarkPaid);
     },
   });
 
   if (isLoading) return (
     <View style={styles.root}>
-      <AdminHeader title="Invoice" backButton onBack={() => router.back()} />
-      <LoadingState message="Loading invoice…" />
+      <AdminHeader title={ti.invoiceLabel} backButton onBack={() => router.back()} />
+      <LoadingState message={ti.loadingInvoice} />
     </View>
   );
   if (isError || !data) return (
     <View style={styles.root}>
-      <AdminHeader title="Invoice" backButton onBack={() => router.back()} />
+      <AdminHeader title={ti.invoiceLabel} backButton onBack={() => router.back()} />
       <ErrorState onRetry={refetch} />
     </View>
   );
@@ -76,7 +79,7 @@ export default function InvoiceDetailScreen() {
   return (
     <View style={styles.root}>
       <AdminHeader
-        title={`Invoice · ${data.period}`}
+        title={`${ti.invoiceLabel} · ${data.period}`}
         backButton
         onBack={() => router.back()}
         right={<StatusPill status={data.status} />}
@@ -89,12 +92,12 @@ export default function InvoiceDetailScreen() {
         <Card style={[styles.summaryCard, { borderLeftWidth: 4, borderLeftColor: sc }]}>
           <View style={styles.summaryRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.clinicName}>{data.clinic?.name ?? "Unknown Clinic"}</Text>
+              <Text style={styles.clinicName}>{data.clinic?.name ?? ti.unknownClinic}</Text>
               <Text style={styles.period}>{data.period}</Text>
             </View>
             <View style={styles.totalBlock}>
               <Text style={[styles.totalAmount, { color: sc }]}>{data.currency} {data.total.toFixed(2)}</Text>
-              <Text style={styles.totalLabel}>Total Due</Text>
+              <Text style={styles.totalLabel}>{ti.totalDue}</Text>
             </View>
           </View>
         </Card>
@@ -105,7 +108,7 @@ export default function InvoiceDetailScreen() {
               <Ionicons name="warning-outline" size={18} color={T.danger} />
             </View>
             <Text style={[styles.alertText, { color: T.danger }]}>
-              Clinic is suspended. Managers and patients cannot access the system until this invoice is paid.
+              {ti.unpaidAlert}
             </Text>
           </View>
         )}
@@ -115,7 +118,7 @@ export default function InvoiceDetailScreen() {
               <Ionicons name="time-outline" size={18} color={T.warning} />
             </View>
             <Text style={[styles.alertText, { color: T.warning }]}>
-              Due {fmt(data.dueAt)}. Clinic will be suspended if not paid by midnight.
+              {ti.pendingAlert.replace("{date}", fmt(data.dueAt))}
             </Text>
           </View>
         )}
@@ -125,33 +128,33 @@ export default function InvoiceDetailScreen() {
               <Ionicons name="checkmark-circle-outline" size={18} color={T.success} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.alertText, { color: T.success }]}>Invoice paid — clinic and all users are active</Text>
+              <Text style={[styles.alertText, { color: T.success }]}>{ti.paidAlert}</Text>
             </View>
           </View>
         )}
 
-        <SectionHeader label="Billing Details" style={styles.sectionGap} />
+        <SectionHeader label={ti.billingDetailsSection} style={styles.sectionGap} />
         <Card noPad>
-          <IRow icon="business-outline" label="Clinic" value={data.clinic?.name ?? "—"} />
+          <IRow icon="business-outline" label={ti.clinicLabel} value={data.clinic?.name ?? "—"} />
           <Divider />
-          <IRow icon="calendar-outline" label="Period" value={data.period} />
+          <IRow icon="calendar-outline" label={ti.periodPlaceholder ?? "Period"} value={data.period} />
           <Divider />
-          <IRow icon="people-outline" label="Patients" value={String(data.patientCount)} />
+          <IRow icon="people-outline" label={ti.patientsLabel} value={String(data.patientCount)} />
           <Divider />
-          <IRow icon="pricetag-outline" label="Unit Price" value={`${data.currency} ${data.unitPrice.toFixed(2)}`} />
+          <IRow icon="pricetag-outline" label={ti.unitPriceLabel} value={`${data.currency} ${data.unitPrice.toFixed(2)}`} />
           <Divider />
-          <IRow icon="cash-outline" label="Total" value={`${data.currency} ${data.total.toFixed(2)}`} bold />
+          <IRow icon="cash-outline" label={ti.totalLabel} value={`${data.currency} ${data.total.toFixed(2)}`} bold />
         </Card>
 
-        <SectionHeader label="Timeline" style={styles.sectionGap} />
+        <SectionHeader label={ti.timelineSection} style={styles.sectionGap} />
         <Card noPad>
-          <IRow icon="add-circle-outline" label="Created" value={fmt(data.createdAt)} />
+          <IRow icon="add-circle-outline" label={ti.createdLabel} value={fmt(data.createdAt)} />
           <Divider />
-          <IRow icon="alert-outline" label="Due By" value={fmt(data.dueAt)} />
+          <IRow icon="alert-outline" label={ti.dueByLabel} value={fmt(data.dueAt)} />
           {data.paidAt && (
             <>
               <Divider />
-              <IRow icon="checkmark-circle-outline" label="Paid At" value={fmt(data.paidAt)} valueColor={T.success} />
+              <IRow icon="checkmark-circle-outline" label={ti.paidAtLabel} value={fmt(data.paidAt)} valueColor={T.success} />
             </>
           )}
         </Card>
@@ -162,7 +165,7 @@ export default function InvoiceDetailScreen() {
             onPress={() => setShowConfirm(true)}
           >
             <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-            <Text style={styles.payBtnText}>Mark as PAID</Text>
+            <Text style={styles.payBtnText}>{ti.markAsPaid}</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -173,12 +176,12 @@ export default function InvoiceDetailScreen() {
             <View style={styles.confirmIconWrap}>
               <Ionicons name="checkmark-circle-outline" size={32} color={T.success} />
             </View>
-            <Text style={styles.confirmTitle}>Confirm Payment</Text>
-            <Text style={styles.confirmSub}>Marking this invoice as PAID will immediately:</Text>
+            <Text style={styles.confirmTitle}>{ti.confirmPaymentTitle}</Text>
+            <Text style={styles.confirmSub}>{ti.confirmPaymentSub}</Text>
             <View style={styles.impactList}>
-              <Impact icon="business-outline" label="Reactivate the clinic" color={T.success} />
-              <Impact icon="people-outline" label="Restore all managers' access" color={T.success} />
-              <Impact icon="person-outline" label="Restore all patients' access" color={T.success} />
+              <Impact icon="business-outline" label={ti.impactReactivateClinic} color={T.success} />
+              <Impact icon="people-outline" label={ti.impactRestoreManagers} color={T.success} />
+              <Impact icon="person-outline" label={ti.impactRestorePatients} color={T.success} />
               <Impact icon="document-text-outline" label={`${data.period} · ${data.currency} ${data.total.toFixed(2)}`} color={T.accent} />
             </View>
             <View style={styles.confirmBtns}>
@@ -187,7 +190,7 @@ export default function InvoiceDetailScreen() {
                 onPress={() => setShowConfirm(false)}
                 disabled={paidMutation.isPending}
               >
-                <Text style={styles.confirmCancelText}>Cancel</Text>
+                <Text style={styles.confirmCancelText}>{ti.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[styles.confirmOkBtn, { opacity: paidMutation.isPending ? 0.7 : 1 }]}
@@ -197,7 +200,7 @@ export default function InvoiceDetailScreen() {
                 {paidMutation.isPending ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.confirmOkText}>Confirm PAID</Text>
+                  <Text style={styles.confirmOkText}>{ti.confirmPaid}</Text>
                 )}
               </Pressable>
             </View>

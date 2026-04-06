@@ -21,6 +21,8 @@ import { Card, SectionHeader, PrimaryButton } from "@/components/ui";
 import { createClinic } from "@/lib/api/adminClinics";
 import { SERVICES } from "@/constants/services";
 import { PhonePickerInput, PhonePickerValue } from "@/components/forms/PhonePickerInput";
+import { useT } from "@/hooks/useT";
+import type { AdminClinicsDict } from "@/i18n/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -39,19 +41,22 @@ type FormFields = {
   websiteUrl: string;
 };
 
-function validate(fields: FormFields): Partial<Record<keyof FormFields, string>> {
+function validate(
+  fields: FormFields,
+  tc: AdminClinicsDict,
+): Partial<Record<keyof FormFields, string>> {
   const errors: Partial<Record<keyof FormFields, string>> = {};
-  if (!fields.name.trim()) errors.name = "Clinic name is required";
-  else if (fields.name.trim().length < 2) errors.name = "Name must be at least 2 characters";
+  if (!fields.name.trim()) errors.name = tc.nameRequired;
+  else if (fields.name.trim().length < 2) errors.name = tc.nameMinLength;
   if (fields.contactEmail && !EMAIL_RE.test(fields.contactEmail.trim()))
-    errors.contactEmail = "Invalid email address";
+    errors.contactEmail = tc.invalidEmail;
   if (fields.billingEmail && !EMAIL_RE.test(fields.billingEmail.trim()))
-    errors.billingEmail = "Invalid billing email";
-  if (fields.services.length === 0) errors.services = "Select at least one service";
+    errors.billingEmail = tc.invalidBillingEmail;
+  if (fields.services.length === 0) errors.services = tc.servicesRequired;
   if (fields.billingUnitPrice && isNaN(Number(fields.billingUnitPrice)))
-    errors.billingUnitPrice = "Must be a number";
+    errors.billingUnitPrice = tc.priceMustBeNumber;
   if (fields.websiteUrl && !/^https?:\/\/.+\..+/.test(fields.websiteUrl.trim()))
-    errors.websiteUrl = "Enter a valid URL (https://...)";
+    errors.websiteUrl = tc.invalidUrl;
   return errors;
 }
 
@@ -156,6 +161,8 @@ const InputBox = React.forwardRef<TextInput, InputBoxProps>(
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CreateClinicScreen() {
+  const t = useT();
+  const tc = t.adminClinics;
   const qc = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -199,15 +206,18 @@ export default function CreateClinicScreen() {
   });
 
   function runValidation(overrides?: Partial<FormFields>) {
-    const errs = validate({
-      name,
-      contactEmail,
-      billingEmail,
-      services: selectedServices,
-      billingUnitPrice,
-      websiteUrl,
-      ...overrides,
-    });
+    const errs = validate(
+      {
+        name,
+        contactEmail,
+        billingEmail,
+        services: selectedServices,
+        billingUnitPrice,
+        websiteUrl,
+        ...overrides,
+      },
+      tc,
+    );
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -217,20 +227,23 @@ export default function CreateClinicScreen() {
       setSelectedServices((prev) => {
         const next = prev.includes(code) ? prev.filter((s) => s !== code) : [...prev, code];
         if (submitted) {
-          const errs = validate({
-            name,
-            contactEmail,
-            billingEmail,
-            services: next,
-            billingUnitPrice,
-            websiteUrl,
-          });
+          const errs = validate(
+            {
+              name,
+              contactEmail,
+              billingEmail,
+              services: next,
+              billingUnitPrice,
+              websiteUrl,
+            },
+            tc,
+          );
           setErrors(errs);
         }
         return next;
       });
     },
-    [submitted, name, contactEmail, billingEmail, billingUnitPrice, websiteUrl],
+    [submitted, name, contactEmail, billingEmail, billingUnitPrice, websiteUrl, tc],
   );
 
   function handleSubmit() {
@@ -301,7 +314,7 @@ export default function CreateClinicScreen() {
 
   return (
     <View style={styles.root}>
-      <AdminHeader title="New Clinic" backButton onBack={() => router.back()} />
+      <AdminHeader title={tc.createTitle} backButton onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -314,15 +327,15 @@ export default function CreateClinicScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── A. Clinic Info ─────────────────────────────── */}
-          <SectionHeader label="Clinic Info" />
+          <SectionHeader label={tc.clinicInfoSection} />
           <Card style={styles.card}>
-            <Field label="Clinic Name" required>
+            <Field label={tc.clinicNameLabel} required>
               <TextInput
                 testID="clinic-name-input"
                 style={[styles.input, errors.name ? styles.inputError : undefined]}
                 value={name}
                 onChangeText={handleNameChange}
-                placeholder="e.g. Istanbul Medical Center"
+                placeholder={tc.clinicNamePlaceholder}
                 placeholderTextColor={T.textMuted}
                 returnKeyType="next"
                 onSubmitEditing={focusAddress}
@@ -331,14 +344,14 @@ export default function CreateClinicScreen() {
               <FieldError error={errors.name} />
             </Field>
 
-            <Field label="Address" style={styles.fieldLast}>
+            <Field label={tc.addressLabel} style={styles.fieldLast}>
               <TextInput
                 ref={addressRef}
                 testID="clinic-address-input"
                 style={[styles.input, styles.inputMulti]}
                 value={address}
                 onChangeText={setAddress}
-                placeholder="Street, district, city, country"
+                placeholder={tc.addressPlaceholder}
                 placeholderTextColor={T.textMuted}
                 returnKeyType="next"
                 onSubmitEditing={focusEmail}
@@ -349,9 +362,9 @@ export default function CreateClinicScreen() {
           </Card>
 
           {/* ── B. Contact ─────────────────────────────────── */}
-          <SectionHeader label="Contact" style={styles.sectionGap} />
+          <SectionHeader label={tc.contactSection} style={styles.sectionGap} />
           <Card style={styles.card}>
-            <Field label="Phone">
+            <Field label={tc.phoneLabel}>
               <PhonePickerInput
                 testID="clinic-phone-input"
                 value={phone}
@@ -359,7 +372,7 @@ export default function CreateClinicScreen() {
               />
             </Field>
 
-            <Field label="Contact Email">
+            <Field label={tc.contactEmailLabel}>
               <InputBox
                 ref={emailRef}
                 testID="clinic-email-input"
@@ -375,7 +388,7 @@ export default function CreateClinicScreen() {
               <FieldError error={errors.contactEmail} />
             </Field>
 
-            <Field label="Website" style={styles.fieldLast}>
+            <Field label={tc.websiteLabel} style={styles.fieldLast}>
               <InputBox
                 ref={websiteRef}
                 testID="clinic-website-input"
@@ -392,9 +405,9 @@ export default function CreateClinicScreen() {
           </Card>
 
           {/* ── C. Services ────────────────────────────────── */}
-          <SectionHeader label="Services Offered" style={styles.sectionGap} />
+          <SectionHeader label={tc.servicesSection} style={styles.sectionGap} />
           <Card style={styles.card}>
-            <Text style={styles.sectionHint}>Select all services this clinic provides</Text>
+            <Text style={styles.sectionHint}>{tc.servicesHint}</Text>
             <View style={styles.chipsRow}>
               {SERVICES.map((svc) => {
                 const active = selectedServices.includes(svc.code);
@@ -422,15 +435,15 @@ export default function CreateClinicScreen() {
           </Card>
 
           {/* ── D. Billing ─────────────────────────────────── */}
-          <SectionHeader label="Billing" style={styles.sectionGap} />
+          <SectionHeader label={tc.billingSection} style={styles.sectionGap} />
           <Card style={styles.card}>
-            <Field label="Billing Email">
+            <Field label={tc.billingEmailLabel}>
               <InputBox
                 ref={billingEmailRef}
                 testID="clinic-billing-email-input"
                 value={billingEmail}
                 onChangeText={handleBillingEmailChange}
-                placeholder="billing@clinic.com (defaults to contact email)"
+                placeholder={tc.billingEmailPlaceholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
@@ -440,13 +453,13 @@ export default function CreateClinicScreen() {
               <FieldError error={errors.billingEmail} />
             </Field>
 
-            <Field label="Unit Price per Patient">
+            <Field label={tc.unitPriceLabel}>
               <InputBox
                 ref={priceRef}
                 testID="clinic-unit-price-input"
                 value={billingUnitPrice}
                 onChangeText={handlePriceChange}
-                placeholder="e.g. 250"
+                placeholder={tc.unitPricePlaceholder}
                 keyboardType="decimal-pad"
                 autoCapitalize="none"
                 returnKeyType="done"
@@ -455,7 +468,7 @@ export default function CreateClinicScreen() {
               <FieldError error={errors.billingUnitPrice} />
             </Field>
 
-            <Field label="Currency" style={styles.fieldLast}>
+            <Field label={tc.currencyLabel} style={styles.fieldLast}>
               <View style={styles.currencyRow}>
                 {CURRENCIES.map((cur) => (
                   <Pressable
@@ -478,14 +491,14 @@ export default function CreateClinicScreen() {
           </Card>
 
           {/* ── E. Notes ───────────────────────────────────── */}
-          <SectionHeader label="Notes" style={styles.sectionGap} />
+          <SectionHeader label={tc.notesSection} style={styles.sectionGap} />
           <Card style={styles.card}>
             <TextInput
               ref={notesRef}
               style={[styles.input, styles.inputMulti]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Internal notes about this clinic (optional)"
+              placeholder={tc.notesPlaceholder}
               placeholderTextColor={T.textMuted}
               multiline
               returnKeyType="default"
@@ -496,7 +509,7 @@ export default function CreateClinicScreen() {
           {/* ── Submit ─────────────────────────────────────── */}
           <View style={styles.actions}>
             <PrimaryButton
-              label="Create Clinic"
+              label={tc.createClinicBtn}
               loading={mutation.isPending}
               onPress={handleSubmit}
               icon="business-outline"
@@ -506,7 +519,7 @@ export default function CreateClinicScreen() {
               style={({ pressed }) => [styles.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}
               onPress={() => router.back()}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText}>{t.adminInvoices.cancel}</Text>
             </Pressable>
           </View>
         </ScrollView>

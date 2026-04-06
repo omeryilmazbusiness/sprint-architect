@@ -23,6 +23,7 @@ import { FilterButton } from "@/components/filters/FilterButton";
 import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPickerModal";
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 import { normalizeInvoiceFilters } from "@/utils/navigationFilters";
+import { useT } from "@/hooks/useT";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "UNPAID", "PAID"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -36,6 +37,8 @@ function statusAccent(status: string): string {
 }
 
 export default function AdminInvoicesScreen() {
+  const t = useT();
+  const ti = t.adminInvoices;
   const { user, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const routeParams = useLocalSearchParams<{ status?: string; clinicId?: string; period?: string }>();
@@ -97,7 +100,7 @@ export default function AdminInvoicesScreen() {
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="Invoices"
+        title={ti.pageTitle}
         userEmail={user?.email}
         onLogout={handleLogout}
       />
@@ -107,7 +110,7 @@ export default function AdminInvoicesScreen() {
           <Ionicons name="calendar-outline" size={16} color={T.textMuted} />
           <TextInput
             style={[styles.periodInput, period && !validPeriod ? { color: T.danger } : null]}
-            placeholder="Period (YYYY-MM)"
+            placeholder={ti.periodPlaceholder}
             placeholderTextColor={T.textMuted}
             value={period}
             onChangeText={setPeriod}
@@ -122,27 +125,27 @@ export default function AdminInvoicesScreen() {
           )}
         </View>
         {period.length > 0 && !validPeriod && (
-          <Text style={styles.periodHint}>Enter a complete period, e.g. 2026-02</Text>
+          <Text style={styles.periodHint}>{ti.periodHint}</Text>
         )}
 
         <View style={styles.filterRow}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
             <FilterButton
               icon="business-outline"
-              label="Clinic"
+              label={ti.filterClinic}
               value={selectedClinicName}
               onPress={() => setPickerOpen("clinic")}
             />
             <FilterButton
               icon="checkmark-circle-outline"
-              label="Status"
+              label={ti.filterStatus}
               value={statusFilter !== "ALL" ? statusFilter : undefined}
               onPress={() => setPickerOpen("status")}
             />
             {hasFilters && (
               <Pressable style={styles.clearBtn} onPress={clearAllFilters}>
                 <Ionicons name="refresh-outline" size={13} color={T.textSec} />
-                <Text style={styles.clearBtnText}>Reset</Text>
+                <Text style={styles.clearBtnText}>{t.adminClinics.filterStatus}</Text>
               </Pressable>
             )}
           </ScrollView>
@@ -152,7 +155,7 @@ export default function AdminInvoicesScreen() {
       </View>
 
       {isLoading ? (
-        <LoadingState message="Loading invoices…" />
+        <LoadingState message={ti.loadingInvoices} />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : (
@@ -163,13 +166,15 @@ export default function AdminInvoicesScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.accent} />}
           scrollEnabled={!!(data?.rows?.length)}
           ListHeaderComponent={data ? (
-            <Text style={styles.countLabel}>{data.total} invoice{data.total !== 1 ? "s" : ""}</Text>
+            <Text style={styles.countLabel}>
+              {data.total === 1 ? ti.countOne : ti.countMany.replace("{n}", String(data.total))}
+            </Text>
           ) : null}
           ListEmptyComponent={
             <EmptyState
               icon="document-text-outline"
-              title="No invoices found"
-              subtitle={hasFilters ? "Try clearing your filters" : "Invoices are generated automatically at end of each month"}
+              title={ti.emptyTitle}
+              subtitle={hasFilters ? ti.emptySubFilter : ti.emptySubAuto}
             />
           }
           renderItem={({ item }) => {
@@ -184,7 +189,7 @@ export default function AdminInvoicesScreen() {
                     <Ionicons name="document-text-outline" size={18} color={sc} />
                   </View>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={styles.clinicName} numberOfLines={1}>{item.clinic?.name ?? "Unknown Clinic"}</Text>
+                    <Text style={styles.clinicName} numberOfLines={1}>{item.clinic?.name ?? ti.unknownClinic}</Text>
                     <View style={styles.cardMeta}>
                       <Text style={styles.period}>{item.period}</Text>
                       <Text style={styles.metaDot}>·</Text>
@@ -206,22 +211,22 @@ export default function AdminInvoicesScreen() {
 
       <FilterPickerModal
         visible={pickerOpen === "clinic"}
-        title="Filter by Clinic"
+        title={ti.filterByClinic}
         options={clinicOptions}
         selected={clinicFilter}
         onSelect={setClinicFilter}
         onClose={() => setPickerOpen(null)}
         searchable={clinicOptions.length > 6}
-        allLabel="All Clinics"
+        allLabel={ti.allClinics}
       />
       <FilterPickerModal
         visible={pickerOpen === "status"}
-        title="Filter by Status"
+        title={ti.filterByStatus}
         options={statusOptions}
         selected={statusFilter !== "ALL" ? statusFilter : ""}
         onSelect={(v) => setStatusFilter((v || "ALL") as StatusFilter)}
         onClose={() => setPickerOpen(null)}
-        allLabel="All Statuses"
+        allLabel={ti.allStatuses}
       />
     </View>
   );

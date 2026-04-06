@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { T } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 interface AdminProfileMenuProps {
   visible: boolean;
@@ -31,6 +32,8 @@ export function AdminProfileMenu({
   role,
   initials,
 }: AdminProfileMenuProps) {
+  const t = useT();
+  const tm = t.adminProfileMenu;
   const { logout } = useAuth();
   const slideAnim = useRef(new Animated.Value(320)).current;
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
@@ -106,9 +109,7 @@ export function AdminProfileMenu({
             <Text style={styles.avatarLgText}>{initials}</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileEmail} numberOfLines={1}>
-              {email}
-            </Text>
+            <Text style={styles.profileEmail} numberOfLines={1}>{email}</Text>
             <View style={[styles.roleBadge, { borderColor: roleBadgeColor }]}>
               <Text style={[styles.roleText, { color: roleBadgeColor }]}>
                 {role.replace("_", " ")}
@@ -128,19 +129,17 @@ export function AdminProfileMenu({
               style={{ alignSelf: "center", marginBottom: 8 }}
             />
             <Text style={styles.confirmTitle}>
-              {confirmState === "logout" ? "Sign out?" : "Logout all devices?"}
+              {confirmState === "logout" ? tm.signOutConfirmTitle : tm.logoutAllConfirmTitle}
             </Text>
             <Text style={styles.confirmSub}>
-              {confirmState === "logout"
-                ? "You will be returned to the login screen."
-                : "All active sessions on all devices will be terminated."}
+              {confirmState === "logout" ? tm.signOutConfirmSub : tm.logoutAllConfirmSub}
             </Text>
             <View style={styles.confirmBtns}>
               <Pressable
                 style={[styles.confirmBtn, styles.confirmBtnCancel]}
                 onPress={() => setConfirmState(null)}
               >
-                <Text style={styles.confirmBtnCancelText}>Cancel</Text>
+                <Text style={styles.confirmBtnCancelText}>{tm.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[styles.confirmBtn, styles.confirmBtnDanger, isBusy && styles.disabled]}
@@ -148,7 +147,7 @@ export function AdminProfileMenu({
                 disabled={isBusy}
               >
                 <Text style={styles.confirmBtnDangerText}>
-                  {isBusy ? "…" : "Confirm"}
+                  {isBusy ? "…" : tm.confirm}
                 </Text>
               </Pressable>
             </View>
@@ -157,7 +156,7 @@ export function AdminProfileMenu({
           <View style={styles.menu}>
             <MenuItem
               icon="settings-outline"
-              label="Settings"
+              label={tm.settings}
               onPress={() => {
                 onClose();
                 router.push("/(admin)/settings");
@@ -166,13 +165,13 @@ export function AdminProfileMenu({
             <View style={styles.menuDivider} />
             <MenuItem
               icon="log-out-outline"
-              label="Sign Out"
+              label={tm.signOut}
               onPress={() => setConfirmState("logout")}
               danger
             />
             <MenuItem
               icon="phone-portrait-outline"
-              label="Logout All Devices"
+              label={tm.logoutAllDevices}
               onPress={() => setConfirmState("logoutAll")}
               danger
             />
@@ -180,7 +179,7 @@ export function AdminProfileMenu({
         )}
 
         <Pressable style={styles.cancelRow} onPress={onClose}>
-          <Text style={styles.cancelText}>Close</Text>
+          <Text style={styles.cancelText}>{tm.close}</Text>
         </Pressable>
       </Animated.View>
     </Modal>
@@ -204,15 +203,9 @@ function MenuItem({
       onPress={onPress}
     >
       <View style={[styles.menuIconWrap, danger && styles.menuIconDanger]}>
-        <Ionicons
-          name={icon}
-          size={17}
-          color={danger ? T.danger : T.primary}
-        />
+        <Ionicons name={icon} size={17} color={danger ? T.danger : T.primary} />
       </View>
-      <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
-        {label}
-      </Text>
+      <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
       <Ionicons name="chevron-forward" size={14} color={T.textMuted} />
     </Pressable>
   );
@@ -263,20 +256,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  avatarLgText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: "#fff",
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 5,
-  },
-  profileEmail: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: T.text,
-  },
+  avatarLgText: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#fff" },
+  profileInfo: { flex: 1, gap: 5 },
+  profileEmail: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
   roleBadge: {
     alignSelf: "flex-start",
     borderWidth: 1,
@@ -284,27 +266,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  roleText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 0.4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: T.border,
-    marginHorizontal: 20,
-  },
-  menu: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-    gap: 2,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: T.surfaceSubtle,
-    marginVertical: 4,
-  },
+  roleText: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.4 },
+  divider: { height: 1, backgroundColor: T.border, marginHorizontal: 20 },
+  menu: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, gap: 2 },
+  menuDivider: { height: 1, backgroundColor: T.surfaceSubtle, marginVertical: 4 },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -323,23 +288,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  menuIconDanger: {
-    backgroundColor: T.dangerBg,
-    borderColor: T.dangerBorder,
-  },
-  menuLabel: {
-    flex: 1,
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: T.text,
-  },
-  menuLabelDanger: {
-    color: T.danger,
-  },
-  confirmArea: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
+  menuIconDanger: { backgroundColor: T.dangerBg, borderColor: T.dangerBorder },
+  menuLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
+  menuLabelDanger: { color: T.danger },
+  confirmArea: { paddingHorizontal: 24, paddingVertical: 20 },
   confirmTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 16,
@@ -355,10 +307,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 19,
   },
-  confirmBtns: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  confirmBtns: { flexDirection: "row", gap: 12 },
   confirmBtn: {
     flex: 1,
     height: 44,
@@ -371,22 +320,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.border,
   },
-  confirmBtnDanger: {
-    backgroundColor: T.danger,
-  },
-  confirmBtnCancelText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: T.text,
-  },
-  confirmBtnDangerText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: "#fff",
-  },
-  disabled: {
-    opacity: 0.5,
-  },
+  confirmBtnDanger: { backgroundColor: T.danger },
+  confirmBtnCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
+  confirmBtnDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  disabled: { opacity: 0.5 },
   cancelRow: {
     marginTop: 8,
     marginHorizontal: 20,
@@ -398,9 +335,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: T.textSec,
-  },
+  cancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.textSec },
 });

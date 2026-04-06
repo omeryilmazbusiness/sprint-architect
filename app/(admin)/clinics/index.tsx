@@ -24,12 +24,7 @@ import { FilterPickerModal, PickerOption } from "@/components/filters/FilterPick
 import { ActiveFilterChips, ActiveChip } from "@/components/filters/ActiveFilterChips";
 import { normalizeClinicFilters, ClinicStatus } from "@/utils/navigationFilters";
 import { serviceLabel } from "@/constants/services";
-
-const STATUS_OPTIONS: PickerOption[] = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
-  { value: "SUSPENDED", label: "Suspended" },
-];
+import { useT } from "@/hooks/useT";
 
 // ─── Module-level card sub-components ─────────────────────────────────────────
 
@@ -52,7 +47,7 @@ function ServiceChips({ services }: { services: string[] }) {
   );
 }
 
-function ManagerRow({ clinic }: { clinic: Clinic }) {
+function ManagerRow({ clinic, noManagerLabel }: { clinic: Clinic; noManagerLabel: string }) {
   const mgr = clinic.primaryManager;
   const displayPhone = mgr?.phoneE164 ?? clinic.contactPhone;
   const displayName = mgr ? (mgr.fullName ?? mgr.email) : null;
@@ -63,7 +58,7 @@ function ManagerRow({ clinic }: { clinic: Clinic }) {
     <View style={styles.managerRow}>
       <Ionicons name="person-outline" size={11} color={T.textMuted} />
       <Text style={styles.managerText} numberOfLines={1}>
-        {displayName ?? "No manager"}
+        {displayName ?? noManagerLabel}
       </Text>
       {mgr && mgr.fullName && (
         <Text style={styles.managerEmail} numberOfLines={1}>{mgr.email}</Text>
@@ -85,7 +80,7 @@ function ManagerRow({ clinic }: { clinic: Clinic }) {
   );
 }
 
-function ClinicCard({ item, onPress }: { item: Clinic; onPress: () => void }) {
+function ClinicCard({ item, onPress, noManagerLabel }: { item: Clinic; onPress: () => void; noManagerLabel: string }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, cardShadow, { opacity: pressed ? 0.85 : 1 }]}
@@ -98,7 +93,7 @@ function ClinicCard({ item, onPress }: { item: Clinic; onPress: () => void }) {
           <StatusPill status={item.status} small />
         </View>
         <ServiceChips services={item.services} />
-        <ManagerRow clinic={item} />
+        <ManagerRow clinic={item} noManagerLabel={noManagerLabel} />
       </View>
       <Ionicons name="chevron-forward" size={14} color={T.textMuted} style={styles.chevron} />
     </Pressable>
@@ -107,7 +102,7 @@ function ClinicCard({ item, onPress }: { item: Clinic; onPress: () => void }) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-function NewBtn() {
+function NewBtn({ label }: { label: string }) {
   return (
     <Pressable
       testID="create-clinic-btn"
@@ -115,13 +110,15 @@ function NewBtn() {
       onPress={() => router.push("/(admin)/clinics/create")}
     >
       <Ionicons name="add" size={16} color="#fff" />
-      <Text style={styles.newBtnText}>New</Text>
+      <Text style={styles.newBtnText}>{label}</Text>
     </Pressable>
   );
 }
 
 export default function ClinicsScreen() {
   const { user, logout } = useAuth();
+  const t = useT();
+  const tc = t.adminClinics;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const routeParams = useLocalSearchParams<{ status?: string }>();
   const [search, setSearch] = useState("");
@@ -129,6 +126,12 @@ export default function ClinicsScreen() {
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [statusFilter, setStatusFilter] = useState<ClinicStatus | "">("");
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const STATUS_OPTIONS: PickerOption[] = [
+    { value: "ACTIVE", label: "Active" },
+    { value: "INACTIVE", label: "Inactive" },
+    { value: "SUSPENDED", label: "Suspended" },
+  ];
 
   useEffect(() => {
     const filters = normalizeClinicFilters(routeParams as Record<string, string | undefined>);
@@ -138,8 +141,8 @@ export default function ClinicsScreen() {
   function handleSearchChange(text: string) {
     setSearch(text);
     if (debounceTimer) clearTimeout(debounceTimer);
-    const t = setTimeout(() => setDebouncedSearch(text), 300);
-    setDebounceTimer(t);
+    const timer = setTimeout(() => setDebouncedSearch(text), 300);
+    setDebounceTimer(timer);
   }
 
   const hasFilters = !!statusFilter || !!debouncedSearch;
@@ -168,16 +171,19 @@ export default function ClinicsScreen() {
     onRemove: () => { setSearch(""); setDebouncedSearch(""); },
   });
 
+  const total = data?.total ?? 0;
+  const countLabel = `${total} ${total === 1 ? tc.countOne : tc.countMany}`;
+
   return (
     <View style={styles.root}>
-      <AdminHeader title="Clinics" rightExtra={<NewBtn />} />
+      <AdminHeader title={tc.pageTitle} rightExtra={<NewBtn label={t.adminTabLabels.clinics === "Клиники" ? "Новая" : "New"} />} />
 
       <View style={styles.filterArea}>
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={16} color={T.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search clinics…"
+            placeholder={tc.searchPlaceholder}
             placeholderTextColor={T.textMuted}
             value={search}
             onChangeText={handleSearchChange}
@@ -194,14 +200,14 @@ export default function ClinicsScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
             <FilterButton
               icon="shield-outline"
-              label="Status"
+              label={tc.filterStatus}
               value={statusFilter || undefined}
               onPress={() => setPickerOpen(true)}
             />
             {hasFilters && (
               <Pressable style={styles.clearBtn} onPress={clearFilters}>
                 <Ionicons name="refresh-outline" size={13} color={T.textSec} />
-                <Text style={styles.clearBtnText}>Reset</Text>
+                <Text style={styles.clearBtnText}>{t.adminDashboard.retry === "Retry" ? "Reset" : "Сбросить"}</Text>
               </Pressable>
             )}
           </ScrollView>
@@ -211,15 +217,13 @@ export default function ClinicsScreen() {
       </View>
 
       {isLoading ? (
-        <LoadingState message="Loading clinics…" />
+        <LoadingState message={tc.loadingClinics} />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : (
         <>
           {data && (
-            <Text style={styles.countLabel}>
-              {data.total} clinic{data.total !== 1 ? "s" : ""}
-            </Text>
+            <Text style={styles.countLabel}>{countLabel}</Text>
           )}
           <FlatList
             data={data?.rows ?? []}
@@ -230,13 +234,14 @@ export default function ClinicsScreen() {
             ListEmptyComponent={
               <EmptyState
                 icon="business-outline"
-                title="No clinics found"
-                subtitle={hasFilters ? "Try clearing your filters" : "Create your first clinic"}
+                title={tc.emptyTitle}
+                subtitle={hasFilters ? tc.emptySubFilter : tc.emptySubCreate}
               />
             }
             renderItem={({ item }) => (
               <ClinicCard
                 item={item}
+                noManagerLabel={tc.noManager}
                 onPress={() => router.push({ pathname: "/(admin)/clinics/[id]", params: { id: item.id } })}
               />
             )}
@@ -246,12 +251,12 @@ export default function ClinicsScreen() {
 
       <FilterPickerModal
         visible={pickerOpen}
-        title="Filter by Status"
+        title={tc.filterByStatus}
         options={STATUS_OPTIONS}
         selected={statusFilter}
         onSelect={(v) => setStatusFilter((v || "") as ClinicStatus | "")}
         onClose={() => setPickerOpen(false)}
-        allLabel="All Statuses"
+        allLabel={tc.allStatuses}
       />
     </View>
   );

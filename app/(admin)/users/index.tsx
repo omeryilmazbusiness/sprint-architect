@@ -37,6 +37,7 @@ import CreateUserSheet from "@/components/admin/CreateUserSheet";
 import { PatientSummarySheet } from "@/components/patients/PatientSummarySheet";
 import { useQuery } from "@tanstack/react-query";
 import type { UnifiedEntity } from "@/lib/api/adminUsers";
+import { useT } from "@/hooks/useT";
 
 type EntityType = "ALL" | "MANAGER" | "PATIENT" | "ADMIN";
 const STATUS_FILTERS = ["ALL", "ACTIVE", "INACTIVE", "SUSPENDED"] as const;
@@ -70,6 +71,8 @@ function SkeletonList() {
 }
 
 export default function UsersScreen() {
+  const t = useT();
+  const tu = t.adminUsers;
   const { user, logout } = useAuth();
   const params = useLocalSearchParams<{ preselectedClinicId?: string }>();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -235,7 +238,7 @@ export default function UsersScreen() {
         hitSlop={8}
       >
         <Text style={styles.selectAllText}>
-          {selection.count > 0 && selection.count === rows.length ? "None" : "All"}
+          {selection.count > 0 && selection.count === rows.length ? tu.noneLabel : tu.allLabel}
         </Text>
       </Pressable>
 
@@ -286,8 +289,10 @@ export default function UsersScreen() {
   );
 
   const headerTitle = selection.selectionMode
-    ? selection.count > 0 ? `${selection.count} selected` : "Select users"
-    : "Users & Patients";
+    ? selection.count > 0
+      ? tu.selectUsers.replace("{n}", String(selection.count))
+      : tu.selectUsers.replace("{n}", "")
+    : tu.pageTitle;
 
   return (
     <View style={styles.root}>
@@ -304,7 +309,7 @@ export default function UsersScreen() {
             <Ionicons name="search-outline" size={16} color={T.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name or email…"
+              placeholder={tu.searchPlaceholder}
               placeholderTextColor={T.textMuted}
               value={search}
               onChangeText={setSearch}
@@ -327,13 +332,13 @@ export default function UsersScreen() {
 
           <View style={styles.filterRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-              <FilterButton icon="business-outline" label="Clinic" value={selectedClinicName} onPress={() => setPickerOpen("clinic")} />
-              <FilterButton icon="person-outline" label="Type" value={entityTypeFilter !== "ALL" ? entityTypeFilter : undefined} onPress={() => setPickerOpen("type")} />
-              <FilterButton icon="checkmark-circle-outline" label="Status" value={statusFilter !== "ALL" ? statusFilter : undefined} onPress={() => setPickerOpen("status")} />
+              <FilterButton icon="business-outline" label={tu.filterClinic} value={selectedClinicName} onPress={() => setPickerOpen("clinic")} />
+              <FilterButton icon="person-outline" label={tu.filterType} value={entityTypeFilter !== "ALL" ? entityTypeFilter : undefined} onPress={() => setPickerOpen("type")} />
+              <FilterButton icon="checkmark-circle-outline" label={tu.filterStatus} value={statusFilter !== "ALL" ? statusFilter : undefined} onPress={() => setPickerOpen("status")} />
               {hasFilters && (
                 <Pressable style={styles.clearBtn} onPress={clearAllFilters}>
                   <Ionicons name="refresh-outline" size={13} color={T.textSec} />
-                  <Text style={styles.clearBtnText}>Reset</Text>
+                  <Text style={styles.clearBtnText}>{tu.clearFilters}</Text>
                 </Pressable>
               )}
             </ScrollView>
@@ -359,19 +364,19 @@ export default function UsersScreen() {
           ListHeaderComponent={
             data ? (
               <Text style={styles.countLabel}>
-                {data.total} record{data.total !== 1 ? "s" : ""}
+                {data.total === 1 ? tu.countOne : tu.countMany.replace("{n}", String(data.total))}
               </Text>
             ) : null
           }
           ListEmptyComponent={
             <EmptyState
               icon="people-outline"
-              title="No records found"
-              subtitle={hasFilters ? "Try adjusting filters" : "No users yet"}
+              title={tu.emptyTitle}
+              subtitle={hasFilters ? tu.emptySubFilter : tu.emptySubNoUsers}
               action={
                 hasFilters ? (
                   <Pressable style={styles.clearFiltersBtn} onPress={clearAllFilters}>
-                    <Text style={styles.clearFiltersBtnText}>Clear filters</Text>
+                    <Text style={styles.clearFiltersBtnText}>{tu.clearFilters}</Text>
                   </Pressable>
                 ) : undefined
               }
@@ -410,31 +415,31 @@ export default function UsersScreen() {
 
       <FilterPickerModal
         visible={pickerOpen === "clinic"}
-        title="Filter by Clinic"
+        title={tu.filterByClinic}
         options={clinicOptions}
         selected={clinicFilter}
         onSelect={setClinicFilter}
         onClose={() => setPickerOpen(null)}
         searchable={clinicOptions.length > 6}
-        allLabel="All Clinics"
+        allLabel={tu.allClinics}
       />
       <FilterPickerModal
         visible={pickerOpen === "type"}
-        title="Filter by Type"
+        title={tu.filterByType}
         options={typeOptions}
         selected={entityTypeFilter !== "ALL" ? entityTypeFilter : ""}
         onSelect={(v) => setEntityTypeFilter((v || "ALL") as EntityType)}
         onClose={() => setPickerOpen(null)}
-        allLabel="All Types"
+        allLabel={tu.allTypes}
       />
       <FilterPickerModal
         visible={pickerOpen === "status"}
-        title="Filter by Status"
+        title={tu.filterByStatus}
         options={statusOptions}
         selected={statusFilter !== "ALL" ? statusFilter : ""}
         onSelect={(v) => setStatusFilter((v || "ALL") as StatusFilter)}
         onClose={() => setPickerOpen(null)}
-        allLabel="All Statuses"
+        allLabel={tu.allStatuses}
       />
 
       <PatientSummarySheet

@@ -7,6 +7,7 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,23 +29,42 @@ interface ManagerNotification {
   type: string;
   severity: NotifSeverity;
   status: NotifStatus;
-  relatedId?: string;
-  relatedType?: string;
+  relatedId?: string | null;
+  relatedType?: string | null;
   createdAt: string;
   readAt?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
+// ─── Icon mapping ─────────────────────────────────────────────────────────────
+
 function getIcon(type: string): React.ComponentProps<typeof Ionicons>["name"] {
-  if (type.startsWith("APPOINTMENT")) return "calendar";
-  if (type.startsWith("DOCUMENT")) return "document-text";
-  if (type === "GUEST_CREATED") return "person-add";
-  if (type === "GUEST_APPROVED") return "checkmark-circle";
-  if (type === "GUEST_STATUS_CHANGED") return "person";
-  if (type === "INVOICE_GENERATED" || type === "INVOICE_OVERDUE") return "receipt";
-  if (type === "CLINIC_SUSPENDED") return "ban";
-  if (type === "SCHEDULER_FAILED" || type === "BILLING_JOB_FAILED") return "alert-circle";
-  return "notifications";
+  switch (type) {
+    case "APPOINTMENT_CREATED":    return "calendar-outline";
+    case "APPOINTMENT_UPDATED":    return "calendar-outline";
+    case "APPOINTMENT_CANCELLED":  return "calendar-clear-outline";
+    case "DOCUMENT_ASSIGNED":      return "document-text-outline";
+    case "DOCUMENT_APPROVED":      return "checkmark-done-outline";
+    case "DOCUMENT_REJECTED":      return "document-text-outline";
+    case "DOCUMENT_UPLOADED":      return "cloud-upload-outline";
+    case "GUEST_CREATED":          return "person-add-outline";
+    case "GUEST_APPROVED":         return "checkmark-circle-outline";
+    case "GUEST_STATUS_CHANGED":   return "person-outline";
+    case "INVOICE_GENERATED":      return "receipt-outline";
+    case "INVOICE_OVERDUE":        return "receipt-outline";
+    case "CLINIC_SUSPENDED":       return "ban-outline";
+    case "HOTEL_ASSIGNED":         return "bed-outline";
+    case "TRANSPORT_ASSIGNED":     return "car-outline";
+    case "DOCTOR_ASSIGNED":        return "medical-outline";
+    case "JOURNEY_UPDATED":        return "map-outline";
+    case "WELCOME":                return "heart-outline";
+    case "SCHEDULER_FAILED":
+    case "BILLING_JOB_FAILED":     return "flash-off-outline";
+    default:                       return "notifications-outline";
+  }
 }
+
+// ─── Color helpers ────────────────────────────────────────────────────────────
 
 function getSeverityColor(severity: NotifSeverity): string {
   switch (severity) {
@@ -54,23 +74,56 @@ function getSeverityColor(severity: NotifSeverity): string {
   }
 }
 
-function getSeverityBg(severity: NotifSeverity): string {
-  switch (severity) {
-    case "CRITICAL": return T.dangerBg ?? "#FEF2F2";
-    case "WARNING":  return T.warningBg ?? "#FFFBEB";
-    default:         return T.bg;
-  }
+function getTypeAccentColor(type: string): string {
+  if (type === "APPOINTMENT_CANCELLED" || type === "CLINIC_SUSPENDED") return T.danger;
+  if (type === "DOCUMENT_REJECTED" || type === "INVOICE_OVERDUE")       return T.warning;
+  if (type === "DOCUMENT_APPROVED" || type === "GUEST_APPROVED")        return T.success;
+  if (type.startsWith("APPOINTMENT"))                                    return T.accent;
+  if (type.startsWith("DOCUMENT") || type === "DOCUMENT_UPLOADED")      return T.primary;
+  if (type === "GUEST_CREATED")                                          return T.primary;
+  if (type === "INVOICE_GENERATED")                                      return T.accent;
+  if (type === "HOTEL_ASSIGNED")                                         return "#7C3AED";
+  if (type === "TRANSPORT_ASSIGNED")                                     return "#0891B2";
+  if (type === "DOCTOR_ASSIGNED")                                        return "#059669";
+  if (type === "WELCOME")                                                return "#EC4899";
+  return T.primary;
 }
 
+// ─── Navigation helper ────────────────────────────────────────────────────────
+
 function getNavTarget(item: ManagerNotification): string | null {
+  const meta = item.metadata as Record<string, string> | null | undefined;
+
+  // Appointment notifications carry patientId in metadata
+  if (
+    item.relatedType === "appointment" &&
+    meta?.patientId
+  ) {
+    return `/(manager)/patients/${meta.patientId}`;
+  }
+
+  // Document notifications: may carry patientId in metadata
+  if (
+    item.relatedType === "patient_document" &&
+    meta?.patientId
+  ) {
+    return `/(manager)/patients/${meta.patientId}`;
+  }
+
+  // Direct patient relation
   if (item.relatedType === "patient" && item.relatedId) {
     return `/(manager)/patients/${item.relatedId}`;
   }
+
+  // Invoice relation
   if (item.relatedType === "invoice" && item.relatedId) {
     return `/(manager)/invoices/${item.relatedId}`;
   }
+
   return null;
 }
+
+// ─── NotifCard ────────────────────────────────────────────────────────────────
 
 function NotifCard({
   item,
@@ -80,28 +133,48 @@ function NotifCard({
   onPress: (item: ManagerNotification) => void;
 }) {
   const isUnread = item.status === "UNREAD";
-  const iconColor = getSeverityColor(item.severity);
-  const bgColor = isUnread ? getSeverityBg(item.severity) : T.surface;
-  const borderColor = isUnread ? iconColor : "transparent";
+  const accentColor = getTypeAccentColor(item.type);
+  const severityColor = getSeverityColor(item.severity);
+  const borderColor = isUnread ? severityColor : "transparent";
   const navTarget = getNavTarget(item);
+
+  // Unread cards get a tinted background from the accent
+  const cardBg = isUnread
+    ? accentColor + "08"
+    : T.surface;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: bgColor, borderLeftColor: borderColor },
+        { backgroundColor: cardBg, borderLeftColor: borderColor },
         { opacity: pressed ? 0.82 : 1 },
       ]}
       onPress={() => onPress(item)}
     >
-      <View style={[styles.iconWrap, { borderColor: iconColor + "30" }]}>
-        <Ionicons name={getIcon(item.type)} size={21} color={iconColor} />
-        {isUnread && <View style={[styles.unreadDot, { backgroundColor: iconColor }]} />}
+      {/* Icon column */}
+      <View
+        style={[
+          styles.iconWrap,
+          {
+            backgroundColor: accentColor + "15",
+            borderColor: accentColor + "30",
+          },
+        ]}
+      >
+        <Ionicons name={getIcon(item.type)} size={20} color={accentColor} />
+        {isUnread && (
+          <View style={[styles.unreadDot, { backgroundColor: severityColor }]} />
+        )}
       </View>
 
+      {/* Content column */}
       <View style={styles.content}>
-        <View style={styles.row}>
-          <Text style={[styles.cardTitle, isUnread && { color: T.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
+        <View style={styles.topRow}>
+          <Text
+            style={[styles.cardTitle, isUnread && styles.cardTitleUnread]}
+            numberOfLines={1}
+          >
             {item.title}
           </Text>
           <View style={styles.metaRow}>
@@ -109,16 +182,30 @@ function NotifCard({
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
             </Text>
             {navTarget !== null && (
-              <Ionicons name="chevron-forward" size={13} color={T.textMuted} style={styles.chevron} />
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={T.textMuted}
+                style={styles.chevron}
+              />
             )}
           </View>
         </View>
+
         <Text style={styles.body} numberOfLines={3}>
           {item.body}
         </Text>
+
+        {/* Severity badge — only for WARNING/CRITICAL */}
         {item.severity !== "INFO" && (
-          <View style={[styles.severityPill, { backgroundColor: iconColor + "18" }]}>
-            <Text style={[styles.severityText, { color: iconColor }]}>
+          <View
+            style={[
+              styles.severityPill,
+              { backgroundColor: severityColor + "18", borderColor: severityColor + "40" },
+            ]}
+          >
+            <View style={[styles.severityDot, { backgroundColor: severityColor }]} />
+            <Text style={[styles.severityText, { color: severityColor }]}>
               {item.severity}
             </Text>
           </View>
@@ -128,20 +215,31 @@ function NotifCard({
   );
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ManagerNotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const { data: notifications, isLoading, isRefetching, refetch } = useQuery<ManagerNotification[]>({
+  const {
+    data: notifications,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = useQuery<ManagerNotification[]>({
     queryKey: ["/v1/manager/notifications"],
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("PUT", `/v1/manager/notifications/${id}/read`),
+    mutationFn: (id: string) =>
+      apiRequest("PUT", `/v1/manager/notifications/${id}/read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications/unread-count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/v1/manager/notifications/unread-count"],
+      });
     },
   });
 
@@ -149,11 +247,14 @@ export default function ManagerNotificationsScreen() {
     mutationFn: () => apiRequest("PUT", "/v1/manager/notifications/read-all"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/manager/notifications/unread-count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/v1/manager/notifications/unread-count"],
+      });
     },
   });
 
-  const unreadCount = notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
+  const unreadCount =
+    notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
 
   function handleCardPress(item: ManagerNotification) {
     if (item.status === "UNREAD") {
@@ -176,8 +277,16 @@ export default function ManagerNotificationsScreen() {
             <Pressable
               onPress={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              style={({ pressed }) => [
+                styles.markAllBtn,
+                { opacity: pressed || markAllReadMutation.isPending ? 0.6 : 1 },
+              ]}
             >
+              {markAllReadMutation.isPending ? (
+                <ActivityIndicator size={12} color={T.primary} />
+              ) : (
+                <Ionicons name="checkmark-done-outline" size={14} color={T.primary} />
+              )}
               <Text style={styles.markAllText}>Mark all read</Text>
             </Pressable>
           ) : undefined
@@ -186,15 +295,22 @@ export default function ManagerNotificationsScreen() {
 
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={T.primary} />
+          <ActivityIndicator color={T.primary} size="large" />
         </View>
       ) : (
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: bottomPad + 24 },
+          ]}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.primary} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={T.primary}
+            />
           }
           renderItem={({ item }) => (
             <NotifCard item={item} onPress={handleCardPress} />
@@ -202,7 +318,7 @@ export default function ManagerNotificationsScreen() {
           ListEmptyComponent={
             <EmptyState
               title="No notifications"
-              subtitle="You're all caught up!"
+              subtitle="You're all caught up! Updates about your clinic will appear here."
               icon="notifications-outline"
             />
           }
@@ -211,6 +327,8 @@ export default function ManagerNotificationsScreen() {
     </View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -226,28 +344,36 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  markAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   markAllText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: T.primary,
   },
+
+  // Card
   card: {
     flexDirection: "row",
-    backgroundColor: T.surface,
     borderRadius: 14,
     padding: 14,
     borderLeftWidth: 3,
     ...cardShadow,
   },
+
+  // Icon
   iconWrap: {
     width: 42,
     height: 42,
     borderRadius: 21,
     borderWidth: 1,
-    backgroundColor: T.surface,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    flexShrink: 0,
     position: "relative",
   },
   unreadDot: {
@@ -260,15 +386,28 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: T.surface,
   },
+
+  // Content
   content: {
     flex: 1,
     gap: 2,
   },
-  row: {
+  topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 2,
+  },
+  cardTitle: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: T.textSec,
+    flex: 1,
+    marginRight: 6,
+  },
+  cardTitleUnread: {
+    fontFamily: "Inter_700Bold",
+    color: T.text,
   },
   metaRow: {
     flexDirection: "row",
@@ -276,20 +415,13 @@ const styles = StyleSheet.create({
     gap: 2,
     flexShrink: 0,
   },
-  chevron: {
-    marginTop: 1,
-  },
-  cardTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: T.textSec,
-    flex: 1,
-    marginRight: 6,
-  },
   time: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: T.textMuted,
+  },
+  chevron: {
+    marginTop: 1,
   },
   body: {
     fontFamily: "Inter_400Regular",
@@ -297,12 +429,23 @@ const styles = StyleSheet.create({
     color: T.textSec,
     lineHeight: 18,
   },
+
+  // Severity badge
   severityPill: {
     marginTop: 6,
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 10,
+    borderWidth: 1,
+  },
+  severityDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   severityText: {
     fontFamily: "Inter_600SemiBold",

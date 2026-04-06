@@ -42,21 +42,49 @@ interface GuestNotification {
   type: NotifType;
   severity: NotifSeverity;
   status: NotifStatus;
-  relatedId?: string;
-  relatedType?: string;
+  relatedId?: string | null;
+  relatedType?: string | null;
   createdAt: string;
   readAt?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
+// ─── Icon mapping ─────────────────────────────────────────────────────────────
+
 function getIcon(type: NotifType): React.ComponentProps<typeof Ionicons>["name"] {
-  if (type.startsWith("APPOINTMENT")) return "calendar";
-  if (type.startsWith("DOCUMENT")) return "document-text";
-  if (type === "JOURNEY_UPDATED") return "map";
-  if (type === "HOTEL_ASSIGNED") return "bed";
-  if (type === "TRANSPORT_ASSIGNED") return "car";
-  if (type === "DOCTOR_ASSIGNED") return "medical";
-  if (type === "WELCOME") return "heart";
-  return "notifications";
+  switch (type) {
+    case "APPOINTMENT_CREATED":   return "calendar-outline";
+    case "APPOINTMENT_UPDATED":   return "calendar-outline";
+    case "APPOINTMENT_CANCELLED": return "calendar-clear-outline";
+    case "DOCUMENT_ASSIGNED":     return "document-text-outline";
+    case "DOCUMENT_APPROVED":     return "checkmark-done-outline";
+    case "DOCUMENT_REJECTED":     return "document-text-outline";
+    case "JOURNEY_UPDATED":       return "map-outline";
+    case "HOTEL_ASSIGNED":        return "bed-outline";
+    case "TRANSPORT_ASSIGNED":    return "car-outline";
+    case "DOCTOR_ASSIGNED":       return "medical-outline";
+    case "WELCOME":               return "heart-outline";
+    default:                      return "notifications-outline";
+  }
+}
+
+// ─── Color helpers ────────────────────────────────────────────────────────────
+
+function getTypeAccentColor(type: NotifType): string {
+  switch (type) {
+    case "APPOINTMENT_CREATED":   return T.accent;
+    case "APPOINTMENT_UPDATED":   return T.accent;
+    case "APPOINTMENT_CANCELLED": return T.danger;
+    case "DOCUMENT_ASSIGNED":     return T.primary;
+    case "DOCUMENT_APPROVED":     return T.success;
+    case "DOCUMENT_REJECTED":     return T.warning;
+    case "JOURNEY_UPDATED":       return T.accent;
+    case "HOTEL_ASSIGNED":        return "#7C3AED";
+    case "TRANSPORT_ASSIGNED":    return "#0891B2";
+    case "DOCTOR_ASSIGNED":       return "#059669";
+    case "WELCOME":               return "#EC4899";
+    default:                      return T.primary;
+  }
 }
 
 function getSeverityColor(severity: NotifSeverity): string {
@@ -67,9 +95,23 @@ function getSeverityColor(severity: NotifSeverity): string {
   }
 }
 
+// ─── Navigation helper ────────────────────────────────────────────────────────
+
 function getNavTarget(type: NotifType): string | null {
-  if (type.startsWith("APPOINTMENT")) return "/(patient)/schedule";
-  if (type.startsWith("DOCUMENT")) return "/(patient)/profile";
+  if (
+    type === "APPOINTMENT_CREATED" ||
+    type === "APPOINTMENT_UPDATED" ||
+    type === "APPOINTMENT_CANCELLED"
+  ) {
+    return "/(patient)/schedule";
+  }
+  if (
+    type === "DOCUMENT_ASSIGNED" ||
+    type === "DOCUMENT_APPROVED" ||
+    type === "DOCUMENT_REJECTED"
+  ) {
+    return "/(patient)/profile";
+  }
   if (
     type === "HOTEL_ASSIGNED" ||
     type === "TRANSPORT_ASSIGNED" ||
@@ -81,6 +123,8 @@ function getNavTarget(type: NotifType): string | null {
   return null;
 }
 
+// ─── NotifCard ────────────────────────────────────────────────────────────────
+
 function NotifCard({
   item,
   onPress,
@@ -89,26 +133,42 @@ function NotifCard({
   onPress: (item: GuestNotification) => void;
 }) {
   const isUnread = item.status === "UNREAD";
-  const iconColor = isUnread ? getSeverityColor(item.severity) : T.textMuted;
+  const accentColor = getTypeAccentColor(item.type);
+  const severityColor = getSeverityColor(item.severity);
   const navTarget = getNavTarget(item.type);
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        isUnread && styles.unreadCard,
+        isUnread && { borderLeftColor: accentColor, backgroundColor: accentColor + "08" },
         { opacity: pressed ? 0.82 : 1 },
       ]}
       onPress={() => onPress(item)}
     >
-      <View style={[styles.iconWrap, { borderColor: iconColor + "33" }]}>
-        <Ionicons name={getIcon(item.type)} size={22} color={iconColor} />
-        {isUnread && <View style={[styles.unreadDot, { backgroundColor: iconColor }]} />}
+      {/* Icon column */}
+      <View
+        style={[
+          styles.iconWrap,
+          {
+            backgroundColor: accentColor + "15",
+            borderColor: accentColor + "30",
+          },
+        ]}
+      >
+        <Ionicons name={getIcon(item.type)} size={21} color={accentColor} />
+        {isUnread && (
+          <View style={[styles.unreadDot, { backgroundColor: severityColor }]} />
+        )}
       </View>
 
+      {/* Content column */}
       <View style={styles.content}>
-        <View style={styles.row}>
-          <Text style={[styles.title, isUnread && styles.unreadTitle]} numberOfLines={1}>
+        <View style={styles.topRow}>
+          <Text
+            style={[styles.title, isUnread && styles.titleUnread]}
+            numberOfLines={1}
+          >
             {item.title}
           </Text>
           <View style={styles.metaRow}>
@@ -116,32 +176,67 @@ function NotifCard({
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
             </Text>
             {navTarget !== null && (
-              <Ionicons name="chevron-forward" size={13} color={T.textMuted} style={styles.chevron} />
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={T.textMuted}
+                style={styles.chevron}
+              />
             )}
           </View>
         </View>
+
         <Text style={styles.body} numberOfLines={3}>
           {item.body}
         </Text>
+
+        {/* Severity badge — only for WARNING/CRITICAL */}
+        {item.severity !== "INFO" && (
+          <View
+            style={[
+              styles.severityPill,
+              {
+                backgroundColor: severityColor + "18",
+                borderColor: severityColor + "40",
+              },
+            ]}
+          >
+            <View style={[styles.severityDot, { backgroundColor: severityColor }]} />
+            <Text style={[styles.severityText, { color: severityColor }]}>
+              {item.severity}
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function GuestNotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const { data: notifications, isLoading, isRefetching, refetch } = useQuery<GuestNotification[]>({
+  const {
+    data: notifications,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = useQuery<GuestNotification[]>({
     queryKey: ["/v1/patient/notifications"],
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("PUT", `/v1/patient/notifications/${id}/read`),
+    mutationFn: (id: string) =>
+      apiRequest("PUT", `/v1/patient/notifications/${id}/read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications/unread-count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/v1/patient/notifications/unread-count"],
+      });
     },
   });
 
@@ -149,11 +244,14 @@ export default function GuestNotificationsScreen() {
     mutationFn: () => apiRequest("PUT", "/v1/patient/notifications/read-all"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/v1/patient/notifications/unread-count"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/v1/patient/notifications/unread-count"],
+      });
     },
   });
 
-  const unreadCount = notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
+  const unreadCount =
+    notifications?.filter((n) => n.status === "UNREAD").length ?? 0;
 
   function handleCardPress(item: GuestNotification) {
     if (item.status === "UNREAD") {
@@ -176,7 +274,7 @@ export default function GuestNotificationsScreen() {
 
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={T.primary} />
+          <ActivityIndicator color={T.primary} size="large" />
         </View>
       ) : (
         <FlatList
@@ -184,28 +282,36 @@ export default function GuestNotificationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 24 },
+            { paddingBottom: bottomPad + 24 },
           ]}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={T.primary} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={T.primary}
+            />
           }
           ListHeaderComponent={
             unreadCount > 0 ? (
               <Pressable
-                style={({ pressed }) => [styles.markAllBtn, { opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [
+                  styles.markAllBtn,
+                  { opacity: pressed || markAllReadMutation.isPending ? 0.7 : 1 },
+                ]}
                 onPress={() => markAllReadMutation.mutate()}
                 disabled={markAllReadMutation.isPending}
               >
-                <Ionicons name="checkmark-done" size={16} color={T.primary} />
+                {markAllReadMutation.isPending ? (
+                  <ActivityIndicator size={13} color={T.primary} />
+                ) : (
+                  <Ionicons name="checkmark-done-outline" size={15} color={T.primary} />
+                )}
                 <Text style={styles.markAllText}>Mark all as read</Text>
               </Pressable>
             ) : null
           }
           renderItem={({ item }) => (
-            <NotifCard
-              item={item}
-              onPress={handleCardPress}
-            />
+            <NotifCard item={item} onPress={handleCardPress} />
           )}
           ListEmptyComponent={
             <EmptyState
@@ -219,6 +325,8 @@ export default function GuestNotificationsScreen() {
     </View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -234,42 +342,48 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+
+  // Mark all button
   markAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-end",
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     marginBottom: 8,
     backgroundColor: T.primary + "12",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: T.primary + "25",
   },
   markAllText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
     color: T.primary,
   },
+
+  // Card
   card: {
     flexDirection: "row",
     backgroundColor: T.surface,
     borderRadius: 14,
     padding: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: "transparent",
     ...cardShadow,
   },
-  unreadCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: T.accent,
-  },
+
+  // Icon
   iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
-    backgroundColor: T.bg,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    flexShrink: 0,
     position: "relative",
   },
   unreadDot: {
@@ -282,14 +396,28 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: T.surface,
   },
+
+  // Content
   content: {
     flex: 1,
+    gap: 2,
   },
-  row: {
+  topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 3,
+  },
+  title: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: T.textSec,
+    flex: 1,
+    marginRight: 6,
+  },
+  titleUnread: {
+    fontFamily: "Inter_700Bold",
+    color: T.text,
   },
   metaRow: {
     flexDirection: "row",
@@ -297,29 +425,41 @@ const styles = StyleSheet.create({
     gap: 2,
     flexShrink: 0,
   },
-  chevron: {
-    marginTop: 1,
-  },
-  title: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: T.textSec,
-    flex: 1,
-    marginRight: 6,
-  },
-  unreadTitle: {
-    fontFamily: "Inter_700Bold",
-    color: T.text,
-  },
   time: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: T.textMuted,
+  },
+  chevron: {
+    marginTop: 1,
   },
   body: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 18,
+  },
+
+  // Severity badge
+  severityPill: {
+    marginTop: 6,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  severityDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  severityText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
 });

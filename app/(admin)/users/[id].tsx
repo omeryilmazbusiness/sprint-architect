@@ -21,6 +21,7 @@ import { getUser, deactivateSingleUser, resetUserPasswordAuto, type AdminUser } 
 import { useInvalidateAdminUsers } from "@/hooks/useAdminUsersQuery";
 import { useAuth } from "@/context/AuthContext";
 import { PurgeDangerSection } from "@/components/users/PurgeDangerSection";
+import { useT } from "@/hooks/useT";
 
 function InfoRow({ icon, label, value, onPress }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -79,8 +80,8 @@ function formatDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "Never";
+function formatDateTime(iso: string | null | undefined, neverLabel: string): string {
+  if (!iso) return neverLabel;
   const d = new Date(iso);
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) +
     " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -96,6 +97,8 @@ function getInitials(user: AdminUser): string {
 }
 
 export default function UserDetailScreen() {
+  const t = useT();
+  const tu = t.adminUsers;
   const { id } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
   const invalidateUsers = useInvalidateAdminUsers();
@@ -157,8 +160,8 @@ export default function UserDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.root}>
-        <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
-        <LoadingState message="Loading user…" />
+        <AdminHeader title={tu.userDetailTitle} backButton onBack={() => router.back()} />
+        <LoadingState message={tu.loadingUser} />
       </View>
     );
   }
@@ -166,7 +169,7 @@ export default function UserDetailScreen() {
   if (isError || !data) {
     return (
       <View style={styles.root}>
-        <AdminHeader title="User Detail" backButton onBack={() => router.back()} />
+        <AdminHeader title={tu.userDetailTitle} backButton onBack={() => router.back()} />
         <ErrorState onRetry={refetch} />
       </View>
     );
@@ -181,7 +184,7 @@ export default function UserDetailScreen() {
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="User Detail"
+        title={tu.userDetailTitle}
         backButton
         onBack={() => router.back()}
         right={<StatusPill status={data.status} small />}
@@ -206,7 +209,7 @@ export default function UserDetailScreen() {
             {data.mustChangePassword && (
               <View style={styles.warningChip}>
                 <Ionicons name="warning-outline" size={11} color="#B45309" />
-                <Text style={styles.warningChipText}>Must change password</Text>
+                <Text style={styles.warningChipText}>{tu.mustChangePassword}</Text>
               </View>
             )}
           </View>
@@ -218,11 +221,11 @@ export default function UserDetailScreen() {
           )}
         </SectionCard>
 
-        <SectionLabel text="CONTACT" />
+        <SectionLabel text={tu.contactSection} />
         <SectionCard>
           <InfoRow
             icon="mail-outline"
-            label="Email"
+            label={tu.emailLabel}
             value={data.email}
             onPress={() => Linking.openURL(`mailto:${data.email}`)}
           />
@@ -231,7 +234,7 @@ export default function UserDetailScreen() {
               <Divider inset={44} />
               <InfoRow
                 icon="call-outline"
-                label="Phone"
+                label={tu.phoneLabel}
                 value={data.phoneE164!}
                 onPress={() => Linking.openURL(`tel:${data.phoneE164}`)}
               />
@@ -241,7 +244,7 @@ export default function UserDetailScreen() {
 
         {hasClinic && (
           <>
-            <SectionLabel text="CLINIC" />
+            <SectionLabel text={tu.clinicSection} />
             <SectionCard>
               <View style={styles.clinicRow}>
                 <View style={styles.clinicIcon}>
@@ -260,7 +263,7 @@ export default function UserDetailScreen() {
                     params: { id: data.clinicId! },
                   })}
                 >
-                  <Text style={styles.openClinicText}>Open</Text>
+                  <Text style={styles.openClinicText}>{tu.openClinic}</Text>
                   <Ionicons name="arrow-forward" size={12} color={T.accent} />
                 </Pressable>
               </View>
@@ -268,26 +271,26 @@ export default function UserDetailScreen() {
           </>
         )}
 
-        <SectionLabel text="ACCOUNT" />
+        <SectionLabel text={tu.accountSection} />
         <SectionCard>
           <InfoRow
             icon="calendar-outline"
-            label="Member since"
+            label={tu.memberSince}
             value={formatDate(data.createdAt)}
           />
           <Divider inset={44} />
           <InfoRow
             icon="time-outline"
-            label="Last login"
-            value={formatDateTime(data.lastLoginAt)}
+            label={tu.lastLogin}
+            value={formatDateTime(data.lastLoginAt, tu.never)}
           />
         </SectionCard>
 
-        <SectionLabel text="ACTIONS" />
+        <SectionLabel text={tu.actionsSection} />
         <SectionCard style={styles.actionsCard}>
           <ActionRow
             icon="key-outline"
-            label="Reset Password"
+            label={tu.resetPassword}
             onPress={() => setShowReset(true)}
           />
           {!isInactive && (
@@ -295,7 +298,7 @@ export default function UserDetailScreen() {
               <Divider inset={52} />
               <ActionRow
                 icon="ban-outline"
-                label="Deactivate User"
+                label={tu.deactivateUser}
                 destructive
                 onPress={() => setShowDeactivate(true)}
               />
@@ -314,12 +317,12 @@ export default function UserDetailScreen() {
             <View style={[styles.modalIcon, { backgroundColor: T.dangerBg }]}>
               <Ionicons name="ban-outline" size={26} color={T.danger} />
             </View>
-            <Text style={styles.modalTitle}>Deactivate User?</Text>
+            <Text style={styles.modalTitle}>{tu.deactivateTitle}</Text>
             <Text style={styles.modalBody}>
-              {displayName} will lose access immediately. You can reactivate them later.
+              {tu.deactivateBody.replace("{name}", displayName)}
             </Text>
             <Text style={styles.modalNote}>
-              Primary clinic managers cannot be deactivated without reassignment.
+              {tu.deactivateNote}
             </Text>
             <View style={styles.modalBtns}>
               <Pressable
@@ -327,7 +330,7 @@ export default function UserDetailScreen() {
                 onPress={() => setShowDeactivate(false)}
                 disabled={isDeactivating}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{tu.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[styles.deactivateBtn, { opacity: isDeactivating ? 0.7 : 1 }]}
@@ -336,7 +339,7 @@ export default function UserDetailScreen() {
               >
                 {isDeactivating
                   ? <ActivityIndicator color={T.danger} size="small" />
-                  : <Text style={styles.deactivateBtnText}>Deactivate</Text>}
+                  : <Text style={styles.deactivateBtnText}>{tu.deactivate}</Text>}
               </Pressable>
             </View>
           </View>
@@ -349,9 +352,9 @@ export default function UserDetailScreen() {
             <View style={[styles.modalIcon, { backgroundColor: T.accent + "12" }]}>
               <Ionicons name="key-outline" size={26} color={T.accent} />
             </View>
-            <Text style={styles.modalTitle}>Reset Password?</Text>
+            <Text style={styles.modalTitle}>{tu.resetPasswordTitle}</Text>
             <Text style={styles.modalBody}>
-              A new temporary password will be generated for {displayName}. They will be required to change it on next login.
+              {tu.resetPasswordBody.replace("{name}", displayName)}
             </Text>
             <View style={styles.modalBtns}>
               <Pressable
@@ -359,7 +362,7 @@ export default function UserDetailScreen() {
                 onPress={() => setShowReset(false)}
                 disabled={isResetting}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{tu.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[styles.confirmBtn, { opacity: isResetting ? 0.7 : 1 }]}
@@ -368,7 +371,7 @@ export default function UserDetailScreen() {
               >
                 {isResetting
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.confirmBtnText}>Reset</Text>}
+                  : <Text style={styles.confirmBtnText}>{tu.reset}</Text>}
               </Pressable>
             </View>
           </View>
@@ -381,17 +384,17 @@ export default function UserDetailScreen() {
             <View style={[styles.modalIcon, { backgroundColor: "#D1FAE5" }]}>
               <Ionicons name="checkmark-circle-outline" size={26} color="#059669" />
             </View>
-            <Text style={styles.modalTitle}>Password Reset</Text>
-            <Text style={styles.modalBody}>New temporary password for {displayName}:</Text>
+            <Text style={styles.modalTitle}>{tu.passwordResetTitle}</Text>
+            <Text style={styles.modalBody}>{tu.passwordResetBody.replace("{name}", displayName)}</Text>
             <View style={styles.passwordBox}>
               <Text style={styles.passwordText} selectable>{newPassword ?? ""}</Text>
             </View>
-            <Text style={styles.modalNote}>Copy this password now — it won't be shown again.</Text>
+            <Text style={styles.modalNote}>{tu.passwordCopyNote}</Text>
             <Pressable
               style={[styles.confirmBtn, { width: "100%" }]}
               onPress={() => { setShowPasswordModal(false); setNewPassword(null); }}
             >
-              <Text style={styles.confirmBtnText}>Done</Text>
+              <Text style={styles.confirmBtnText}>{tu.done}</Text>
             </Pressable>
           </View>
         </View>
