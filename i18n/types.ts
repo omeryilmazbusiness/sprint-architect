@@ -505,6 +505,12 @@ export interface ManagerUsersDict {
   guestPlural: string;
   apptSingular: string;
   apptPlural: string;
+  // GuestListCard
+  noTravelDates: string;
+  arrivingDate: string;
+  keyPrefix: string;
+  tagDocsPending: string;
+  tagTodayAppt: string;
 }
 
 export interface ManagerServicesDict {
@@ -627,6 +633,12 @@ export interface ManagerDoctorsDict {
   toastHasAppointments: string;
   toastFailedDelete: string;
   toastFailedSave: string;
+  // DoctorListCard
+  generalPractice: string;
+  yrsExp: string;
+  diplomaVerified: string;
+  confirmRemoveDoctor: string;
+  btnRemove: string;
 }
 
 export interface ManagerHotelsDict {
@@ -661,6 +673,28 @@ export interface ManagerTransportsDict {
   toastFailedSave: string;
   toastFailedUpdate: string;
   toastFailedDelete: string;
+  // TransportFormSheet
+  sectionDriver: string;
+  sectionVehicle: string;
+  fieldFullName: string;
+  fieldPhone: string;
+  fieldBrand: string;
+  fieldModel: string;
+  fieldLicensePlate: string;
+  editTitle: string;
+  addTitle: string;
+  errDriverRequired: string;
+  errPhoneRequired: string;
+  errBrandRequired: string;
+  errModelRequired: string;
+  errPlateRequired: string;
+  btnSaveChanges: string;
+  btnCancel: string;
+  // TransportListCard
+  unknownDriver: string;
+  deleteTransportTitle: string;
+  deleteTransportConfirm: string;
+  btnDelete: string;
 }
 
 export interface ManagerDocTypesDict {
@@ -706,6 +740,194 @@ export interface AppointmentsTodayDict {
   apptPlural: string;
 }
 
+// ─── Shared guest-detail component dictionaries ───────────────────────────────
+
+export interface GuestDetailDict {
+  // Shared action labels
+  change: string;
+  assign: string;
+  add: string;
+  cancel: string;
+  approve: string;
+  reject: string;
+  // GuestHeroCard
+  approving: string;
+  approveGuest: string;
+  // GuestInfoCard
+  infoSectionTitle: string;
+  labelPassport: string;
+  labelDOB: string;
+  labelPhone: string;
+  labelEmail: string;
+  labelTravelDates: string;
+  labelServicesRequested: string;
+  labelNotes: string;
+  labelCompanion: string;
+  // GuestTrackingStepper
+  journeyTitle: string;
+  updating: string;
+  stepCurrent: string;
+  tapToSet: string;
+  stepPreArrival: string;
+  stepArrivalTransfer: string;
+  stepHotelCheckin: string;
+  stepTreatment: string;
+  stepFollowup: string;
+  stepDeparture: string;
+  // TransportAssignmentCard
+  transportTitle: string;
+  transportEmpty: string;
+  transportEmptyHint: string;
+  // HotelAssignmentCard
+  hotelTitle: string;
+  hotelEmpty: string;
+  hotelEmptyHint: string;
+  // DocumentsAssignmentCard
+  docsTitle: string;
+  docsPendingCount: string;
+  docsUploadedCount: string;
+  docsAssignedCount: string;
+  docsEmpty: string;
+  docsEmptyHint: string;
+  docUploadedDate: string;
+  approveDocTitle: string;
+  approveDocConfirm: string;
+  rejectDocTitle: string;
+  rejectDocSub: string;
+  rejectDocPlaceholder: string;
+  // AssignTransportSheet
+  assignTransportTitle: string;
+  noTransportsAvailable: string;
+  // AssignHotelSheet
+  assignHotelTitle: string;
+  noHotelsAvailable: string;
+  // AssignDocTypeSheet
+  selectDocTypeTitle: string;
+  noDocTypesDefined: string;
+  noDocTypesHint: string;
+  instructionLabel: string;
+  instructionPlaceholder: string;
+  assignDocumentBtn: string;
+  // CreateAppointmentSheet
+  newApptTitle: string;
+  labelDate: string;
+  labelTime: string;
+  labelDoctor: string;
+  labelProcedureTitle: string;
+  apptSummaryLabel: string;
+  searchDoctorPlaceholder: string;
+  noDoctorsMatch: string;
+  noDoctorsAvailable: string;
+  errSelectDate: string;
+  errSelectTime: string;
+  errSelectDoctor: string;
+  errTitleTooShort: string;
+  errTitleTooLong: string;
+  moreDoctors: string;
+  createApptError: string;
+  createApptBtn: string;
+  apptTitlePlaceholder: string;
+}
+
+export interface CreateGuestDict {
+  // NationalityPickerModal
+  nationalityTitle: string;
+  searchCountryPlaceholder: string;
+  // ServicesPickerModal
+  servicesTitle: string;
+  confirmSelectAtLeast: string;
+  confirmServices: string;
+  serviceLabels: Record<string, string>;
+  // Form header
+  headerTitle: string;
+  successHeaderTitle: string;
+  // Section headers
+  sectionIdentity: string;
+  sectionContact: string;
+  sectionTravelService: string;
+  sectionNotes: string;
+  // Field labels
+  fieldFullName: string;
+  fieldFullNamePlaceholder: string;
+  fieldDOB: string;
+  fieldDOBPlaceholder: string;
+  fieldGender: string;
+  fieldNationality: string;
+  fieldNationalityPlaceholder: string;
+  fieldPassport: string;
+  fieldPassportPlaceholder: string;
+  fieldPhone: string;
+  fieldEmail: string;
+  fieldEmailPlaceholder: string;
+  fieldServices: string;
+  fieldServicesPlaceholder: string;
+  fieldServicesSelected: string;
+  fieldArrivalDate: string;
+  fieldArrivalPlaceholder: string;
+  fieldDepartureDate: string;
+  fieldDeparturePlaceholder: string;
+  fieldArrivalAirport: string;
+  fieldArrivalAirportPlaceholder: string;
+  fieldFlightNo: string;
+  fieldFlightNoPlaceholder: string;
+  fieldInternalNotes: string;
+  fieldNotesPlaceholder: string;
+  // Companion section
+  companionToggleAdd: string;
+  companionToggleOpen: string;
+  companionName: string;
+  companionNamePlaceholder: string;
+  companionPhone: string;
+  companionRelation: string;
+  // Gender chips
+  genderMale: string;
+  genderFemale: string;
+  genderOther: string;
+  // Companion relation chips
+  relationSpouse: string;
+  relationFamily: string;
+  relationFriend: string;
+  relationCaregiver: string;
+  relationOther: string;
+  // Validation errors
+  errFullNameRequired: string;
+  errNationalityRequired: string;
+  errPhoneRequired: string;
+  errArrivalRequired: string;
+  errDepartureRequired: string;
+  errDepartureBefore: string;
+  errServicesRequired: string;
+  errInvalidEmail: string;
+  // Submit
+  submitBtn: string;
+  // Success state
+  successAddedTo: string;
+  keyLabel: string;
+  keyHint: string;
+  copy: string;
+  copied: string;
+  openGuestProfile: string;
+  done: string;
+}
+
+export interface FilterSheetDict {
+  title: string;
+  sectionGuestStatus: string;
+  pendingDocsLabel: string;
+  pendingDocsSub: string;
+  todayApptLabel: string;
+  todayApptSub: string;
+  clearAll: string;
+  apply: string;
+  applyWithCount: string;
+  statusAll: string;
+  statusWaitingApproval: string;
+  statusPending: string;
+  statusApproved: string;
+  statusActive: string;
+  statusEnded: string;
+}
+
 // ─── Root dictionary shape ─────────────────────────────────────────────────────
 
 export interface AppDict {
@@ -734,4 +956,8 @@ export interface AppDict {
   managerTransports: ManagerTransportsDict;
   managerDocTypes: ManagerDocTypesDict;
   appointmentsToday: AppointmentsTodayDict;
+  // Shared components
+  guestDetail: GuestDetailDict;
+  createGuest: CreateGuestDict;
+  filterSheet: FilterSheetDict;
 }
