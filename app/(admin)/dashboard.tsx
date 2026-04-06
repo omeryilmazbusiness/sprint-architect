@@ -18,6 +18,7 @@ import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 import { BannerCarousel } from "@/components/adminDashboard/BannerCarousel";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { RecentInvoicesList } from "@/components/dashboard/RecentInvoicesList";
+import { useT } from "@/hooks/useT";
 
 function NavRow({
   icon,
@@ -49,13 +50,21 @@ function NavRow({
   );
 }
 
-function ErrorBanner({ onRetry }: { onRetry: () => void }) {
+function ErrorBanner({
+  message,
+  retryLabel,
+  onRetry,
+}: {
+  message: string;
+  retryLabel: string;
+  onRetry: () => void;
+}) {
   return (
     <View style={styles.errorBanner}>
       <Ionicons name="warning-outline" size={18} color={T.danger} />
-      <Text style={styles.errorText}>Failed to load dashboard data</Text>
+      <Text style={styles.errorText}>{message}</Text>
       <Pressable style={styles.retryBtn} onPress={onRetry}>
-        <Text style={styles.retryText}>Retry</Text>
+        <Text style={styles.retryText}>{retryLabel}</Text>
       </Pressable>
     </View>
   );
@@ -64,6 +73,8 @@ function ErrorBanner({ onRetry }: { onRetry: () => void }) {
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const t = useT();
+  const d = t.adminDashboard;
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminDashboard();
 
@@ -75,7 +86,7 @@ export default function AdminDashboard() {
   return (
     <View style={styles.root}>
       <AdminHeader
-        title="Dashboard"
+        title={d.pageTitle}
         userEmail={user?.email}
         onLogout={handleLogout}
         showBell
@@ -96,46 +107,52 @@ export default function AdminDashboard() {
         <BannerCarousel data={data} isLoading={isLoading} />
 
         <View style={styles.body}>
-          {isError && !isLoading && <ErrorBanner onRetry={refetch} />}
+          {isError && !isLoading && (
+            <ErrorBanner
+              message={d.loadError}
+              retryLabel={d.retry}
+              onRetry={refetch}
+            />
+          )}
 
           {/* ── Overview KPIs ─────────────────────────────────── */}
-          <Text style={styles.sectionLabel}>OVERVIEW</Text>
+          <Text style={styles.sectionLabel}>{d.sectionOverview}</Text>
           <KpiGrid data={data} isLoading={isLoading} />
 
           {/* ── Quick Actions ─────────────────────────────────── */}
-          <Text style={[styles.sectionLabel, styles.sectionGap]}>QUICK ACTIONS</Text>
+          <Text style={[styles.sectionLabel, styles.sectionGap]}>{d.sectionQuickActions}</Text>
           <Card noPad style={softShadow}>
             <NavRow
               icon="add-circle-outline"
-              label="Create Clinic"
-              sub="Add a new clinic to the platform"
+              label={d.createClinic}
+              sub={d.createClinicSub}
               onPress={() => router.push("/(admin)/clinics/create")}
             />
             <Divider inset={64} />
             <NavRow
               icon="business-outline"
-              label="All Clinics"
-              sub="Edit, suspend, and view all clinics"
+              label={d.allClinics}
+              sub={d.allClinicsSub}
               onPress={() => router.push("/(admin)/clinics")}
             />
             <Divider inset={64} />
             <NavRow
               icon="document-text-outline"
-              label="All Invoices"
-              sub="Billing history across all clinics"
+              label={d.allInvoices}
+              sub={d.allInvoicesSub}
               onPress={() => router.push("/(admin)/invoices")}
             />
             <Divider inset={64} />
             <NavRow
               icon="people-outline"
-              label="Manage Users"
-              sub="Managers, admins and accounts"
+              label={d.manageUsers}
+              sub={d.manageUsersSub}
               onPress={() => router.push("/(admin)/users")}
             />
           </Card>
 
           {/* ── Recent Invoices ────────────────────────────────── */}
-          <Text style={[styles.sectionLabel, styles.sectionGap]}>RECENT INVOICES</Text>
+          <Text style={[styles.sectionLabel, styles.sectionGap]}>{d.sectionRecentInvoices}</Text>
           <RecentInvoicesList
             invoices={data?.recentInvoices}
             isLoading={isLoading}

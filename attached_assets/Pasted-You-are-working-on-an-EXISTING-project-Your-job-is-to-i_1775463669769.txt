@@ -1,0 +1,233 @@
+You are working on an EXISTING project.
+
+Your job is to inspect the current codebase deeply and then implement a production-ready internationalization (i18n) system starting from the ADMIN side, while also making a small manager banner readability improvement.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing working flows
+- First inspect the real implementation deeply
+- Then directly implement the requested changes
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random string replacements without architecture
+- Build a real scalable i18n foundation that can later cover the full project
+- The solution must be modern, SOLID-compliant, and extendable to the whole app
+
+PRIMARY REQUESTS
+
+1) MANAGER BANNER BACKGROUND SHOULD BE DARKER
+Required behavior:
+- The manager dashboard banner background image/visual should be slightly darker
+- This is to improve text readability
+- Do not destroy the premium visual style
+- Just improve readability with a more professional dark overlay treatment
+
+2) ADD A SECOND LANGUAGE SUPPORT STARTING FROM ADMIN
+Required behavior:
+- Add a professional multilingual architecture to the project
+- Start with ADMIN pages first
+- First page to localize: Admin Dashboard
+- Add Russian language support
+- Then structure the system so the rest of the admin pages can be translated in the same architecture
+- The architecture must be ready to scale to the whole project later (admin, manager, guest)
+
+3) ADD LANGUAGE SWITCHER TO ADMIN HEADER
+Required behavior:
+- Add a language icon/button to the admin header
+- When clicked, the admin can select the current language
+- At minimum support:
+  - English (or existing default language if current admin UI is already in one language)
+  - Russian
+- Language switch must update the admin dashboard immediately
+- The selected language should persist properly
+
+4) BUILD THE I18N SYSTEM IN A MODERN, CLEAN, SOLID WAY
+Required behavior:
+- This must not be a one-off dashboard-only hack
+- Create a proper i18n structure that can be reused across the project
+- Admin dashboard is only phase 1
+- The design must make it easy to localize the rest of admin pages one by one later
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+A. CURRENT ADMIN ARCHITECTURE
+- admin pages structure
+- admin layout/header structure
+- how admin dashboard is built
+- where admin strings currently live
+- whether there is already any i18n or language context in the project
+- whether admin uses shared layout/header components
+- how state persistence is currently handled
+
+B. EXISTING LANGUAGE SUPPORT IN THE PROJECT
+- whether guest or manager side already has a language system
+- whether there is already an i18n context/provider/dictionary approach
+- whether any existing implementation can be reused or should be generalized
+- whether there are duplicate translation systems that should be unified carefully
+
+C. MANAGER BANNER
+- current banner component
+- current background image and overlay treatment
+- how text is rendered over the background
+- safest way to darken it without breaking design
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — MANAGER BANNER READABILITY IMPROVEMENT
+1. Inspect the current manager banner implementation
+2. Increase/darken the overlay/background treatment slightly
+3. Improve text readability while preserving premium look
+4. Do not over-darken or make it flat
+
+Acceptance criteria:
+- manager banner background is darker than before
+- text is easier to read
+- premium design is preserved
+
+PHASE 2 — I18N FOUNDATION ARCHITECTURE
+Build a real translation architecture for the project.
+
+Requirements:
+- scalable to the entire project
+- clean provider/context or equivalent architecture
+- typed translation keys where practical
+- clean separation of:
+  - language state
+  - dictionaries/resources
+  - hooks/helpers
+  - UI integration
+- no hardcoded mixed-language strings left in localized admin dashboard areas
+- future pages should be easy to migrate into this system
+
+Suggested architecture direction:
+- central i18n folder/module
+- language provider/context
+- translation resources per language
+- a typed translation hook/helper
+- persistence layer for selected language
+- easy integration with headers/layouts/pages
+
+If the project already has a partial i18n system elsewhere:
+- inspect it first
+- reuse/generalize it if it is clean enough
+- avoid creating a second conflicting system
+
+Acceptance criteria:
+- one clear i18n architecture exists
+- it is reusable beyond admin dashboard
+- language state persists
+- no hacky one-page solution
+
+PHASE 3 — ADMIN HEADER LANGUAGE SWITCHER
+1. Add a language icon/button to the admin header
+2. Add a clean language selector interaction
+3. Support switching between:
+   - current default language
+   - Russian
+4. Persist the chosen language
+5. Ensure the selection updates UI reactively
+6. Keep the UX premium, minimal, and professional
+
+Acceptance criteria:
+- admin header has a language switcher
+- clicking it allows language selection
+- selected language is applied immediately
+- language choice persists after refresh/navigation
+
+PHASE 4 — ADMIN DASHBOARD LOCALIZATION
+1. Localize Admin Dashboard fully
+2. Move all visible strings into the new i18n system
+3. Add Russian translations
+4. Keep wording professional and product-appropriate
+5. Ensure all dashboard sections respond correctly to language switch
+6. Avoid hardcoded leftover strings in the dashboard area
+
+Acceptance criteria:
+- admin dashboard can fully switch language
+- Russian translations are working
+- no mixed-language UI in dashboard
+- layout remains clean in both languages
+
+PHASE 5 — ADMIN-SIDE EXPANSION-READY STRUCTURE
+Do NOT fully translate every admin page right now unless safe and trivial.
+But you MUST structure the system so that all admin pages can be localized page-by-page cleanly.
+
+Requirements:
+- make the architecture ready for sequential rollout
+- identify how the rest of admin pages should plug into the same translation system
+- avoid duplicated translation logic
+- keep page migration simple
+
+Acceptance criteria:
+- rest of admin pages can be localized next using the same pattern
+- no redesign needed later
+- no parallel translation system will be necessary
+
+PHASE 6 — RUSSIAN TRANSLATION QUALITY
+Russian must be:
+- natural
+- professional
+- product/UI appropriate
+- concise
+- not machine-garbage wording
+- consistent across dashboard terminology
+
+Use professional product terminology.
+Avoid awkward literal translations.
+
+PHASE 7 — CLEANUP / HARDENING
+1. Remove or refactor any duplicated string logic in the localized admin dashboard area
+2. Ensure no hardcoded admin dashboard strings remain where they should be localized
+3. Ensure type-safety remains strong
+4. Ensure no performance regression from language switching
+5. Keep dark/light/admin styles stable
+6. Keep the implementation clean and maintainable
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant structure
+- clear separation of concerns
+- reusable translation provider/system
+- reusable translation hook/helper
+- centralized dictionaries/resources
+- no duplicated translation helpers
+- easy future rollout to all project areas
+- header language switch not tied only to one page
+- persistence handled cleanly
+
+YOU MUST CHECK FOR THESE RISKS
+- project already has another language system and creating a second one would cause conflicts
+- admin header is duplicated in multiple files
+- dashboard strings are embedded deep inside child components
+- Russian text may expand UI width and break layout
+- language persistence may conflict with auth/session persistence
+- manager/guest existing translations may use different patterns
+- darkening manager banner may accidentally reduce image quality or contrast balance
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current admin architecture
+2. Whether there was an existing i18n structure and how you handled it
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new i18n architecture
+2. Summary of manager banner darkening change
+3. Summary of admin header language switcher
+4. Summary of admin dashboard Russian localization
+5. Exact files changed
+6. Manual QA checklist
+7. Recommended next order for translating the remaining admin pages
+8. Remaining future improvements if any
+
+START NOW
+First inspect the current admin architecture, any existing language/i18n logic in the project, and the current manager banner implementation.
+Then implement the changes end-to-end in the order above.

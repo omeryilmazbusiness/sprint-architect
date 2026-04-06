@@ -120,9 +120,9 @@ function Slide({ slide }: { slide: SlideConfig }) {
     <View style={ss.slide}>
       <Image source={src} style={ss.image} resizeMode="cover" />
 
-      {/* Dark gradient over bottom half — identical to guest banner */}
+      {/* Dark gradient — slightly deeper for text readability */}
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.72)"]}
+        colors={["transparent", "rgba(0,0,0,0.82)"]}
         style={ss.overlay}
       />
 
@@ -297,7 +297,7 @@ const ss = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: CARD_H * 0.62,
+    height: CARD_H * 0.72,
   },
 
   // Context badge — top-left corner

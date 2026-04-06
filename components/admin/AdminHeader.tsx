@@ -11,7 +11,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { useAdminHeaderData } from "@/hooks/useAdminHeaderData";
+import { useLanguage } from "@/context/LanguageContext";
+import { LOCALE_FLAGS } from "@/i18n";
 import { AdminProfileMenu } from "./AdminProfileMenu";
+import { LanguageSelectorSheet } from "./LanguageSelectorSheet";
 
 interface AdminHeaderProps {
   title: string;
@@ -62,6 +65,20 @@ function HealthDot({ ok, loaded }: { ok: boolean; loaded: boolean }) {
       {loaded && !ok && (
         <Text style={styles.degradedLabel}>!</Text>
       )}
+    </Pressable>
+  );
+}
+
+function LangBtn({ onPress }: { onPress: () => void }) {
+  const { locale } = useLanguage();
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.65 : 1 }]}
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityLabel="Switch language"
+    >
+      <Text style={styles.langFlag}>{LOCALE_FLAGS[locale]}</Text>
     </Pressable>
   );
 }
@@ -118,6 +135,7 @@ export function AdminHeader({
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const [menuVisible, setMenuVisible] = useState(false);
+  const [langSheetVisible, setLangSheetVisible] = useState(false);
 
   const data = useAdminHeaderData();
   const email = data.email || userEmail || "";
@@ -145,6 +163,7 @@ export function AdminHeader({
     <View style={styles.actionsRow}>
       {rightExtra && <View style={styles.extraSlot}>{rightExtra}</View>}
       <HealthDot ok={data.healthOk} loaded={data.healthLoaded} />
+      <LangBtn onPress={() => setLangSheetVisible(true)} />
       <NotifBell count={data.unreadCount} />
       <ProfileBtn initials={initials} onPress={() => setMenuVisible(true)} />
     </View>
@@ -182,6 +201,11 @@ export function AdminHeader({
         email={email}
         role={data.role}
         initials={initials}
+      />
+
+      <LanguageSelectorSheet
+        visible={langSheetVisible}
+        onClose={() => setLangSheetVisible(false)}
       />
     </>
   );
@@ -269,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexShrink: 0,
-    maxWidth: 210,
+    maxWidth: 250,
   },
   extraSlot: {
     flexDirection: "row",
@@ -347,5 +371,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 9,
     color: "#fff",
+  },
+  langFlag: {
+    fontSize: 16,
+    lineHeight: 20,
   },
 });
