@@ -12,8 +12,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
 import { useLanguage } from "@/context/LanguageContext";
 import { useT } from "@/hooks/useT";
-import { LOCALE_FLAGS } from "@/i18n/types";
+import { LOCALE_FLAGS, LOCALE_LABELS } from "@/i18n/types";
 import type { SupportedLocale } from "@/i18n";
+
+const ALL_LOCALES: SupportedLocale[] = ["en", "ru", "tr"];
 
 export function LanguageSwitcherButton() {
   const { locale, setLocale } = useLanguage();
@@ -22,10 +24,12 @@ export function LanguageSwitcherButton() {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const OPTIONS: { locale: SupportedLocale; label: string; flag: string }[] = [
-    { locale: "en", label: tl.english, flag: LOCALE_FLAGS.en },
-    { locale: "ru", label: tl.russian, flag: LOCALE_FLAGS.ru },
-  ];
+  const OPTIONS: { locale: SupportedLocale; label: string; flag: string }[] =
+    ALL_LOCALES.map((loc) => ({
+      locale: loc,
+      label: LOCALE_LABELS[loc],
+      flag: LOCALE_FLAGS[loc],
+    }));
 
   return (
     <>

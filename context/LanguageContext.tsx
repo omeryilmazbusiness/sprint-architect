@@ -34,7 +34,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
-        if (stored === "en" || stored === "ru") {
+        if (stored === "en" || stored === "ru" || stored === "tr") {
           setLocaleState(stored);
         }
       })

@@ -1,0 +1,195 @@
+You are working on an EXISTING project.
+
+Your task is to inspect the current MANAGER-side implementation and FIX the issue that:
+- Turkish flag / Turkish language option was NOT added to the manager header
+- Turkish translation is NOT working across manager pages
+
+This must be fixed in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing manager flows
+- First inspect the real implementation deeply
+- Then directly implement the fix
+- Reuse the existing i18n system if one already exists
+- Do NOT create a second translation system
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No partial solution
+- The final result must be complete and production-ready
+
+STRICT REQUIREMENT
+After this task is complete:
+
+1. The MANAGER header MUST include Turkish as a selectable language option
+2. A Turkish flag/icon option must be visible in the manager header language selector
+3. When Turkish is selected, ALL visible manager UI text must switch to Turkish
+4. No mixed-language manager UI is allowed
+5. If even one visible manager string remains untranslated when Turkish is selected, the task is NOT complete
+
+PRIMARY PROBLEM
+The previous implementation did NOT successfully add:
+- the Turkish flag/language option to the manager header
+- Turkish translation coverage for the manager side
+
+You must identify why this failed and fix it completely.
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand all of the following:
+
+1. MANAGER HEADER
+- current manager header implementation
+- current language icon/switcher implementation
+- whether the manager header is shared or duplicated
+- whether Turkish exists in the UI options or not
+- whether the language selector UI is correctly wired
+- whether the flag/icon list is incomplete
+
+2. I18N SYSTEM
+- current language provider/context/store/hook
+- whether Turkish resources actually exist
+- whether Turkish resources are incomplete or missing
+- whether manager pages are connected to the i18n provider
+- whether manager-visible strings are still hardcoded
+- whether some manager components bypass the translation layer
+
+3. MANAGER TRANSLATION COVERAGE
+Inspect ALL manager-visible screens/components, including:
+- manager header
+- dashboard
+- users
+- guests tab
+- doctors tab
+- services
+- invoices
+- settings
+- notifications
+- guest detail
+- doctors screens
+- hotels screens
+- transports screens
+- document types screens
+- forms
+- bottom sheets
+- dialogs
+- cards
+- badges
+- statuses
+- filters
+- empty/loading/error states
+- all shared manager components
+
+4. LANGUAGE SWITCH REACTIVITY
+- does selecting a language update the real source of truth?
+- does manager UI rerender?
+- does persistence work?
+- is Turkish missing from the dictionary?
+- are some labels using static config or enum mapping outside i18n?
+
+Then directly implement the fix.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ADD TURKISH OPTION TO MANAGER HEADER
+1. Inspect the current language selector in manager header
+2. Add Turkish as a visible selectable option
+3. Ensure the Turkish flag/icon is included cleanly
+4. Keep the header premium, minimal, and professional
+5. Make sure selecting Turkish updates the real language state
+
+Acceptance criteria:
+- manager header shows Turkish as an option
+- Turkish flag/icon is visible
+- selecting Turkish is possible
+- header remains visually clean and premium
+
+PHASE 2 — FIX TURKISH TRANSLATION COVERAGE
+1. Audit the full manager side for missing Turkish strings
+2. Add missing Turkish translation keys/resources
+3. Replace hardcoded manager-visible strings with translation keys
+4. Ensure all manager-visible UI reacts to Turkish selection
+5. Ensure no mixed-language manager UI remains
+
+Acceptance criteria:
+- ALL manager-visible text switches to Turkish
+- no hardcoded leftovers remain in visible manager UI
+- no mixed-language screens remain
+
+PHASE 3 — FIX STATUS / BADGE / ENUM LABELS
+1. Inspect all manager-visible status labels and chips
+2. Ensure they use translated labels, not raw enum values
+3. Add Turkish translations for:
+   - guest statuses
+   - appointment statuses
+   - document statuses
+   - invoice statuses
+   - clinic statuses
+   - notification severities
+   - generic action/result states
+
+Acceptance criteria:
+- no raw status text remains untranslated
+- badges/chips are localized consistently
+
+PHASE 4 — FIX LANGUAGE REACTIVITY AND PERSISTENCE
+1. Ensure selecting Turkish updates the full manager UI immediately
+2. Ensure current page rerenders correctly
+3. Ensure selected language persists after navigation/reload/app reopen if supported
+4. Ensure no manager layout/provider boundary blocks the update
+
+Acceptance criteria:
+- selecting Turkish updates current manager screen immediately
+- navigating across manager pages keeps Turkish
+- no stale old-language UI remains
+
+PHASE 5 — CLEANUP / HARDENING
+1. Remove leftover hardcoded manager-visible strings
+2. Remove duplicate or conflicting translation logic if found
+3. Ensure no missing-key crashes
+4. Ensure Turkish text does not break layouts badly
+5. Leave the manager side cleaner and more maintainable than before
+
+ARCHITECTURE EXPECTATIONS
+- one reusable i18n system
+- one real source of truth for selected language
+- clean separation of concerns
+- no duplicate translation helpers
+- no duplicated manager header language logic
+- scalable to future languages
+
+YOU MUST CHECK FOR THESE RISKS
+- Turkish option may exist in data but not in UI
+- Turkish flag may be missing from the language selector rendering logic
+- manager strings may still be hardcoded in deep shared components
+- some manager text may come from enum mappers or utility files
+- language selector may change local UI only, not global i18n state
+- persistence may work but manager pages may not rerender
+- Russian may work while Turkish resource keys are incomplete
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found
+2. Exact files changed
+3. Why each fix was necessary
+4. What was added to the manager header
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary for why Turkish option/translation was missing
+2. Confirmation that Turkish flag/icon is now visible in manager header
+3. Confirmation that ALL manager-visible text now switches to Turkish
+4. Exact files changed
+5. Manual QA checklist
+6. Any remaining edge cases if found
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- Turkish is visible in the manager header language selector
+- Turkish can be selected
+- ALL visible manager UI switches to Turkish
+
+START NOW
+First inspect the manager header language selector and the current manager i18n setup deeply.
+Then implement the fix end-to-end professionally.

@@ -26,7 +26,7 @@ interface Props {
 
 // ─── Locale options in display order ─────────────────────────────────────────
 
-const LOCALES: SupportedLocale[] = ["en", "ru"];
+const LOCALES: SupportedLocale[] = ["en", "ru", "tr"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

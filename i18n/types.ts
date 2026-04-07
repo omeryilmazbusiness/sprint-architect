@@ -1,15 +1,17 @@
 // ─── Supported locales ────────────────────────────────────────────────────────
 
-export type SupportedLocale = "en" | "ru";
+export type SupportedLocale = "en" | "ru" | "tr";
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
   ru: "Русский",
+  tr: "Türkçe",
 };
 
 export const LOCALE_FLAGS: Record<SupportedLocale, string> = {
   en: "🇬🇧",
   ru: "🇷🇺",
+  tr: "🇹🇷",
 };
 
 // ─── Per-section translation shapes ───────────────────────────────────────────
