@@ -15,7 +15,7 @@ import { useT } from "@/hooks/useT";
 import { LOCALE_FLAGS, LOCALE_LABELS } from "@/i18n/types";
 import type { SupportedLocale } from "@/i18n";
 
-const ALL_LOCALES: SupportedLocale[] = ["en", "ru", "tr"];
+const ALL_LOCALES: SupportedLocale[] = ["en", "ru", "tr", "es"];
 
 export function LanguageSwitcherButton() {
   const { locale, setLocale } = useLanguage();
