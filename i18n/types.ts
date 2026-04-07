@@ -1204,6 +1204,64 @@ export interface GuestExploreDict {
   feature6Desc: string;
 }
 
+export interface LoginScreenDict {
+  // Brand header
+  brandSub: string;
+  // Tabs
+  tabGuest: string;
+  tabManagement: string;
+  // Guest form
+  guestKeyLabel: string;
+  guestKeyPlaceholder: string;
+  guestKeyHelp: string;
+  btnContinue: string;
+  btnRequestNewKey: string;
+  // Management form
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  btnLogin: string;
+  btnForgotPassword: string;
+  // Demo section
+  demoSectionLabel: string;
+  demoAdmin: string;
+  demoManager: string;
+  demoGuest: string;
+  // Footer
+  footer: string;
+  // Forgot password modal
+  forgotTitle: string;
+  forgotDesc: string;
+  forgotFieldLabel: string;
+  forgotFieldPlaceholder: string;
+  // Request key modal
+  reqKeyTitle: string;
+  reqKeyDesc: string;
+  reqKeyFieldLabel: string;
+  reqKeyFieldPlaceholder: string;
+  // Shared modal actions
+  modalSubmitBtn: string;
+  modalSuccessTitle: string;
+  modalSuccessMsg: string;
+  modalDone: string;
+  // Language selector
+  langSelectorTitle: string;
+  // Inline validation
+  errEnterKey: string;
+  errEnterEmailPassword: string;
+  errGeneric: string;
+  // Auth error codes → friendly text
+  errAuthInvalid: string;
+  errAuthRequired: string;
+  errNoPermission: string;
+  errSessionExpired: string;
+  errClinicSuspended: string;
+  errGuestKeyInvalid: string;
+  errDeviceBound: string;
+  errTooManyAttempts: string;
+  errAccountInactive: string;
+}
+
 // ─── Root dictionary shape ─────────────────────────────────────────────────────
 
 export interface AppDict {
@@ -1245,4 +1303,5 @@ export interface AppDict {
   guestNotifications: GuestNotificationsDict;
   guestProfile: GuestProfileDict;
   guestExplore: GuestExploreDict;
+  loginScreen: LoginScreenDict;
 }

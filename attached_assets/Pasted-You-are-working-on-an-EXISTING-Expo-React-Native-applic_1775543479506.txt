@@ -1,0 +1,275 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to deeply inspect the current startup flow, welcome screen, login screen, and language system, then implement the following in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing auth, navigation, or startup flows
+- First inspect the real implementation deeply
+- Then directly implement the requested changes
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT create a second translation system
+- Reuse the existing i18n/language system if already present
+- Mobile-first polish is critical
+- The final result must feel premium, modern, elegant, branded, and production-ready
+
+PRIMARY GOALS
+
+1) WELCOME / START SCREEN SHOULD LAST A BIT LONGER
+Required behavior:
+- The welcome screen must stay visible slightly longer than it does now
+- It must feel intentional and premium, not like a flash
+- It must NOT become annoyingly slow
+- Tune the duration carefully for a polished luxury startup experience
+
+2) REDESIGN THE WELCOME SCREEN INTO A MUCH MORE PREMIUM BLACK + SOFT GOLD EXPERIENCE
+Required behavior:
+- The startup welcome screen must become richer, more detailed, and more premium
+- Use a black base with subtle elegant gold accents
+- The design must feel luxury, refined, and modern
+- Text should have tasteful visual effects
+- The background should feel layered and premium, not flat
+- Motion/effects must remain subtle and elegant, not flashy or cheap
+
+Visual direction:
+- deep black / charcoal base
+- soft premium gold glow accents
+- subtle gradients / bloom / light falloff
+- refined typography
+- elegant text treatment
+- premium brand hierarchy
+- luxury but minimal composition
+- no clutter
+- no tacky shiny effects
+
+3) ADD LANGUAGE SELECTION TO LOGIN SCREEN
+Required behavior:
+- Add a professional language selection control to the login screen
+- It must integrate with the EXISTING global language/i18n system
+- It must NOT use local-only fake state
+- Selecting a language must immediately translate ALL visible login screen text
+
+This includes:
+- title
+- subtitle
+- role tabs (guest / manager / admin if present)
+- input labels/placeholders
+- buttons
+- helper text
+- forgot password / forgot key texts
+- validation messages shown in UI
+- visible error text
+- any other visible login-screen label
+
+4) AFTER LOGIN, THE APP MUST CONTINUE IN THE SELECTED LANGUAGE
+Required behavior:
+- If the user selects a language on the login screen, the app must continue in that same language after login
+- The selected language must persist through the auth transition
+- It must NOT reset to default after login
+- It must remain active on post-login screens
+
+5) BUILD THIS IN A CLEAN, REUSABLE WAY
+Required behavior:
+- Analyze the current language architecture
+- Reuse and improve it if already present
+- Do NOT duplicate provider/context/store logic
+- Keep one source of truth for selected language
+- Keep startup/welcome, login, and post-login flows connected to the same language state
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT STARTUP / WELCOME FLOW
+- current app entry point
+- current startup/welcome implementation
+- current timing logic
+- transition to login
+- auth/session restore behavior
+- whether there is already a splash/startup coordinator
+- where the welcome screen is best integrated
+
+2. CURRENT WELCOME SCREEN DESIGN
+- current colors
+- current layout
+- current typography
+- current text effects
+- current loading indicator
+- current motion/animation setup
+- what currently feels too short / too plain / too weak
+
+3. CURRENT LOGIN SCREEN
+- current login layout
+- all visible login text
+- whether any language selector already exists
+- current role tab behavior
+- current validation/error rendering
+- which login strings are still hardcoded
+
+4. CURRENT I18N / LANGUAGE SYSTEM
+- current provider/context/store/hook
+- current translation resources
+- current language persistence mechanism
+- whether login screen is correctly wrapped in the provider
+- whether post-login layouts/screens use the same source of truth
+- whether language selection is already used elsewhere in the app
+
+5. AUTH FLOW + PERSISTENCE
+- what happens after login
+- whether app state is reset
+- where selected language may be lost
+- how to ensure the selected language survives login and post-login navigation
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — ANALYZE AND REUSE THE EXISTING LANGUAGE SYSTEM
+1. Confirm the current i18n architecture
+2. Reuse the existing global language source of truth
+3. Do NOT create a second translation system
+4. If login is not correctly connected, fix the integration cleanly
+
+Acceptance criteria:
+- there is one clear language source of truth
+- login and post-login screens use the same language state
+- no duplicate i18n logic is introduced
+
+PHASE 2 — LONGER WELCOME SCREEN DURATION
+1. Inspect current timing logic
+2. Increase the duration slightly
+3. Keep it premium and intentional
+4. Ensure no awkward delay or flicker
+5. Ensure cleanup/timer logic is safe
+
+Acceptance criteria:
+- welcome screen stays visible longer than before
+- timing feels polished and deliberate
+- transition to login remains smooth
+
+PHASE 3 — PREMIUM BLACK + SOFT GOLD WELCOME REDESIGN
+1. Redesign the welcome screen into a richer premium experience
+2. Use black + subtle gold luxury design language
+3. Improve background depth with elegant layers
+4. Add refined text styling/effects
+5. Keep loading/progress treatment elegant
+6. Keep performance smooth on mobile
+
+Suggested direction:
+- deep black background
+- soft gold glow accents
+- premium title treatment
+- subtle elegant text effects
+- layered gradient depth
+- minimalist luxury composition
+- modern cinematic feel
+- refined bottom line loading indicator if appropriate
+
+Acceptance criteria:
+- welcome screen feels much more premium
+- black + soft gold palette is clearly present
+- text looks elegant and premium
+- visual effects are tasteful and refined
+
+PHASE 4 — ADD LANGUAGE SELECTOR TO LOGIN SCREEN
+1. Add a premium, minimal language selector to the login screen
+2. Hook it into the GLOBAL language/i18n system
+3. Ensure selecting a language updates the screen immediately
+4. Keep the UX clean and mobile-friendly
+
+Acceptance criteria:
+- login screen has a language selector
+- selecting language updates login UI immediately
+- no local-only fake state is used
+
+PHASE 5 — FULL LOGIN SCREEN LOCALIZATION
+1. Move ALL visible login strings into the translation system
+2. Ensure no mixed-language login UI remains
+3. Include:
+   - titles
+   - subtitles
+   - role tabs
+   - labels
+   - placeholders
+   - buttons
+   - helper text
+   - forgot password / forgot key text
+   - visible validation/error text
+
+Acceptance criteria:
+- every visible login string is language-aware
+- switching language updates everything on login immediately
+- no hardcoded visible login strings remain
+
+PHASE 6 — PERSIST LANGUAGE AFTER LOGIN
+1. Ensure the selected login language becomes the active app language
+2. Ensure it remains active after successful login
+3. Ensure post-login screens open in the same selected language
+4. Ensure refresh/reopen/navigation do not unexpectedly reset the language
+
+Acceptance criteria:
+- choose language on login
+- log in
+- app opens after login in the same language
+- language does not reset unexpectedly
+
+PHASE 7 — CLEANUP / HARDENING
+1. Remove duplicate language logic on login/startup if found
+2. Ensure no missing-key crashes
+3. Ensure translated text length does not break layout badly
+4. Keep welcome/login/auth flow stable
+5. Keep the codebase cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- startup timing logic separated from presentation
+- login UI separated from language state logic
+- one reusable i18n system
+- one source of truth for selected language
+- clean persistence strategy
+- no duplicated translation helpers
+- no fragile timer or navigation hacks
+
+YOU MUST CHECK FOR THESE RISKS
+- welcome duration becomes too long and annoying
+- gold accents become tacky instead of premium
+- login selector changes local state only, not global app language
+- login screen is not correctly subscribed to the i18n provider
+- auth transition resets language state
+- some login strings remain hardcoded
+- startup/welcome and login use different language sources
+- post-login screens ignore the chosen language
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current startup/login/language flow
+2. Root cause / architecture observations
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the longer welcome duration
+2. Summary of the new premium black + soft gold welcome design
+3. Summary of the login language selector
+4. Confirmation that login screen text fully translates
+5. Confirmation that selected language persists after login
+6. Exact files changed
+7. Manual QA checklist for Android and iOS
+8. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the welcome screen is visibly longer and more premium
+- the design clearly uses a refined black + soft gold luxury style
+- the login screen has a language selector
+- all visible login text changes with the selected language
+- after login, the app opens in the same selected language
+
+START NOW
+First inspect the current startup/welcome flow, login screen, and i18n/language persistence architecture deeply.
+Then implement the requested improvements end-to-end.

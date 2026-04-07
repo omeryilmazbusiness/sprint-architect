@@ -17,36 +17,151 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { useT } from "@/hooks/useT";
 import { T } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
+import {
+  type SupportedLocale,
+  LOCALE_LABELS,
+  LOCALE_FLAGS,
+  type LoginScreenDict,
+} from "@/i18n/types";
 
 type Tab = "guest" | "management";
 
-const ERROR_MESSAGES: Record<string, string> = {
-  // Staff login codes
-  "AUTH-001": "Email or password is incorrect.",
-  "AUTH-002": "Authentication required. Please log in again.",
-  "AUTH-003": "You don't have permission to access this.",
-  "AUTH-004": "Session expired. Please log in again.",
-  "BILL-001": "Clinic access is currently suspended due to billing. Please contact support.",
-  // Guest / patient login codes
-  "AUTH-GUEST-001": "This access key is invalid. Check with your clinic manager.",
-  "AUTH-GUEST-002": "This key is already active on another device. Ask your clinic manager to reset your device binding.",
-  // Legacy string keys (kept for safety)
-  AUTH_INVALID_CREDENTIALS: "Email or password is incorrect.",
-  PATIENT_KEY_INVALID: "Access key is incorrect. Check with your clinic manager.",
-  DEVICE_ALREADY_BOUND: "This key is already active on another device. Ask your clinic manager to reset your device binding.",
-  CLINIC_SUSPENDED_BILLING: "Clinic access is currently suspended due to billing. Please contact support.",
-  TOO_MANY_ATTEMPTS: "Too many attempts. Please wait a few minutes and try again.",
-  ACCOUNT_INACTIVE: "Your account has been deactivated. Contact your administrator.",
-  RATE_LIMIT_EXCEEDED: "Too many attempts. Please wait a few minutes and try again.",
-};
+const ALL_LOCALES: SupportedLocale[] = ["en", "ru", "tr", "es"];
 
-function friendlyError(e: any): string {
-  if (e?.code && ERROR_MESSAGES[e.code]) return ERROR_MESSAGES[e.code];
-  if (e?.message) return e.message;
-  return "Something went wrong. Please try again.";
+// ─── Error resolution ─────────────────────────────────────────────────────────
+
+function friendlyError(e: unknown, ls: LoginScreenDict): string {
+  const msgs: Record<string, string> = {
+    "AUTH-001":               ls.errAuthInvalid,
+    "AUTH-002":               ls.errAuthRequired,
+    "AUTH-003":               ls.errNoPermission,
+    "AUTH-004":               ls.errSessionExpired,
+    "BILL-001":               ls.errClinicSuspended,
+    "AUTH-GUEST-001":         ls.errGuestKeyInvalid,
+    "AUTH-GUEST-002":         ls.errDeviceBound,
+    AUTH_INVALID_CREDENTIALS: ls.errAuthInvalid,
+    PATIENT_KEY_INVALID:      ls.errGuestKeyInvalid,
+    DEVICE_ALREADY_BOUND:     ls.errDeviceBound,
+    CLINIC_SUSPENDED_BILLING: ls.errClinicSuspended,
+    TOO_MANY_ATTEMPTS:        ls.errTooManyAttempts,
+    ACCOUNT_INACTIVE:         ls.errAccountInactive,
+    RATE_LIMIT_EXCEEDED:      ls.errTooManyAttempts,
+  };
+  if (e && typeof e === "object") {
+    const err = e as { code?: string; message?: string };
+    if (err.code && msgs[err.code]) return msgs[err.code];
+    if (err.message) return err.message;
+  }
+  return ls.errGeneric;
 }
+
+// ─── Language picker modal ────────────────────────────────────────────────────
+
+function LangPickerModal({
+  visible,
+  title,
+  locale,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  locale: SupportedLocale;
+  onSelect: (l: SupportedLocale) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={langStyles.overlay} onPress={onClose}>
+        <Pressable style={langStyles.sheet} onPress={(e) => e.stopPropagation()}>
+          <View style={langStyles.header}>
+            <Text style={langStyles.title}>{title}</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={20} color={T.textSec} />
+            </Pressable>
+          </View>
+          {ALL_LOCALES.map((loc) => {
+            const active = loc === locale;
+            return (
+              <Pressable
+                key={loc}
+                style={[langStyles.row, active && langStyles.rowActive]}
+                onPress={() => { onSelect(loc); onClose(); }}
+              >
+                <Text style={langStyles.flag}>{LOCALE_FLAGS[loc]}</Text>
+                <Text style={[langStyles.label, active && langStyles.labelActive]}>
+                  {LOCALE_LABELS[loc]}
+                </Text>
+                {active && (
+                  <Ionicons name="checkmark" size={16} color={T.primary} style={langStyles.check} />
+                )}
+              </Pressable>
+            );
+          })}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const langStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  sheet: {
+    backgroundColor: T.surface,
+    borderRadius: 18,
+    padding: 20,
+    width: "100%",
+    maxWidth: 360,
+    gap: 4,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 18 },
+      android: { elevation: 10 },
+      default: {},
+    }),
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  title: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  rowActive: {
+    backgroundColor: T.surfaceSubtle,
+  },
+  flag: { fontSize: 22 },
+  label: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: T.textSec,
+  },
+  labelActive: {
+    color: T.text,
+    fontFamily: "Inter_600SemiBold",
+  },
+  check: { marginLeft: "auto" },
+});
+
+// ─── Request modal ────────────────────────────────────────────────────────────
 
 function RequestModal({
   visible,
@@ -60,6 +175,10 @@ function RequestModal({
   onClose,
   isLoading,
   success,
+  submitLabel,
+  successTitle,
+  successMsg,
+  doneLabel,
 }: {
   visible: boolean;
   title: string;
@@ -72,6 +191,10 @@ function RequestModal({
   onClose: () => void;
   isLoading: boolean;
   success: boolean;
+  submitLabel: string;
+  successTitle: string;
+  successMsg: string;
+  doneLabel: string;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -89,12 +212,10 @@ function RequestModal({
               <View style={modalStyles.successIcon}>
                 <Ionicons name="checkmark-circle" size={40} color="#16A34A" />
               </View>
-              <Text style={modalStyles.successTitle}>Request Submitted</Text>
-              <Text style={modalStyles.successMsg}>
-                Your request has been received. An administrator will process it and send your new credential to the registered contact.
-              </Text>
+              <Text style={modalStyles.successTitle}>{successTitle}</Text>
+              <Text style={modalStyles.successMsg}>{successMsg}</Text>
               <Pressable style={modalStyles.doneBtn} onPress={onClose}>
-                <Text style={modalStyles.doneBtnText}>Done</Text>
+                <Text style={modalStyles.doneBtnText}>{doneLabel}</Text>
               </Pressable>
             </View>
           ) : (
@@ -125,7 +246,7 @@ function RequestModal({
                 {isLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={modalStyles.submitBtnText}>Send Request</Text>
+                  <Text style={modalStyles.submitBtnText}>{submitLabel}</Text>
                 )}
               </Pressable>
             </>
@@ -136,64 +257,69 @@ function RequestModal({
   );
 }
 
+// ─── Login screen ─────────────────────────────────────────────────────────────
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const { login, loginAsPatient } = useAuth();
 
-  const [tab, setTab] = useState<Tab>("guest");
-  const [guestKey, setGuestKey] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login, loginAsPatient } = useAuth();
+  const { locale, setLocale } = useLanguage();
+  const t  = useT();
+  const ls = t.loginScreen;
+
+  const [tab, setTab]               = useState<Tab>("guest");
+  const [guestKey, setGuestKey]     = useState("");
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading]   = useState(false);
+  const [error, setError]           = useState<string | null>(null);
 
   const [deviceId] = useState(
     () => `device-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   );
 
   const passwordRef = useRef<TextInput>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(18)).current;
+  const fadeAnim    = useRef(new Animated.Value(0)).current;
+  const slideAnim   = useRef(new Animated.Value(18)).current;
 
-  const [forgotOpen, setForgotOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOpen, setForgotOpen]       = useState(false);
+  const [forgotEmail, setForgotEmail]     = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
-  const [reqKeyOpen, setReqKeyOpen] = useState(false);
-  const [reqKey, setReqKey] = useState("");
+  const [reqKeyOpen, setReqKeyOpen]       = useState(false);
+  const [reqKey, setReqKey]               = useState("");
   const [reqKeyLoading, setReqKeyLoading] = useState(false);
   const [reqKeySuccess, setReqKeySuccess] = useState(false);
 
+  const [langOpen, setLangOpen] = useState(false);
+
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  function switchTab(t: Tab) {
-    if (t === tab) return;
-    setTab(t);
+  function switchTab(next: Tab) {
+    if (next === tab) return;
+    setTab(next);
     setError(null);
   }
 
   async function handleGuestLogin() {
-    if (!guestKey.trim()) {
-      setError("Please enter your Guest Access Key.");
-      return;
-    }
+    if (!guestKey.trim()) { setError(ls.errEnterKey); return; }
     setError(null);
     setIsLoading(true);
     try {
       await loginAsPatient(guestKey.trim(), deviceId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(patient)/dashboard");
-    } catch (e: any) {
-      setError(friendlyError(e));
+    } catch (e) {
+      setError(friendlyError(e, ls));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(false);
@@ -201,10 +327,7 @@ export default function LoginScreen() {
   }
 
   async function handleManagementLogin() {
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter your email and password.");
-      return;
-    }
+    if (!email.trim() || !password.trim()) { setError(ls.errEnterEmailPassword); return; }
     setError(null);
     setIsLoading(true);
     try {
@@ -213,8 +336,8 @@ export default function LoginScreen() {
       if (role === "ADMIN" || role === "SUPER_ADMIN") router.replace("/(admin)/dashboard");
       else if (role === "MANAGER") router.replace("/(manager-tabs)/dashboard");
       else router.replace("/(tabs)");
-    } catch (e: any) {
-      setError(friendlyError(e));
+    } catch (e) {
+      setError(friendlyError(e, ls));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(false);
@@ -281,7 +404,8 @@ export default function LoginScreen() {
   }
 
   return (
-    <>
+    <View style={styles.rootWrap}>
+      {/* ── Main scrollable login content ── */}
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -303,15 +427,18 @@ export default function LoginScreen() {
               { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
+            {/* Brand header */}
             <View style={styles.brand}>
               <View style={styles.logoWrap}>
                 <Ionicons name="airplane" size={28} color="#fff" />
               </View>
               <Text style={styles.brandName}>Healory</Text>
-              <Text style={styles.brandSub}>Your complete care journey, beautifully managed.</Text>
+              <Text style={styles.brandSub}>{ls.brandSub}</Text>
             </View>
 
+            {/* Login card */}
             <View style={styles.card}>
+              {/* Tab selector */}
               <View style={styles.segment}>
                 <Pressable
                   style={[styles.segBtn, tab === "guest" && styles.segBtnActive]}
@@ -323,7 +450,7 @@ export default function LoginScreen() {
                     color={tab === "guest" ? T.primary : T.textMuted}
                   />
                   <Text style={[styles.segBtnText, tab === "guest" && styles.segBtnTextActive]}>
-                    Guest Login
+                    {ls.tabGuest}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -338,11 +465,12 @@ export default function LoginScreen() {
                   <Text
                     style={[styles.segBtnText, tab === "management" && styles.segBtnTextActive]}
                   >
-                    Management
+                    {ls.tabManagement}
                   </Text>
                 </Pressable>
               </View>
 
+              {/* Error box */}
               {error && (
                 <View style={styles.errorBox}>
                   <Ionicons name="alert-circle-outline" size={16} color={T.danger} />
@@ -350,17 +478,18 @@ export default function LoginScreen() {
                 </View>
               )}
 
+              {/* Guest form */}
               {tab === "guest" ? (
                 <View style={styles.form}>
-                  <Text style={styles.fieldTitle}>Guest Access Key</Text>
+                  <Text style={styles.fieldTitle}>{ls.guestKeyLabel}</Text>
                   <View style={styles.inputWrap}>
                     <Ionicons name="key-outline" size={17} color={T.textMuted} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="GUEST-XXXX-0000"
+                      placeholder={ls.guestKeyPlaceholder}
                       placeholderTextColor={T.textMuted}
                       value={guestKey}
-                      onChangeText={(t) => { setGuestKey(t); setError(null); }}
+                      onChangeText={(v) => { setGuestKey(v); setError(null); }}
                       autoCapitalize="none"
                       autoCorrect={false}
                       returnKeyType="done"
@@ -373,9 +502,7 @@ export default function LoginScreen() {
                       </Pressable>
                     )}
                   </View>
-                  <Text style={styles.helpText}>
-                    Your clinic manager shares this key with you.
-                  </Text>
+                  <Text style={styles.helpText}>{ls.guestKeyHelp}</Text>
 
                   <Pressable
                     style={[styles.primaryBtn, { opacity: isLoading ? 0.75 : 1 }]}
@@ -386,7 +513,7 @@ export default function LoginScreen() {
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
                       <>
-                        <Text style={styles.primaryBtnText}>Continue</Text>
+                        <Text style={styles.primaryBtnText}>{ls.btnContinue}</Text>
                         <Ionicons name="arrow-forward" size={16} color="#fff" />
                       </>
                     )}
@@ -397,21 +524,22 @@ export default function LoginScreen() {
                     onPress={() => { setReqKeyOpen(true); setReqKey(guestKey); }}
                   >
                     <Ionicons name="refresh-outline" size={13} color={T.accent} />
-                    <Text style={[styles.linkText, { color: T.accent }]}>Request a New Access Key</Text>
+                    <Text style={[styles.linkText, { color: T.accent }]}>{ls.btnRequestNewKey}</Text>
                   </Pressable>
                 </View>
               ) : (
+                /* Management form */
                 <View style={styles.form}>
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Email Address</Text>
+                    <Text style={styles.fieldLabel}>{ls.emailLabel}</Text>
                     <View style={styles.inputWrap}>
                       <Ionicons name="mail-outline" size={17} color={T.textMuted} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
-                        placeholder="you@clinic.com"
+                        placeholder={ls.emailPlaceholder}
                         placeholderTextColor={T.textMuted}
                         value={email}
-                        onChangeText={(t) => { setEmail(t); setError(null); }}
+                        onChangeText={(v) => { setEmail(v); setError(null); }}
                         keyboardType="email-address"
                         autoCapitalize="none"
                         autoComplete="email"
@@ -423,7 +551,7 @@ export default function LoginScreen() {
                   </View>
 
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Password</Text>
+                    <Text style={styles.fieldLabel}>{ls.passwordLabel}</Text>
                     <View style={styles.inputWrap}>
                       <Ionicons name="lock-closed-outline" size={17} color={T.textMuted} style={styles.inputIcon} />
                       <TextInput
@@ -432,7 +560,7 @@ export default function LoginScreen() {
                         placeholder="••••••••"
                         placeholderTextColor={T.textMuted}
                         value={password}
-                        onChangeText={(t) => { setPassword(t); setError(null); }}
+                        onChangeText={(v) => { setPassword(v); setError(null); }}
                         secureTextEntry={!showPassword}
                         autoComplete="password"
                         returnKeyType="done"
@@ -458,7 +586,7 @@ export default function LoginScreen() {
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
                       <>
-                        <Text style={styles.primaryBtnText}>Login</Text>
+                        <Text style={styles.primaryBtnText}>{ls.btnLogin}</Text>
                         <Ionicons name="arrow-forward" size={16} color="#fff" />
                       </>
                     )}
@@ -469,71 +597,107 @@ export default function LoginScreen() {
                     onPress={() => { setForgotOpen(true); setForgotEmail(email); }}
                   >
                     <Ionicons name="lock-open-outline" size={13} color={T.textMuted} />
-                    <Text style={styles.linkText}>Forgot password? Request a reset</Text>
+                    <Text style={styles.linkText}>{ls.btnForgotPassword}</Text>
                   </Pressable>
                 </View>
               )}
 
+              {/* Demo accounts */}
               <View style={styles.demoSection}>
-                <Text style={styles.demoLabel}>DEMO ACCOUNTS</Text>
+                <Text style={styles.demoLabel}>{ls.demoSectionLabel}</Text>
                 <View style={styles.demoRow}>
                   <Pressable style={styles.demoBtn} onPress={() => fillDemo("admin")}>
                     <Ionicons name="shield-outline" size={13} color={T.primary} />
-                    <Text style={styles.demoBtnText}>Admin</Text>
+                    <Text style={styles.demoBtnText}>{ls.demoAdmin}</Text>
                   </Pressable>
                   <Pressable style={styles.demoBtn} onPress={() => fillDemo("manager")}>
                     <Ionicons name="briefcase-outline" size={13} color={T.primary} />
-                    <Text style={styles.demoBtnText}>Manager</Text>
+                    <Text style={styles.demoBtnText}>{ls.demoManager}</Text>
                   </Pressable>
                   <Pressable style={[styles.demoBtn, styles.demoBtnGuest]} onPress={fillDemoGuest}>
                     <Ionicons name="key-outline" size={13} color={T.accent} />
-                    <Text style={[styles.demoBtnText, { color: T.accent }]}>Guest</Text>
+                    <Text style={[styles.demoBtnText, { color: T.accent }]}>{ls.demoGuest}</Text>
                   </Pressable>
                 </View>
               </View>
             </View>
 
-            <Text style={styles.footer}>Healory · Secure Health Tourism Platform</Text>
+            <Text style={styles.footer}>{ls.footer}</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* ── Language button — floats top-right ── */}
+      <Pressable
+        style={[styles.langBtn, { top: topPad + 10 }]}
+        onPress={() => setLangOpen(true)}
+        hitSlop={8}
+      >
+        <Text style={styles.langBtnFlag}>{LOCALE_FLAGS[locale]}</Text>
+        <Text style={styles.langBtnCode}>{locale.toUpperCase()}</Text>
+        <Ionicons name="chevron-down" size={11} color={T.textMuted} />
+      </Pressable>
+
+      {/* ── Language picker modal ── */}
+      <LangPickerModal
+        visible={langOpen}
+        title={ls.langSelectorTitle}
+        locale={locale}
+        onSelect={(l) => { setLocale(l); setError(null); }}
+        onClose={() => setLangOpen(false)}
+      />
+
+      {/* ── Forgot password modal ── */}
       <RequestModal
         visible={forgotOpen}
-        title="Request Password Reset"
-        description="Enter your account email. An administrator will generate a new temporary password and send it to you."
-        fieldLabel="Email Address"
-        placeholder="you@clinic.com"
+        title={ls.forgotTitle}
+        description={ls.forgotDesc}
+        fieldLabel={ls.forgotFieldLabel}
+        placeholder={ls.forgotFieldPlaceholder}
         value={forgotEmail}
         onChange={setForgotEmail}
         onSubmit={handleForgotSubmit}
         onClose={closeForgot}
         isLoading={forgotLoading}
         success={forgotSuccess}
+        submitLabel={ls.modalSubmitBtn}
+        successTitle={ls.modalSuccessTitle}
+        successMsg={ls.modalSuccessMsg}
+        doneLabel={ls.modalDone}
       />
 
+      {/* ── Request new access key modal ── */}
       <RequestModal
         visible={reqKeyOpen}
-        title="Request New Access Key"
-        description="Enter your current Guest Access Key (if you have it) so we can identify your account. Your clinic manager will be notified."
-        fieldLabel="Current Access Key (if known)"
-        placeholder="GUEST-XXXX-0000"
+        title={ls.reqKeyTitle}
+        description={ls.reqKeyDesc}
+        fieldLabel={ls.reqKeyFieldLabel}
+        placeholder={ls.reqKeyFieldPlaceholder}
         value={reqKey}
         onChange={setReqKey}
         onSubmit={handleReqKeySubmit}
         onClose={closeReqKey}
         isLoading={reqKeyLoading}
         success={reqKeySuccess}
+        submitLabel={ls.modalSubmitBtn}
+        successTitle={ls.modalSuccessTitle}
+        successMsg={ls.modalSuccessMsg}
+        doneLabel={ls.modalDone}
       />
-    </>
+    </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: T.bg },
+  rootWrap: { flex: 1, backgroundColor: T.bg },
+  root: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, gap: 20 },
   inner: { flex: 1, gap: 20 },
+
+  // Brand header
   brand: { alignItems: "center", gap: 8, paddingVertical: 12 },
   logoWrap: {
     width: 68,
@@ -546,6 +710,8 @@ const styles = StyleSheet.create({
   },
   brandName: { fontFamily: "Inter_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5 },
   brandSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center" },
+
+  // Card
   card: {
     backgroundColor: T.surface,
     borderRadius: 20,
@@ -558,6 +724,8 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+
+  // Segment
   segment: {
     flexDirection: "row",
     backgroundColor: T.surfaceSubtle,
@@ -586,6 +754,8 @@ const styles = StyleSheet.create({
   },
   segBtnText: { fontFamily: "Inter_500Medium", fontSize: 13.5, color: T.textMuted },
   segBtnTextActive: { color: T.primary, fontFamily: "Inter_600SemiBold" },
+
+  // Error
   errorBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -599,6 +769,8 @@ const styles = StyleSheet.create({
     borderColor: T.dangerBorder,
   },
   errorText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.danger, lineHeight: 18 },
+
+  // Form
   form: { paddingHorizontal: 16, paddingBottom: 20, gap: 14 },
   fieldTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text, marginBottom: 2 },
   fieldGroup: { gap: 6 },
@@ -617,6 +789,8 @@ const styles = StyleSheet.create({
   inputIcon: { flexShrink: 0 },
   input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, padding: 0 },
   helpText: { fontFamily: "Inter_400Regular", fontSize: 12.5, color: T.textMuted, marginTop: -4 },
+
+  // Buttons
   primaryBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -637,6 +811,8 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   linkText: { fontFamily: "Inter_400Regular", fontSize: 12.5, color: T.textMuted },
+
+  // Demo section
   demoSection: {
     gap: 10,
     alignItems: "center",
@@ -661,7 +837,42 @@ const styles = StyleSheet.create({
   },
   demoBtnGuest: { borderColor: T.accent + "40" },
   demoBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.primary },
-  footer: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, textAlign: "center", paddingBottom: 4 },
+
+  // Footer
+  footer: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: T.textMuted,
+    textAlign: "center",
+    paddingBottom: 4,
+  },
+
+  // Language button — floats top-right
+  langBtn: {
+    position: "absolute",
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4 },
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
+  langBtnFlag: { fontSize: 14 },
+  langBtnCode: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: T.textSec,
+    letterSpacing: 0.4,
+  },
 });
 
 const modalStyles = StyleSheet.create({
