@@ -1,0 +1,366 @@
+You are working on an EXISTING application.
+
+Your task is NOT to immediately build random features.
+Your first and primary task is to perform a FULL production-readiness audit of the ENTIRE application, from authentication to all core business processes, and then bring the project to at least 95% production-ready in the cleanest, safest, most professional, SOLID-compliant way.
+
+THIS IS A STRICT REQUIREMENT.
+
+GOAL
+I want a complete, structured, deep audit of the whole system and then a professional hardening/refinement pass.
+The final result must be at least 95% production-ready.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT make random refactors without justification
+- First inspect the entire codebase deeply
+- Then identify what is already production-ready, what is risky, what is incomplete, what is broken, and what must be improved
+- Then directly implement the required improvements in the correct priority order
+- Preserve good existing architecture where possible
+- Refactor only where needed for security, correctness, UX quality, reliability, maintainability, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake “looks done” changes
+- This must be a real engineering-quality production hardening pass
+
+AUDIT SCOPE
+You MUST inspect the project end-to-end, including but not limited to:
+
+1. AUTHENTICATION / AUTHORIZATION
+- login flows
+- guest / manager / admin auth
+- key-based login if used
+- JWT / token generation
+- refresh flow
+- session persistence
+- logout
+- route guards
+- role checks
+- clinic scope checks
+- unauthorized access risks
+- device binding logic if present
+
+2. APP STARTUP / BOOT FLOW
+- app start / welcome / splash
+- startup timers
+- session restore
+- navigation boot flow
+- auth gate behavior
+- language restore
+- notification initialization if present
+
+3. I18N / LANGUAGE SYSTEM
+- current translation architecture
+- provider/store/context
+- language persistence
+- reactivity
+- manager/admin/guest coverage
+- mixed-language risks
+- hardcoded string leftovers
+
+4. ADMIN SIDE
+- admin dashboard
+- admin notifications
+- admin credential requests
+- admin billing/invoices
+- admin language support
+- admin navigation
+- admin tables/forms/modals
+- admin error states
+- admin production readiness
+
+5. MANAGER SIDE
+- dashboard
+- banner
+- overview cards
+- pending documents
+- users/guests
+- doctors/hotels/transports/document types
+- guest detail
+- appointments
+- invoices
+- notifications
+- settings
+- language support
+- mobile UX
+- broken flows / missing actions
+
+6. GUEST SIDE
+- dashboard
+- doctor/hotel/transport cards
+- appointments/schedule
+- notifications
+- explore
+- documents upload/open/view
+- track/journey
+- profile/settings
+- language support
+- login/access key flow
+- mobile UX
+
+7. DOCUMENT FLOW
+- assign document
+- upload document
+- view/open PDFs
+- approve/reject
+- signed/protected access
+- manager and guest flows
+- mobile compatibility
+- file security
+- stale or broken document states
+
+8. APPOINTMENT FLOW
+- create/update/cancel
+- manager side
+- guest side
+- status handling
+- no-show / missed logic
+- calendar rendering
+- status colors
+- upcoming / past logic
+- UX consistency
+
+9. BILLING / INVOICING
+- billing event creation
+- invoice generation
+- overdue flow
+- suspension flow
+- admin/manager visibility
+- notification coverage
+- consistency and correctness
+
+10. NOTIFICATIONS
+- admin notifications
+- manager notifications
+- guest notifications
+- notification creation triggers
+- unread counts
+- mark as read
+- push token registration
+- push notification reliability
+- Expo notifications setup
+- Android/iOS behavior
+- app-closed delivery
+- missing critical notifications
+
+11. FORMS / CRUD FLOWS
+- doctor create/edit/delete
+- hotel create/edit/delete
+- transport create/edit/delete
+- guest create/edit/delete
+- document type create/edit/delete
+- mobile bottom sheets / popups
+- validation
+- submission
+- query invalidation
+- loading/error states
+
+12. UI / UX / MOBILE QUALITY
+- phone responsiveness
+- spacing
+- keyboard avoidance
+- safe area
+- bottom sheets / modals
+- premium visual quality
+- dark theme consistency
+- loading skeletons
+- empty states
+- error states
+- visual consistency
+
+13. API / BACKEND QUALITY
+- route structure
+- response consistency
+- validation
+- error handling
+- rate limiting
+- logging
+- requestId/correlation
+- duplicate routes
+- shadowed routes
+- dead code
+- modularity
+- service/repository separation
+
+14. DATA / DB / INTEGRITY
+- schema correctness
+- key relationships
+- foreign key assumptions
+- soft delete behavior
+- audit logging
+- stale data risks
+- duplication risks
+- collision risks
+- notification/device token persistence
+- hidden integrity problems
+
+15. SECURITY
+- auth boundaries
+- clinic isolation
+- document access protection
+- push token handling
+- input validation
+- status bypass risks
+- dangerous legacy endpoints
+- privilege escalation risks
+- unsafe hardcoded keys or secrets
+
+16. PERFORMANCE / STABILITY
+- heavy queries
+- repeated polling
+- stale cache
+- expensive rerenders
+- missing pagination
+- broken invalidation
+- mobile performance risks
+- startup performance
+- crash risks
+
+17. OBSERVABILITY / DEBUGGABILITY
+- structured logging
+- traceability
+- error context
+- silent failures
+- audit logs
+- ability to diagnose production issues quickly
+
+REQUIRED WORKFLOW
+
+PHASE 1 — FULL PRODUCTION AUDIT
+Do a comprehensive audit of the full codebase first.
+
+I want a detailed, structured report that answers:
+
+- What is already solid and production-ready?
+- What is partially done?
+- What is broken?
+- What is risky?
+- What is missing?
+- What blocks the app from being 95%+ production-ready?
+
+Do NOT just give vague observations.
+Trace real flows through:
+UI → state/hook → API → service → repository/DB
+
+PHASE 2 — PRODUCTION READINESS SCORING
+Score each major area:
+- Auth
+- Startup
+- i18n
+- Admin
+- Manager
+- Guest
+- Documents
+- Appointments
+- Billing
+- Notifications
+- CRUD flows
+- UX/mobile
+- Backend/API
+- Data integrity
+- Security
+- Performance
+- Observability
+
+For each area, mark:
+- Ready
+- Needs improvement
+- Not ready
+
+Then estimate a real overall production-readiness percentage.
+
+PHASE 3 — GAP LIST
+List ALL gaps that prevent 95% production readiness.
+
+Classify:
+- P0 critical blockers
+- P1 major issues
+- P2 important polish
+- P3 future improvements
+
+PHASE 4 — IMPLEMENT THE FIXES
+After the audit, directly implement the necessary improvements in the correct order.
+
+Priority order:
+1. Security / auth / data integrity blockers
+2. Broken core flows
+3. Production risks / crash risks
+4. Missing manager/admin/guest critical actions
+5. Notifications / billing / documents correctness
+6. UX/mobile fixes
+7. Cleanup / dead code / maintainability hardening
+8. Final polish
+
+PHASE 5 — RE-VERIFY
+After implementation, re-check the same readiness areas and provide an updated production-readiness score.
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+- short summary of the app’s current state
+- estimated current production-readiness %
+- confidence level
+
+## 2. End-to-End System Audit
+Break down the whole system from auth to all major processes.
+Use short but structured sections.
+
+## 3. Production Readiness Score by Area
+For each area:
+- status
+- score
+- short reason
+
+## 4. Critical Blockers (P0)
+List all critical blockers clearly.
+
+## 5. Major Issues (P1)
+List all major issues clearly.
+
+## 6. Important Improvements (P2)
+List all important improvements clearly.
+
+## 7. Future Enhancements (P3)
+List all future enhancements clearly.
+
+## 8. Implementation Plan
+Explain the exact order of fixes.
+
+## 9. Files / Areas to Update
+List the exact files or modules that must change and why.
+
+## 10. Implemented Changes
+After coding, summarize exactly what you changed.
+
+## 11. Re-Assessment
+Give the new production-readiness score after the fixes.
+
+## 12. Remaining Risks
+List any remaining risks if the app is still under 95%.
+
+## 13. Final Verdict
+Answer clearly:
+- Is the app now at least 95% production-ready?
+- If not, what still prevents it?
+
+STRICT ENGINEERING EXPECTATIONS
+- Keep architecture SOLID-compliant
+- Keep route/controller layer thin
+- Business logic in services/use cases
+- Persistence in repositories
+- Reusable UI/state logic
+- Remove dead/confusing code where safe
+- Avoid duplicate logic
+- Keep translation system unified
+- Keep notification system unified
+- Keep auth/session logic consistent
+- Keep codebase cleaner than before
+
+IMPORTANT FINAL RULE
+Do NOT stop after analysis.
+Audit first, then directly implement the required improvements to get the app as close as possible to 95%+ production-ready.
+
+START NOW
+First inspect the entire codebase deeply and produce the production-readiness audit.
+Then implement the necessary improvements end-to-end.
