@@ -38,7 +38,6 @@ function PremiumBackground({ glowOp, glowSc, pulseSc }: {
         start={{ x: 0, y: 1 }}
         end={{ x: 1, y: 0 }}
         style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
       />
 
       {/* Layer 2 — soft navy bloom from top-right corner */}
@@ -47,7 +46,6 @@ function PremiumBackground({ glowOp, glowSc, pulseSc }: {
         start={{ x: 1, y: 0 }}
         end={{ x: 0.2, y: 0.8 }}
         style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
       />
 
       {/* Layer 3 — animated deep navy radial glow behind the brand area */}
@@ -59,15 +57,12 @@ function PremiumBackground({ glowOp, glowSc, pulseSc }: {
             transform: [{ scale: Animated.multiply(glowSc, pulseSc) }],
           },
         ]}
-        pointerEvents="none"
       />
       <Animated.View
         style={[bgStyles.radialMid, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
-        pointerEvents="none"
       />
       <Animated.View
         style={[bgStyles.radialCore, { opacity: glowOp, transform: [{ scale: glowSc }] }]}
-        pointerEvents="none"
       />
 
       {/* Layer 4 — edge vignette: darkens corners for cinematic depth */}
@@ -77,7 +72,6 @@ function PremiumBackground({ glowOp, glowSc, pulseSc }: {
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
       />
 
       {/* Layer 5 — horizontal side vignette */}
@@ -87,7 +81,6 @@ function PremiumBackground({ glowOp, glowSc, pulseSc }: {
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
       />
     </>
   );

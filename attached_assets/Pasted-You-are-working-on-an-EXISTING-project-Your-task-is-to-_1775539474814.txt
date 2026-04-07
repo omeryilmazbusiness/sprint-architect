@@ -1,0 +1,343 @@
+You are working on an EXISTING project.
+
+Your task is to implement FULL Turkish language support across the ENTIRE MANAGER side of the application in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+THIS IS A STRICT REQUIREMENT.
+
+WHEN TURKISH IS SELECTED:
+EVERY SINGLE VISIBLE TEXT on ALL MANAGER screens MUST become Turkish.
+
+NO EXCEPTIONS.
+NO PARTIAL TRANSLATION.
+NO MIXED LANGUAGE.
+NO HARDCODED LEFTOVERS.
+
+PRIMARY REQUIREMENTS
+
+1. Add Turkish language support to ALL manager pages
+2. Add Turkish as a selectable option in the MANAGER header language switcher
+3. When the manager changes language to Turkish, the ENTIRE manager UI must update immediately
+4. The selected language must persist
+5. The implementation must be scalable and reusable across the whole project
+6. The implementation must reuse any good existing i18n architecture if present
+7. Do NOT create a second conflicting translation system
+
+EVERYTHING ON MANAGER SIDE MUST BE TRANSLATED
+This includes ALL visible manager UI text, such as:
+- page titles
+- headers
+- tabs
+- navigation labels
+- card titles
+- section titles
+- KPI labels
+- quick actions
+- button text
+- filters
+- search placeholders
+- form labels
+- helper text
+- validation messages shown in UI
+- dialog / modal / sheet text
+- table headers
+- row action labels
+- status chips / badges
+- empty states
+- loading states
+- error states shown to user
+- notification texts shown in manager UI
+- settings labels
+- profile/clinic labels
+- invoices screen labels
+- users screen labels
+- doctors/hotels/transports/document types labels
+- guest detail screen labels
+- appointment screen labels
+- documents screen labels
+- ANY text visible to manager
+
+IF ONE VISIBLE STRING REMAINS UNTRANSLATED, THIS TASK IS FAILED.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing manager flows
+- First inspect the current implementation deeply
+- Reuse the existing i18n/language system if one already exists
+- Do NOT create a second translation system
+- Do NOT leave mixed-language UI
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No random inline translation patches everywhere
+- Build this like a real enterprise multilingual SaaS
+- The result must be scalable to the full project
+
+FIRST TASK — FULL MANAGER I18N AUDIT
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT I18N ARCHITECTURE
+- existing language provider/context/hook/resource setup
+- whether admin/guest already use a translation system
+- whether manager already partially uses it
+- how language persistence currently works
+- whether there are duplicated or conflicting translation patterns
+- whether the manager header already has a language switcher and which languages it currently supports
+
+2. MANAGER SURFACE AREA
+Scan ALL manager-related screens, layouts, and reusable components.
+You must inspect:
+- manager tabs layout
+- manager stack layout
+- manager header
+- dashboard
+- users
+- guests tab
+- doctors tab
+- services
+- invoices
+- settings
+- notifications
+- guest detail
+- doctors CRUD screens
+- hotels CRUD screens
+- transports CRUD screens
+- document types screens
+- appointments-related screens/components
+- pending documents UI
+- all manager cards
+- all manager sheets/modals/dialogs/forms
+- all shared manager-visible components
+
+3. STRING SOURCES
+Find ALL visible manager strings:
+- hardcoded labels
+- enum-to-label mappings
+- placeholders
+- helper text
+- form validation/help text
+- confirmation dialog text
+- empty state text
+- loading text
+- error text shown to user
+- toast/success/warning UI strings
+- badge/chip/status text
+- search/filter labels
+- button text
+- fallback strings
+- section subtitles
+- card descriptions
+
+Then directly implement the localization rollout.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — VERIFY / EXTEND I18N FOUNDATION
+1. Inspect the current i18n architecture
+2. Reuse it if it is already clean
+3. If needed, generalize it so manager can use it properly
+4. Ensure there is ONE translation system, not multiple conflicting ones
+5. Keep the structure scalable to the entire project
+
+Suggested key organization style:
+- manager.common.*
+- manager.header.*
+- manager.dashboard.*
+- manager.users.*
+- manager.guests.*
+- manager.guestDetail.*
+- manager.doctors.*
+- manager.hotels.*
+- manager.transports.*
+- manager.documents.*
+- manager.documentTypes.*
+- manager.appointments.*
+- manager.invoices.*
+- manager.notifications.*
+- manager.settings.*
+- manager.status.*
+- manager.errors.*
+- manager.empty.*
+
+Adjust to the current project conventions if needed, but keep it consistent and scalable.
+
+Acceptance criteria:
+- one clean i18n system is used
+- manager plugs into it cleanly
+- no duplicate translation system exists
+
+PHASE 2 — ADD TURKISH TO MANAGER HEADER LANGUAGE SWITCHER
+1. Inspect the current manager header language switcher
+2. Add Turkish as a selectable language option
+3. Keep the switcher premium, minimal, and professional
+4. Ensure switching to Turkish updates the manager UI immediately
+5. Persist the selected language
+6. Ensure header UX remains clean on mobile
+
+Acceptance criteria:
+- manager header language switcher includes Turkish
+- selecting Turkish updates the manager UI immediately
+- selected language persists after navigation/reload
+
+PHASE 3 — FULL MANAGER PAGE LOCALIZATION TO TURKISH
+Localize the ENTIRE manager side into Turkish.
+
+Move all visible manager strings into the i18n system.
+
+This includes all manager pages and manager-visible components:
+- dashboard
+- users
+- guests tab
+- doctors tab
+- services
+- invoices
+- settings
+- notifications
+- guest detail
+- doctors screens
+- hotels screens
+- transports screens
+- document types screens
+- all forms
+- all bottom sheets
+- all dialogs
+- all cards
+- all lists
+- all table/list headers
+- all filters and search areas
+- all empty/loading/error states
+
+Acceptance criteria:
+- all manager pages are fully language-aware
+- switching to Turkish turns the full manager UI into Turkish
+- no mixed-language manager screens remain
+
+PHASE 4 — ENUM / STATUS / BADGE LOCALIZATION
+Inspect and localize all manager-visible enum labels and status texts properly.
+
+Examples:
+- guest statuses
+- appointment statuses
+- document statuses
+- invoice statuses
+- clinic statuses
+- notification severities
+- generic action/result states
+
+Requirements:
+- centralize mapping where practical
+- avoid duplicated label logic
+- do not leak raw enum values to UI
+- keep badge colors but translate their text
+
+Acceptance criteria:
+- all manager-visible statuses are localized
+- no raw enum text appears untranslated
+- wording is consistent across the whole manager panel
+
+PHASE 5 — MODALS / FORMS / TABLES / EDGE CASES
+Ensure Turkish covers ALL of the manager UX, including:
+- modal titles
+- confirmation dialogs
+- form labels
+- placeholders
+- helper texts
+- validation messages shown in UI
+- table/list headers
+- row actions
+- search/filter labels
+- empty states
+- fallback text
+- error states shown in UI
+- success / warning / info copy shown to manager
+
+Acceptance criteria:
+- manager forms, dialogs, tables, and lists are fully localized
+- no partially translated UX remains
+
+PHASE 6 — TURKISH TRANSLATION QUALITY
+Turkish translations must be:
+- natural
+- professional
+- concise
+- UI-appropriate
+- consistent across the whole manager panel
+- not awkward machine garbage
+
+Use consistent professional product terminology for:
+- guests/patients
+- appointments
+- documents
+- approvals/rejections
+- hotels/transports/doctors
+- invoices
+- settings/profile
+- dashboard metrics
+
+Acceptance criteria:
+- Turkish feels product-quality
+- terminology is consistent
+- no strange literal wording remains
+
+PHASE 7 — LANGUAGE SWITCH REACTIVITY
+Ensure that when Turkish is selected:
+- the ENTIRE manager UI updates immediately
+- current screen updates too
+- header, layout, tabs, cards, modals, lists — everything reacts
+- language preference persists after refresh/navigation/app reopen if supported
+
+Acceptance criteria:
+- language switching updates all visible manager text immediately
+- no stale untranslated UI remains
+- selected language persists correctly
+
+PHASE 8 — HARDENING / CLEANUP
+1. Remove all remaining hardcoded manager-visible strings where they should be localized
+2. Fix missing translation keys
+3. Ensure no runtime crashes from missing keys
+4. Ensure Turkish text length does not break layouts
+5. Keep mobile layout stable
+6. Keep the implementation maintainable
+7. Leave the manager side cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant structure
+- clean separation of concerns
+- one reusable translation system
+- reusable translation hook/helper
+- centralized dictionaries/resources
+- no duplicated translation helpers
+- minimal page/component clutter
+- manager rollout should stay aligned with admin/guest rollout, not diverge
+
+YOU MUST CHECK FOR THESE RISKS
+- manager strings may live in deeply nested shared components
+- there may already be partial translation systems elsewhere
+- toasts/modals may bypass the current translation layer
+- status labels may come from utility files or enum mappers
+- Turkish text may affect layout density in some screens
+- some manager strings may come from hardcoded chip/badge arrays
+- route-specific sheets may have hidden untranslated strings
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current manager/i18n setup
+2. Which manager pages/components were localized
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the final manager i18n architecture usage
+2. Confirmation that ALL manager-visible text now switches to Turkish
+3. Summary of the manager header language switcher update
+4. Exact files changed
+5. Manual QA checklist
+6. Any remaining hidden edge cases if found
+
+FINAL STRICT RULE
+If Turkish is selected and even ONE visible manager string remains in the old language, this task is NOT complete.
+
+START NOW
+First inspect the current i18n system and all manager-visible screens/components deeply.
+Then implement full Turkish localization across the entire manager side and add Turkish to the manager header language switcher.
