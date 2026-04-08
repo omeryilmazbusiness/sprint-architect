@@ -13,17 +13,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
       - name: Run ESLint
         run: bun run lint
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: TypeScript type check
+        run: bunx tsc --noEmit
 
   test:
     name: Test
@@ -32,39 +44,24 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_SECRET }}
+      SESSION_SECRET: ci-session-secret
+      STORAGE_PROVIDER: local
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
+      - name: Run DB migrations (Neon)
+        run: bunx drizzle-kit push --force
       - name: Run tests
         run: bun run test
-
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: TypeScript type check
-        run: bunx tsc --noEmit
 
   build-server:
     name: Build Server
@@ -73,14 +70,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
       - name: Build server
         run: bun run server:build
