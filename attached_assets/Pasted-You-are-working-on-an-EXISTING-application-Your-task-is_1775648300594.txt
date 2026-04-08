@@ -1,0 +1,371 @@
+You are working on an EXISTING application.
+
+Your task is to design and implement a STRICT, PRODUCTION-READY, SOLID-COMPLIANT “KEY ONLY 1 DEVICE” security model for GUEST login.
+
+THIS IS A HARD BUSINESS RULE.
+
+BUSINESS RULE
+When a new guest is created, that guest receives a guest key.
+
+That guest key must work like this:
+
+1. The first successful login with that guest key determines the ONLY allowed device
+2. The deviceId of that first successful login must be captured and bound to that guest
+3. After that, the same guest key must work ONLY on that same device
+4. Any different device attempting to use the same guest key must be rejected
+5. The lock must be enforced by backend/domain logic, not only by frontend logic
+6. The system must be production-ready, secure, maintainable, and auditable
+
+STRICT REQUIREMENT
+This is NOT a UI-only restriction.
+This is NOT a frontend-only check.
+This is a real system-level device lock.
+
+PRIMARY GOAL
+Build a professional one-device-per-guest authentication model where:
+- first successful device becomes the trusted device
+- same guest key cannot be used on another phone/tablet/device
+- only authorized reset can unlock/rebind the guest to a new device
+
+IMPORTANT RULES
+- Do NOT rebuild the entire project from scratch
+- Do NOT apply shallow hacks
+- First inspect the current auth architecture deeply
+- Then directly implement the required solution
+- Preserve good existing architecture where possible
+- Refactor only where needed for security, correctness, maintainability, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT trust frontend state alone
+- Do NOT issue auth tokens before device validation passes
+- The final result must be enforceable, secure, and production-ready
+
+FIRST TASK — FULL SYSTEM ANALYSIS
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT GUEST AUTH FLOW
+- guest login screen
+- guest login API
+- guest key validation logic
+- token generation
+- refresh flow
+- session persistence
+- logout behavior
+- device binding/reset flow if already present
+- whether there are multiple guest auth paths
+- whether there are shadowed or duplicate login routes
+
+2. CURRENT DEVICE MODEL
+- whether the app already generates or stores deviceId
+- where deviceId currently comes from
+- whether a devices table already exists
+- whether there is already partial device binding logic
+- whether current device identification is stable enough
+- whether reinstall changes identity
+- whether platform-specific handling exists for Android and iOS
+
+3. CURRENT BACKEND STRUCTURE
+- controllers/routes
+- services/use cases
+- repositories
+- data model
+- how auth/session logic is currently layered
+- whether device rules are scattered or centralized
+
+4. CURRENT RESET / RECOVERY FLOW
+- whether manager/admin can already reset device binding
+- whether old device sessions/tokens are revoked
+- whether new device binding after reset is supported
+- whether audit logs exist
+
+5. SECURITY RISKS
+- spoofed deviceId risk
+- race condition on first login
+- token refresh bypass
+- session restore bypass
+- alternate login endpoint bypass
+- device reset not revoking old access
+- multiple simultaneous first logins
+- stale old tokens on old device
+
+Then directly implement the solution.
+
+ARCHITECTURAL TARGET
+Build the system with a clear layered design:
+
+- Route/Controller: thin
+- Auth/Device Lock Use Case or Service: all core decisions
+- Repository layer: persistence only
+- Device identity helper/provider: deviceId generation/retrieval rules
+- Domain errors: explicit business errors
+- Audit/logging layer: important auth and lock events
+
+Do NOT scatter device lock checks across random files.
+
+REQUIRED BUSINESS LOGIC
+
+A. GUEST CREATION
+When a new guest is created:
+- a guest key must be generated
+- the guest starts with NO bound device yet
+- device binding should not be prefilled
+- device lock is created only on FIRST successful login
+
+B. FIRST SUCCESSFUL GUEST LOGIN
+When a guest uses the key for the first time:
+- validate the guest key
+- retrieve the deviceId from the app/client
+- if there is no active bound device yet:
+  - bind this deviceId to the guest
+  - record firstBoundAt
+  - allow login
+  - issue tokens/session only AFTER binding succeeds
+
+C. REPEAT LOGIN ON SAME DEVICE
+If the same guest returns on the same device:
+- validate guest key
+- compare deviceId with stored active deviceId
+- if match:
+  - allow login
+  - update lastSeenAt if appropriate
+  - issue/refresh session safely
+
+D. LOGIN ATTEMPT ON A DIFFERENT DEVICE
+If a different device uses the same guest key:
+- reject login
+- do NOT overwrite the old bound device
+- do NOT issue tokens
+- return a clear business error
+
+E. RESET / REBIND FLOW
+Only an authorized role (manager/admin) may reset the binding:
+- revoke the current active binding
+- invalidate active refresh/session tokens as needed
+- next successful guest login can bind a new device
+- audit log this event
+
+PROFESSIONAL DEVICE ID STRATEGY
+You must inspect the current app and choose the safest practical device identification approach for this stack.
+
+Requirements:
+- stable enough for repeated login on the same installed app/device
+- different devices must produce different identifiers
+- frontend must consistently send it
+- backend must treat it as part of auth policy
+- avoid weak ad-hoc logic
+- if deviceId generation is currently weak, fix it properly
+
+You MUST explicitly decide and implement:
+- where deviceId is generated/retrieved
+- how it is stored locally
+- how it is transmitted during login
+- how backend validates and persists it
+
+TOKEN / SESSION / REFRESH HARDENING
+This is critical.
+
+You must ensure:
+- device lock is checked BEFORE token issuance on login
+- refresh token flow cannot bypass device lock
+- session restore cannot bypass device lock
+- after reset, old device tokens stop working
+- old device cannot continue using a valid refresh token after rebinding
+
+This is mandatory.
+A device lock is NOT complete unless refresh/session paths are also protected.
+
+DATA MODEL REQUIREMENTS
+Design or update persistence professionally.
+
+Use existing schema if good, otherwise improve it cleanly.
+Possible fields to persist:
+- guest/patient id
+- deviceId
+- platform
+- firstBoundAt
+- lastSeenAt
+- revokedAt
+- createdAt / updatedAt
+- optional metadata for debugging/support
+
+Rules:
+- only one ACTIVE device binding per guest
+- multiple historical revoked bindings may exist if useful
+- repository must make this explicit and safe
+
+ERROR MODEL
+Create explicit business errors such as:
+- GUEST_DEVICE_LOCKED_TO_ANOTHER_DEVICE
+- GUEST_DEVICE_BINDING_REQUIRED
+- GUEST_DEVICE_BINDING_RESET_REQUIRED
+- GUEST_DEVICE_ID_MISSING
+
+Frontend/UI must show a professional message like:
+- “This guest access key is already linked to another device.”
+- “Please contact your clinic manager to reset device access.”
+
+Avoid raw technical text.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — AUDIT + ARCHITECTURE DECISION
+1. Audit the current guest login and device model
+2. Decide the final binding architecture
+3. Decide how deviceId is generated and trusted
+4. Identify all bypass paths
+5. Identify all files/routes/services involved
+
+Acceptance criteria:
+- final device-lock architecture is clearly defined
+- all auth paths that must enforce the lock are identified
+
+PHASE 2 — DEVICE ID GENERATION / RETRIEVAL
+1. Implement or harden the app-side deviceId strategy
+2. Ensure same device gets same usable identifier
+3. Ensure different device gets different identifier
+4. Ensure login flow always includes deviceId
+5. Ensure missing deviceId is handled safely
+
+Acceptance criteria:
+- deviceId is reliably available at guest login
+- no fragile inconsistent device identity flow remains
+
+PHASE 3 — BACKEND DEVICE BINDING ON FIRST LOGIN
+1. Implement first-login bind logic in the proper auth use case/service
+2. Bind device only after guest key is validated
+3. Do not issue tokens before binding succeeds
+4. Make first bind atomic enough to avoid race-condition issues
+
+Acceptance criteria:
+- first successful login binds the device
+- guest can continue from same device
+- logic is backend-enforced
+
+PHASE 4 — BLOCK DIFFERENT DEVICE LOGINS
+1. Compare current deviceId vs bound deviceId
+2. Reject mismatched deviceId
+3. Return proper domain error
+4. Ensure no tokens are issued on mismatch
+
+Acceptance criteria:
+- same guest key cannot log in from another device
+- backend rejects the second device cleanly
+
+PHASE 5 — REFRESH / SESSION / RESTORE HARDENING
+1. Audit refresh token path
+2. Ensure refresh cannot bypass device lock
+3. Ensure session restore cannot bypass device lock
+4. Ensure old device stops working after reset/rebind
+
+Acceptance criteria:
+- device lock applies to login, refresh, and restored sessions
+- no hidden bypass remains
+
+PHASE 6 — RESET / REBIND FLOW
+1. Implement or harden manager/admin reset device binding flow
+2. Revoke old binding properly
+3. Revoke old active sessions/tokens if needed
+4. Allow next login to bind a new device
+5. Add audit logging
+
+Acceptance criteria:
+- reset works cleanly
+- next login on new device binds successfully
+- old device access is invalidated
+
+PHASE 7 — ERROR HANDLING + UI INTEGRATION
+1. Surface clean errors to the guest login UI
+2. Avoid generic auth failure
+3. Provide user-understandable messaging
+4. Keep UI professional and clear
+5. Ensure manager/admin can understand/reset the issue operationally
+
+Acceptance criteria:
+- blocked device login shows a clear message
+- no confusing UX remains
+
+PHASE 8 — LOGGING / AUDIT / SECURITY HARDENING
+1. Audit log:
+   - first device bind
+   - repeated same-device login
+   - blocked other-device attempt
+   - reset/rebind event
+2. Add structured logs where useful
+3. Review spoofing/race risks
+4. Review stale token/session risks
+
+Acceptance criteria:
+- important device-lock events are traceable
+- implementation is secure enough for production
+
+PHASE 9 — CLEANUP / SOLID REFACTOR
+1. Keep controllers/routes thin
+2. Move core lock logic to dedicated auth/device-lock use case/service
+3. Keep repositories focused on persistence
+4. Remove duplicate/scattered device binding logic
+5. Leave the codebase cleaner than before
+
+PRODUCTION-READY EXPECTATIONS
+The final implementation must:
+- be backend enforced
+- prevent one key from being used on multiple devices
+- handle first login correctly
+- handle same-device repeat login correctly
+- block different-device login
+- include authorized reset/rebind
+- protect login + refresh + restore paths
+- be auditable
+- be maintainable
+- be clear for support/operations
+
+YOU MUST CHECK FOR THESE RISKS
+- token issued before device validation
+- refresh token bypass
+- multiple simultaneous first logins
+- old sessions surviving reset
+- deviceId spoofing assumptions
+- inconsistent deviceId generation between platforms
+- duplicate guest login endpoints
+- frontend-only lock illusion
+- auto-overwriting bound device on new login
+- manager/admin reset not fully revoking old access
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current guest auth/device architecture
+2. Final device-lock architecture decision
+3. Exact files changed
+4. Why each change was made
+5. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the final “one guest key = one device” model
+2. How first login binds the device
+3. How same-device repeat login works
+4. How different-device login is blocked
+5. How refresh/session restore is protected
+6. How reset/rebind works
+7. Exact files changed
+8. Manual QA checklist for:
+   - first guest login
+   - same-device second login
+   - different-device login attempt
+   - token refresh on allowed device
+   - token refresh on revoked/old device
+   - manager/admin reset flow
+9. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- a guest key can bind to exactly one active device
+- first successful login creates that binding
+- same key cannot log in from a second device
+- refresh/session restore cannot bypass the lock
+- reset/rebind works cleanly
+- the implementation is production-ready and SOLID
+
+START NOW
+First inspect the full guest auth flow, session/token flow, and current device/session model deeply.
+Then implement the one-device lock mechanism end-to-end professionally.
