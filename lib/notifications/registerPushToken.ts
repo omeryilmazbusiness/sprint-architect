@@ -1,4 +1,3 @@
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { apiRequest } from "@/lib/query-client";
@@ -10,12 +9,16 @@ import { apiRequest } from "@/lib/query-client";
  * Fully safe to call in any environment:
  *  - Skips silently on web.
  *  - Handles permission denied gracefully.
- *  - Catches expo-notifications errors caused by Expo Go limitations on
- *    Android (SDK 53+ dropped remote-push support in Expo Go).
+ *  - Uses dynamic import so Android Expo Go (SDK 53+, which removed remote
+ *    push from Expo Go) never crashes at module-load time.
  */
 export async function registerPushToken(endpoint: string): Promise<void> {
   try {
     if (Platform.OS === "web") return;
+
+    // Dynamic import avoids the top-level crash on Android Expo Go SDK 53+
+    // (expo-notifications throws during module initialisation there).
+    const Notifications = await import("expo-notifications");
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;

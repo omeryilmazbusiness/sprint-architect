@@ -1,0 +1,261 @@
+You are working on an EXISTING application.
+
+Your task is NOT to re-implement the device lock blindly.
+Your task is to DEBUG and FIND THE REAL ROOT CAUSE of why the same guest key is still usable from both phone and PC, even though a one-device lock system was supposedly already implemented.
+
+THIS IS A STRICT ROOT-CAUSE DEBUG TASK.
+
+CURRENT CLAIM VS REALITY
+The codebase claims:
+- one guest key = one device
+- first successful login binds device
+- different device must be blocked
+
+But the real observed behavior is:
+- the same guest key can still be used from both phone and PC
+
+That means the system is NOT truly enforcing the lock in real usage.
+
+Your job is to find the exact reason, prove it with code/log/data evidence, and then fix it properly in a production-ready, SOLID-compliant way.
+
+IMPORTANT RULES
+- Do NOT assume the previous implementation is correct
+- Do NOT trust previous summaries blindly
+- Do NOT just add more code without proving the failure path
+- First inspect the actual runtime path deeply
+- Then identify the exact bypass / bug / data inconsistency
+- Then fix it cleanly
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No frontend-only patch
+- The final answer must be based on real route, DB, and runtime evidence
+
+PRIMARY GOAL
+Find out WHY the same guest key can still log in on two different devices, and then fix the problem so that:
+- first successful login binds exactly one active device
+- same device continues to work
+- different device is rejected
+- refresh/session restore cannot bypass the lock
+- no alternate auth path can bypass the lock
+- the behavior is real, not just theoretical
+
+MANDATORY DEBUG WORKFLOW
+
+PHASE 1 — TRACE THE REAL LOGIN PATH
+You must inspect and verify the ACTUAL guest login path that is being called in runtime.
+
+Check:
+- which login endpoint the guest login screen actually uses
+- whether web and mobile use the same login endpoint
+- whether any alternate guest auth path exists
+- whether there are duplicate or shadowed routes
+- whether login goes through the supposed device-lock code every time
+
+You must prove:
+- exact route
+- exact service/use case/repo path
+- whether the device lock logic is actually executed
+
+Acceptance criteria:
+- you can point to the real login path with file-level evidence
+- you know exactly whether the lock code is or is not reached
+
+PHASE 2 — TRACE DEVICE ID GENERATION ON PHONE VS PC
+You must inspect the real deviceId generation and transport path.
+
+Check:
+- how deviceId is created on mobile
+- how deviceId is created on web/PC
+- whether both environments generate distinct IDs
+- whether the app sometimes reuses the same ID unexpectedly
+- whether localStorage / SecureStore / cache behavior causes collisions
+- whether hot reload / preview/dev mode affects identity
+- whether the login UI actually waits for deviceId before allowing login
+- what payload is truly sent to backend on phone vs PC
+
+You must prove with runtime logging:
+- deviceId value shape on phone
+- deviceId value shape on PC/web
+- whether they are identical or different
+- whether the backend receives them correctly
+
+Acceptance criteria:
+- you can show whether phone and PC are sending the same or different deviceId
+- you know whether the problem is client-side identity generation or backend enforcement
+
+PHASE 3 — VERIFY DB STATE AFTER FIRST LOGIN
+After a first guest login, inspect the database state directly.
+
+You must verify:
+- does a device binding row get created?
+- in which table?
+- with what patientId?
+- with what deviceId?
+- is revokedAt null?
+- is there exactly one active binding?
+- are multiple active bindings being created by mistake?
+- is the binding attached to the correct guest?
+
+You must inspect:
+- the patient/guest record
+- devices or device-binding table
+- refresh_tokens table if relevant
+- any audit logs related to the bind event
+
+Acceptance criteria:
+- you know whether first login actually persists a valid active device binding
+- you know whether the DB state matches the intended architecture
+
+PHASE 4 — VERIFY SECOND LOGIN PATH FROM DIFFERENT DEVICE
+Now trace the second login from another device/browser.
+
+You must prove:
+- what deviceId is sent
+- what DB lookup is performed
+- what the backend finds as the current active device binding
+- why it does NOT return a device-bound error
+- whether it incorrectly treats the second device as the same device
+- whether it overwrites the old binding
+- whether it skips the check entirely
+- whether a different endpoint bypasses the rule
+
+Acceptance criteria:
+- exact reason is identified with evidence
+- not a guess
+
+PHASE 5 — VERIFY REFRESH / SESSION / RESTORE BYPASS
+You must also test whether the lock is bypassed through session persistence or refresh token logic.
+
+Check:
+- does refresh token validation enforce device logic?
+- can an old session continue working after another device logs in?
+- does session restore on app start ignore device mismatch?
+- does reset binding truly revoke old refresh tokens?
+- can a user appear “logged in” on both devices because one is using an already-issued token?
+
+Acceptance criteria:
+- you know whether the bug is login-path only or also refresh/session-related
+- any bypass is explicitly identified
+
+PHASE 6 — VERIFY ENVIRONMENT DIFFERENCES
+You must consider whether the issue only happens because of environment differences, for example:
+- Expo web preview vs native app
+- same browser profile reusing localStorage
+- dev server/hot reload behavior
+- emulator/simulator environment quirks
+
+But do NOT stop there.
+Even if environment contributes, the production behavior must still be correct and well-defined.
+
+Acceptance criteria:
+- you know whether this is a real production risk or just a dev-environment artifact
+- if it is a dev artifact, explain exactly why
+- if it is a real production bug, fix it fully
+
+PHASE 7 — FIX THE ROOT CAUSE
+Only after proving the failure path, implement the correct fix.
+
+Possible root-cause categories include:
+- wrong route being used
+- deviceId collision
+- missing DB bind
+- multiple active bindings
+- compare logic bug
+- token issued before validation
+- refresh/session bypass
+- wrong patientId lookup
+- alternate auth endpoint bypass
+- reset flow not revoking old access
+- frontend allowing login before deviceId resolves
+- web/mobile generating same device identity unexpectedly
+
+Fix the actual cause cleanly and professionally.
+
+PHASE 8 — ADD DEBUG-SAFE OBSERVABILITY
+Add temporary or structured logs as needed to prove the fix, such as:
+- guest login attempt with patientId and sanitized deviceId hash
+- active binding found or not
+- bind created
+- mismatch rejected
+- refresh token rejected after revoke
+
+Do NOT log secrets or raw sensitive credentials.
+Do NOT leave noisy insecure logs behind in final production code unless appropriately sanitized and useful.
+
+PHASE 9 — FINAL RE-TEST
+You must re-test all of the following:
+
+1. First login from device A
+- should bind successfully
+
+2. Logout + login again from same device A
+- should work
+
+3. Login from device B with same guest key
+- should fail with device-bound error
+
+4. Existing refresh/session behavior
+- should not bypass the lock
+
+5. Reset binding from manager/admin
+- should revoke old access
+- next login from device B should bind successfully
+- device A should no longer work
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+- short explanation of the real bug
+- whether the previous implementation was incomplete, bypassed, or broken
+- confidence level
+
+## 2. Real Login Path Audit
+- actual login route used
+- actual execution path
+- whether the device lock code was really reached
+
+## 3. Device ID Audit
+- how deviceId is generated on phone
+- how deviceId is generated on PC/web
+- whether they were same or different
+- whether this contributed to the bug
+
+## 4. Database State Audit
+- what was stored after first login
+- whether active binding was correct
+- whether multiple active bindings existed
+
+## 5. Root Cause
+- exact cause with code/data evidence
+
+## 6. Fix Implemented
+- what was changed
+- why that fix solves the real problem
+
+## 7. Files Changed
+- exact files and why
+
+## 8. Re-Test Results
+- first login same device
+- second login same device
+- login on different device
+- refresh/session behavior
+- reset/rebind behavior
+
+## 9. Final Verdict
+Answer clearly:
+- Is one key now truly limited to one device?
+- Was the previous implementation incomplete or bypassed?
+- Is the system now production-ready?
+
+FINAL STRICT RULE
+This task is NOT complete unless you can explain with evidence:
+- why phone + PC could both log in before
+- what exact code/data path caused it
+- how the fix prevents it now
+
+START NOW
+First trace the real guest login path, the real deviceId generation path, and the DB state after first login.
+Then identify the exact root cause and fix it professionally.
