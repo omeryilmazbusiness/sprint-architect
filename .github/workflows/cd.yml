@@ -1,0 +1,43 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build server
+        run: bun run server:build
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "$DEPLOY_SSH_KEY" > deploy_key
+          chmod 600 deploy_key
+          rsync -avz --delete \
+            -e "ssh -i deploy_key -o StrictHostKeyChecking=no" \
+            server_dist/ \
+            $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/server_dist/
+          ssh -i deploy_key -o StrictHostKeyChecking=no \
+            $DEPLOY_USER@$DEPLOY_HOST \
+            "cd $DEPLOY_PATH && pm2 restart sprint-architect || pm2 start server_dist/index.js --name sprint-architect"
+          rm -f deploy_key
