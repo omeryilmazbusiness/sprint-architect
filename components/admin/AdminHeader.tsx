@@ -15,6 +15,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LOCALE_FLAGS } from "@/i18n";
 import { AdminProfileMenu } from "./AdminProfileMenu";
 import { LanguageSelectorSheet } from "./LanguageSelectorSheet";
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 interface AdminHeaderProps {
   title: string;
@@ -153,9 +154,7 @@ export function AdminHeader({
         <Ionicons name="arrow-back" size={20} color={T.primary} />
       </Pressable>
     ) : (
-      <View style={styles.brandMark}>
-        <Text style={styles.brandMarkText}>H</Text>
-      </View>
+      <BrandLogo variant="header" />
     )
   );
 
@@ -224,20 +223,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-  brandMark: {
-    width: 32,
-    height: 32,
-    borderRadius: T.r8,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  brandMarkText: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 15,
-    color: "#fff",
   },
   titleBlock: {
     flex: 1,

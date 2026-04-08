@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/context/LanguageContext";
 import { LOCALE_FLAGS } from "@/i18n";
 import { LanguageSelectorSheet } from "@/components/admin/LanguageSelectorSheet";
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 interface ManagerHeaderProps {
   title: string;
@@ -70,9 +71,7 @@ export function ManagerHeader({
               <Ionicons name="arrow-back" size={22} color={T.primary} />
             </Pressable>
           ) : (
-            <View style={styles.brandMark}>
-              <View style={styles.brandDot} />
-            </View>
+            <BrandLogo variant="header" />
           )}
 
           <View style={styles.titleBlock}>
@@ -141,20 +140,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: T.sp12,
-  },
-  brandMark: {
-    width: 34,
-    height: 34,
-    borderRadius: T.r8,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#fff",
   },
   backBtn: {
     width: 34,

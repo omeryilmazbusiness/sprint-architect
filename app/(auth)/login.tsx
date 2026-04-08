@@ -15,6 +15,7 @@ import {
 import { getOrCreateDeviceId } from "@/lib/device/deviceId";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { BrandLogo } from "@/components/common/BrandLogo";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
@@ -439,9 +440,7 @@ export default function LoginScreen() {
           >
             {/* Brand header */}
             <View style={styles.brand}>
-              <View style={styles.logoWrap}>
-                <Ionicons name="airplane" size={28} color="#fff" />
-              </View>
+              <BrandLogo variant="login" />
               <Text style={styles.brandName}>Healory</Text>
               <Text style={styles.brandSub}>{ls.brandSub}</Text>
             </View>
@@ -709,15 +708,6 @@ const styles = StyleSheet.create({
 
   // Brand header
   brand: { alignItems: "center", gap: 8, paddingVertical: 12 },
-  logoWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    backgroundColor: T.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
   brandName: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5 },
   brandSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textSec, textAlign: "center" },
 
