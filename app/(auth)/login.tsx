@@ -440,7 +440,9 @@ export default function LoginScreen() {
           >
             {/* Brand header */}
             <View style={styles.brand}>
-              <BrandLogo variant="login" />
+              <View style={styles.brandLogo}>
+                <BrandLogo variant="login" />
+              </View>
               <Text style={styles.brandName}>Healory</Text>
               <Text style={styles.brandSub}>{ls.brandSub}</Text>
             </View>
@@ -706,9 +708,11 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, gap: 20 },
   inner: { flex: 1, gap: 20 },
 
-  // Brand header
-  brand: { alignItems: "center", gap: 8, paddingVertical: 12 },
-  brandName: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5 },
+  // Brand header — transparent logo needs more vertical breathing than an
+  // opaque-container icon did; paddingVertical 20 gives the mark room to land.
+  brand: { alignItems: "center", paddingVertical: 20 },
+  brandLogo: { marginBottom: 12 },
+  brandName: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5, marginBottom: 4 },
   brandSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textSec, textAlign: "center" },
 
   // Card

@@ -1,0 +1,178 @@
+You are working on an EXISTING application.
+
+Your task is to replace the PREVIOUSLY integrated logo asset with the NEW transparent-background logo that has just been provided, and update all related branding placements in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing login, header, or navigation layouts
+- First inspect the current logo integration deeply
+- Then directly replace and refine it
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, visual consistency, correctness, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT leave the old logo in any visible place
+- Do NOT just swap the asset blindly — refine sizing, spacing, and rendering for the new transparent logo
+- The result must feel premium, modern, minimal, and production-ready
+
+PRIMARY GOAL
+The app previously integrated a logo.
+Now a NEW transparent-background version of the logo has been provided.
+
+You must:
+1. Replace the old logo asset everywhere it was integrated
+2. Use the new transparent logo as the primary brand logo
+3. Ensure it looks better than the previous version
+4. Re-polish login branding and header branding around this new logo
+
+LOGO SOURCE
+Use the newly provided transparent-background logo image as the official logo asset.
+
+PRIMARY AREAS TO UPDATE
+
+1) LOGIN SCREEN
+- Replace the previously used logo with the new transparent version
+- Re-evaluate the size, padding, visual balance, and composition
+- Ensure the logo looks premium on the login screen
+- Ensure transparency works correctly against the background
+- No visible white box / wrong background / ugly bounding
+
+2) APP HEADERS
+- Replace the previous logo with the new transparent version in the top-left branding/header area
+- Ensure the logo looks crisp and balanced
+- Ensure spacing with title text and header icons remains correct
+- Ensure the transparent background integrates naturally with header surfaces
+
+3) SHARED BRANDING COMPONENTS
+- If a shared logo component or asset reference was created previously, update it cleanly
+- Remove old references safely
+- Keep branding reusable and maintainable
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT LOGO INTEGRATION
+- where the previous logo was integrated
+- which files/screens/components currently use it
+- whether there is a shared branding/logo component
+- whether login and headers use different variants/sizing rules
+
+2. NEW LOGO CHARACTERISTICS
+- transparent background
+- different edge/shape balance vs previous logo
+- how it behaves on dark/light surfaces
+- whether sizing or padding should change because of the new transparent silhouette
+
+3. CURRENT HEADER / LOGIN LAYOUT
+- current logo placement in login screen
+- current logo placement in headers
+- whether the transparent logo needs slightly different sizing/alignment than the old one
+
+Then directly implement the replacement and refinement.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — REPLACE OLD LOGO ASSET REFERENCES
+1. Find all places using the previous logo
+2. Replace them with the new transparent logo
+3. Remove stale old asset references where safe
+4. Ensure there is no visible old logo left in login/header branding
+
+Acceptance criteria:
+- old logo is no longer used in visible UI
+- new transparent logo is now the active official logo
+- no stale visible branding remains
+
+PHASE 2 — LOGIN SCREEN RE-POLISH
+1. Refit the login logo placement for the new transparent logo
+2. Adjust:
+   - size
+   - padding
+   - alignment
+   - spacing around text
+   - overall composition
+3. Ensure the logo looks premium and intentional
+4. Ensure transparency blends naturally with the login background
+
+Acceptance criteria:
+- new logo looks better than the previous one on login
+- composition feels balanced and premium
+- no awkward transparency edge issues
+
+PHASE 3 — HEADER RE-POLISH
+1. Update the header logo integration to the new transparent asset
+2. Re-tune:
+   - size
+   - top-left alignment
+   - spacing with title text
+   - spacing with actions/icons
+3. Keep the header clean, premium, minimal, and stable
+4. Ensure the logo remains crisp on Android and iOS
+
+Acceptance criteria:
+- header uses the new transparent logo cleanly
+- no crowding or misalignment
+- result feels polished and professional
+
+PHASE 4 — SHARED BRAND COMPONENT CLEANUP
+1. If a shared logo component or asset constant exists, update it cleanly
+2. Ensure login and header use proper size variants
+3. Remove dead old-logo code if safe
+4. Keep branding integration maintainable for future updates
+
+Acceptance criteria:
+- branding is centralized and clean
+- no duplicated messy asset logic remains
+
+PHASE 5 — HARDENING / QA
+1. Verify crisp rendering on Android and iOS
+2. Verify the transparent logo looks correct on all relevant backgrounds
+3. Verify no layout regressions on small screens
+4. Verify no old logo asset is still visible anywhere
+5. Leave the codebase cleaner than before
+
+DESIGN EXPECTATIONS
+- premium
+- modern
+- minimal
+- elegant
+- medically trustworthy / health-tech appropriate
+- crisp
+- balanced
+- no oversized branding
+- no clumsy spacing
+
+YOU MUST CHECK FOR THESE RISKS
+- previous logo may still be referenced in one of the layouts
+- shared header and login may use different asset paths
+- transparent logo may appear too small or too large if old sizing is reused blindly
+- transparency may expose poor contrast on some surfaces
+- old logo may still remain in cache/static references if not updated cleanly
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current logo integration
+2. Exact files changed
+3. Why each change was made
+4. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of old-to-new logo replacement
+2. Summary of login screen logo refinements
+3. Summary of header logo refinements
+4. Exact files changed
+5. Manual QA checklist for Android and iOS
+6. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the old logo is fully replaced by the new transparent logo
+- login screen uses the new logo professionally
+- header top-left branding uses the new logo professionally
+- the result looks premium and production-ready
+
+START NOW
+First inspect the current logo integration deeply.
+Then replace the old logo with the new transparent one and re-polish the branding end-to-end professionally.
