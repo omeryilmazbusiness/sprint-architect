@@ -11,6 +11,7 @@ import { db } from "../db";
 import { env } from "../config";
 import { clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "../shared/logger";
 
 const patientLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
@@ -87,7 +88,7 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     // Device binding is neither checked nor written so the devices table
     // stays clean. This path is unreachable when NODE_ENV=production.
     const maskedKey = `${patientKey.slice(0, 4)}****`;
-    console.info(`[DEMO] Guest multi-device bypass enabled for key ${maskedKey}`);
+    logger.info("[DEMO] Guest multi-device bypass enabled", { maskedKey });
   } else {
     const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);
 

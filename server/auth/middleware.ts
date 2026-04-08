@@ -4,6 +4,7 @@ import { Errors } from "./errors";
 import { db } from "../db";
 import { clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "../shared/logger";
 
 declare global {
   namespace Express {
@@ -132,6 +133,8 @@ export function errorHandler(
     res.status(e.statusCode ?? 400).json({ code: e.code, message: e.message });
     return;
   }
-  console.error("[unhandled]", err);
+  logger.error("[unhandled] Unexpected error in auth middleware", {
+    error: err instanceof Error ? err.message.slice(0, 300) : String(err),
+  });
   res.status(500).json({ code: "INTERNAL_ERROR", message: "Internal server error" });
 }

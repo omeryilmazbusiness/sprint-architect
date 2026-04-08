@@ -1,0 +1,259 @@
+You are working on an EXISTING production-grade application.
+
+Your task is to perform the FINAL hardening pass required to move the app from its current ~92% production-readiness to at least **98% production-ready**.
+
+This is NOT a general audit anymore.
+This is the FINAL GAP-CLOSING TASK.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT waste time on already-solid areas unless they still block 98%
+- First verify the current state deeply
+- Then directly fix the remaining blockers
+- Preserve good architecture where possible
+- Refactor only where needed for security, reliability, maintainability, observability, or production readiness
+- Keep TypeScript strict
+- No `any` except unavoidable ORM edge cases with explicit containment
+- No fragile hacks
+- No fake “done” claims
+- This task is NOT complete unless the app is genuinely as close as possible to 98% production-ready
+
+CURRENT KNOWN STATUS
+The app is already around ~92% production-ready.
+Core product architecture is mature.
+The remaining gaps are primarily in:
+- final environment hardening
+- security hardening
+- observability hardening
+- web security completeness
+- remaining production hygiene
+- a few residual UX / legacy / config issues
+
+PRIMARY GOAL
+Close the final production gaps so the app reaches ~98% production-ready, with production-safe defaults, strong security posture, clean observability, and no ambiguous launch blockers.
+
+PRIORITY TARGETS
+You MUST verify and fix all remaining high-value gaps, especially:
+
+1. ENVIRONMENT / SECRETS HARDENING
+- Verify JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are truly required in production
+- Verify startup hard-fails safely if secrets are weak/missing
+- Remove or neutralize any lingering dangerous demo flags or bypass configuration
+- Ensure production env behavior is explicit and safe
+- Ensure no fallback/dev-only secrets remain anywhere
+
+2. GUEST DEVICE LOCK HARDENING
+- Re-verify one-key-one-device behavior under real conditions
+- Re-verify refresh/session restore cannot bypass it
+- Re-verify manager/admin reset fully revokes old access
+- Re-verify no environment/config flag can accidentally weaken it in production
+- Remove ambiguity around demo mode entirely if safe
+
+3. WEB SECURITY HARDENING
+- Add a proper CSP strategy in a way that does NOT break the current web bundle
+- If a full strict CSP cannot be safely enabled immediately, implement the strongest safe version possible and document exact next step
+- Keep Helmet configuration production-grade
+- Ensure headers are appropriate and not incomplete
+
+4. TOKEN / SESSION HARDENING
+- Re-verify SecureStore migration on mobile
+- Re-verify logout / refresh / restore behavior
+- Ensure no stale token/session behavior remains after device reset
+- Ensure no sensitive token values appear anywhere in logs
+
+5. OBSERVABILITY / LOGGING HARDENING
+- Verify structured logger is used in all security-sensitive and auth-sensitive paths
+- Remove any remaining raw console.log / console.error in production paths
+- Ensure log metadata is useful and safe
+- Improve consistency of WARN / ERROR / INFO usage
+- Make the app diagnosable in production without leaking secrets
+
+6. BACKEND/API HARDENING
+- Verify no remaining dangerous duplicate / shadowed / legacy routes in critical areas
+- Improve error shape consistency in the highest-value paths
+- Ensure auth/device/document/billing routes are clean and predictable
+- Remove dead or misleading endpoints where safe
+
+7. FINAL UX / PROD HYGIENE
+- Fix any remaining dead buttons in real user flows
+- Fix any remaining production-visible hardcoded text in key surfaces
+- Ensure key auth/login/error states are clean
+- Ensure no production-critical placeholder behavior remains in core flows
+- Legacy unreachable screens can remain only if they are truly unreachable and harmless; prove that
+
+8. TYPE / CODEBASE HYGIENE
+- Reduce remaining unsafe casts in critical paths
+- Contain unavoidable ORM casts behind typed repository boundaries
+- Keep the codebase cleaner and easier to maintain than before
+
+FIRST TASK — VERIFY THE CURRENT CLAIMS
+Before making changes, verify whether the previously reported state is truly accurate.
+
+Specifically verify:
+- current production-readiness score areas
+- JWT production guard behavior
+- SecureStore token storage
+- Helmet setup
+- device lock production guard behavior
+- remaining hardcoded critical strings
+- structured logger coverage
+- duplicate/legacy route cleanup status
+
+Do NOT trust prior summaries blindly.
+Confirm the real current state from code.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — FINAL P0/P1 VERIFICATION
+Inspect the codebase deeply and verify whether any of the following still exist:
+- weak secret fallback
+- dangerous demo/bypass flags
+- insecure token storage
+- incomplete security headers
+- refresh/session bypasses
+- unsafe logs
+- duplicate critical routes
+- misleading dead endpoints
+- major auth inconsistencies
+
+Acceptance criteria:
+- all true remaining P0/P1 blockers are identified with evidence
+
+PHASE 2 — ENVIRONMENT + SECURITY HARDENING
+1. Make production secret requirements airtight
+2. Eliminate or fully neutralize dangerous demo flags / bypass behavior
+3. Harden production config behavior
+4. Ensure no source-code fallback weakens auth/security
+5. Improve Helmet/web security as far as safely possible now
+
+Acceptance criteria:
+- no ambiguity remains around production secrets or dangerous bypass flags
+- production config is explicit and safe
+- security posture is stronger than before
+
+PHASE 3 — DEVICE LOCK RE-VERIFICATION AND HARDENING
+1. Re-test the one-device lock model end-to-end
+2. Ensure production mode cannot accidentally bypass it
+3. Ensure reset/rebind invalidates old refresh tokens cleanly
+4. Ensure old device cannot silently continue after rebinding
+
+Acceptance criteria:
+- one guest key truly maps to one active device
+- same device works, different device is blocked
+- reset/rebind works cleanly
+- no bypass remains
+
+PHASE 4 — OBSERVABILITY HARDENING
+1. Replace remaining unsafe console logs in production paths
+2. Ensure structured logger covers:
+   - auth
+   - guest login/device lock
+   - credential request flows
+   - billing / suspension
+   - document-sensitive flows
+   - reset/rebind flows
+3. Ensure no secrets/credentials/tokens are logged
+4. Improve consistency of log levels and metadata
+
+Acceptance criteria:
+- sensitive paths are properly logged
+- logs are safe and useful
+- no raw insecure production logging remains
+
+PHASE 5 — API / ROUTE / ERROR HARDENING
+1. Remove or isolate remaining confusing duplicate routes in high-value areas
+2. Improve error response consistency in key flows:
+   - auth
+   - guest login
+   - documents
+   - manager critical actions
+3. Remove dead endpoints that create ambiguity if safe
+4. Keep route/controller layer thin and clean
+
+Acceptance criteria:
+- critical API behavior is cleaner and more predictable
+- duplicate-route ambiguity is minimized
+- production debugging is easier
+
+PHASE 6 — FINAL UX / PROD SURFACE HARDENING
+1. Fix remaining production-visible dead buttons in real flows
+2. Fix remaining high-visibility untranslated or hardcoded text in key surfaces
+3. Ensure auth/login/device-lock error messaging is clear and professional
+4. Ensure no critical user flow feels unfinished
+
+Acceptance criteria:
+- no obvious broken UX remains in core production flows
+- key screens feel complete enough for launch
+
+PHASE 7 — FINAL RE-ASSESSMENT
+After fixes, re-score the app honestly.
+The target is ~98% production-ready.
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+- current state before final fixes
+- target
+- confidence level
+
+## 2. Verified Remaining Blockers
+- exact blockers found after re-verification
+
+## 3. Production Readiness Score by Area
+For each area:
+- status
+- score
+- short reason
+
+## 4. P0 Critical Blockers
+List any remaining true critical blockers.
+
+## 5. P1 Major Issues
+List any remaining major issues.
+
+## 6. P2 Important Improvements
+List remaining important improvements.
+
+## 7. Final Fix Plan
+Explain the exact implementation order used.
+
+## 8. Files / Modules Updated
+List exact files/modules changed and why.
+
+## 9. Implemented Changes
+After coding, summarize exactly what was changed.
+
+## 10. Re-Assessment
+Give the updated overall production-readiness score after all fixes.
+
+## 11. Remaining Risks
+List any remaining risks honestly.
+
+## 12. Final Verdict
+Answer clearly:
+- Is the app now at least 98% production-ready?
+- If not, exactly what still prevents it?
+
+STRICT ENGINEERING EXPECTATIONS
+- Keep architecture SOLID-compliant
+- Thin route/controller layer
+- Business logic in services/use cases
+- Persistence in repositories
+- Unified auth/session logic
+- Unified notification logic
+- Unified i18n usage in core surfaces
+- No dangerous demo config ambiguity
+- No secret leakage
+- No fake readiness claims
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the remaining production blockers are actually fixed or explicitly proven to require out-of-code deployment action
+- the app is honestly re-assessed afterward
+- the final score reaches as close as possible to 98%
+- you clearly separate “fixed in code” vs “manual deployment action still required”
+
+START NOW
+First re-verify the current real state of the app and the previously reported ~92% readiness.
+Then implement the final hardening changes required to reach 98% production-readiness.

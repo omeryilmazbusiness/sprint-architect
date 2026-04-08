@@ -1,4 +1,5 @@
 import { deviceTokenRepo } from "../repositories/deviceTokenRepo";
+import { logger } from "../shared/logger";
 
 interface PushPayload {
   title: string;
@@ -34,19 +35,31 @@ async function sendBatch(tokens: string[], payload: PushPayload): Promise<void> 
 
     if (!res.ok) {
       const text = await res.text().catch(() => "(no body)");
-      console.error(`[PushService] Expo push API error ${res.status}: ${text}`);
+      logger.error("[PushService] Expo push API error", {
+        status: res.status,
+        body: text.slice(0, 200),
+        tokenCount: tokens.length,
+      });
     } else {
       const result = await res.json().catch(() => null);
       const failures = (result?.data as Array<{ status: string }> | undefined)
         ?.filter((r) => r.status === "error") ?? [];
       if (failures.length > 0) {
-        console.warn(`[PushService] ${failures.length}/${tokens.length} push(es) failed:`, failures);
+        logger.warn(`[PushService] ${failures.length}/${tokens.length} push(es) failed`, {
+          failureCount: failures.length,
+          totalCount: tokens.length,
+        });
       } else {
-        console.log(`[PushService] Sent ${tokens.length} push notification(s) successfully`);
+        logger.info("[PushService] Push notification(s) sent successfully", {
+          count: tokens.length,
+        });
       }
     }
   } catch (err) {
-    console.error("[PushService] Failed to send push notifications:", err);
+    logger.error("[PushService] Failed to send push notifications", {
+      error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      tokenCount: tokens.length,
+    });
   }
 }
 
@@ -58,7 +71,10 @@ export const pushService = {
         await sendBatch(rows.map((r) => r.token), payload);
       }
     } catch (err) {
-      console.error("[PushService] sendToRole error:", err);
+      logger.error("[PushService] sendToRole error", {
+        role,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 
@@ -69,7 +85,10 @@ export const pushService = {
         await sendBatch(rows.map((r) => r.token), payload);
       }
     } catch (err) {
-      console.error("[PushService] sendToClinicRole error:", err);
+      logger.error("[PushService] sendToClinicRole error", {
+        role,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 
@@ -80,7 +99,10 @@ export const pushService = {
         await sendBatch(rows.map((r) => r.token), payload);
       }
     } catch (err) {
-      console.error("[PushService] sendToUser error:", err);
+      logger.error("[PushService] sendToUser error", {
+        userId,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 };

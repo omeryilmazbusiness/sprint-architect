@@ -6,6 +6,7 @@ import { seedDatabase } from "./seed";
 import { startBillingScheduler } from "./billing/scheduler";
 import { requestIdMiddleware } from "./shared/middleware/requestId";
 import { globalErrorHandler } from "./shared/middleware/errorHandler";
+import { logger } from "./shared/logger";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -193,17 +194,64 @@ function setupErrorHandler(app: express.Application) {
 
 (async () => {
   if (process.env.NODE_ENV !== "production") {
-    await seedDatabase().catch(err => console.error("[seed] DB seed failed:", err));
+    await seedDatabase().catch((err: unknown) =>
+      logger.error("[seed] DB seed failed", {
+        error: err instanceof Error ? err.message.slice(0, 300) : "unknown",
+      })
+    );
   }
 
   setupCors(app);
-  // Helmet sets secure HTTP headers (X-Frame-Options, X-Content-Type-Options,
-  // Strict-Transport-Security, etc.).  Placed after CORS so CORS headers win.
-  // crossOriginResourcePolicy is relaxed to allow Expo assets to load cross-origin.
+
+  // Helmet — security headers.  Placed after CORS so CORS headers win.
+  //
+  // CSP NOTES:
+  // ──────────
+  // Expo web (Metro bundler) outputs inline scripts and inline styles, so
+  // script-src and style-src cannot drop 'unsafe-inline'.  In development,
+  // Metro also uses eval() for source maps, requiring 'unsafe-eval'.
+  //
+  // Despite the weakened script-src, the CSP still provides meaningful value:
+  //   • object-src 'none'     → blocks Flash / plugin code-execution
+  //   • base-uri 'self'       → prevents <base> tag hijacking
+  //   • form-action 'self'    → prevents form submissions to external origins
+  //   • frame-ancestors 'none'→ clickjacking protection (belt-and-suspenders)
+  //   • upgrade-insecure-requests → enforces HTTPS in production
+  //
+  // To harden further in future: adopt a nonce-based CSP by injecting a
+  // per-request nonce via the Expo/Metro build pipeline.
+  const isProduction = process.env.NODE_ENV === "production";
+  const cspScriptSrc = ["'self'", "'unsafe-inline'"];
+  if (!isProduction) cspScriptSrc.push("'unsafe-eval'"); // Metro HMR in dev
+
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
-      contentSecurityPolicy: false, // CSP would break Expo web assets; configure per-app if needed
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc:       ["'self'"],
+          scriptSrc:        cspScriptSrc,
+          scriptSrcAttr:    ["'none'"],
+          styleSrc:         ["'self'", "'unsafe-inline'"],
+          imgSrc:           ["'self'", "data:", "blob:", "https:"],
+          fontSrc:          ["'self'", "data:"],
+          mediaSrc:         ["'self'", "blob:"],
+          objectSrc:        ["'none'"],
+          baseUri:          ["'self'"],
+          formAction:       ["'self'"],
+          frameAncestors:   ["'none'"],
+          workerSrc:        ["'self'", "blob:"],
+          connectSrc: [
+            "'self'",
+            "https://exp.host",
+            "https://api.expo.dev",
+            "wss:",
+            "ws:",
+          ],
+          ...(isProduction ? { upgradeInsecureRequests: [] } : {}),
+        },
+      },
     }),
   );
   app.use(requestIdMiddleware);

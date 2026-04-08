@@ -8,6 +8,7 @@ import {
 } from "./billingService";
 import { insertJobRun } from "../modules/jobRuns/repos/JobRunsRepo.drizzle";
 import { notificationService } from "../services/NotificationService";
+import { logger } from "../shared/logger";
 
 const ISTANBUL_TZ = "Europe/Istanbul";
 
@@ -54,26 +55,39 @@ function scheduleCron(
     if (lastRanDate === dateKey) return;
 
     lastRanDate = dateKey;
-    console.log(`[scheduler] Running job: ${label}`);
+    logger.info(`[scheduler] Running job: ${label}`, { jobName });
     const startedAt = new Date();
     try {
       await fn();
       const finishedAt = new Date();
-      console.log(`[scheduler] Job completed: ${label}`);
-      insertJobRun({ jobName, status: "SUCCESS", startedAt, finishedAt }).catch((e) =>
-        console.error(`[scheduler] Failed to record job run for ${jobName}:`, e)
+      logger.info(`[scheduler] Job completed: ${label}`, {
+        jobName,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+      });
+      insertJobRun({ jobName, status: "SUCCESS", startedAt, finishedAt }).catch((e: unknown) =>
+        logger.error(`[scheduler] Failed to record job run for ${jobName}`, {
+          error: sanitizeError(e),
+        })
       );
     } catch (err) {
       const finishedAt = new Date();
       const errMsg = sanitizeError(err);
-      console.error(`[scheduler] Job failed: ${label}`, err);
+      logger.error(`[scheduler] Job failed: ${label}`, {
+        jobName,
+        error: errMsg,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+      });
       insertJobRun({
         jobName,
         status: "FAILED",
         startedAt,
         finishedAt,
         errorMessageSafe: errMsg,
-      }).catch((e) => console.error(`[scheduler] Failed to record job run for ${jobName}:`, e));
+      }).catch((e: unknown) =>
+        logger.error(`[scheduler] Failed to record job run for ${jobName}`, {
+          error: sanitizeError(e),
+        })
+      );
 
       notificationService.emitAdminNotification({
         type: "BILLING_JOB_FAILED",
@@ -87,10 +101,11 @@ function scheduleCron(
 }
 
 export function startBillingScheduler(): void {
-  console.log("[billing] Scheduler started (Europe/Istanbul timezone)");
-  console.log("[billing]   Job A: 09:00 on last day of month → generate PENDING invoices + email clinics");
-  console.log("[billing]   Job B: 00:00 daily → mark overdue PENDING as UNPAID, suspend clinics");
-  console.log("[billing]   Job C: 00:00 on day 1 of month → send monthly status report");
+  logger.info("[billing] Scheduler started (Europe/Istanbul timezone)", {
+    jobA: "09:00 on last day of month → generate PENDING invoices + email clinics",
+    jobB: "00:00 daily → mark overdue PENDING as UNPAID, suspend clinics",
+    jobC: "00:00 on day 1 of month → send monthly status report",
+  });
 
   // Job A — Generate invoices on last day of month at 09:00
   scheduleCron(
@@ -100,7 +115,7 @@ export function startBillingScheduler(): void {
     () => isLastDayOfMonth(),
     async () => {
       const period = currentPeriod();
-      console.log(`[billing] Job A: generating invoices for period ${period}`);
+      logger.info(`[billing] Job A: generating invoices for period ${period}`, { period });
       await generatePendingInvoicesForPeriod(period);
     }
   );
@@ -112,7 +127,7 @@ export function startBillingScheduler(): void {
     0, 0,
     () => true,
     async () => {
-      console.log("[billing] Job B: marking overdue invoices as UNPAID, suspending clinics + users");
+      logger.info("[billing] Job B: marking overdue invoices as UNPAID, suspending clinics + users");
       await markOverdueInvoicesAsUnpaid();
     }
   );
@@ -124,13 +139,13 @@ export function startBillingScheduler(): void {
     0, 0,
     () => isFirstDayOfMonth(),
     async () => {
-      console.log("[billing] Job C: sending monthly status report email");
+      logger.info("[billing] Job C: sending monthly status report email");
       await sendMonthlyReport();
     }
   );
 
   // Run overdue check on startup
-  markOverdueInvoicesAsUnpaid().catch((err) =>
-    console.error("[billing] Startup overdue check error:", err)
+  markOverdueInvoicesAsUnpaid().catch((err: unknown) =>
+    logger.error("[billing] Startup overdue check error", { error: sanitizeError(err) })
   );
 }

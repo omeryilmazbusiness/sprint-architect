@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { EmailProvider, EmailMessage } from "./EmailProvider";
 import { insertEmailEvent } from "../modules/emailStatus/repos/EmailStatusRepo.drizzle";
+import { logger } from "../shared/logger";
 
 function inferEmailType(subject: string): string {
   const s = subject.toLowerCase();
@@ -41,18 +42,29 @@ export class SmtpEmailProvider implements EmailProvider {
         html: message.html,
         text: message.text,
       });
-      console.log(`[email:smtp] Sent "${message.subject}" → ${message.to}`);
-      insertEmailEvent({ type, status: "SUCCESS", toEmail: message.to }).catch((e) =>
-        console.error("[email:smtp] Failed to record email event:", e)
+      logger.info("[email:smtp] Email sent successfully", {
+        subject: message.subject,
+        type,
+      });
+      insertEmailEvent({ type, status: "SUCCESS", toEmail: message.to }).catch((e: unknown) =>
+        logger.error("[email:smtp] Failed to record email event", {
+          error: e instanceof Error ? e.message.slice(0, 200) : "unknown",
+        })
       );
     } catch (err: unknown) {
       const safe =
         err instanceof Error
           ? err.message.replace(/password=\S+/gi, "***").slice(0, 200)
           : "SMTP error";
-      console.error(`[email:smtp] Failed to send "${message.subject}" → ${message.to}:`, err);
-      insertEmailEvent({ type, status: "FAILED", toEmail: message.to, errorMessageSafe: safe }).catch((e) =>
-        console.error("[email:smtp] Failed to record email failure event:", e)
+      logger.error("[email:smtp] Failed to send email", {
+        subject: message.subject,
+        type,
+        error: safe,
+      });
+      insertEmailEvent({ type, status: "FAILED", toEmail: message.to, errorMessageSafe: safe }).catch((e: unknown) =>
+        logger.error("[email:smtp] Failed to record email failure event", {
+          error: e instanceof Error ? e.message.slice(0, 200) : "unknown",
+        })
       );
       throw err;
     }

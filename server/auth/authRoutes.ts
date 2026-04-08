@@ -138,9 +138,18 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
   auditLog({ actorId: user.id, actorRole: user.role, action: "USER_LOGIN_SUCCESS", metadata: { email: user.email, ip } });
 
   if (user.role === "ADMIN") {
-    runBillingCycle().catch((e) => console.error("[billing] login trigger error:", e));
+    runBillingCycle().catch((e: unknown) =>
+      logger.error("[billing] Login trigger error (admin)", {
+        error: e instanceof Error ? e.message.slice(0, 200) : "unknown",
+      })
+    );
   } else if (user.clinicId) {
-    runBillingCycle([user.clinicId]).catch((e) => console.error("[billing] login trigger error:", e));
+    runBillingCycle([user.clinicId]).catch((e: unknown) =>
+      logger.error("[billing] Login trigger error (clinic)", {
+        clinicId: user.clinicId,
+        error: e instanceof Error ? e.message.slice(0, 200) : "unknown",
+      })
+    );
   }
 
   res.json({

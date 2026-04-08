@@ -2,6 +2,7 @@ import type { EmailProvider } from "./EmailProvider";
 import { SmtpEmailProvider } from "./SmtpEmailProvider";
 import { DevConsoleEmailProvider } from "./DevConsoleEmailProvider";
 import { CircuitBreakerEmailProvider } from "./CircuitBreakerEmailProvider";
+import { logger } from "../shared/logger";
 
 let _provider: CircuitBreakerEmailProvider | null = null;
 
@@ -16,10 +17,10 @@ export function getEmailProvider(): CircuitBreakerEmailProvider {
 
   let inner: EmailProvider;
   if (host && port && user && pass && from) {
-    console.log(`[email] Using SMTP provider (${host}:${port})`);
+    logger.info("[email] Using SMTP provider", { host, port });
     inner = new SmtpEmailProvider({ host, port: parseInt(port), user, pass, from });
   } else {
-    console.log("[email] SMTP not configured — using DevConsoleEmailProvider (emails logged only)");
+    logger.info("[email] SMTP not configured — using DevConsoleEmailProvider (emails logged only)");
     inner = new DevConsoleEmailProvider();
   }
 

@@ -1,8 +1,9 @@
 import { db } from "../db";
 import { auditLogs } from "@shared/schema";
+import { logger } from "../shared/logger";
 
 export async function auditLog(entry: {
-  clinicId?: string;
+  clinicId?: string | null;
   actorId: string;
   actorRole: string;
   action: string;
@@ -20,10 +21,18 @@ export async function auditLog(entry: {
       resourceType: entry.resourceType ?? null,
       resourceId: entry.resourceId ?? null,
       metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
-    }).execute().catch(err => {
-      console.error("Failed to insert audit log:", err);
+    }).execute().catch((err: unknown) => {
+      logger.error("[auditLog] Failed to insert audit log", {
+        action: entry.action,
+        actorId: entry.actorId,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     });
   } catch (err) {
-    console.error("Failed to trigger audit log:", err);
+    logger.error("[auditLog] Failed to trigger audit log", {
+      action: entry.action,
+      actorId: entry.actorId,
+      error: err instanceof Error ? (err as Error).message.slice(0, 200) : "unknown",
+    });
   }
 }

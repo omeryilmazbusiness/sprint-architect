@@ -1,5 +1,6 @@
 import { AppError } from "../errors/AppError";
 import type { ErrorCode } from "../errors/ErrorCodes";
+import { logger } from "../logger";
 
 type CBState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
@@ -66,9 +67,11 @@ export class CircuitBreaker {
     if (this.state === "HALF_OPEN" || this.failures >= this.failureThreshold) {
       this.state = "OPEN";
       this.openedAt = Date.now();
-      console.warn(
-        `[CircuitBreaker] OPEN after ${this.failures} failure(s). Code: ${this.errorCode}`,
-      );
+      logger.warn("[CircuitBreaker] Circuit OPEN", {
+        failures: this.failures,
+        errorCode: this.errorCode,
+        cooldownMs: this.cooldownMs,
+      });
     }
   }
 

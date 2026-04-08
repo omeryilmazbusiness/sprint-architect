@@ -1,5 +1,6 @@
 import { notificationRepo } from "../repositories/notificationRepo";
 import { pushService } from "./PushService";
+import { logger } from "../shared/logger";
 
 export type NotificationSeverity = "INFO" | "WARNING" | "CRITICAL";
 
@@ -61,9 +62,17 @@ export const notificationService = {
           relatedType: event.relatedType ?? null,
           severity: event.severity,
         },
-      }).catch((err) => console.error("[NotificationService] admin push failed:", err));
+      }).catch((err: unknown) =>
+        logger.error("[NotificationService] admin push failed", {
+          type: event.type,
+          error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+        })
+      );
     } catch (err) {
-      console.error("[NotificationService] emitAdminNotification failed:", err);
+      logger.error("[NotificationService] emitAdminNotification failed", {
+        type: event.type,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 
@@ -91,9 +100,19 @@ export const notificationService = {
           relatedType: event.relatedType ?? null,
           severity: event.severity,
         },
-      }).catch((err) => console.error("[NotificationService] manager push failed:", err));
+      }).catch((err: unknown) =>
+        logger.error("[NotificationService] manager push failed", {
+          type: event.type,
+          clinicId,
+          error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+        })
+      );
     } catch (err) {
-      console.error("[NotificationService] emitManagerNotification failed:", err);
+      logger.error("[NotificationService] emitManagerNotification failed", {
+        type: event.type,
+        clinicId,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 
@@ -126,9 +145,19 @@ export const notificationService = {
           relatedType: event.relatedType ?? null,
           severity: event.severity,
         },
-      }).catch((err) => console.error("[NotificationService] guest push failed:", err));
+      }).catch((err: unknown) =>
+        logger.error("[NotificationService] guest push failed", {
+          type: event.type,
+          patientId,
+          error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+        })
+      );
     } catch (err) {
-      console.error("[NotificationService] emitGuestNotification failed:", err);
+      logger.error("[NotificationService] emitGuestNotification failed", {
+        type: event.type,
+        patientId,
+        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      });
     }
   },
 };

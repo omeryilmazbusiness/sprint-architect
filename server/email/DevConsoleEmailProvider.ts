@@ -1,5 +1,6 @@
 import type { EmailProvider, EmailMessage } from "./EmailProvider";
 import { insertEmailEvent } from "../modules/emailStatus/repos/EmailStatusRepo.drizzle";
+import { logger } from "../shared/logger";
 
 function inferEmailType(subject: string): string {
   const s = subject.toLowerCase();
@@ -12,16 +13,20 @@ function inferEmailType(subject: string): string {
 
 export class DevConsoleEmailProvider implements EmailProvider {
   async send(message: EmailMessage): Promise<void> {
-    console.log("[email:dev] ─────────────────────────────────────────────");
-    console.log(`[email:dev] TO:      ${message.to}`);
-    console.log(`[email:dev] SUBJECT: ${message.subject}`);
-    console.log(`[email:dev] BODY:    ${(message.text ?? message.html).slice(0, 500)}`);
-    console.log("[email:dev] ─────────────────────────────────────────────");
+    logger.info("[email:dev] Email intercepted (dev mode — not sent)", {
+      to: message.to,
+      subject: message.subject,
+      bodyPreview: (message.text ?? message.html ?? "").slice(0, 300),
+    });
 
     insertEmailEvent({
       type: inferEmailType(message.subject),
       status: "SUCCESS",
       toEmail: message.to,
-    }).catch((e) => console.error("[email:dev] Failed to record email event:", e));
+    }).catch((e: unknown) =>
+      logger.error("[email:dev] Failed to record email event", {
+        error: e instanceof Error ? e.message.slice(0, 200) : "unknown",
+      })
+    );
   }
 }
