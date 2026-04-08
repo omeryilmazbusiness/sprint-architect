@@ -163,9 +163,11 @@ export const patientRepo = {
     return { rows: enrichedRows, total: Number(total[0].count), page, pageSize };
   },
 
-  async findById(id: string, clinicId: string) {
+  async findById(id: string, clinicId?: string | null) {
     const row = await db.query.patients.findFirst({
-      where: and(eq(patients.id, id), eq(patients.clinicId, clinicId)),
+      where: clinicId
+        ? and(eq(patients.id, id), eq(patients.clinicId, clinicId))
+        : eq(patients.id, id),
     });
     if (!row) return null;
     return enrichPatient(row);

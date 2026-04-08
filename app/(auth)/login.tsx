@@ -12,6 +12,7 @@ import {
   Animated,
   Modal,
 } from "react-native";
+import { getOrCreateDeviceId } from "@/lib/device/deviceId";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -277,9 +278,17 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading]   = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
-  const [deviceId] = useState(
-    () => `device-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-  );
+  // Stable, installation-scoped device ID loaded from SecureStore.
+  // Persists across restarts; changes only on reinstall (correct security behavior).
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  useEffect(() => {
+    getOrCreateDeviceId()
+      .then(setDeviceId)
+      .catch(() => {
+        // Fallback: generate in-memory ID so login still works this session.
+        setDeviceId(`device-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
+      });
+  }, []);
 
   const passwordRef = useRef<TextInput>(null);
   const fadeAnim    = useRef(new Animated.Value(0)).current;
@@ -312,10 +321,11 @@ export default function LoginScreen() {
 
   async function handleGuestLogin() {
     if (!guestKey.trim()) { setError(ls.errEnterKey); return; }
+    if (!deviceId) return; // still loading — button should already be disabled
     setError(null);
     setIsLoading(true);
     try {
-      await loginAsPatient(guestKey.trim(), deviceId);
+      await loginAsPatient(guestKey.trim(), deviceId, Platform.OS);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(patient)/dashboard");
     } catch (e) {
@@ -505,11 +515,11 @@ export default function LoginScreen() {
                   <Text style={styles.helpText}>{ls.guestKeyHelp}</Text>
 
                   <Pressable
-                    style={[styles.primaryBtn, { opacity: isLoading ? 0.75 : 1 }]}
+                    style={[styles.primaryBtn, { opacity: (isLoading || !deviceId) ? 0.75 : 1 }]}
                     onPress={handleGuestLogin}
-                    disabled={isLoading}
+                    disabled={isLoading || !deviceId}
                   >
-                    {isLoading ? (
+                    {(isLoading || !deviceId) ? (
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
                       <>

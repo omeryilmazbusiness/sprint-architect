@@ -1,0 +1,310 @@
+You are working on an EXISTING application.
+
+Your task is to inspect the current codebase deeply and then implement a professional, SOLID-compliant, production-ready improvement plan with two primary goals:
+
+1. Modernize the typography system across the entire application by selecting and implementing a more modern, premium, readable font system
+2. Implement a robust “first device lock” rule for Guest accounts:
+   - when a guest logs in for the first time, that device becomes the only allowed device
+   - after that, the guest can log in only from that same device unless an authorized reset happens
+
+This must be done in the cleanest, safest, most maintainable, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT apply shallow or hacky fixes
+- First inspect the current architecture deeply
+- Then directly implement the required changes
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, correctness, security, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake “device lock” implemented only on frontend
+- The solution must be real, secure, and backend-enforced
+- The final result must feel like a serious production SaaS/mobile product
+
+PRIMARY GOALS
+
+A) MODERN FONT SYSTEM
+The app should use a more modern, premium, clean, readable font system.
+
+Requirements:
+- choose the right font for a premium health-tech / medical tourism app
+- ensure it looks modern and trustworthy
+- ensure it works well across Android and iOS
+- ensure loading is stable and production-safe
+- centralize typography rules
+- keep consistency across admin / manager / guest
+- avoid decorative or gimmicky fonts
+- improve visual hierarchy and perceived product quality
+
+B) GUEST FIRST-DEVICE LOCK
+Business rule:
+- when a guest account is first used to log in successfully, the system must bind that guest to that specific device
+- after that, only that same device can log in
+- any different device must be rejected
+- the only way to allow a different device later should be through an explicit authorized reset flow (for example manager/admin reset device binding)
+
+This must be implemented securely and professionally.
+
+FIRST TASK — FULL ANALYSIS
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT FONT / TYPOGRAPHY SYSTEM
+- what font(s) are currently used
+- how fonts are loaded
+- where typography is defined
+- whether different parts of the app use inconsistent font styles
+- whether font loading is safe and stable
+- whether there are startup/font timing risks
+- whether typography tokens/components already exist
+
+2. CURRENT GUEST AUTH FLOW
+- guest login screen
+- guest login API
+- how guest key/login is validated
+- how session/token is created
+- whether device binding already exists partially
+- whether device identifiers already exist
+- how devices table / tokens / sessions are currently stored
+- whether there is already a reset-device-binding flow
+- how manager/admin currently reset guest access if needed
+
+3. DEVICE BINDING MODEL
+- where current device info comes from
+- whether app already generates a stable device identifier
+- whether this identifier is secure and reliable enough
+- whether first-login device binding is already partially implemented but buggy
+- whether the backend actually enforces device identity
+- whether auth currently trusts client input too much
+
+4. SECURITY / DOMAIN RULES
+- how to prevent spoofed or inconsistent device identifiers
+- whether a signed device registration or fingerprint strategy is needed
+- how device revocation/reset should work
+- what happens if app is reinstalled
+- what happens if guest changes phone
+- how to balance usability and security professionally
+
+Then directly implement the requested improvements.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — TYPOGRAPHY AUDIT + MODERN FONT DECISION
+1. Audit the current typography system
+2. Choose a modern premium font family suitable for:
+   - healthcare / health tourism
+   - operational dashboards
+   - guest mobile UX
+   - readable multilingual UI
+3. Explain why this font is the right choice
+4. Implement it cleanly across the application
+5. Centralize typography hierarchy and usage
+
+Good font choice should feel:
+- modern
+- premium
+- readable
+- trustworthy
+- minimal
+- international-friendly
+
+Acceptance criteria:
+- the app visibly feels more modern
+- typography is more consistent
+- font loading is production-safe
+- Android and iOS both render well
+
+PHASE 2 — CENTRALIZE TYPOGRAPHY SYSTEM
+1. Build or improve a typography system:
+   - font family tokens
+   - weight usage
+   - heading/body/caption/button hierarchy
+   - reusable text styling where appropriate
+2. Avoid random inline font usage
+3. Keep the system scalable for the whole app
+
+Acceptance criteria:
+- typography is centrally managed
+- visual hierarchy is clear
+- no mixed old/new typography remains in key surfaces
+
+PHASE 3 — DESIGN THE GUEST FIRST-DEVICE LOCK ARCHITECTURE
+Before coding blindly, design the correct architecture.
+
+You must define:
+- how the device ID is created or obtained
+- how first successful guest login binds the device
+- how later logins check the bound device
+- how unauthorized device login is rejected
+- how reset/rebind works through manager/admin
+- how reinstall/device ID changes are handled
+- how tokens/sessions interact with device lock
+- how to log/audit device-binding actions
+
+The design must be backend-enforced, not UI-enforced.
+
+Required principle:
+- guest auth succeeds only if:
+  1. no device is currently bound yet → bind first successful device
+  2. or the login comes from the already bound device
+- otherwise reject with a clear controlled error
+
+Acceptance criteria:
+- architecture is secure, understandable, and maintainable
+- first device binding is not bypassable through frontend tricks
+
+PHASE 4 — IMPLEMENT GUEST FIRST-DEVICE LOCK
+Implement the device lock professionally.
+
+Requirements:
+- first successful guest login binds the device in backend
+- all future guest logins require the same device
+- if a different device tries:
+  - reject login cleanly
+  - return a meaningful controlled error code/message
+- keep logs/audit trail
+- avoid race conditions on first binding
+- do not trust device identity only in frontend state
+
+Important:
+- inspect whether an existing devices table/model can be reused
+- if appropriate, store:
+  - guest/patient id
+  - device identifier
+  - firstBoundAt
+  - lastSeenAt
+  - revokedAt
+  - platform / metadata if useful
+- ensure only one active allowed device for guest login
+
+Acceptance criteria:
+- first device login binds successfully
+- second different device is rejected
+- original device continues to work
+- backend fully enforces the rule
+
+PHASE 5 — RESET / RECOVERY FLOW
+Implement or harden the authorized recovery flow.
+
+Requirements:
+- manager/admin can explicitly reset guest device binding if needed
+- after reset, the next successful guest login can bind a new device
+- old device becomes invalid
+- flow must be audited/logged
+- guest cannot self-bypass the restriction without authorized reset unless current product rules explicitly allow that
+
+Acceptance criteria:
+- authorized reset works
+- next login after reset can bind new device
+- old device no longer works
+- audit trail exists
+
+PHASE 6 — ERROR HANDLING / UX / PROD-READY BEHAVIOR
+Implement professional UX around this flow.
+
+Requirements:
+- if login is blocked because device is different, return a clean business error
+- UI must show a professional message
+- no raw technical error text
+- no confusing generic “login failed”
+- explain that access is limited to the original registered device and a reset is required
+
+Also ensure:
+- no crash if device ID cannot be retrieved
+- safe fallback/error handling
+- clean logging for diagnosis
+
+Acceptance criteria:
+- users get clear feedback
+- support/manager can understand what happened
+- errors are clean and production-appropriate
+
+PHASE 7 — SECURITY HARDENING
+Audit and improve the security of this model.
+
+Check:
+- device ID spoofing risks
+- replay/session risks
+- stale device records
+- race conditions on first login
+- unauthorized reset risks
+- token issuance before/after device validation
+- logout/session restore interaction
+- reinstall behavior and platform differences
+
+Acceptance criteria:
+- the device lock flow is secure enough for production use
+- auth flow remains stable and understandable
+
+PHASE 8 — GENERAL PROD-READY HARDENING
+While implementing the above, also improve the surrounding production quality where needed:
+- auth flow consistency
+- session restore stability
+- validation
+- API error consistency
+- logging / audit logs
+- maintainability
+- dead/confusing code cleanup
+- route/service separation
+- repository/data cleanliness
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- typography system separated from raw component styling
+- auth logic separated from UI
+- device-binding rules in backend business layer
+- repositories handle persistence
+- services/use cases handle device-binding decisions
+- controllers/routes remain thin
+- no duplicated auth logic
+- no duplicated typography hacks
+- leave the codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- current device binding may already exist but be partially broken
+- frontend may send a fake device ID without backend verification strategy
+- reinstall may change device identity unexpectedly
+- login may issue token before device validation
+- reset flow may not fully revoke prior access
+- typography rollout may break startup if fonts are loaded incorrectly
+- multilingual screens may break with new font if font coverage is poor
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current typography system
+2. Which modern font you selected and why
+3. What you found in the current guest auth/device-binding flow
+4. The final device-lock architecture decision
+5. Exact files changed
+6. Why each change was made
+7. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the new typography system
+2. Which font was selected and why
+3. Summary of the guest first-device-lock architecture
+4. How first login binding now works
+5. How reset/rebind now works
+6. Exact files changed
+7. Manual QA checklist for:
+   - first guest login
+   - repeated login on same device
+   - login attempt on different device
+   - reset binding flow
+   - Android font rendering
+   - iOS font rendering
+8. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the application visibly uses a more modern and more premium font system
+- guest first login binds the device on the backend
+- subsequent login from another device is blocked
+- authorized reset allows rebinding cleanly
+- the result is production-ready and architecturally clean
+
+START NOW
+First inspect the current typography system and the full guest auth/device-binding flow deeply.
+Then implement the improvements end-to-end professionally.

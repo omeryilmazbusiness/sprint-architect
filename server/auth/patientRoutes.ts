@@ -27,6 +27,7 @@ const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const patientLoginSchema = z.object({
   patientKey: z.string().min(1),
   deviceId: z.string().min(1),
+  platform: z.string().optional(),
 });
 
 router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Response): Promise<void> => {
@@ -37,24 +38,24 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
       actorId: "unknown",
       actorRole: "GUEST",
       action: "PATIENT_LOGIN_FAILED",
-      metadata: { reason: "validation_error", details: parsed.error.issues[0].message }
+      metadata: { reason: "validation_error", details: parsed.error.issues[0].message },
     });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
 
-  const { patientKey, deviceId } = parsed.data;
+  const { patientKey, deviceId, platform } = parsed.data;
 
   let patient: Awaited<ReturnType<typeof patientRepo.findByKey>>;
   try {
     patient = await patientRepo.findByKey(patientKey);
-  } catch (err) {
+  } catch {
     const e = Errors.PATIENT_KEY_INVALID();
     auditLog({
       actorId: "unknown",
       actorRole: "GUEST",
       action: "PATIENT_LOGIN_FAILED",
-      metadata: { patientKey, reason: "key_invalid" }
+      metadata: { patientKey, reason: "key_invalid" },
     });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
@@ -66,7 +67,7 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
       actorId: patient?.id ?? "unknown",
       actorRole: "PATIENT",
       action: "PATIENT_LOGIN_FAILED",
-      metadata: { patientKey, reason: !patient ? "patient_not_found" : "patient_inactive" }
+      metadata: { patientKey, reason: !patient ? "patient_not_found" : "patient_inactive" },
     });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
@@ -92,12 +93,34 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
 
     if (existingDevice) {
       if (existingDevice.deviceId !== deviceId) {
+        // A different device is attempting to log in. Reject and audit.
+        auditLog({
+          clinicId: patient.clinicId,
+          actorId: patient.id,
+          actorRole: "PATIENT",
+          action: "PATIENT_LOGIN_FAILED",
+          resourceType: "patient",
+          resourceId: patient.id,
+          metadata: { reason: "device_already_bound", platform: platform ?? "unknown" },
+        });
         const e = Errors.DEVICE_ALREADY_BOUND();
         res.status(e.statusCode).json({ code: e.code, message: e.message });
         return;
       }
+      // Same device returning — update the last-seen timestamp for audit trail.
+      await authRepo.updateDeviceLastSeen(patient.id);
     } else {
-      await authRepo.bindDevice(patient.id, deviceId);
+      // First login — bind this device to the patient account.
+      await authRepo.bindDevice(patient.id, deviceId, platform);
+      auditLog({
+        clinicId: patient.clinicId,
+        actorId: patient.id,
+        actorRole: "PATIENT",
+        action: "DEVICE_BOUND",
+        resourceType: "patient",
+        resourceId: patient.id,
+        metadata: { platform: platform ?? "unknown" },
+      });
     }
   }
 
@@ -135,18 +158,9 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     const { patientId } = req.params as { patientId: string };
 
-    let patient: Awaited<ReturnType<typeof patientRepo.findById>>;
-    try {
-      const clinicId = req.actor?.clinicId || null;
-      if (req.actor?.role === "MANAGER" && clinicId) {
-        patient = await patientRepo.findById(patientId, clinicId);
-      } else {
-        const allPatient = await patientRepo.findByKey(patientId).catch(() => null);
-        patient = allPatient as any;
-      }
-    } catch {
-      patient = undefined;
-    }
+    // Resolve patient — managers are scoped to their clinic; admins see all.
+    const clinicId = req.actor?.role === "MANAGER" ? (req.actor.clinicId ?? null) : null;
+    const patient = await patientRepo.findById(patientId, clinicId);
 
     if (!patient) {
       const e = Errors.NOT_FOUND("Patient not found");
@@ -154,15 +168,14 @@ router.post(
       return;
     }
 
-    if (
-      req.actor?.role === "MANAGER" &&
-      req.actor.clinicId !== patient.clinicId
-    ) {
+    if (req.actor?.role === "MANAGER" && req.actor.clinicId !== patient.clinicId) {
       const e = Errors.FORBIDDEN("Manager can only reset devices for patients in their clinic");
       res.status(e.statusCode).json({ code: e.code, message: e.message });
       return;
     }
 
+    // Revoke the device binding AND all active sessions so the old device
+    // loses access immediately — it cannot continue with a cached token.
     await authRepo.revokeDevice(patientId);
 
     auditLog({

@@ -32,7 +32,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<UserRole>;
-  loginAsPatient: (patientKey: string, deviceId: string) => Promise<void>;
+  loginAsPatient: (patientKey: string, deviceId: string, platform?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -138,12 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const loginAsPatient = useCallback(
-    async (patientKey: string, deviceId: string) => {
+    async (patientKey: string, deviceId: string, platform?: string) => {
       const data = await apiPost<{
         accessToken: string;
         refreshToken: string;
         patient: { id: string; fullName: string; clinicId: string; status: string };
-      }>("/v1/patient/auth/login", { patientKey, deviceId });
+      }>("/v1/patient/auth/login", { patientKey, deviceId, ...(platform ? { platform } : {}) });
 
       await persistSession(
         { accessToken: data.accessToken, refreshToken: data.refreshToken },

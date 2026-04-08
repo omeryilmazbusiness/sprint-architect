@@ -330,6 +330,8 @@ export const devices = pgTable("devices", {
   deviceId: text("device_id").notNull(),
   boundAt: timestamp("bound_at").notNull().defaultNow(),
   revokedAt: timestamp("revoked_at"),
+  lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
+  platform: text("platform"),
 });
 
 export const invoices = pgTable("invoices", {
