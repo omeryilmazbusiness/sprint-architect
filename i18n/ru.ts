@@ -543,6 +543,8 @@ export const ru: AppDict = {
     markAllRead: "Отметить всё прочитанным",
     emptyTitle: "Нет уведомлений",
     emptySubtitle: "Всё прочитано! Здесь будут появляться обновления о клинике.",
+    severityWarning: "ВНИМАНИЕ",
+    severityCritical: "КРИТИЧНО",
   },
 
   managerPatient: {

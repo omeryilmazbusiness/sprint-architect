@@ -543,6 +543,8 @@ export const en: AppDict = {
     markAllRead: "Mark all read",
     emptyTitle: "No notifications",
     emptySubtitle: "You're all caught up! Updates about your clinic will appear here.",
+    severityWarning: "WARNING",
+    severityCritical: "CRITICAL",
   },
 
   managerPatient: {

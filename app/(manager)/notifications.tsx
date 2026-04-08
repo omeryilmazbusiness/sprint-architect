@@ -119,6 +119,8 @@ function NotifCard({
   item: ManagerNotification;
   onPress: (item: ManagerNotification) => void;
 }) {
+  const t = useT();
+  const tn = t.managerNotifications;
   const isUnread = item.status === "UNREAD";
   const accentColor = getTypeAccentColor(item.type);
   const severityColor = getSeverityColor(item.severity);
@@ -190,7 +192,7 @@ function NotifCard({
           >
             <View style={[styles.severityDot, { backgroundColor: severityColor }]} />
             <Text style={[styles.severityText, { color: severityColor }]}>
-              {item.severity}
+              {item.severity === "WARNING" ? tn.severityWarning : tn.severityCritical}
             </Text>
           </View>
         )}

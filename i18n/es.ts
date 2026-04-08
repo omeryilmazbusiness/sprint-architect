@@ -539,6 +539,8 @@ export const es: AppDict = {
     markAllRead: "Marcar todas como leídas",
     emptyTitle: "Sin notificaciones",
     emptySubtitle: "¡Todo al día! Las actualizaciones de tu clínica aparecerán aquí.",
+    severityWarning: "ADVERTENCIA",
+    severityCritical: "CRÍTICO",
   },
 
   managerPatient: {

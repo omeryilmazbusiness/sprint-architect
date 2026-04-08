@@ -539,6 +539,8 @@ export const tr: AppDict = {
     markAllRead: "Tümünü okundu işaretle",
     emptyTitle: "Bildirim yok",
     emptySubtitle: "Hepsi tamamlandı! Kliniğinizle ilgili güncellemeler burada görünecek.",
+    severityWarning: "UYARI",
+    severityCritical: "KRİTİK",
   },
 
   managerPatient: {

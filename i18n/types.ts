@@ -570,6 +570,8 @@ export interface ManagerNotificationsDict {
   markAllRead: string;
   emptyTitle: string;
   emptySubtitle: string;
+  severityWarning: string;
+  severityCritical: string;
 }
 
 export interface ManagerPatientDict {
