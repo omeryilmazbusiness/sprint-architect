@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config";
 
 export interface ActorContext {
   sub: string;
@@ -8,10 +9,10 @@ export interface ActorContext {
   type: "user" | "patient";
 }
 
-const ACCESS_SECRET =
-  process.env.JWT_ACCESS_SECRET || "ht-access-secret-dev-only";
-const REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || "ht-refresh-secret-dev-only";
+// Secrets are read from config, which validates them at startup and enforces
+// that production never runs with the well-known dev defaults.
+const ACCESS_SECRET = env.jwtAccessSecret;
+const REFRESH_SECRET = env.jwtRefreshSecret;
 
 const ACCESS_TTL = "15m";
 const REFRESH_TTL = "30d";

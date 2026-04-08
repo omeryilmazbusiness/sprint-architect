@@ -60,6 +60,35 @@ function setupBodyParsing(app: express.Application) {
   app.use(express.urlencoded({ extended: false }));
 }
 
+/**
+ * Keys whose values must never appear in server logs.
+ * Applies to top-level response JSON fields only.
+ */
+const SENSITIVE_LOG_KEYS = new Set([
+  "accessToken",
+  "refreshToken",
+  "password",
+  "oneTimePassword",
+  "oneTimeAccessKey",
+  "hash",
+  "token",
+  "secret",
+]);
+
+/**
+ * Returns a shallow copy of `obj` with all sensitive fields replaced by
+ * "[REDACTED]".  Only top-level keys are scrubbed — deep nesting is not
+ * expected in these responses and the truncation below adds a second safety
+ * net anyway.
+ */
+function sanitizeForLog(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = SENSITIVE_LOG_KEYS.has(k) ? "[REDACTED]" : v;
+  }
+  return out;
+}
+
 function setupRequestLogging(app: express.Application) {
   app.use((req, res, next) => {
     const start = Date.now();
@@ -77,7 +106,7 @@ function setupRequestLogging(app: express.Application) {
       const duration = Date.now() - start;
       let logLine = `${req.method} ${p} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: ${JSON.stringify(sanitizeForLog(capturedJsonResponse))}`;
       }
       if (logLine.length > 120) logLine = logLine.slice(0, 119) + "…";
       log(logLine);

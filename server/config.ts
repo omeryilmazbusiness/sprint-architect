@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/**
+ * Well-known insecure default values used during local development.
+ * The server refuses to start in production if either JWT secret matches one
+ * of these strings.
+ */
+const DEV_JWT_DEFAULTS = [
+  "ht-access-secret-dev-only",
+  "ht-refresh-secret-dev-only",
+] as const;
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -8,6 +18,22 @@ const envSchema = z.object({
   DATABASE_URL_TEST: z.string().optional(),
   SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
   PORT: z.coerce.number().default(5000),
+
+  /**
+   * JWT signing secrets — MUST be overridden in production.
+   * Defaults are provided so local/test environments start without extra
+   * configuration, but the server will exit(1) if these defaults are still
+   * set when NODE_ENV=production.
+   */
+  JWT_ACCESS_SECRET: z
+    .string()
+    .min(1, "JWT_ACCESS_SECRET is required")
+    .default("ht-access-secret-dev-only"),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(1, "JWT_REFRESH_SECRET is required")
+    .default("ht-refresh-secret-dev-only"),
+
   /**
    * GUEST_MULTI_DEVICE_DEMO — Dev / demo only.
    * When "true", guest login skips the single-device binding check so the
@@ -31,6 +57,24 @@ if (!parsed.success) {
 }
 
 const _env = parsed.data;
+
+// ── Production guard: refuse to start with known-weak JWT secrets ─────────────
+// If a developer forgets to set JWT_ACCESS_SECRET / JWT_REFRESH_SECRET before
+// deploying, the server will exit immediately instead of silently accepting
+// forgeable tokens.
+if (_env.NODE_ENV === "production") {
+  const usingDefault =
+    (DEV_JWT_DEFAULTS as readonly string[]).includes(_env.JWT_ACCESS_SECRET) ||
+    (DEV_JWT_DEFAULTS as readonly string[]).includes(_env.JWT_REFRESH_SECRET);
+  if (usingDefault) {
+    console.error(
+      "[config] FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set " +
+        "to strong, unique secrets in production. " +
+        "The default development values were detected — server cannot start.",
+    );
+    process.exit(1);
+  }
+}
 
 function deriveTestUrl(prodUrl: string): string {
   try {
@@ -60,6 +104,10 @@ export const env = {
   isDev: _env.NODE_ENV === "development",
   port: _env.PORT,
   sessionSecret: _env.SESSION_SECRET,
+  /** JWT signing secret for access tokens (15 min TTL). */
+  jwtAccessSecret: _env.JWT_ACCESS_SECRET,
+  /** JWT signing secret for refresh tokens (30 day TTL). */
+  jwtRefreshSecret: _env.JWT_REFRESH_SECRET,
   /** True only in non-production when GUEST_MULTI_DEVICE_DEMO=true is set. */
   guestMultiDeviceDemo: _env.NODE_ENV !== "production" && (_env.GUEST_MULTI_DEVICE_DEMO ?? false),
 } as const;
