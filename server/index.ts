@@ -1,5 +1,6 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { seedDatabase } from "./seed";
 import { startBillingScheduler } from "./billing/scheduler";
@@ -196,6 +197,15 @@ function setupErrorHandler(app: express.Application) {
   }
 
   setupCors(app);
+  // Helmet sets secure HTTP headers (X-Frame-Options, X-Content-Type-Options,
+  // Strict-Transport-Security, etc.).  Placed after CORS so CORS headers win.
+  // crossOriginResourcePolicy is relaxed to allow Expo assets to load cross-origin.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      contentSecurityPolicy: false, // CSP would break Expo web assets; configure per-app if needed
+    }),
+  );
   app.use(requestIdMiddleware);
   setupBodyParsing(app);
   setupRequestLogging(app);

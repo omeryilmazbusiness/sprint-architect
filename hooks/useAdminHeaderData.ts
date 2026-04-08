@@ -44,7 +44,7 @@ export function useAdminHeaderData(): AdminHeaderData {
     envLabel: isProd ? "PROD" : "DEV",
     cityLabel,
     email,
-    role: (user as any)?.role ?? "",
+    role: user?.role ?? "",
     initials,
   };
 }

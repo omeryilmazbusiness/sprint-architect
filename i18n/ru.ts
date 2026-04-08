@@ -521,6 +521,9 @@ export const ru: AppDict = {
     rowPrivacy: "Политика конфиденциальности",
     rowPrivacySub: "Как мы обрабатываем ваши данные",
     rowSignOut: "Выйти",
+    alertOk: "ОК",
+    alertHelpBody: "По вопросам поддержки пишите на support@healory.com",
+    alertPrivacyBody: "Политика конфиденциальности доступна на healory.com/privacy",
   },
 
   managerInvoices: {

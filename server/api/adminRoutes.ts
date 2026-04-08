@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { logger } from "../shared/logger";
 import { z } from "zod";
 import { authMiddleware, requireRole } from "../auth/middleware";
 import { invoiceRepo } from "../repositories/invoiceRepo";
@@ -221,11 +222,11 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
     const emailProvider = getEmailProvider();
     const adminId = req.actor!.sub;
 
-    console.log(`[credential-resolve] id=${cr.id} kind=${cr.kind} adminId=${adminId}`);
+    logger.info("[credential-resolve] processing", { id: cr.id, kind: cr.kind });
 
     if (cr.kind === "MANAGER_PASSWORD") {
       if (!cr.targetUser) {
-        console.warn(`[credential-resolve] MANAGER_PASSWORD id=${cr.id}: targetUser not found (user deleted?)`);
+        logger.warn("[credential-resolve] MANAGER_PASSWORD: targetUser not found", { id: cr.id });
         throw new AppError("NOT_FOUND", "Target manager account no longer exists", 404);
       }
 
@@ -256,9 +257,9 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
           }),
         });
         emailSent = true;
-        console.log(`[credential-resolve] email sent to ${sentToEmail} for request ${cr.id}`);
-      } catch (emailErr: any) {
-        console.error(`[credential-resolve] email FAILED for request ${cr.id} to ${sentToEmail}:`, emailErr?.message ?? emailErr);
+        logger.info("[credential-resolve] MANAGER_PASSWORD email sent", { requestId: cr.id });
+      } catch (emailErr) {
+        logger.error("[credential-resolve] MANAGER_PASSWORD email failed", { requestId: cr.id, error: String(emailErr) });
       }
 
       await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: emailSent ? sentToEmail : undefined });
@@ -276,7 +277,7 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
 
     } else if (cr.kind === "GUEST_ACCESS_KEY") {
       if (!cr.targetPatient) {
-        console.warn(`[credential-resolve] GUEST_ACCESS_KEY id=${cr.id}: targetPatient not found (patient deleted?)`);
+        logger.warn("[credential-resolve] GUEST_ACCESS_KEY: targetPatient not found", { id: cr.id });
         throw new AppError("NOT_FOUND", "Target patient account no longer exists", 404);
       }
 
@@ -315,12 +316,12 @@ router.post("/credential-requests/:id/resolve", async (req, res, next) => {
             }),
           });
           emailSent = true;
-          console.log(`[credential-resolve] email sent to ${sentToEmail} for request ${cr.id}`);
-        } catch (emailErr: any) {
-          console.error(`[credential-resolve] email FAILED for request ${cr.id} to ${sentToEmail}:`, emailErr?.message ?? emailErr);
+          logger.info("[credential-resolve] GUEST_ACCESS_KEY email sent", { requestId: cr.id });
+        } catch (emailErr) {
+          logger.error("[credential-resolve] GUEST_ACCESS_KEY email failed", { requestId: cr.id, error: String(emailErr) });
         }
       } else {
-        console.warn(`[credential-resolve] GUEST_ACCESS_KEY id=${cr.id}: no email address available, skipping email`);
+        logger.warn("[credential-resolve] GUEST_ACCESS_KEY: no email address, skipping", { id: cr.id });
       }
 
       await credentialRequestRepo.resolve(cr.id, adminId, { sentToEmail: emailSent ? (sentToEmail ?? undefined) : undefined });

@@ -24,29 +24,33 @@ export interface RegenerateKeyResult {
   oneTimeAccessKey: string;
 }
 
+interface ErrorBody {
+  message?: string;
+}
+
 export async function getPatientSummary(id: string): Promise<PatientSummary> {
   const res = await apiRequest("GET", `/v1/admin/patients/${id}`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message ?? "Failed to load patient");
+    const err = await res.json().catch(() => ({})) as ErrorBody;
+    throw new Error(err.message ?? "Failed to load patient");
   }
-  return res.json();
+  return res.json() as Promise<PatientSummary>;
 }
 
 export async function deactivatePatient(id: string): Promise<{ success: boolean }> {
   const res = await apiRequest("POST", `/v1/admin/patients/${id}/deactivate`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message ?? "Failed to deactivate patient");
+    const err = await res.json().catch(() => ({})) as ErrorBody;
+    throw new Error(err.message ?? "Failed to deactivate patient");
   }
-  return res.json();
+  return res.json() as Promise<{ success: boolean }>;
 }
 
 export async function regeneratePatientAccessKey(id: string): Promise<RegenerateKeyResult> {
   const res = await apiRequest("POST", `/v1/admin/patients/${id}/regenerate-access-key`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message ?? "Failed to regenerate access key");
+    const err = await res.json().catch(() => ({})) as ErrorBody;
+    throw new Error(err.message ?? "Failed to regenerate access key");
   }
-  return res.json();
+  return res.json() as Promise<RegenerateKeyResult>;
 }

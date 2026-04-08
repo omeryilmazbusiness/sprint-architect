@@ -6,6 +6,8 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -116,14 +118,30 @@ export default function ManagerSettingsScreen() {
             icon="help-circle-outline"
             label={ts.rowHelpSupport}
             subtitle={ts.rowHelpSupportSub}
-            onPress={() => {}}
+            onPress={() =>
+              Alert.alert(ts.rowHelpSupport, ts.alertHelpBody, [
+                {
+                  text: ts.alertOk,
+                  onPress: () =>
+                    Linking.openURL("mailto:support@healory.com").catch(() => {}),
+                },
+              ])
+            }
           />
           <Divider inset={56} />
           <ListRow
             icon="shield-outline"
             label={ts.rowPrivacy}
             subtitle={ts.rowPrivacySub}
-            onPress={() => {}}
+            onPress={() =>
+              Alert.alert(ts.rowPrivacy, ts.alertPrivacyBody, [
+                {
+                  text: ts.alertOk,
+                  onPress: () =>
+                    Linking.openURL("https://healory.com/privacy").catch(() => {}),
+                },
+              ])
+            }
           />
         </Card>
 

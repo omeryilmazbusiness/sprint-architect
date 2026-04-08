@@ -7,11 +7,15 @@ export interface DiagnosticsResult {
   server: { version: string };
 }
 
+interface ErrorBody {
+  message?: string;
+}
+
 export async function fetchDiagnostics(): Promise<DiagnosticsResult> {
   const res = await apiRequest("GET", "/v1/admin/diagnostics");
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message ?? "Diagnostics unavailable");
+    const err = await res.json().catch(() => ({})) as ErrorBody;
+    throw new Error(err.message ?? "Diagnostics unavailable");
   }
-  return res.json();
+  return res.json() as Promise<DiagnosticsResult>;
 }

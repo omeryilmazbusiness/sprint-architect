@@ -9,6 +9,8 @@ declare global {
   namespace Express {
     interface Request {
       actor?: ActorContext;
+      /** Set by clinicScopeMiddleware — convenience accessor for the clinic-scoped clinic ID. */
+      clinicId?: string | null;
     }
   }
 }
@@ -111,7 +113,7 @@ export function clinicScopeMiddleware(
     return;
   }
 
-  (req as any).clinicId = req.actor.clinicId;
+  req.clinicId = req.actor.clinicId;
   next();
 }
 

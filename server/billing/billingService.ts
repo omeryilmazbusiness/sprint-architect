@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { logger } from "../shared/logger";
 import { clinics, invoices, patients, users } from "@shared/schema";
 import { eq, and, lt, not, gte, isNotNull, or, inArray, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
@@ -107,9 +108,9 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
         )
       );
     if (fallbackCount > 0) {
-      console.warn(
-        `[billing] ${fallbackCount} patient(s) in clinic ${clinic.id} had no arrivalDate for period ${period} — using createdAt as fallback`
-      );
+      logger.warn("[billing] patients missing arrivalDate, using createdAt fallback", {
+        clinicId: clinic.id, period, count: fallbackCount,
+      });
     }
 
     const unitPrice = clinic.billingUnitPrice ?? parseFloat(process.env.DEFAULT_UNIT_PRICE ?? "50");
@@ -170,9 +171,9 @@ export async function generatePendingInvoicesForPeriod(period: string): Promise<
           .update(invoices)
           .set({ emailedAt: new Date(), emailedTo: clinic.contactEmail } as any)
           .where(eq(invoices.id, invoice.id));
-        console.log(`[billing] Invoice email sent → ${clinic.contactEmail} (${clinic.name})`);
+        logger.info("[billing] invoice email sent", { clinicId: clinic.id, email: clinic.contactEmail });
       } catch (err) {
-        console.error(`[billing] Failed to email invoice to ${clinic.contactEmail}:`, err);
+        logger.error("[billing] invoice email failed", { clinicId: clinic.id, error: String(err) });
       }
     }
   }
@@ -229,7 +230,7 @@ export async function sendMonthlyReport(): Promise<void> {
     metadata: { period, totalInvoices: periodInvoices.length, paid, unpaid, pending, suspendedClinics },
   });
 
-  console.log(`[billing] Monthly report for ${period} sent to ${reportEmail}`);
+  logger.info("[billing] monthly report sent", { period, reportEmail });
 }
 
 export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
@@ -332,6 +333,6 @@ export async function runBillingCycle(targetClinicIds?: string[]): Promise<void>
   try {
     await checkAndSuspendOverdue();
   } catch (err) {
-    console.error("[billing] runBillingCycle error:", err);
+    logger.error("[billing] runBillingCycle error", { error: String(err) });
   }
 }

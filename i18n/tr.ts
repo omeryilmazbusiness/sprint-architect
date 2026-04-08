@@ -517,6 +517,9 @@ export const tr: AppDict = {
     rowPrivacy: "Gizlilik Politikası",
     rowPrivacySub: "Verilerinizi nasıl işliyoruz",
     rowSignOut: "Çıkış Yap",
+    alertOk: "Tamam",
+    alertHelpBody: "Destek için support@healory.com adresine yazın",
+    alertPrivacyBody: "Gizlilik politikamız healory.com/privacy adresinde mevcuttur",
   },
 
   managerInvoices: {

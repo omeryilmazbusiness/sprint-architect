@@ -34,17 +34,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/stats", (_req, res) => {
-    res.json({
-      totalPatients: 0,
-      activePatients: 0,
-      totalClinics: 1,
-      appointmentsToday: 0,
-      pendingTransports: 0,
-      revenue: { thisMonth: 0, lastMonth: 0, currency: "USD" },
-    });
-  });
-
   app.use("/v1/auth", authRoutes);
   app.use("/v1/patient", patientRoutes);
   app.use("/v1/patient", patientDashboardRoute);

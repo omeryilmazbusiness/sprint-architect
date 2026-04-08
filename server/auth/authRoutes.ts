@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { logger } from "../shared/logger";
 import { z } from "zod";
 import { verifyPassword } from "./password";
 import {
@@ -150,8 +151,8 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
       email: user.email,
       role: user.role,
       clinicId: user.clinicId,
-      mustChangePassword: (user as any).mustChangePassword ?? false,
-      lastLoginAt: (user as any).lastLoginAt?.toISOString() ?? null,
+      mustChangePassword: (user.mustChangePassword as boolean | undefined) ?? false,
+      lastLoginAt: (user.lastLoginAt as Date | null | undefined)?.toISOString() ?? null,
     },
   });
 });
@@ -280,11 +281,11 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
       const { email } = parsed.data;
       const user = await authRepo.findUserByEmail(email.toLowerCase());
       if (!user) {
-        console.log(`[credential-request] MANAGER_PASSWORD: no user found for email=${email} (silent)`);
+        logger.info("[credential-request] MANAGER_PASSWORD: no user found (silent)");
       } else if (user.role !== "MANAGER") {
-        console.log(`[credential-request] MANAGER_PASSWORD: user role=${user.role} is not MANAGER (silent)`);
+        logger.info("[credential-request] MANAGER_PASSWORD: non-manager role (silent)", { role: user.role });
       } else if (user.status !== "ACTIVE") {
-        console.log(`[credential-request] MANAGER_PASSWORD: user status=${user.status} not ACTIVE (silent)`);
+        logger.info("[credential-request] MANAGER_PASSWORD: user not active (silent)", { status: user.status });
       } else {
         const row = await credentialRequestRepo.create({
           kind: "MANAGER_PASSWORD",
@@ -292,7 +293,7 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
           requesterEmail: user.email,
           targetUserId: user.id,
         });
-        console.log(`[credential-request] created MANAGER_PASSWORD id=${row.id} targetUserId=${user.id} clinicId=${user.clinicId}`);
+        logger.info("[credential-request] MANAGER_PASSWORD created", { id: row.id, targetUserId: user.id });
         auditLog({
           actorId: user.id,
           actorRole: user.role,
@@ -306,16 +307,16 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
       const { guestAccessKey } = parsed.data;
       const patient = await patientRepo.findByKey(guestAccessKey.toUpperCase());
       if (!patient) {
-        console.log(`[credential-request] GUEST_ACCESS_KEY: no patient found for key=${guestAccessKey.toUpperCase()} (silent)`);
+        logger.info("[credential-request] GUEST_ACCESS_KEY: no patient found (silent)");
       } else if (patient.status !== "ACTIVE") {
-        console.log(`[credential-request] GUEST_ACCESS_KEY: patient status=${patient.status} not ACTIVE (silent)`);
+        logger.info("[credential-request] GUEST_ACCESS_KEY: patient not active (silent)", { status: patient.status });
       } else {
         const row = await credentialRequestRepo.create({
           kind: "GUEST_ACCESS_KEY",
           clinicId: patient.clinicId,
           targetPatientId: patient.id,
         });
-        console.log(`[credential-request] created GUEST_ACCESS_KEY id=${row.id} targetPatientId=${patient.id} clinicId=${patient.clinicId}`);
+        logger.info("[credential-request] GUEST_ACCESS_KEY created", { id: row.id });
         auditLog({
           actorId: patient.id,
           actorRole: "PATIENT",
@@ -327,7 +328,7 @@ router.post("/credential-requests", credentialRequestLimiter, async (req: Reques
       }
     }
   } catch (err) {
-    console.error("[credential-request] unexpected error:", err);
+    logger.error("[credential-request] unexpected error", { error: String(err) });
   }
 
   res.json(GENERIC_SUCCESS);

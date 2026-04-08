@@ -1,0 +1,234 @@
+You are working on an EXISTING production-grade application.
+
+Your mission is to take this app from its current state to at least **95% production-ready**.
+
+This is a FINAL HARDENING TASK.
+Do NOT stop at analysis.
+Do NOT stop at reporting.
+Audit first, then directly implement the critical and major fixes required to reach 95%+ production readiness.
+
+STRICT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT make random refactors without clear justification
+- First inspect the real codebase deeply
+- Then identify the exact blockers preventing 95%+ production readiness
+- Then implement the required fixes in the correct order
+- Preserve good architecture where possible
+- Refactor only where needed for security, correctness, reliability, maintainability, UX quality, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake “done” claims
+- Do not mark the task complete unless the critical blockers are actually fixed
+- The end result must be architecturally clean, secure, stable, and production-grade
+
+PRIMARY GOAL
+Bring the app to at least 95% production-ready by fixing the real remaining blockers.
+
+KNOWN HIGH-PRIORITY AREAS TO VERIFY AND FIX
+You MUST verify and fix these if still present:
+
+1. SECURITY HARDENING
+- Ensure JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are required and production-safe
+- Ensure there are no insecure secret fallbacks
+- Add/verify Helmet or equivalent security headers on backend
+- Ensure request/response logging redacts credentials, tokens, one-time passwords, one-time access keys, device IDs if needed
+- Audit legacy endpoints for bypass risks
+- Ensure clinic isolation and role boundaries remain intact
+
+2. GUEST DEVICE LOCK
+- Verify one guest key truly works on only one active device
+- Ensure GUEST_MULTI_DEVICE_DEMO or any bypass/demo flags are removed/disabled for production
+- Ensure first login binds device correctly
+- Ensure second device login is blocked
+- Ensure refresh/session restore cannot bypass the lock
+- Ensure manager/admin reset fully revokes old device access
+
+3. MOBILE TOKEN STORAGE
+- Migrate auth token persistence from insecure storage to secure mobile storage where needed
+- Use the correct secure storage approach (for Expo/React Native) in a production-safe way
+- Ensure session restore still works
+- Ensure no token leak risk remains on mobile
+
+4. AUTH / SESSION HARDENING
+- Audit guest / manager / admin login flows
+- Verify refresh rotation
+- Verify logout behavior
+- Verify session restore
+- Verify provider boundaries
+- Verify no alternate auth path bypasses current rules
+- Verify language selection persists through login if applicable
+
+5. STARTUP / ANDROID / IOS STABILITY
+- Fix any remaining startup/runtime issues
+- Ensure welcome/splash/login flow is stable
+- Ensure no Expo Go / notifications / provider-order runtime issues remain
+- Ensure Android and iOS startup are clean and prod-safe
+
+6. BACKEND/API CONSISTENCY
+- Fix inconsistent error shapes where important
+- Reduce duplicate/shadowed routes where risky
+- Improve modularity where needed
+- Ensure validation and route behavior are consistent enough for production
+
+7. OBSERVABILITY / LOGGING
+- Improve structured logging enough for production diagnosis
+- Keep audit logs meaningful
+- Remove noisy or insecure logs
+- Ensure sensitive data never reaches logs
+
+8. I18N / UI PRODUCTION CONSISTENCY
+- Verify that the current language system does not leave major hardcoded visible strings in key flows
+- Focus on production-critical surfaces first: login, auth errors, dashboard headers, notifications, settings, major CRUD flows
+- Do not spend time polishing low-priority placeholder screens before security/stability blockers are fixed
+
+9. UX / MOBILE HARDENING
+- Fix dead buttons in key surfaces
+- Ensure modals, bottom sheets, forms, and keyboard handling are stable
+- Ensure error and loading states are clean
+- Ensure no core flow feels incomplete or broken
+
+10. TYPOGRAPHY / DESIGN SYSTEM
+- Verify the modern font system is implemented safely
+- Ensure font loading is stable
+- Ensure there is no font-related startup/runtime risk
+- Ensure typography is reasonably consistent in key surfaces
+
+FULL AUDIT SCOPE
+You MUST inspect all of the following:
+- Auth / Authorization
+- App startup / boot
+- Admin side
+- Manager side
+- Guest side
+- Documents
+- Appointments
+- Billing / invoices
+- Notifications
+- CRUD flows
+- i18n / language persistence
+- Typography / design system
+- Backend / API quality
+- Data / DB integrity
+- Security
+- Performance / stability
+- Observability / debugability
+
+REQUIRED WORKFLOW
+
+PHASE 1 — FULL AUDIT
+Perform a full audit first.
+
+I need a real structured audit with evidence, not vague comments.
+
+You must trace actual paths:
+UI → hook/state → route/API → service/use case → repository/DB
+
+PHASE 2 — SCORE EACH AREA
+Score each area realistically:
+- Ready
+- Needs Improvement
+- Not Ready
+
+Give a numerical score too.
+
+PHASE 3 — IDENTIFY WHAT BLOCKS 95%+
+Classify findings into:
+- P0 Critical blockers
+- P1 Major issues
+- P2 Important improvements
+- P3 Future polish
+
+PHASE 4 — FIX THE BLOCKERS
+Directly implement the P0 and P1 fixes required to get the app as close as possible to 95%+ production-ready.
+
+You must prioritize in this order:
+1. Security / auth / data integrity
+2. Device lock correctness
+3. Startup / platform blockers
+4. Token/session safety
+5. Backend/API consistency
+6. Logging / observability
+7. UX/mobile hardening
+8. Final polish
+
+PHASE 5 — RE-ASSESS
+After fixes, re-audit and give an honest updated production-readiness score.
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+- short summary
+- production-readiness before fixes
+- target
+- confidence level
+
+## 2. Full End-to-End Audit
+- structured analysis from auth through all major product flows
+
+## 3. Production Readiness Score by Area
+For each area:
+- status
+- score
+- short reason
+
+## 4. P0 Critical Blockers
+List all critical blockers clearly.
+
+## 5. P1 Major Issues
+List all major issues clearly.
+
+## 6. P2 Important Improvements
+List all important improvements clearly.
+
+## 7. P3 Future Enhancements
+List all future enhancements clearly.
+
+## 8. Prioritized Fix Plan
+Explain exact fix order.
+
+## 9. Files / Modules to Update
+List exact files/modules and why.
+
+## 10. Implemented Changes
+After coding, summarize exactly what you changed.
+
+## 11. Re-Assessment
+Give updated production-readiness score after fixes.
+
+## 12. Remaining Risks
+List any remaining risks.
+
+## 13. Final Verdict
+Answer clearly:
+- Is the app now at least 95% production-ready?
+- If not, exactly what still blocks it?
+
+STRICT ENGINEERING EXPECTATIONS
+- Keep architecture SOLID-compliant
+- Thin route/controller layer
+- Business logic in services/use cases
+- Persistence in repositories
+- Unified auth/session logic
+- Unified notification logic
+- Unified i18n approach
+- No duplicate or conflicting flows
+- Remove dead/confusing code where safe
+- Be honest about what is still not ready
+
+FINAL STRICT RULE
+DO NOT mark this task complete if:
+- critical security issues remain
+- guest multi-device bypass remains
+- token storage remains insecure without mitigation
+- startup/platform blockers remain
+- the realistic score is still below 95%
+
+If the score is still below 95%, continue fixing the highest-priority remaining blockers until either:
+1. the app reaches 95%+, or
+2. you can prove exactly which remaining blockers require broader product decisions
+
+START NOW
+First inspect the entire codebase deeply and perform the full production-readiness audit.
+Then implement the highest-priority fixes end-to-end professionally until the app reaches as close as possible to 95%+ production readiness.

@@ -548,6 +548,9 @@ export interface ManagerSettingsDict {
   rowPrivacy: string;
   rowPrivacySub: string;
   rowSignOut: string;
+  alertOk: string;
+  alertHelpBody: string;
+  alertPrivacyBody: string;
 }
 
 export interface ManagerInvoicesDict {

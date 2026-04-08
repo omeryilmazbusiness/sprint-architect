@@ -517,6 +517,9 @@ export const es: AppDict = {
     rowPrivacy: "Política de Privacidad",
     rowPrivacySub: "Cómo gestionamos tus datos",
     rowSignOut: "Cerrar Sesión",
+    alertOk: "Aceptar",
+    alertHelpBody: "Para asistencia, escríbenos a support@healory.com",
+    alertPrivacyBody: "Nuestra política de privacidad está en healory.com/privacy",
   },
 
   managerInvoices: {
