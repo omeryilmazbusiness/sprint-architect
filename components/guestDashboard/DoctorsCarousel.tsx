@@ -282,7 +282,7 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   diplomaText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: "#059669",
   },
@@ -313,7 +313,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   avatarInitials: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 24,
     color: T.accent,
     letterSpacing: -0.5,
@@ -321,7 +321,7 @@ const s = StyleSheet.create({
 
   heroInfo: { flex: 1, gap: 5 },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
     letterSpacing: -0.3,
@@ -333,7 +333,7 @@ const s = StyleSheet.create({
     gap: 5,
   },
   specialty: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.accent,
     flex: 1,
@@ -346,14 +346,14 @@ const s = StyleSheet.create({
     gap: 7,
   },
   metaText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,
   },
 
   bio: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 19,
@@ -373,7 +373,7 @@ const s = StyleSheet.create({
   },
   langExtra: { backgroundColor: T.surfaceSubtle },
   langText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.accent,
   },
@@ -396,7 +396,7 @@ const s = StyleSheet.create({
     borderColor: "rgba(3,105,161,0.15)",
   },
   contactBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.accent,
   },
@@ -430,13 +430,13 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
     textAlign: "center",
   },
   emptySub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
     textAlign: "center",

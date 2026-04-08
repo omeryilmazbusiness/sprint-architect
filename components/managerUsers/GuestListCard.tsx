@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
   },
   nameCol: {
@@ -207,17 +207,17 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   name: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 16,
     color: T.text,
   },
   travelLine: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.accent,
   },
   travelLineMuted: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   keyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.textSec,
     flex: 1,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.border,
   },
   phoneText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     flexShrink: 1,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     borderColor: "#BFDBFE",
   },
   tagText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
   },

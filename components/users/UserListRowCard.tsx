@@ -166,18 +166,18 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
   },
   info: { flex: 1, gap: 3 },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: T.text,
     lineHeight: 20,
   },
   email: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11.5,
     color: T.textMuted,
     marginTop: -1,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r6,
   },
   chipText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     letterSpacing: 0.2,
   },

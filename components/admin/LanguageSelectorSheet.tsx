@@ -146,7 +146,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
   },
@@ -178,12 +178,12 @@ const s = StyleSheet.create({
   },
   localeLabel: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
   localeLabelActive: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.primary,
   },
   emptyCheck: {
@@ -209,7 +209,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   closeText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.textSec,
   },

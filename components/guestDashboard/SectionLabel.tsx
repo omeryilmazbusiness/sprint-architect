@@ -8,7 +8,7 @@ export function SectionLabel({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
     marginBottom: T.sp12,

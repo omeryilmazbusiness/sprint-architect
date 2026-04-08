@@ -156,7 +156,7 @@ export function PurgeDangerSection({ user, onPurged }: Props) {
                 <Text style={s.modalTitle}>Are you absolutely sure?</Text>
                 <Text style={s.modalBody}>
                   You are about to permanently delete{"\n"}
-                  <Text style={{ fontFamily: "Inter_600SemiBold", color: T.text }}>
+                  <Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", color: T.text }}>
                     {user.fullName ?? user.email}
                   </Text>
                   {"\n"}This cannot be undone.
@@ -263,7 +263,7 @@ export function PurgeDangerSection({ user, onPurged }: Props) {
                 <Text style={s.modalTitle}>Type to confirm</Text>
                 <Text style={s.modalBody}>
                   This will permanently delete{"\n"}
-                  <Text style={{ fontFamily: "Inter_600SemiBold", color: T.text }}>
+                  <Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", color: T.text }}>
                     {user.fullName ?? user.email}
                   </Text>
                   {"\n"}and all associated records.
@@ -311,7 +311,7 @@ export function PurgeDangerSection({ user, onPurged }: Props) {
 
 const s = StyleSheet.create({
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.danger,
     letterSpacing: 1,
@@ -343,18 +343,18 @@ const s = StyleSheet.create({
   },
   dangerHeaderText: { flex: 1 },
   dangerTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
     marginBottom: 2,
   },
   dangerSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
   dangerDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 19,
@@ -369,7 +369,7 @@ const s = StyleSheet.create({
     backgroundColor: T.danger,
   },
   purgeBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: "#fff",
   },
@@ -402,13 +402,13 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 19,
     color: T.text,
     textAlign: "center",
   },
   modalBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     textAlign: "center",
@@ -429,7 +429,7 @@ const s = StyleSheet.create({
     borderColor: T.border,
   },
   cancelBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.textSec,
   },
@@ -441,7 +441,7 @@ const s = StyleSheet.create({
     backgroundColor: T.primary,
   },
   proceedBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: "#fff",
   },
@@ -453,7 +453,7 @@ const s = StyleSheet.create({
     backgroundColor: T.danger,
   },
   purgeConfirmBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: "#fff",
   },
@@ -482,12 +482,12 @@ const s = StyleSheet.create({
   },
   depLabel: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
   },
   depCount: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.text,
   },
@@ -511,7 +511,7 @@ const s = StyleSheet.create({
     borderColor: T.dangerBorder,
   },
   blockedTagText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.danger,
   },
@@ -523,7 +523,7 @@ const s = StyleSheet.create({
     width: "100%",
   },
   modeLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
@@ -540,7 +540,7 @@ const s = StyleSheet.create({
     backgroundColor: T.accent + "15",
   },
   modeBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -548,7 +548,7 @@ const s = StyleSheet.create({
     color: T.accent,
   },
   modeNote: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",
@@ -566,12 +566,12 @@ const s = StyleSheet.create({
     gap: 4,
   },
   confirmHintText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
   confirmHintValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: T.danger,
     letterSpacing: 0.5,
@@ -583,7 +583,7 @@ const s = StyleSheet.create({
     borderRadius: T.r10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     backgroundColor: T.surfaceSubtle,

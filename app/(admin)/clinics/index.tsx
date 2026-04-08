@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: T.r8,
   },
-  newBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  newBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: "#fff" },
 
   filterArea: { backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border },
   searchBar: {
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.border,
   },
-  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  searchInput: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text },
   filterRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   filterScroll: { paddingHorizontal: 14, paddingVertical: 9, gap: 7, flexDirection: "row", alignItems: "center" },
   clearBtn: {
@@ -302,10 +302,10 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     backgroundColor: T.surface,
   },
-  clearBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec },
+  clearBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.textSec },
 
   countLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     paddingHorizontal: 16,
@@ -333,14 +333,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: T.primary },
+  avatarText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 16, color: T.primary },
   cardBody: { flex: 1, gap: 3 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
-  clinicName: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  clinicName: { flex: 1, fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
   chevron: { flexShrink: 0 },
 
   serviceText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textSec,
   },
@@ -352,13 +352,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   managerText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11.5,
     color: T.text,
     flexShrink: 1,
   },
   managerEmail: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     flexShrink: 1,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   phoneText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.accent,
   },

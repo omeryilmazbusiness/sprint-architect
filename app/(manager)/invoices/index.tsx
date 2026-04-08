@@ -57,10 +57,10 @@ function InvoiceCard({ invoice, colors }: { invoice: Invoice; colors: any }) {
             <Ionicons name="document-text-outline" size={20} color={statusColors[invoice.status]} />
           </View>
           <View>
-            <Text style={[styles.period, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.period, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
               {invoice.period}
             </Text>
-            <Text style={[styles.date, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.date, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               Created {new Date(invoice.createdAt).toLocaleDateString()}
             </Text>
           </View>
@@ -70,10 +70,10 @@ function InvoiceCard({ invoice, colors }: { invoice: Invoice; colors: any }) {
 
       <View style={styles.cardBody}>
         <View style={styles.metric}>
-          <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
             Total
           </Text>
-          <Text style={[styles.metricValue, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.metricValue, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
             {invoice.total} {invoice.currency}
           </Text>
         </View>
@@ -87,26 +87,26 @@ function InvoiceCard({ invoice, colors }: { invoice: Invoice; colors: any }) {
       {expanded && (
         <View style={[styles.expandedContent, { borderTopColor: colors.border }]}>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               Patients this month
             </Text>
-            <Text style={[styles.detailValue, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.detailValue, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
               {invoice.patientCount}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               Unit Price
             </Text>
-            <Text style={[styles.detailValue, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.detailValue, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
               {invoice.unitPrice} {invoice.currency}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               Invoice ID
             </Text>
-            <Text style={[styles.detailValue, { color: colors.textMuted, fontSize: 10, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.detailValue, { color: colors.textMuted, fontSize: 10, fontFamily: "PlusJakartaSans_400Regular" }]}>
               {invoice.id}
             </Text>
           </View>
@@ -135,7 +135,7 @@ export default function InvoicesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+        <Text style={[styles.title, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
           Invoices
         </Text>
       </View>

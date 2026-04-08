@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     gap: T.sp12,
   },
   errorTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.danger,
   },
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r8,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: "#fff",
   },

@@ -544,17 +544,17 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   fieldLast: { borderBottomWidth: 0 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
+  fieldLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textSec },
   required: { color: T.danger },
   fieldError: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.danger,
     marginTop: 2,
   },
 
   input: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
     paddingVertical: Platform.OS === "ios" ? 6 : 4,
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   inputError: { color: T.text },
 
   sectionHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     marginBottom: 14,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: T.primary, borderColor: T.primary },
   chipInactive: { backgroundColor: T.surface, borderColor: T.border },
-  chipText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  chipText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14 },
   chipTextActive: { color: "#fff" },
   chipTextInactive: { color: T.textSec },
 
@@ -599,11 +599,11 @@ const styles = StyleSheet.create({
     borderColor: T.accent,
     backgroundColor: T.accent + "12",
   },
-  currencyText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec },
+  currencyText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.textSec },
   currencyTextActive: { color: T.accent },
 
   actions: { marginTop: 28, gap: 12 },
   submitBtn: { width: "100%" },
   cancelBtn: { alignItems: "center", paddingVertical: 14 },
-  cancelBtnText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.textSec },
+  cancelBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 15, color: T.textSec },
 });

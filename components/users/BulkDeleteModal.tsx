@@ -134,13 +134,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: T.text,
     textAlign: "center",
   },
   body: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     textAlign: "center",
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   warnText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12.5,
     color: T.warningText,
     lineHeight: 17,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   blockedText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12.5,
     color: T.dangerText,
     lineHeight: 17,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   cancelText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.textSec,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.danger,
   },
   confirmText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },

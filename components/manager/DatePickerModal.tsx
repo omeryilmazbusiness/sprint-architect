@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
   },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   monthText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 16,
     color: T.text,
   },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   weekDay: {
     flex: 1,
     textAlign: "center",
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   dayText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
   },
@@ -253,11 +253,11 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
   },
   dayTextToday: {
     color: T.primary,
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
   },
   dayTextDisabled: {
     color: T.textMuted,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "30",
   },
   selectedText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.primary,
   },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.border,
   },
   confirmText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: "#fff",
   },

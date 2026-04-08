@@ -52,7 +52,7 @@ const s = StyleSheet.create({
     backgroundColor: T.primary + "08",
   },
   label: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12.5,
     flexShrink: 1,
   },

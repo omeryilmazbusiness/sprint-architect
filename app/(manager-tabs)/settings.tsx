@@ -168,17 +168,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: "#fff",
   },
   profileName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
   },
   profileEmail: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
   },
   clinicInfo: { flex: 1 },
   clinicName: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
   },
   clinicId: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   suspendedText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.dangerText,
     lineHeight: 18,

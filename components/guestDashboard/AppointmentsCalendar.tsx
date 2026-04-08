@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   monthCenter: { flex: 1, alignItems: "center" },
   monthLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18, color: T.text, letterSpacing: -0.3,
   },
   navRight: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(3,105,161,0.2)",
   },
   todayBtnText: {
-    fontFamily: "Inter_600SemiBold", fontSize: 11, color: T.accent,
+    fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 11, color: T.accent,
   },
   weekRow: {
     flexDirection: "row",
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   weekDay: {
     width: `${100 / 7}%`,
     textAlign: "center",
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11, color: T.textMuted,
     textTransform: "uppercase", letterSpacing: 0.3,
   },
@@ -201,12 +201,12 @@ const styles = StyleSheet.create({
     borderColor: "#059669",
   },
   dayNum: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     lineHeight: 20,
   },
   dayNumToday: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: "#059669",
   },
   legendDivider: {
@@ -221,6 +221,6 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 6,
     alignItems: "center", justifyContent: "center",
   },
-  swatchTxt: { fontFamily: "Inter_700Bold", fontSize: 9 },
-  legendLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
+  swatchTxt: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 9 },
+  legendLabel: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted },
 });

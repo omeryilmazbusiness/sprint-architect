@@ -95,10 +95,10 @@ export default function DashboardScreen() {
       >
         <View style={styles.headerTop}>
           <View>
-            <Text style={[styles.greeting, { fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.greeting, { fontFamily: "PlusJakartaSans_400Regular" }]}>
               Good morning,
             </Text>
-            <Text style={[styles.adminName, { fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.adminName, { fontFamily: "PlusJakartaSans_700Bold" }]}>
               {user?.fullName ?? "Admin"}
             </Text>
           </View>
@@ -125,17 +125,17 @@ export default function DashboardScreen() {
                 },
               ]}
             />
-            <Text style={[styles.apiText, { fontFamily: "Inter_500Medium" }]}>
+            <Text style={[styles.apiText, { fontFamily: "PlusJakartaSans_500Medium" }]}>
               {healthLoading ? "Checking..." : health?.status === "ok" ? "API Online" : "API Offline"}
             </Text>
           </View>
         </View>
 
         <View style={styles.headerStat}>
-          <Text style={[styles.bigValue, { fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.bigValue, { fontFamily: "PlusJakartaSans_700Bold" }]}>
             {metricsLoading ? "—" : metrics?.totalPatients ?? "—"}
           </Text>
-          <Text style={[styles.bigLabel, { fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.bigLabel, { fontFamily: "PlusJakartaSans_400Regular" }]}>
             Total Patients Across All Clinics
           </Text>
         </View>
@@ -145,7 +145,7 @@ export default function DashboardScreen() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: colors.text, fontFamily: "Inter_600SemiBold" },
+            { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" },
           ]}
         >
           Key Metrics
@@ -169,7 +169,7 @@ export default function DashboardScreen() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: colors.text, fontFamily: "Inter_600SemiBold", marginTop: 8 },
+            { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold", marginTop: 8 },
           ]}
         >
           Upcoming Appointments
@@ -178,7 +178,7 @@ export default function DashboardScreen() {
         {!appointments || appointments.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
               No upcoming appointments
             </Text>
           </View>
@@ -196,15 +196,15 @@ export default function DashboardScreen() {
               ]}
             >
               <View style={[styles.aptTime, { backgroundColor: colors.accent + "15" }]}>
-                <Text style={[styles.aptTimeText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+                <Text style={[styles.aptTimeText, { color: colors.accent, fontFamily: "PlusJakartaSans_700Bold" }]}>
                   {formatDate(apt.startAt)}
                 </Text>
               </View>
               <View style={styles.aptInfo}>
-                <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
                   {apt.patient.fullName}
                 </Text>
-                <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                   {apt.type}{apt.doctor ? ` · ${apt.doctor.name}` : ""}
                 </Text>
               </View>
@@ -217,25 +217,25 @@ export default function DashboardScreen() {
           <View style={[styles.apiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.apiCardHeader}>
               <Ionicons name="server-outline" size={16} color={colors.accent} />
-              <Text style={[styles.apiCardTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[styles.apiCardTitle, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
                 System Status
               </Text>
             </View>
             <View style={styles.apiRow}>
-              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>Service</Text>
-              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "Inter_500Medium" }]}>{health.service}</Text>
+              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>Service</Text>
+              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "PlusJakartaSans_500Medium" }]}>{health.service}</Text>
             </View>
             <View style={styles.apiRow}>
-              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>Version</Text>
-              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "Inter_500Medium" }]}>v{health.version}</Text>
+              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>Version</Text>
+              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "PlusJakartaSans_500Medium" }]}>v{health.version}</Text>
             </View>
             <View style={styles.apiRow}>
-              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>Environment</Text>
-              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "Inter_500Medium" }]}>{health.environment}</Text>
+              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>Environment</Text>
+              <Text style={[styles.apiVal, { color: colors.text, fontFamily: "PlusJakartaSans_500Medium" }]}>{health.environment}</Text>
             </View>
             <View style={styles.apiRow}>
-              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>Last Check</Text>
-              <Text style={[styles.apiVal, { color: colors.success, fontFamily: "Inter_500Medium" }]}>
+              <Text style={[styles.apiKey, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>Last Check</Text>
+              <Text style={[styles.apiVal, { color: colors.success, fontFamily: "PlusJakartaSans_500Medium" }]}>
                 {formatDate(health.time)}
               </Text>
             </View>

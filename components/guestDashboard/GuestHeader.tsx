@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
   },
   left: { flex: 1, marginRight: 16 },
   date: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginBottom: 4,
     letterSpacing: 0.1,
   },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 24,
     color: T.text,
     letterSpacing: -0.3,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderColor: T.surface,
   },
   badgeTxt: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 8,
     color: "#fff",
   },

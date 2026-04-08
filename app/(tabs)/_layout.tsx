@@ -64,7 +64,7 @@ function ClassicTabLayout() {
             />
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
+          fontFamily: "PlusJakartaSans_500Medium",
           fontSize: 10,
           marginBottom: 2,
         },

@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   monthTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 16,
     color: T.text,
     minWidth: 120,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   todayBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.primary,
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   weekDayText: {
     flex: 1,
     textAlign: "center",
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: T.primary,
   },
   dayText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
   },
@@ -295,11 +295,11 @@ const styles = StyleSheet.create({
   },
   selectedDayText: {
     color: "#fff",
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
   },
   todayDayText: {
     color: T.primary,
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
   },
   dot: {
     width: 4,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     marginTop: T.sp8,
   },
   agendaTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
   },
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },
@@ -356,23 +356,23 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   timeText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
     color: T.primary,
   },
   apptInfo: { flex: 1, gap: 1 },
   apptTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
   },
   apptPatient: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.text,
   },
   apptDoctor: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },

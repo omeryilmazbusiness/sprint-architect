@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
   },
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   editBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.accent,
   },
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   hotelName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
   },
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   rowText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,
@@ -165,12 +165,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emptyText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textSec,
   },
   emptyHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.04)",
   },
   skipText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.45)",
     letterSpacing: 0.2,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   brandName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 42,
     color: "#ffffff",
     letterSpacing: -1.5,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     maxWidth: 40,
   },
   tagline: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 10,
     color: "rgba(255,255,255,0.30)",
     letterSpacing: 3,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   pillarLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: "rgba(255,255,255,0.30)",
     letterSpacing: 0.4,
@@ -379,20 +379,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   captionLine1: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 22,
     color: "rgba(255,255,255,0.45)",
     letterSpacing: -0.3,
   },
   captionLine2: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: "#ffffff",
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   captionSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.25)",
     textAlign: "center",

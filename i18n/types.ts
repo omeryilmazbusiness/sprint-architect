@@ -592,6 +592,24 @@ export interface ManagerPatientDict {
   approveGuestConfirm: string;
   approveGuestCancel: string;
   approveGuestAction: string;
+  toastApproved: string;
+  toastApprovalFailed: string;
+  toastResetDevice: string;
+  toastResetDeviceFailed: string;
+  toastStepFailed: string;
+  toastTransportAssigned: string;
+  toastTransportFailed: string;
+  toastHotelAssigned: string;
+  toastHotelFailed: string;
+  toastDocAssigned: string;
+  toastDocAssignFailed: string;
+  toastDocStatusUpdated: string;
+  toastDocStatusFailed: string;
+  toastApptCancelled: string;
+  toastApptCancelFailed: string;
+  toastPreparingDoc: string;
+  toastPdfError: string;
+  toastApptCreated: string;
 }
 
 export interface ManagerDoctorsDict {

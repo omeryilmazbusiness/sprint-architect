@@ -31,7 +31,7 @@ export function StatusBadge({ status, small }: StatusBadgeProps) {
       <Text
         style={[
           styles.text,
-          { color, fontFamily: "Inter_600SemiBold" },
+          { color, fontFamily: "PlusJakartaSans_600SemiBold" },
           small && styles.smallText,
         ]}
       >

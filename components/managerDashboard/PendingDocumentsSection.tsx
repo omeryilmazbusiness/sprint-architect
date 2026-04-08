@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarInitial: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
   },
 
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   countBadgeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 12,
     color: "#fff",
   },
@@ -257,13 +257,13 @@ const styles = StyleSheet.create({
     borderColor: T.success + "40",
   },
   uploadedBadgeText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
     color: T.success,
   },
 
   guestName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: T.text,
     letterSpacing: -0.2,
@@ -274,11 +274,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   summaryBold: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 12,
   },
   summaryMuted: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -301,12 +301,12 @@ const styles = StyleSheet.create({
     maxWidth: CARD_W - 28,
   },
   chipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 10,
     flexShrink: 1,
   },
   moreChip: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: T.textMuted,
     alignSelf: "center",
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   ctaText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
   },
 
@@ -342,12 +342,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   allClearTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.success,
   },
   allClearSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.success,
     marginTop: 2,

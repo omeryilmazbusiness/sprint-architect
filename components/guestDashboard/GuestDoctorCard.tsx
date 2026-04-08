@@ -270,7 +270,7 @@ const s = StyleSheet.create({
     gap: 5,
   },
   chip: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
     textTransform: "uppercase",
@@ -286,7 +286,7 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   apptBadgeText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: T.accent,
   },
@@ -300,7 +300,7 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   certText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: "#059669",
   },
@@ -315,7 +315,7 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   certTextSmall: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 9,
     color: "#059669",
   },
@@ -344,7 +344,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   avatarInitials: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 26,
     color: T.accent,
     letterSpacing: -0.5,
@@ -355,14 +355,14 @@ const s = StyleSheet.create({
     paddingTop: 4,
   },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
     letterSpacing: -0.3,
     lineHeight: 23,
   },
   specialty: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.accent,
     lineHeight: 18,
@@ -380,13 +380,13 @@ const s = StyleSheet.create({
     gap: 3,
   },
   statsVal: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: T.text,
     textAlign: "center",
   },
   statsLbl: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -411,7 +411,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   bioText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 20,
@@ -422,7 +422,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   langsLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -443,7 +443,7 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.04)",
   },
   langText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.accent,
   },
@@ -466,13 +466,13 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.textMuted,
     textAlign: "center",
   },
   emptySub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",

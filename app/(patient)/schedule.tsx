@@ -529,7 +529,7 @@ const sum = StyleSheet.create({
   },
   nextLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
   nextLabelText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 10,
     color: T.accent,
     letterSpacing: 0.8,
@@ -544,20 +544,20 @@ const sum = StyleSheet.create({
     paddingVertical: 8,
     gap: 1,
   },
-  nextDateDay: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff" },
+  nextDateDay: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: "#fff" },
   nextDateMon: {
-    fontFamily: "Inter_600SemiBold", fontSize: 10,
+    fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10,
     color: "rgba(255,255,255,0.8)", textTransform: "uppercase",
   },
   nextInfo: { flex: 1, gap: 4 },
   nextTitle: {
-    fontFamily: "Inter_700Bold", fontSize: 15, color: T.text,
+    fontFamily: "PlusJakartaSans_700Bold", fontSize: 15, color: T.text,
     letterSpacing: -0.2, lineHeight: 20,
   },
   nextMeta: { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
-  nextMetaTxt: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
-  dot: { color: T.border, fontFamily: "Inter_700Bold", fontSize: 12 },
-  noNextTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
+  nextMetaTxt: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted },
+  dot: { color: T.border, fontFamily: "PlusJakartaSans_700Bold", fontSize: 12 },
+  noNextTxt: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.textMuted },
   kpiRow: { flexDirection: "row", gap: 10 },
 });
 
@@ -566,8 +566,8 @@ const kpi = StyleSheet.create({
     flex: 1, backgroundColor: T.surface, borderRadius: 14, borderWidth: 1,
     borderColor: T.border, alignItems: "center", paddingVertical: 14, gap: 4,
   },
-  value: { fontFamily: "Inter_700Bold", fontSize: 22, letterSpacing: -0.5 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 11, color: T.textMuted },
+  value: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 22, letterSpacing: -0.5 },
+  label: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 11, color: T.textMuted },
 });
 
 const fb = StyleSheet.create({
@@ -581,7 +581,7 @@ const fb = StyleSheet.create({
     borderColor: T.border, paddingHorizontal: 12, height: 44, gap: 8,
   },
   searchIcon: { flexShrink: 0 },
-  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: T.text, height: 44 },
+  searchInput: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.text, height: 44 },
   dropRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   drop: {
     flexDirection: "row", alignItems: "center", gap: 6,
@@ -589,27 +589,27 @@ const fb = StyleSheet.create({
     borderColor: T.border, paddingHorizontal: 12, paddingVertical: 9, flex: 1,
   },
   dropActive: { borderColor: T.accent, backgroundColor: "rgba(3,105,161,0.05)" },
-  dropTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec, flex: 1 },
+  dropTxt: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.textSec, flex: 1 },
   dropTxtActive: { color: T.accent },
   clearBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 9,
   },
-  clearTxt: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.danger },
+  clearTxt: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.danger },
 });
 
 const sh = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 12 },
   line: { flex: 1, height: 1, backgroundColor: T.border },
   text: {
-    fontFamily: "Inter_700Bold", fontSize: 12, color: T.textSec,
+    fontFamily: "PlusJakartaSans_700Bold", fontSize: 12, color: T.textSec,
     textTransform: "uppercase", letterSpacing: 0.5,
   },
   badge: {
     backgroundColor: T.surfaceSubtle, borderRadius: 10,
     paddingHorizontal: 7, paddingVertical: 2,
   },
-  badgeTxt: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: T.textSec },
+  badgeTxt: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, color: T.textSec },
 });
 
 const ac = StyleSheet.create({
@@ -622,16 +622,16 @@ const ac = StyleSheet.create({
     width: 46, alignItems: "center", backgroundColor: T.surfaceSubtle,
     borderRadius: 10, paddingVertical: 8, gap: 1,
   },
-  badgeDay: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  badgeMon: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: T.accent, textTransform: "uppercase" },
-  badgeWd:  { fontFamily: "Inter_400Regular",  fontSize: 9, color: T.textMuted },
+  badgeDay: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
+  badgeMon: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 9, color: T.accent, textTransform: "uppercase" },
+  badgeWd:  { fontFamily: "PlusJakartaSans_400Regular",  fontSize: 9, color: T.textMuted },
   body:     { flex: 1, gap: 5 },
-  title:    { fontFamily: "Inter_700Bold", fontSize: 14, color: T.text, lineHeight: 19 },
+  title:    { fontFamily: "PlusJakartaSans_700Bold", fontSize: 14, color: T.text, lineHeight: 19 },
   metaRow:  { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
-  metaTxt:  { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
-  dot:      { color: T.border, fontFamily: "Inter_700Bold", fontSize: 11 },
+  metaTxt:  { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted },
+  dot:      { color: T.border, fontFamily: "PlusJakartaSans_700Bold", fontSize: 11 },
   pill:     { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, alignSelf: "flex-start" },
-  pillTxt:  { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  pillTxt:  { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10 },
 });
 
 const el = StyleSheet.create({
@@ -640,17 +640,17 @@ const el = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: T.surfaceSubtle, alignItems: "center", justifyContent: "center",
   },
-  title:   { fontFamily: "Inter_700Bold",    fontSize: 16, color: T.text,    textAlign: "center" },
-  sub:     { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, textAlign: "center", lineHeight: 19, maxWidth: 260 },
+  title:   { fontFamily: "PlusJakartaSans_700Bold",    fontSize: 16, color: T.text,    textAlign: "center" },
+  sub:     { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textMuted, textAlign: "center", lineHeight: 19, maxWidth: 260 },
 });
 
 const st = StyleSheet.create({
   root:    { flex: 1, backgroundColor: T.bg },
   center:  { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
-  centerTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
-  errTitle:  { fontFamily: "Inter_700Bold",   fontSize: 17, color: T.text },
+  centerTxt: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.textMuted },
+  errTitle:  { fontFamily: "PlusJakartaSans_700Bold",   fontSize: 17, color: T.text },
   retryBtn:  { backgroundColor: T.accent, paddingHorizontal: 24, paddingVertical: 10, borderRadius: T.r10 },
-  retryTxt:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  retryTxt:  { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: "#fff" },
   listContent: { padding: T.sp16, gap: 0 },
   listEmpty:   { flex: 1 },
 });
@@ -668,7 +668,7 @@ const pm = StyleSheet.create({
     borderRadius: 2, alignSelf: "center", marginBottom: T.sp16,
   },
   title: {
-    fontFamily: "Inter_700Bold", fontSize: 16,
+    fontFamily: "PlusJakartaSans_700Bold", fontSize: 16,
     color: T.text, marginBottom: T.sp12,
   },
   option: {
@@ -677,6 +677,6 @@ const pm = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: T.border,
   },
   optionSelected: { backgroundColor: "rgba(3,105,161,0.06)", borderRadius: T.r10, paddingHorizontal: T.sp10 },
-  optLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
-  optLabelSelected: { fontFamily: "Inter_700Bold", color: T.accent },
+  optLabel: { flex: 1, fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
+  optLabelSelected: { fontFamily: "PlusJakartaSans_700Bold", color: T.accent },
 });

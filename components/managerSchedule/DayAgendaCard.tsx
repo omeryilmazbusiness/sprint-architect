@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   headerTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
   },
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderColor: T.successBorder,
   },
   countText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 12,
     color: T.success,
   },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   timeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11,
     color: T.accent,
   },
@@ -194,18 +194,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   patient: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.text,
   },
   title: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.text,
     opacity: 0.75,
   },
   doctor: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },

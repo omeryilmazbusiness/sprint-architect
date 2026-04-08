@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   headerTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
   },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -159,20 +159,20 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   dateDay: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: T.accent,
     lineHeight: 24,
   },
   dateMonth: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.accent,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   dateTime: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: T.textMuted,
     marginTop: 2,
@@ -182,18 +182,18 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   heroPatient: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
   },
   heroTitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.text,
     opacity: 0.75,
   },
   heroDoctor: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },

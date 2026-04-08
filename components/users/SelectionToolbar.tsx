@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   cancelText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
   count: {
     flex: 1,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
     textAlign: "center",
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent + "08",
   },
   selectAllText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.accent,
   },
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.border,
   },
   deleteText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: "#fff",
   },

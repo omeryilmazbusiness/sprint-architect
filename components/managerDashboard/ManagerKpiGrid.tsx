@@ -177,18 +177,18 @@ const styles = StyleSheet.create({
     marginBottom: T.sp8,
   },
   value: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 28,
     color: T.text,
     letterSpacing: -0.5,
   },
   label: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 12,
     color: T.text,
   },
   sub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badgeText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 10,
   },
 });

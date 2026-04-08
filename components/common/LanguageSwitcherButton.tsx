@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sheetTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -156,12 +156,12 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 16,
     color: T.text,
   },
   optionLabelActive: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.accent,
   },
 });

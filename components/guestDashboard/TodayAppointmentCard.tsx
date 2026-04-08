@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: T.sp12,
   },
   label: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: T.accent,
     textTransform: "uppercase",
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   time: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: T.primary,
   },
@@ -126,11 +126,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
   },
   title: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 16,
     color: T.text,
   },
@@ -141,12 +141,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   doctorName: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
   doctorSpec: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   locationText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,

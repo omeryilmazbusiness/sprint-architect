@@ -322,7 +322,7 @@ const ss = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.14)",
   },
   contextText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: "rgba(255,255,255,0.9)",
     letterSpacing: 0.3,
@@ -337,12 +337,12 @@ const ss = StyleSheet.create({
     gap: 5,
   },
   captionSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.75)",
   },
   captionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: "#ffffff",
     letterSpacing: -0.3,
@@ -367,12 +367,12 @@ const ss = StyleSheet.create({
     paddingHorizontal: 2,
   },
   statNum: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: "#ffffff",
   },
   statLbl: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 9,
     color: "rgba(255,255,255,0.65)",
     textTransform: "uppercase",

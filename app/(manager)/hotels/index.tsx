@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   searchIcon: { flexShrink: 0 },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     padding: 0,
@@ -397,11 +397,11 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   info: { flex: 1 },
-  name: { fontFamily: "Inter_600SemiBold" as "Inter_600SemiBold", fontSize: 15, color: T.text },
+  name: { fontFamily: "PlusJakartaSans_600SemiBold" as "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
   stars: { fontSize: 12, color: "#D97706", marginTop: 2 },
-  meta: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
+  meta: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
   empty: { paddingTop: 80, alignItems: "center", gap: T.sp12, paddingHorizontal: T.sp32 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
 
   // Toast
   toast: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   toastSuccess: { backgroundColor: "#16A34A" },
   toastError: { backgroundColor: "#DC2626" },
-  toastText: { fontFamily: "Inter_500Medium", fontSize: 13.5, color: "#fff", flexShrink: 1 },
+  toastText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13.5, color: "#fff", flexShrink: 1 },
 
   // Modal
   modal: { flex: 1, backgroundColor: T.bg },
@@ -432,15 +432,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: T.sp20, paddingTop: T.sp24, paddingBottom: T.sp16,
     backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border,
   },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  modalTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
   modalContent: { padding: T.sp20, gap: T.sp16, paddingBottom: 40 },
   field: { gap: T.sp4 },
   fieldRow: { flexDirection: "row", gap: T.sp12 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
+  fieldLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textSec },
   fieldInput: {
     backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: T.r10,
     paddingHorizontal: 14, paddingVertical: T.sp12,
-    fontFamily: "Inter_400Regular", fontSize: 15, color: T.text,
+    fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text,
   },
   textArea: { height: 80, textAlignVertical: "top" },
   modalActions: {
@@ -452,10 +452,10 @@ const styles = StyleSheet.create({
     flex: 1, height: 46, borderRadius: T.r10, borderWidth: 1, borderColor: T.border,
     alignItems: "center", justifyContent: "center", backgroundColor: T.surface,
   },
-  btnSecondaryText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
+  btnSecondaryText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 15, color: T.text },
   btnPrimary: {
     flex: 2, height: 46, borderRadius: T.r10, backgroundColor: T.primary,
     alignItems: "center", justifyContent: "center",
   },
-  btnPrimaryText: { fontFamily: "Inter_600SemiBold" as "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  btnPrimaryText: { fontFamily: "PlusJakartaSans_600SemiBold" as "PlusJakartaSans_600SemiBold", fontSize: 15, color: "#fff" },
 });

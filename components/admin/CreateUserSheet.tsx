@@ -83,7 +83,7 @@ const seg = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 8,
   },
-  label: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.textSec },
+  label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.textSec },
   activeLabel: { color: "#fff" },
 });
 
@@ -138,7 +138,7 @@ const cpick = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  text: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  text: { flex: 1, fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
   placeholder: { color: T.textMuted },
 });
 
@@ -172,8 +172,8 @@ function ToggleRow({
 
 const tog = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
-  sub: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 2 },
+  label: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
+  sub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted, marginTop: 2 },
 });
 
 // ─── ClinicSelectorModal ───────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ const csel = StyleSheet.create({
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginBottom: 16 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  title: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 17, color: T.text },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -257,9 +257,9 @@ const csel = StyleSheet.create({
     borderRadius: 10,
   },
   itemIcon: { width: 30, height: 30, borderRadius: 8, backgroundColor: T.accent + "12", alignItems: "center", justifyContent: "center" },
-  itemName: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
-  itemSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 1 },
-  empty: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center", paddingVertical: 24 },
+  itemName: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
+  itemSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted, marginTop: 1 },
+  empty: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center", paddingVertical: 24 },
 });
 
 // ─── OtpModal ─────────────────────────────────────────────────────────────────
@@ -295,7 +295,7 @@ function OtpModal({
           <Text style={otp.title}>{tcu.userCreatedTitle}</Text>
           <Text style={otp.sub}>
             {tcu.userCreatedSub.split("{email}")[0]}
-            <Text style={{ fontFamily: "Inter_600SemiBold", color: T.text }}>{email}</Text>
+            <Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", color: T.text }}>{email}</Text>
             {tcu.userCreatedSub.split("{email}")[1] ?? ""}
           </Text>
           <Pressable style={otp.pwBox} onPress={handleCopy}>
@@ -333,8 +333,8 @@ const otp = StyleSheet.create({
     elevation: 16,
   },
   iconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: T.successBg, alignItems: "center", justifyContent: "center" },
-  title: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
-  sub: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, textAlign: "center", lineHeight: 19 },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: T.text },
+  sub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textSec, textAlign: "center", lineHeight: 19 },
   pwBox: {
     width: "100%",
     backgroundColor: T.surfaceSubtle,
@@ -346,15 +346,15 @@ const otp = StyleSheet.create({
     alignItems: "center",
   },
   pwText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
     letterSpacing: 1,
     textAlign: "center",
   },
   copyBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
-  copyLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.accent },
-  note: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, textAlign: "center" },
+  copyLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.accent },
+  note: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted, textAlign: "center" },
   doneBtn: {
     width: "100%",
     backgroundColor: T.primary,
@@ -363,7 +363,7 @@ const otp = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  doneBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  doneBtnText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 15, color: "#fff" },
 });
 
 // ─── Main sheet ───────────────────────────────────────────────────────────────
@@ -591,17 +591,17 @@ const styles = StyleSheet.create({
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: T.border, alignSelf: "center", marginBottom: 16 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  title: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: T.text },
   content: { gap: 8, paddingBottom: 8 },
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.8,
     marginBottom: 8,
   },
   fields: { gap: 10 },
-  fieldHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.danger, marginTop: 4 },
+  fieldHint: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.danger, marginTop: 4 },
   toggleSection: {
     backgroundColor: T.surfaceSubtle,
     borderRadius: 12,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 16,
   },
-  infoText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.accent, lineHeight: 18 },
+  infoText: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.accent, lineHeight: 18 },
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -631,5 +631,5 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 24,
   },
-  submitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+  submitText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 16, color: "#fff" },
 });

@@ -41,9 +41,9 @@ export function AppHeader({
     >
       <View style={styles.row}>
         <View style={styles.titleBlock}>
-          <Text style={[styles.title, { fontFamily: "Inter_700Bold" }]}>{title}</Text>
+          <Text style={[styles.title, { fontFamily: "PlusJakartaSans_700Bold" }]}>{title}</Text>
           {subtitle ? (
-            <Text style={[styles.subtitle, { fontFamily: "Inter_400Regular" }]}>{subtitle}</Text>
+            <Text style={[styles.subtitle, { fontFamily: "PlusJakartaSans_400Regular" }]}>{subtitle}</Text>
           ) : null}
         </View>
 
@@ -51,16 +51,16 @@ export function AppHeader({
           {userEmail ? (
             <View style={styles.userChip}>
               <View style={styles.avatarDot}>
-                <Text style={[styles.avatarText, { fontFamily: "Inter_700Bold" }]}>
+                <Text style={[styles.avatarText, { fontFamily: "PlusJakartaSans_700Bold" }]}>
                   {userEmail.slice(0, 2).toUpperCase()}
                 </Text>
               </View>
               <View>
-                <Text style={[styles.chipEmail, { fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                <Text style={[styles.chipEmail, { fontFamily: "PlusJakartaSans_500Medium" }]} numberOfLines={1}>
                   {userEmail}
                 </Text>
                 {userRole ? (
-                  <Text style={[styles.chipRole, { fontFamily: "Inter_400Regular" }]}>{userRole}</Text>
+                  <Text style={[styles.chipRole, { fontFamily: "PlusJakartaSans_400Regular" }]}>{userRole}</Text>
                 ) : null}
               </View>
             </View>

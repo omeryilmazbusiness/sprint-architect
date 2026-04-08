@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   titleText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 46,
     color: "#FFFFFF",
     letterSpacing: 12,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   taglineText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: "rgba(210,200,180,0.68)",
     letterSpacing: 2.5,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   bottomLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 9.5,
     color: "rgba(180,160,100,0.32)",
     letterSpacing: 2,

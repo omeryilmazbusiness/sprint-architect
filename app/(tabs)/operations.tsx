@@ -56,24 +56,24 @@ function AppointmentRow({
     <SectionCard colors={colors}>
       <View style={styles.aptRow}>
         <View style={[styles.aptTimePill, { backgroundColor: colors.accent + "15" }]}>
-          <Text style={[styles.aptTime, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.aptTime, { color: colors.accent, fontFamily: "PlusJakartaSans_700Bold" }]}>
             {timeStr}
           </Text>
-          <Text style={[styles.aptDate, { color: colors.accent + "CC", fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.aptDate, { color: colors.accent + "CC", fontFamily: "PlusJakartaSans_400Regular" }]}>
             {dateStr}
           </Text>
         </View>
         <View style={styles.aptDetails}>
-          <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[styles.aptPatient, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
             {apt.patient.fullName}
           </Text>
-          <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.aptType, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
             {apt.type}
           </Text>
           {apt.doctor && (
             <View style={styles.aptDoctor}>
               <Ionicons name="person-circle-outline" size={13} color={colors.textMuted} />
-              <Text style={[styles.aptDoctorText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.aptDoctorText, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 {apt.doctor.name}
               </Text>
             </View>
@@ -111,7 +111,7 @@ function ResourceCard({
       <View style={[styles.resourceIcon, { backgroundColor: colors.accent + "10" }]}>
         <Ionicons name={icon} size={24} color={colors.accent} />
       </View>
-      <Text style={[styles.resourceTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+      <Text style={[styles.resourceTitle, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
         {title}
       </Text>
       <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -144,7 +144,7 @@ export default function OperationsScreen() {
           },
         ]}
       >
-        <Text style={[styles.screenTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+        <Text style={[styles.screenTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
           Operations
         </Text>
 
@@ -168,7 +168,7 @@ export default function OperationsScreen() {
                   styles.tabText,
                   {
                     color: activeTab === t ? "#fff" : colors.textSecondary,
-                    fontFamily: "Inter_500Medium",
+                    fontFamily: "PlusJakartaSans_500Medium",
                   },
                 ]}
               >
@@ -199,7 +199,7 @@ export default function OperationsScreen() {
             {(appointments ?? []).length === 0 && (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
-                <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
                   No upcoming appointments
                 </Text>
               </View>

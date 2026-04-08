@@ -128,7 +128,7 @@ export function MonthlyCalendar({
                 style={[
                   styles.dayText,
                   !inMonth && styles.dayTextOtherMonth,
-                  cfg && { color: cfg.tc, fontFamily: "Inter_600SemiBold" as any },
+                  cfg && { color: cfg.tc, fontFamily: "PlusJakartaSans_600SemiBold" as any },
                   selected && !todayDay && styles.dayTextSelected,
                 ]}
               >
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   monthTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
     minWidth: 110,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     borderColor: T.successBorder,
   },
   todayBtnText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 12,
     color: T.success,
   },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   weekDay: {
     flex: 1,
     textAlign: "center",
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.2,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     borderColor: T.accent,
   },
   dayText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.text,
   },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: T.accent,
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
   },
 
   // Colored status strip at the bottom of the cell
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   legendText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textSec,
   },

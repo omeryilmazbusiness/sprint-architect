@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   selectAllText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.accent,
   },
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.border,
   },
-  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  searchInput: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text },
   filterRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   filterScroll: {
     paddingHorizontal: 14,
@@ -570,10 +570,10 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     backgroundColor: T.surface,
   },
-  clearBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec },
+  clearBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.textSec },
 
   countLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     paddingHorizontal: 16,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent + "08",
   },
   clearFiltersBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.accent,
   },

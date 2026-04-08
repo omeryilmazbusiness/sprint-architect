@@ -50,7 +50,7 @@ function StatusBadge({ ok, labelOk = "OK", labelFail = "FAIL" }: { ok: boolean; 
 }
 const bd = StyleSheet.create({
   pill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 6 },
-  text: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff", letterSpacing: 0.3 },
+  text: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 10, color: "#fff", letterSpacing: 0.3 },
 });
 
 function EnvBadge({ env }: { env: string }) {
@@ -95,8 +95,8 @@ const mr = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
   iconWrap: { width: 34, height: 34, borderRadius: 9, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   info: { flex: 1 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
-  sub: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, marginTop: 1 },
+  label: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
+  sub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted, marginTop: 1 },
 });
 
 function CardSkeleton({ rows = 3 }: { rows?: number }) {
@@ -137,9 +137,9 @@ function CardError({ message, onRetry }: { message?: string; onRetry: () => void
 }
 const ce = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
-  text: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.dangerText },
+  text: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.dangerText },
   btn: { backgroundColor: T.danger, paddingHorizontal: 12, paddingVertical: 6, borderRadius: T.r8 },
-  btnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
+  btnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12, color: "#fff" },
 });
 
 function SettingsRow({
@@ -194,10 +194,10 @@ const sr = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
   iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   info: { flex: 1 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
-  subtitle: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, marginTop: 1 },
+  label: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 15, color: T.text },
+  subtitle: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted, marginTop: 1 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
-  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.3 },
+  badgeText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, letterSpacing: 0.3 },
 });
 
 function SectionRefreshBtn({ onPress, loading, labelRefresh, labelRefreshing }: {
@@ -216,7 +216,7 @@ function SectionRefreshBtn({ onPress, loading, labelRefresh, labelRefreshing }: 
 }
 const rb = StyleSheet.create({
   btn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.accent },
+  label: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12, color: T.accent },
 });
 
 function SectionHeaderWithRefresh({
@@ -233,7 +233,7 @@ function SectionHeaderWithRefresh({
 }
 const sh2 = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 20, marginBottom: 8 },
-  label: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: T.textMuted, letterSpacing: 0.8 },
+  label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 11, color: T.textMuted, letterSpacing: 0.8 },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -654,15 +654,15 @@ const s = StyleSheet.create({
 
   profileCard: { flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 20 },
   avatarWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: T.primary, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff" },
-  profileEmail: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  avatarText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: "#fff" },
+  profileEmail: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
   profileBadges: { flexDirection: "row", gap: 6 },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
-  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.4 },
+  badgeText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, letterSpacing: 0.4 },
   lastLoginRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  lastLoginText: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted },
+  lastLoginText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted },
 
-  versionText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.text },
+  versionText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.text },
 
   diagActions: {
     flexDirection: "row",
@@ -678,7 +678,7 @@ const s = StyleSheet.create({
     gap: 6,
     paddingVertical: 12,
   },
-  diagBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12.5, color: T.accent },
+  diagBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12.5, color: T.accent },
   diagBtnDivider: { width: StyleSheet.hairlineWidth, backgroundColor: T.border, marginVertical: 10 },
 
   cardActionBtn: {
@@ -690,12 +690,12 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: T.border,
   },
-  cardActionText: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.accent },
+  cardActionText: { flex: 1, fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.accent },
 
   infoRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 4, paddingVertical: 16, justifyContent: "space-between" },
-  infoLabel: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.textSec },
-  infoValue: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
-  brand: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted, textAlign: "center", marginTop: 8, marginBottom: 8 },
+  infoLabel: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.textSec },
+  infoValue: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
+  brand: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted, textAlign: "center", marginTop: 8, marginBottom: 8 },
 
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
   modal: {
@@ -707,9 +707,9 @@ const s = StyleSheet.create({
     }),
   },
   modalIcon: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: T.text },
-  modalSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20, textAlign: "center" },
+  modalTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: T.text },
+  modalSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20, textAlign: "center" },
   modalBtns: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: "center", justifyContent: "center", borderWidth: 1.5 },
-  modalBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  modalBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15 },
 });

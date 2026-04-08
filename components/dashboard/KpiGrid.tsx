@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 2,
   },
-  value: { fontFamily: "Inter_700Bold", fontSize: 26, lineHeight: 30 },
-  label: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.text },
-  sub: { fontFamily: "Inter_400Regular", fontSize: 11, color: T.textMuted, marginTop: -2 },
+  value: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 26, lineHeight: 30 },
+  label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.text },
+  sub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted, marginTop: -2 },
 });

@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
   },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11,
     color: "#fff",
   },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     gap: T.sp16,
   },
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.textSec,
     textTransform: "uppercase",
@@ -309,13 +309,13 @@ const styles = StyleSheet.create({
     backgroundColor: T.primary + "10",
   },
   statusChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textSec,
   },
   statusChipTextActive: {
     color: T.primary,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   divider: {
     height: 1,
@@ -342,12 +342,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   toggleLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
   },
   toggleSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 1,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.surfaceSubtle,
   },
   btnClearText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.textSec,
   },
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnApplyText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: "#fff",
   },

@@ -139,7 +139,7 @@ function ServicesPickerModal({ visible, selected, onConfirm, onClose }: Services
                     color={active ? T.primary : T.textMuted}
                   />
                 </View>
-                <Text style={[pickerStyles.serviceLabel, active && { color: T.primary, fontFamily: "Inter_600SemiBold" as any }]}>
+                <Text style={[pickerStyles.serviceLabel, active && { color: T.primary, fontFamily: "PlusJakartaSans_600SemiBold" as any }]}>
                   {s}
                 </Text>
                 {active && <Ionicons name="checkmark" size={18} color={T.primary} />}
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { paddingTop: 24 } }),
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 17,
     color: T.text,
   },
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 13,
     color: T.primary,
     letterSpacing: 0.5,
@@ -839,13 +839,13 @@ const styles = StyleSheet.create({
   field: { marginBottom: 14 },
   fieldLabelRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
   fieldLabel: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  required: { fontFamily: "Inter_600SemiBold" as any, fontSize: 12, color: T.danger },
+  required: { fontFamily: "PlusJakartaSans_600SemiBold" as any, fontSize: 12, color: T.danger },
 
   input: {
     backgroundColor: T.surface,
@@ -854,14 +854,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
   },
   inputMultiline: { minHeight: 80, paddingTop: 12 },
   inputError: { borderColor: T.danger },
   inlineError: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.danger,
     marginTop: 4,
@@ -878,8 +878,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  pickerBtnText: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, flex: 1 },
-  pickerBtnPlaceholder: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.textMuted, flex: 1 },
+  pickerBtnText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text, flex: 1 },
+  pickerBtnPlaceholder: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.textMuted, flex: 1 },
 
   dateRow: { flexDirection: "row", gap: 10 },
 
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
   },
   chipActive: { backgroundColor: T.primary + "15", borderColor: T.primary },
-  chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.text },
+  chipText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.text },
   chipTextActive: { color: T.primary },
 
   serviceChipRow: {
@@ -914,7 +914,7 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "30",
   },
   serviceChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.primary,
   },
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  companionToggleLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.text },
+  companionToggleLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.text },
   companionSection: {
     backgroundColor: T.surfaceSubtle,
     borderRadius: 12,
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
     ...cardShadow,
   },
   footerError: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.danger,
     textAlign: "center",
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
   },
   submitBtnDisabled: { backgroundColor: T.border },
   submitBtnText: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 16,
     color: "#fff",
   },
@@ -998,7 +998,7 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { paddingTop: 24 } }),
   },
   successHeaderTitle: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 17,
     color: T.text,
   },
@@ -1012,14 +1012,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   successName: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 22,
     color: T.text,
     textAlign: "center",
     marginBottom: 4,
   },
   successSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
     textAlign: "center",
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
     ...cardShadow,
   },
   keyLabel: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 1,
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   keyValue: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 24,
     color: T.primary,
     letterSpacing: 2,
@@ -1068,12 +1068,12 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "30",
   },
   copyBtnText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.primary,
   },
   keyHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     lineHeight: 17,
@@ -1090,7 +1090,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   openGuestBtnText: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 16,
     color: "#fff",
   },
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   doneBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
@@ -1123,7 +1123,7 @@ const pickerStyles = StyleSheet.create({
     borderBottomColor: T.border,
     ...Platform.select({ web: { paddingTop: 24 } }),
   },
-  title: { fontFamily: "Inter_700Bold" as any, fontSize: 17, color: T.text },
+  title: { fontFamily: "PlusJakartaSans_700Bold" as any, fontSize: 17, color: T.text },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1138,7 +1138,7 @@ const pickerStyles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
     padding: 0,
@@ -1151,7 +1151,7 @@ const pickerStyles = StyleSheet.create({
     gap: 12,
   },
   flag: { fontSize: 22, width: 32, textAlign: "center" },
-  countryName: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  countryName: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text },
   serviceIcon: {
     width: 36,
     height: 36,
@@ -1159,7 +1159,7 @@ const pickerStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  serviceLabel: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text },
+  serviceLabel: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text },
   confirmRow: {
     position: "absolute",
     bottom: 0,
@@ -1180,7 +1180,7 @@ const pickerStyles = StyleSheet.create({
   },
   confirmBtnDisabled: { backgroundColor: T.border },
   confirmBtnText: {
-    fontFamily: "Inter_700Bold" as any,
+    fontFamily: "PlusJakartaSans_700Bold" as any,
     fontSize: 16,
     color: "#fff",
   },

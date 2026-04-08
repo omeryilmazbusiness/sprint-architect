@@ -43,13 +43,13 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1 },
   title: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
     marginBottom: 3,
   },
   sub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 18,

@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
   },
   nameBlock: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: T.text,
     lineHeight: 28,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   keyText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.text,
     flex: 1,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   approveBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: "#fff",
   },

@@ -64,23 +64,23 @@ function PatientCard({ patient, colors, onPress }: { patient: Patient; colors: t
       testID={`patient-card-${patient.id}`}
     >
       <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
-        <Text style={[styles.avatarText, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>{initials}</Text>
+        <Text style={[styles.avatarText, { color: colors.primary, fontFamily: "PlusJakartaSans_700Bold" }]}>{initials}</Text>
       </View>
       <View style={styles.cardBody}>
         <View style={styles.cardRow}>
-          <Text style={[styles.name, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]} numberOfLines={1}>
             {patient.fullName}
           </Text>
           <StatusBadge status={patient.status} />
         </View>
-        <Text style={[styles.key, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+        <Text style={[styles.key, { color: colors.accent, fontFamily: "PlusJakartaSans_500Medium" }]}>
           {patient.patientKey}
         </Text>
         <View style={styles.cardMeta}>
           {patient.arrivalDate && (
             <View style={styles.metaItem}>
               <Ionicons name="airplane-outline" size={12} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 {formatDate(patient.arrivalDate)}
               </Text>
             </View>
@@ -88,7 +88,7 @@ function PatientCard({ patient, colors, onPress }: { patient: Patient; colors: t
           {patient.nationality && (
             <View style={styles.metaItem}>
               <Ionicons name="flag-outline" size={12} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.metaText, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 {patient.nationality}
               </Text>
             </View>
@@ -165,14 +165,14 @@ function CreatePatientModal({ visible, onClose, colors, clinicId }: {
           <Pressable onPress={resetAndClose} style={styles.modalClose} testID="close-create-modal">
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
-          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
             {created ? "Patient Created" : "New Patient"}
           </Text>
           {!created && (
             <Pressable onPress={submit} disabled={mutation.isPending} testID="submit-create-patient">
               {mutation.isPending
                 ? <ActivityIndicator size="small" color={colors.accent} />
-                : <Text style={[styles.saveBtn, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Save</Text>
+                : <Text style={[styles.saveBtn, { color: colors.accent, fontFamily: "PlusJakartaSans_600SemiBold" }]}>Save</Text>
               }
             </Pressable>
           )}
@@ -185,20 +185,20 @@ function CreatePatientModal({ visible, onClose, colors, clinicId }: {
               <View style={[styles.successIcon, { backgroundColor: colors.success + "20" }]}>
                 <Ionicons name="checkmark-circle" size={48} color={colors.success} />
               </View>
-              <Text style={[styles.successTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+              <Text style={[styles.successTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
                 Patient Registered
               </Text>
-              <Text style={[styles.successName, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.successName, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 {created.fullName}
               </Text>
               <View style={[styles.keyCard, { backgroundColor: colors.accent + "15", borderColor: colors.accent + "40" }]}>
-                <Text style={[styles.keyLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                <Text style={[styles.keyLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_500Medium" }]}>
                   PATIENT KEY
                 </Text>
-                <Text style={[styles.keyValue, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+                <Text style={[styles.keyValue, { color: colors.accent, fontFamily: "PlusJakartaSans_700Bold" }]}>
                   {created.patientKey}
                 </Text>
-                <Text style={[styles.keyHint, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.keyHint, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
                   Share this key with the patient to log into the app
                 </Text>
               </View>
@@ -207,7 +207,7 @@ function CreatePatientModal({ visible, onClose, colors, clinicId }: {
                 style={[styles.doneBtn, { backgroundColor: colors.primary }]}
                 testID="done-button"
               >
-                <Text style={[styles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
+                <Text style={[styles.doneBtnText, { fontFamily: "PlusJakartaSans_600SemiBold" }]}>Done</Text>
               </Pressable>
             </View>
           ) : (
@@ -233,7 +233,7 @@ function FormField({ label, value, onChangeText, placeholder, colors, keyboardTy
 }) {
   return (
     <View style={styles.field}>
-      <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>{label}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_500Medium" }]}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -250,7 +250,7 @@ function FormField({ label, value, onChangeText, placeholder, colors, keyboardTy
             backgroundColor: colors.card,
             borderColor: colors.border,
             color: colors.text,
-            fontFamily: "Inter_400Regular",
+            fontFamily: "PlusJakartaSans_400Regular",
             height: multiline ? 80 : 44,
             textAlignVertical: multiline ? "top" : "center",
           },
@@ -305,9 +305,9 @@ export default function PatientsScreen() {
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.title, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Patients</Text>
+            <Text style={[styles.title, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>Patients</Text>
             {data && (
-              <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 {data.total} total
               </Text>
             )}
@@ -329,7 +329,7 @@ export default function PatientsScreen() {
             onChangeText={handleSearch}
             placeholder="Search by name or patient key..."
             placeholderTextColor={colors.textMuted}
-            style={[styles.searchInput, { color: colors.text, fontFamily: "Inter_400Regular" }]}
+            style={[styles.searchInput, { color: colors.text, fontFamily: "PlusJakartaSans_400Regular" }]}
             testID="patient-search"
           />
           {search.length > 0 && (
@@ -349,11 +349,11 @@ export default function PatientsScreen() {
       {error && !isLoading && (
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.errorText, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
             Failed to load patients
           </Text>
           <Pressable onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.retryText, { fontFamily: "Inter_600SemiBold" }]}>Retry</Text>
+            <Text style={[styles.retryText, { fontFamily: "PlusJakartaSans_600SemiBold" }]}>Retry</Text>
           </Pressable>
         </View>
       )}
@@ -374,11 +374,11 @@ export default function PatientsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: "Inter_500Medium" }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_500Medium" }]}>
                 {debouncedSearch ? "No patients match your search" : "No patients yet"}
               </Text>
               {!debouncedSearch && isManager && (
-                <Text style={[styles.emptyHint, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.emptyHint, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
                   Tap + to register the first patient
                 </Text>
               )}

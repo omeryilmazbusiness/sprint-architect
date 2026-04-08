@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: T.sp16, gap: T.sp16 },
   intro: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
     lineHeight: 20,
@@ -140,12 +140,12 @@ const styles = StyleSheet.create({
     marginBottom: T.sp4,
   },
   cardLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: T.text,
   },
   cardDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     lineHeight: 16,

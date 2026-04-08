@@ -138,14 +138,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
     textAlign: "center",
     letterSpacing: -0.2,
   },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     marginTop: 2,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderColor: T.surface,
   },
   badgeTxt: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 8,
     color: "#fff",
   },

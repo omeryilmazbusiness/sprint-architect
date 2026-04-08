@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(3,105,161,0.2)",
   },
   avatarInitials: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: T.accent,
     letterSpacing: -0.5,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
   name: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: T.text,
     textAlign: "center",
@@ -150,14 +150,14 @@ const styles = StyleSheet.create({
   },
   specialtyRow: { flexDirection: "row", alignItems: "center", gap: 4, justifyContent: "center" },
   specialty: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
     textAlign: "center",
   },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   infoText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textSec,
     flex: 1,
@@ -170,5 +170,5 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   langExtra: { backgroundColor: T.surfaceSubtle },
-  langText: { fontFamily: "Inter_500Medium", fontSize: 9, color: T.accent },
+  langText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 9, color: T.accent },
 });

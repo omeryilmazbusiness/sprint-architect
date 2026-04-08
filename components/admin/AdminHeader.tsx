@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   brandMarkText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   chipText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 9,
     letterSpacing: 0.3,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     color: T.textMuted,
   },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 2,
     right: 4,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 8,
     color: T.warning,
   },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     borderColor: T.surface,
   },
   badgeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 9,
     color: "#fff",
     lineHeight: 13,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 9,
     color: "#fff",
   },

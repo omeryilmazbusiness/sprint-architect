@@ -56,12 +56,12 @@ function SettingRow({
       <View style={[styles.settingIcon, { backgroundColor: (accent ?? colors.accent) + "15" }]}>
         <Ionicons name={icon} size={18} color={accent ?? colors.accent} />
       </View>
-      <Text style={[styles.settingLabel, { color: colors.text, fontFamily: "Inter_500Medium" }]}>
+      <Text style={[styles.settingLabel, { color: colors.text, fontFamily: "PlusJakartaSans_500Medium" }]}>
         {label}
       </Text>
       <View style={styles.flex1} />
       {value ? (
-        <Text style={[styles.settingValue, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+        <Text style={[styles.settingValue, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
           {value}
         </Text>
       ) : null}
@@ -118,7 +118,7 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
-        <Text style={[styles.screenTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+        <Text style={[styles.screenTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
           Settings
         </Text>
       </View>
@@ -126,17 +126,17 @@ export default function SettingsScreen() {
       <View style={styles.body}>
         <View style={[styles.adminCard, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
           <View style={[styles.adminAvatar, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.adminAvatarText, { fontFamily: "Inter_700Bold" }]}>{initials}</Text>
+            <Text style={[styles.adminAvatarText, { fontFamily: "PlusJakartaSans_700Bold" }]}>{initials}</Text>
           </View>
           <View style={styles.flex1}>
-            <Text style={[styles.adminName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.adminName, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
               {displayName}
             </Text>
-            <Text style={[styles.adminRole, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.adminRole, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               {roleLabel} · {user?.role}
             </Text>
             {user?.clinicId && (
-              <Text style={[styles.adminClinic, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.adminClinic, { color: colors.accent, fontFamily: "PlusJakartaSans_400Regular" }]}>
                 Clinic ID: {user.clinicId}
               </Text>
             )}
@@ -158,7 +158,7 @@ export default function SettingsScreen() {
 
         {user?.role === "ADMIN" && (
           <>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
               CLINICS
             </Text>
             <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -175,10 +175,10 @@ export default function SettingsScreen() {
                     <Ionicons name="business-outline" size={18} color={colors.accent} />
                   </View>
                   <View style={styles.clinicInfo}>
-                    <Text style={[styles.clinicName, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                    <Text style={[styles.clinicName, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
                       {clinic.name}
                     </Text>
-                    <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
                       {clinic.patientCount} patients
                     </Text>
                   </View>
@@ -190,7 +190,7 @@ export default function SettingsScreen() {
           </>
         )}
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
           SYSTEM
         </Text>
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -210,7 +210,7 @@ export default function SettingsScreen() {
           <SettingRow icon="shield-checkmark-outline" label="Roles & Permissions" value={user?.role} colors={colors} accent={colors.primary} last />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
           CONFIGURATION
         </Text>
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
           <SettingRow icon="moon-outline" label="Appearance" value="Auto" colors={colors} accent={colors.warning} last />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
           ABOUT
         </Text>
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -235,16 +235,16 @@ export default function SettingsScreen() {
           ]}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.error} />
-          <Text style={[styles.logoutText, { color: colors.error, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[styles.logoutText, { color: colors.error, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
             Sign Out
           </Text>
         </Pressable>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Text style={[styles.footerText, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.footerText, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
             Healory Operations Platform
           </Text>
-          <Text style={[styles.footerSub, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.footerSub, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
             Sprint 2 · Auth & RBAC Foundation
           </Text>
         </View>
@@ -268,10 +268,10 @@ export default function SettingsScreen() {
             <View style={[styles.modalIconWrap, { backgroundColor: colors.error + "18" }]}>
               <Ionicons name="log-out-outline" size={28} color={colors.error} />
             </View>
-            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
               Sign Out
             </Text>
-            <Text style={[styles.modalBody, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.modalBody, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
               Are you sure you want to sign out?
             </Text>
             <View style={styles.modalActions}>
@@ -280,7 +280,7 @@ export default function SettingsScreen() {
                 style={[styles.modalBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
                 testID="logout-cancel"
               >
-                <Text style={[styles.modalBtnText, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[styles.modalBtnText, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
                   Cancel
                 </Text>
               </Pressable>
@@ -289,7 +289,7 @@ export default function SettingsScreen() {
                 style={[styles.modalBtn, styles.modalBtnDestructive, { backgroundColor: colors.error }]}
                 testID="logout-confirm"
               >
-                <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "PlusJakartaSans_600SemiBold" }]}>
                   Sign Out
                 </Text>
               </Pressable>

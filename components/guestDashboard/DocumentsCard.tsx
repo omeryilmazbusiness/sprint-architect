@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: T.sp12,
   },
   label: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: T.accent,
     textTransform: "uppercase",
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },
@@ -117,11 +117,11 @@ const styles = StyleSheet.create({
     borderRadius: T.r10,
   },
   countNum: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
   },
   countLbl: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     marginTop: 2,
   },
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderTopColor: T.border,
   },
   docName: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.text,
     flex: 1,
@@ -145,11 +145,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   pillText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
   },
   moreText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",

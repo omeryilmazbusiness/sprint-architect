@@ -154,13 +154,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 19,
     color: T.text,
     textAlign: "center",
   },
   body: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13.5,
     color: T.textSec,
     textAlign: "center",
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   ruleText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: "#991b1b",
     lineHeight: 16,
@@ -197,12 +197,12 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   confirmLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
   confirmCode: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.danger,
     letterSpacing: 0.5,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: T.border,
     paddingHorizontal: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     letterSpacing: 1,
     color: T.text,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   cancelText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.textSec,
   },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.border,
   },
   purgeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },

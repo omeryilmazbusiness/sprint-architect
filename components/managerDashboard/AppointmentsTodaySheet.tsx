@@ -330,12 +330,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
   headerSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     paddingVertical: 0,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   countText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   timeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 12,
     color: T.accent,
   },
@@ -423,18 +423,18 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   patientName: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
   },
   apptTitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.text,
     opacity: 0.75,
   },
   doctorName: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     marginTop: 1,
@@ -462,14 +462,14 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
     textAlign: "center",
     marginTop: 4,
   },
   emptyBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
     textAlign: "center",
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r8,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: "#fff",
   },

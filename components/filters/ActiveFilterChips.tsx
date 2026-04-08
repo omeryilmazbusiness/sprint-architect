@@ -90,7 +90,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     maxWidth: 140,
   },
@@ -102,7 +102,7 @@ const s = StyleSheet.create({
     paddingVertical: 5,
   },
   clearText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.danger,
   },

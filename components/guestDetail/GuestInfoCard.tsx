@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     marginBottom: T.sp16,
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
   },
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   nationalityName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
   },
@@ -288,14 +288,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   infoValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
     marginTop: 1,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   servicesLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   chipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.accent,
   },
@@ -344,13 +344,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   notesLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textSec,
     flex: 1,
   },
   notesText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     lineHeight: 20,

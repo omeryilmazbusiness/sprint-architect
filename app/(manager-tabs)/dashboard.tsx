@@ -154,14 +154,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   sectionAction: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.accent,
   },

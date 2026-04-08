@@ -423,18 +423,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroInitials: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 26,
     color: "#fff",
   },
   heroName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: T.text,
     textAlign: "center",
   },
   heroEmail: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "30",
   },
   roleChipText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: T.primary,
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     borderColor: "#FCD34D",
   },
   warningChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: "#B45309",
   },
@@ -486,14 +486,14 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   statusReasonText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textSec,
     textTransform: "capitalize",
   },
 
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     letterSpacing: 0.6,
     color: T.textMuted,
@@ -529,14 +529,14 @@ const styles = StyleSheet.create({
   },
   infoText: { flex: 1 },
   infoLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   infoValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   clinicInfo: { flex: 1 },
   clinicName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
     marginBottom: 4,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent + "08",
   },
   openClinicText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: T.accent,
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
@@ -631,19 +631,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: T.text,
   },
   modalBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     textAlign: "center",
     lineHeight: 21,
   },
   modalNote: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   cancelBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.textSec,
   },
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
     borderColor: T.dangerBorder,
   },
   deactivateBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.danger,
   },
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.primary,
   },
   confirmBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   passwordText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.primary,
     letterSpacing: 2,

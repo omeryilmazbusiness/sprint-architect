@@ -29,10 +29,10 @@ export function MetricCard({
       <View style={[styles.iconWrap, { backgroundColor: iconColor + "18" }]}>
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>
-      <Text style={[styles.value, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+      <Text style={[styles.value, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
         {value}
       </Text>
-      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
         {label}
       </Text>
       {trend ? (
@@ -41,7 +41,7 @@ export function MetricCard({
             styles.trend,
             {
               color: trendPositive ? colors.success : colors.error,
-              fontFamily: "Inter_500Medium",
+              fontFamily: "PlusJakartaSans_500Medium",
             },
           ]}
         >

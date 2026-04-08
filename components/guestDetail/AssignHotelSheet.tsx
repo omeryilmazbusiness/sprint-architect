@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   sheetTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textMuted,
   },
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   itemName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
   },
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     color: "#F59E0B",
   },
   itemSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },

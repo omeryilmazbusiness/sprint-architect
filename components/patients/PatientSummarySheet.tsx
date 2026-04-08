@@ -672,13 +672,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
     marginTop: 4,
   },
   errorText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     textAlign: "center",
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: "#fff",
   },
@@ -714,11 +714,11 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "28",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.primary,
   },
   patientName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createdAt: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   clinicChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12.5,
     color: T.accent,
     flex: 1,
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
   },
 
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.8,
@@ -827,13 +827,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   infoLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     marginBottom: 2,
   },
   infoValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
     lineHeight: 19,
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     padding: 13,
   },
   keyValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.primary,
     letterSpacing: 1,
@@ -883,12 +883,12 @@ const styles = StyleSheet.create({
   },
   newKeyTitle: {
     flex: 1,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: "#15803D",
   },
   newKeyValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: "#166534",
     letterSpacing: 1.5,
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   newKeyHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11.5,
     color: "#16A34A",
   },
@@ -913,7 +913,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   newKeyCopyText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: "#16A34A",
   },
@@ -933,7 +933,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   copiedToastText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: "#16A34A",
   },
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
     borderColor: T.dangerBorder,
   },
   actionBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
   },
 });

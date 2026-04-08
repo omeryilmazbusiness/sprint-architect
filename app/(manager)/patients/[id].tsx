@@ -155,9 +155,9 @@ export default function GuestDetailScreen() {
       apiRequest("POST", `/v1/manager/patients/${id}/approve`, {}),
     onSuccess: () => {
       invalidate();
-      showToast("Guest approved ✓");
+      showToast(tp.toastApproved);
     },
-    onError: () => showToast("Approval failed"),
+    onError: () => showToast(tp.toastApprovalFailed),
   });
 
   const resetDeviceMutation = useMutation({
@@ -165,11 +165,11 @@ export default function GuestDetailScreen() {
       apiRequest("POST", `/v1/manager/patients/${id}/reset-device-binding`, {}),
     onSuccess: () => {
       setShowResetConfirm(false);
-      showToast("Device binding reset ✓");
+      showToast(tp.toastResetDevice);
     },
     onError: () => {
       setShowResetConfirm(false);
-      showToast("Failed to reset device binding");
+      showToast(tp.toastResetDeviceFailed);
     },
   });
 
@@ -181,7 +181,7 @@ export default function GuestDetailScreen() {
     onSuccess: () => {
       invalidate();
     },
-    onError: () => showToast("Failed to update step"),
+    onError: () => showToast(tp.toastStepFailed),
   });
 
   const assignTransportMutation = useMutation({
@@ -192,9 +192,9 @@ export default function GuestDetailScreen() {
     onSuccess: () => {
       setShowTransportSheet(false);
       invalidate();
-      showToast("Transport assigned ✓");
+      showToast(tp.toastTransportAssigned);
     },
-    onError: () => showToast("Failed to assign transport"),
+    onError: () => showToast(tp.toastTransportFailed),
   });
 
   const assignHotelMutation = useMutation({
@@ -205,9 +205,9 @@ export default function GuestDetailScreen() {
     onSuccess: () => {
       setShowHotelSheet(false);
       invalidate();
-      showToast("Hotel assigned ✓");
+      showToast(tp.toastHotelAssigned);
     },
-    onError: () => showToast("Failed to assign hotel"),
+    onError: () => showToast(tp.toastHotelFailed),
   });
 
   const assignDocMutation = useMutation({
@@ -224,9 +224,9 @@ export default function GuestDetailScreen() {
     onSuccess: () => {
       setShowDocSheet(false);
       invalidate();
-      showToast("Document assigned ✓");
+      showToast(tp.toastDocAssigned);
     },
-    onError: () => showToast("Failed to assign document"),
+    onError: () => showToast(tp.toastDocAssignFailed),
   });
 
   const updateDocStatusMutation = useMutation({
@@ -247,9 +247,9 @@ export default function GuestDetailScreen() {
     },
     onSuccess: () => {
       invalidate();
-      showToast("Document status updated ✓");
+      showToast(tp.toastDocStatusUpdated);
     },
-    onError: () => showToast("Failed to update document status"),
+    onError: () => showToast(tp.toastDocStatusFailed),
   });
 
   const cancelAppointmentMutation = useMutation({
@@ -260,11 +260,11 @@ export default function GuestDetailScreen() {
     onSuccess: () => {
       setCancellingApptId(null);
       invalidate();
-      showToast("Appointment cancelled ✓");
+      showToast(tp.toastApptCancelled);
     },
     onError: () => {
       setCancellingApptId(null);
-      showToast("Failed to cancel appointment");
+      showToast(tp.toastApptCancelFailed);
     },
   });
 
@@ -291,7 +291,7 @@ export default function GuestDetailScreen() {
 
   const handleViewPdf = async (docId: string, fileName?: string | null) => {
     try {
-      if (Platform.OS !== "web") showToast("Preparing document…");
+      if (Platform.OS !== "web") showToast(tp.toastPreparingDoc);
       const baseUrl = getApiUrl();
       const resp = await fetch(`${baseUrl}v1/documents/${docId}/signed-url`, {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
@@ -307,7 +307,7 @@ export default function GuestDetailScreen() {
         : `${baseUrl.replace(/\/$/, "")}${body.url}`;
       await openPdf(fullUrl, resolvedFileName);
     } catch (e: any) {
-      Alert.alert("Could not open PDF", e.message ?? "An unexpected error occurred");
+      Alert.alert(tp.toastPdfError, e.message ?? "An unexpected error occurred");
     }
   };
 
@@ -573,7 +573,7 @@ export default function GuestDetailScreen() {
         onClose={() => setShowApptSheet(false)}
         onCreated={() => {
           invalidate();
-          showToast("Appointment created ✓");
+          showToast(tp.toastApptCreated);
         }}
       />
     </View>
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     flex: 1,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
     textAlign: "center",
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     padding: T.sp16,
   },
   sectionLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 12,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   apptBadge: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.success,
     textTransform: "uppercase",
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   apptEmptyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -704,18 +704,18 @@ const styles = StyleSheet.create({
     borderRadius: T.r8,
   },
   apptCreateBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: "#fff",
   },
   apptTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
     marginBottom: 3,
   },
   apptMeta: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
   },
@@ -727,19 +727,19 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg,
   },
   loadingText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textMuted,
     marginTop: 12,
   },
   errorTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.text,
     marginTop: 12,
   },
   errorSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
     marginTop: 4,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: "#fff",
   },
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
     ...cardShadow,
   },
   dangerZoneLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 12,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -786,12 +786,12 @@ const styles = StyleSheet.create({
     backgroundColor: T.danger + "08",
   },
   dangerBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.danger,
   },
   dangerBtnHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     lineHeight: 17,

@@ -212,13 +212,13 @@ const styles = StyleSheet.create({
     backgroundColor: T.surfaceSubtle,
   },
   flagText: { fontSize: 18 },
-  dialCode: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.text },
+  dialCode: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.text },
 
   divider: { width: 1, height: 28, backgroundColor: T.border },
 
   phoneInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
     paddingHorizontal: 12,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.border,
   },
-  cpTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: T.text },
+  cpTitle: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 16, color: T.text },
   cpSearch: {
     flexDirection: "row",
     alignItems: "center",
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   cpSearchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
   },
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
   countryFlag: { fontSize: 22 },
   countryName: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
   },
   countryDial: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textSec,
   },

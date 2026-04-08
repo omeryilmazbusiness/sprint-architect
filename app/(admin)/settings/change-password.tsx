@@ -59,12 +59,12 @@ function PasswordField({
 
 const pf = StyleSheet.create({
   wrap: { gap: 6 },
-  label: { fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.5, color: T.textSec },
+  label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12, letterSpacing: 0.5, color: T.textSec },
   row: { flexDirection: "row", alignItems: "center", backgroundColor: T.surfaceSubtle, borderWidth: 1.5, borderColor: T.border, borderRadius: 12, paddingHorizontal: 14 },
   rowError: { borderColor: T.danger },
-  input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, paddingVertical: 12 },
+  input: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text, paddingVertical: 12 },
   eye: { paddingLeft: 8 },
-  errorText: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.danger },
+  errorText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.danger },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -246,21 +246,21 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, backgroundColor: T.surface, borderBottomWidth: 1, borderBottomColor: T.border },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: T.surfaceSubtle, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  headerTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
   content: { paddingHorizontal: 16, paddingTop: 20, gap: 16 },
   policyCard: { backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
   policyHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  policyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.accent },
+  policyTitle: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.accent },
   policyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   policyDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: T.textMuted },
-  policyItem: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec },
+  policyItem: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textSec },
   form: { gap: 14 },
   strengthWrap: { flexDirection: "row", alignItems: "center", gap: 10 },
   strengthBar: { flex: 1, height: 4, backgroundColor: T.border, borderRadius: 2, overflow: "hidden" },
   strengthFill: { height: 4, borderRadius: 2 },
-  strengthLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, width: 40 },
+  strengthLabel: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 11, width: 40 },
   warningCard: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: T.warning + "10", borderWidth: 1, borderColor: T.warning + "30", borderRadius: 12, padding: 14 },
-  warningText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, lineHeight: 18 },
+  warningText: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textSec, lineHeight: 18 },
   submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: T.primary, borderRadius: 14, paddingVertical: 15 },
-  submitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+  submitText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 16, color: "#fff" },
 });

@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
   },
   brandModel: {
     fontSize: 17,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.text,
     letterSpacing: -0.3,
   },
   plate: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: T.textMuted,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   driverName: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     color: T.text,
   },
   phoneChip: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   phoneText: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     color: T.accent,
   },
 });

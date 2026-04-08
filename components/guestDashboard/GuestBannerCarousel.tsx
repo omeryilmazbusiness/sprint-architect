@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
     right: T.sp20,
   },
   captionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: "#fff",
     letterSpacing: -0.3,
     marginBottom: 3,
   },
   captionSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.8)",
   },

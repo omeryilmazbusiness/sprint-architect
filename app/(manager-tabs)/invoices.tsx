@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   suspendedText: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.dangerText,
     lineHeight: 18,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     borderColor: T.primary,
   },
   filterChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r8,
   },
   period: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.primary,
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
   },
   cardRow: {
@@ -313,13 +313,13 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
   },
   totalAmount: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: T.text,
     letterSpacing: -0.5,
   },
   patientCount: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
@@ -334,12 +334,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   breakdownLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
   },
   breakdownValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.text,
   },
@@ -350,12 +350,12 @@ const styles = StyleSheet.create({
     marginTop: T.sp4,
   },
   breakdownTotalValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: T.primary,
   },
   issuedAt: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     gap: T.sp12,
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },

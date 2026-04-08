@@ -675,16 +675,16 @@ const docStyles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
   },
   name: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 15,
     color: T.text,
   },
   totalLine: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 2,
@@ -701,7 +701,7 @@ const docStyles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
   },
   chipRow: {
@@ -721,13 +721,13 @@ const docStyles = StyleSheet.create({
     backgroundColor: T.warningBg,
   },
   chipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 10,
     color: T.warning,
     flexShrink: 1,
   },
   moreText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: T.textMuted,
     alignSelf: "center",
@@ -815,13 +815,13 @@ const styles = StyleSheet.create({
     borderBottomColor: T.primary,
   },
   tabText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textMuted,
   },
   tabTextActive: {
     color: T.primary,
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
   },
   loader: { paddingTop: 60, alignItems: "center" },
   filterBar: {
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: 6 },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     height: 40,
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.primary + "08",
   },
   emptyAddBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.primary,
   },
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   filterPillActive: { backgroundColor: T.primary, borderColor: T.primary },
-  filterPillText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
+  filterPillText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textSec },
   filterPillTextActive: { color: "#fff" },
   clearFiltersBtn: {
     marginTop: 12,
@@ -926,9 +926,9 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     backgroundColor: T.surface,
   },
-  clearFiltersBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
+  clearFiltersBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textSec },
   listCount: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.textMuted,
     paddingHorizontal: T.sp16,
@@ -937,12 +937,12 @@ const styles = StyleSheet.create({
   },
   empty: { paddingTop: 72, alignItems: "center", gap: T.sp8, paddingHorizontal: T.sp32 },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 16,
     color: T.text,
     textAlign: "center",
   },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
   fab: {
     position: "absolute",
     bottom: Platform.OS === "web" ? 34 + 84 + 16 : 84 + 16,
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   toastBarError: { backgroundColor: T.danger },
   toastText: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: "#fff",
   },

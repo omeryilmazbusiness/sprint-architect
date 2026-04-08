@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: "#ffffff",
     lineHeight: 25,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12.5,
     color: "rgba(255,255,255,0.80)",
     marginTop: 2,
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   chipValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: "#ffffff",
     textShadowColor: "rgba(0,0,0,0.30)",
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   chipLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11.5,
     color: "rgba(255,255,255,0.80)",
     textShadowColor: "rgba(0,0,0,0.20)",
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ctaText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13.5,
     color: "#1a1a1a",
   },

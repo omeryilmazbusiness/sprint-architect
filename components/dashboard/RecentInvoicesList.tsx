@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  clinicName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
-  period: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
+  clinicName: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.text },
+  period: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted },
   right: { alignItems: "flex-end", gap: 4 },
-  total: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: T.text },
+  total: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.text },
 });

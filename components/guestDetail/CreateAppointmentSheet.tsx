@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   sheetTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
@@ -570,14 +570,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 13,
     color: T.textSec,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   fieldError: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.danger,
   },
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   calMonthLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   calDayLabel: {
     flex: 1,
     textAlign: "center",
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -644,17 +644,17 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   calDayText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.text,
   },
   calDayTextSel: {
     color: "#fff",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   calDayTextToday: {
     color: T.accent,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   calDayTextPast: {
     color: T.textMuted,
@@ -678,13 +678,13 @@ const styles = StyleSheet.create({
     borderColor: T.accent,
   },
   timeChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
   timeChipTextSel: {
     color: "#fff",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
 
   /* ── Doctor ── */
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     padding: 0,
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.accent,
   },
   avatarText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textSec,
   },
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   doctorName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },
@@ -755,19 +755,19 @@ const styles = StyleSheet.create({
     color: T.accent,
   },
   doctorSpec: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
   emptyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textMuted,
     textAlign: "center",
     paddingVertical: 16,
   },
   moreHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
   },
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     borderLeftColor: T.accent,
   },
   previewLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11,
     color: T.accent,
     textTransform: "uppercase",
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   previewText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
 
   /* ── Submit ── */
   submitError: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.danger,
     textAlign: "center",
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   submitText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },

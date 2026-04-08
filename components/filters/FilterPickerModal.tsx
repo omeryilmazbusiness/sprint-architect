@@ -187,7 +187,7 @@ const s = StyleSheet.create({
     borderBottomColor: T.border,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
@@ -206,7 +206,7 @@ const s = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
   },
@@ -224,22 +224,22 @@ const s = StyleSheet.create({
   },
   optionText: { flex: 1 },
   optionLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
   optionLabelActive: {
     color: T.primary,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   optionSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 2,
   },
   empty: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
     textAlign: "center",

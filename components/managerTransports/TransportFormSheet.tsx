@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: 17,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.text,
   },
   closeBtn: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: T.textMuted,
     letterSpacing: 1.1,
     textTransform: "uppercase",
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: T.text,
   },
   input: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     borderColor: "#E8ECF0",
     paddingHorizontal: 14,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     color: T.text,
   },
   inputError: {
@@ -361,13 +361,13 @@ const styles = StyleSheet.create({
   },
   brandLabel: {
     fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     color: T.textMuted,
     textAlign: "center",
   },
   brandLabelSelected: {
     color: T.accent,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   submitBtn: {
     backgroundColor: T.primary,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: "#FFFFFF",
   },
 });

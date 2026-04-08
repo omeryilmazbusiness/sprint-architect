@@ -167,13 +167,13 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
     letterSpacing: -0.3,
   },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -210,6 +210,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: "#fff",
     fontSize: 9,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
   },
 });

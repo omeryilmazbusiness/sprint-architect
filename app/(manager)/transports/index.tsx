@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     color: T.textMuted,
   },
   addBtn: {
@@ -250,13 +250,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.text,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     color: T.textMuted,
     textAlign: "center",
     lineHeight: 21,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: "#FFFFFF",
   },
   toast: {
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   toastText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     color: "#FFFFFF",
   },
 });

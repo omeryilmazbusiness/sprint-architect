@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   cardLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
     textTransform: "uppercase",
@@ -181,17 +181,17 @@ const styles = StyleSheet.create({
     gap: T.sp8,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.textMuted,
   },
   emptySub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.border,
   },
   hotelName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
     color: T.text,
     marginBottom: T.sp8,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   infoText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     flex: 1,
@@ -224,13 +224,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stayLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: T.textMuted,
     marginBottom: 3,
   },
   stayDate: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: T.text,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(3,105,161,0.05)",
   },
   callBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: T.accent,
   },

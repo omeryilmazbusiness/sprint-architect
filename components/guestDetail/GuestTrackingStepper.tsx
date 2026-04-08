@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
     marginBottom: T.sp16,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
   },
   updatingLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -190,23 +190,23 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   stepLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
   },
   stepLabelDone: {
     color: T.success,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   stepLabelActive: {
     color: T.accent,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
   },
   stepLabelFuture: {
     color: T.textMuted,
   },
   tapHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     marginTop: 2,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   currentBadgeText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: "#fff",
   },

@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingTop: 4 },
 
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.textMuted,
     letterSpacing: 0.8,
@@ -188,9 +188,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  navLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: T.text },
+  navLabel: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
   navSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 1,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.dangerText,
   },
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r8,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     color: "#fff",
   },

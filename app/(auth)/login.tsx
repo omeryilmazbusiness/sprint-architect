@@ -135,7 +135,7 @@ const langStyles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
   },
-  title: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 17, color: T.text },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -150,13 +150,13 @@ const langStyles = StyleSheet.create({
   flag: { fontSize: 22 },
   label: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.textSec,
   },
   labelActive: {
     color: T.text,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   check: { marginLeft: "auto" },
 });
@@ -708,8 +708,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  brandName: { fontFamily: "Inter_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5 },
-  brandSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, textAlign: "center" },
+  brandName: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 28, color: T.text, letterSpacing: -0.5 },
+  brandSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textSec, textAlign: "center" },
 
   // Card
   card: {
@@ -752,8 +752,8 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  segBtnText: { fontFamily: "Inter_500Medium", fontSize: 13.5, color: T.textMuted },
-  segBtnTextActive: { color: T.primary, fontFamily: "Inter_600SemiBold" },
+  segBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13.5, color: T.textMuted },
+  segBtnTextActive: { color: T.primary, fontFamily: "PlusJakartaSans_600SemiBold" },
 
   // Error
   errorBox: {
@@ -768,13 +768,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.dangerBorder,
   },
-  errorText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 13, color: T.danger, lineHeight: 18 },
+  errorText: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.danger, lineHeight: 18 },
 
   // Form
   form: { paddingHorizontal: 16, paddingBottom: 20, gap: 14 },
-  fieldTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text, marginBottom: 2 },
+  fieldTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 17, color: T.text, marginBottom: 2 },
   fieldGroup: { gap: 6 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec, letterSpacing: 0.2 },
+  fieldLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.textSec, letterSpacing: 0.2 },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -787,8 +787,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   inputIcon: { flexShrink: 0 },
-  input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, padding: 0 },
-  helpText: { fontFamily: "Inter_400Regular", fontSize: 12.5, color: T.textMuted, marginTop: -4 },
+  input: { flex: 1, fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text, padding: 0 },
+  helpText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12.5, color: T.textMuted, marginTop: -4 },
 
   // Buttons
   primaryBtn: {
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 4,
   },
-  primaryBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff" },
+  primaryBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 16, color: "#fff" },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     marginTop: -4,
   },
-  linkText: { fontFamily: "Inter_400Regular", fontSize: 12.5, color: T.textMuted },
+  linkText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12.5, color: T.textMuted },
 
   // Demo section
   demoSection: {
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
-  demoLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.2, color: T.textMuted },
+  demoLabel: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, letterSpacing: 1.2, color: T.textMuted },
   demoRow: { flexDirection: "row", gap: 8, justifyContent: "center" },
   demoBtn: {
     flexDirection: "row",
@@ -836,11 +836,11 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
   },
   demoBtnGuest: { borderColor: T.accent + "40" },
-  demoBtnText: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.primary },
+  demoBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.primary },
 
   // Footer
   footer: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     textAlign: "center",
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   },
   langBtnFlag: { fontSize: 14 },
   langBtnCode: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.textSec,
     letterSpacing: 0.4,
@@ -901,10 +901,10 @@ const modalStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  title: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  desc: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20 },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
+  desc: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textSec, lineHeight: 20 },
   fieldGroup: { gap: 6 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12.5, color: T.textSec },
+  fieldLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.textSec },
   inputWrap: {
     backgroundColor: T.surfaceSubtle,
     borderRadius: 12,
@@ -913,7 +913,7 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  input: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.text, padding: 0 },
+  input: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.text, padding: 0 },
   submitBtn: {
     backgroundColor: T.primary,
     borderRadius: 13,
@@ -921,7 +921,7 @@ const modalStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  submitBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  submitBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: "#fff" },
   successBox: { alignItems: "center", gap: 12, paddingVertical: 8 },
   successIcon: {
     width: 72,
@@ -931,9 +931,9 @@ const modalStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  successTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  successTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
   successMsg: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     lineHeight: 20,
@@ -947,5 +947,5 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 32,
     alignItems: "center",
   },
-  doneBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  doneBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: "#fff" },
 });

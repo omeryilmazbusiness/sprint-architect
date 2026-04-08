@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   sectionHeader: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     letterSpacing: 0.8,
     color: T.textMuted,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     letterSpacing: 0.3,
   },
   listRow: {
@@ -427,25 +427,25 @@ const styles = StyleSheet.create({
   },
   listRowContent: { flex: 1 },
   listRowLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 15,
     color: T.text,
   },
   listRowSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 1,
   },
   tfGroup: { gap: 6 },
   tfLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     letterSpacing: 0.5,
     color: T.textSec,
   },
   tfInput: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
     backgroundColor: T.surface,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === "ios" ? 12 : 10,
   },
   tfHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   primaryBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 15,
     color: "#fff",
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secondaryBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.text,
   },
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   destructiveBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.danger,
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stateText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     marginTop: 8,
@@ -529,13 +529,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 16,
     color: T.text,
     textAlign: "center",
   },
   emptySub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     textAlign: "center",
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   retryBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },

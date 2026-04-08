@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 16,
     color: T.text,
   },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   addBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.accent,
   },
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   summaryChipText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
   },
   docList: {
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
   },
   viewBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
   },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     borderColor: T.danger + "40",
   },
   docUploaded: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.success,
     marginTop: 2,
@@ -435,12 +435,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   docName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },
   docInstruction: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     marginTop: 2,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   pillText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
   },
   emptyState: {
@@ -460,12 +460,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emptyText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textSec,
   },
   emptyHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -485,12 +485,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 17,
     color: T.text,
   },
   modalSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
     lineHeight: 18,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     borderRadius: 10,
     padding: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     minHeight: 80,
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   modalBtnCancelText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
   },
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.danger,
   },
   modalBtnRejectText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: "#fff",
   },

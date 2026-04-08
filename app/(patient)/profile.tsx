@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 12,
   },
-  errorTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: T.text },
+  errorTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 17, color: T.text },
   retryBtn: {
     backgroundColor: T.accent,
     paddingHorizontal: 24,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r10,
   },
   retryText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: "#fff",
   },
@@ -484,16 +484,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  avatarText: { fontFamily: "Inter_700Bold", fontSize: 30, color: "#fff" },
+  avatarText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 30, color: "#fff" },
   heroName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 20,
     color: T.text,
     textAlign: "center",
     letterSpacing: -0.3,
   },
   heroNat: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 2,
   },
-  statusPillText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  statusPillText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 12 },
 
   keyRow: {
     flexDirection: "row",
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   keyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
     letterSpacing: 1.5,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.successBg,
   },
   copyTxt: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     color: T.textMuted,
   },
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   sectionHeader: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -588,14 +588,14 @@ const styles = StyleSheet.create({
   },
   infoText: { flex: 1, gap: 2 },
   infoLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   infoValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
   },
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     borderColor: T.dangerBorder,
   },
   logoutText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: T.danger,
   },

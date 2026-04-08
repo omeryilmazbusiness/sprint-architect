@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   cardLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: "rgba(255,255,255,0.5)",
     textTransform: "uppercase",
@@ -192,17 +192,17 @@ const styles = StyleSheet.create({
     gap: T.sp8,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 16,
     color: "rgba(255,255,255,0.5)",
   },
   emptySub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.3)",
   },
   vehicleName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 26,
     color: "#FFFFFF",
     marginBottom: T.sp8,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     marginBottom: T.sp16,
   },
   plateText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: "rgba(255,255,255,0.85)",
     letterSpacing: 2,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   driverInfo: {},
   driverLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
     color: "rgba(255,255,255,0.4)",
     textTransform: "uppercase",
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   driverName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 15,
     color: "rgba(255,255,255,0.9)",
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: T.sp16,
   },
   meetText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.4)",
     flex: 1,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.12)",
   },
   callBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 14,
     color: "#0D1117",
   },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: T.sp12,
   },
   plateBtnText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: "rgba(255,255,255,0.6)",
   },

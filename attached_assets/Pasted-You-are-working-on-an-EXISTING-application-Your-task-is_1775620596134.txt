@@ -1,0 +1,472 @@
+You are working on an EXISTING application.
+
+Your task is to perform a FULL design-system + production-readiness hardening pass across the ENTIRE application, with two major goals:
+
+1. Replace the current typography system with a more modern, premium, professional font system across the entire product
+2. Bring the application as close as possible to true production-ready quality across authentication and all major business flows
+
+THIS IS A STRICT, HIGH-PRIORITY TASK.
+
+IMPORTANT RULES
+- Do NOT rebuild the application from scratch
+- Do NOT make random visual changes without architectural thinking
+- First inspect the ENTIRE codebase deeply
+- Then identify what is already solid, what is weak, what is broken, what is inconsistent, and what prevents the app from being truly production-ready
+- Then directly implement the required improvements in the correct order
+- Preserve good architecture where possible
+- Refactor only where needed for consistency, maintainability, correctness, UX quality, performance, security, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No shallow “looks better” fixes
+- No fake prod-ready claims — do real engineering hardening
+- The result must feel like a premium modern production app on both design and engineering levels
+
+PRIMARY GOALS
+
+A) TYPOGRAPHY MODERNIZATION
+The entire application must use a more modern, professional, premium typography system.
+
+This means:
+- choose the right modern font family/families for the product
+- implement them correctly and safely
+- ensure consistent typography hierarchy across all roles/screens
+- improve readability, polish, and perceived product quality
+- make sure font loading is stable and production-safe
+- avoid font-related startup/runtime issues
+
+B) FULL PRODUCTION-READINESS HARDENING
+Audit and improve the app across:
+- auth
+- startup
+- language system
+- admin
+- manager
+- guest
+- documents
+- appointments
+- billing
+- notifications
+- CRUD flows
+- navigation
+- UI/UX consistency
+- mobile behavior
+- backend/API correctness
+- data integrity
+- security
+- performance
+- observability
+
+The target is:
+- a highly polished, stable, production-ready app
+- architecturally cleaner than before
+- premium visual quality
+- at least 95% production-ready if realistically achievable within the current architecture
+
+FIRST TASK — FULL CODEBASE AUDIT
+Before changing anything, inspect the full codebase deeply.
+
+You MUST audit:
+
+1. TYPOGRAPHY / DESIGN SYSTEM
+- current fonts in use
+- current font loading strategy
+- whether there are multiple inconsistent font styles
+- where fonts are applied
+- whether typography hierarchy is weak or inconsistent
+- whether web/mobile font behavior is inconsistent
+- whether current font choice hurts premium feel
+- whether font loading affects startup/login reliability
+
+2. AUTHENTICATION / AUTHORIZATION
+- login flows
+- guest / manager / admin auth
+- key-based login if used
+- token generation
+- refresh flow
+- session restore
+- logout
+- route guards
+- role enforcement
+- clinic scope enforcement
+- device binding logic if present
+- possible bypass risks
+
+3. APP STARTUP / BOOT FLOW
+- welcome/splash/start screen
+- startup timing
+- auth gate
+- session restore
+- language restore
+- notification initialization
+- asset/font initialization
+- navigation bootstrap stability
+
+4. LANGUAGE / I18N SYSTEM
+- provider/store/context/hook
+- selected language persistence
+- admin/manager/guest coverage
+- mixed-language risks
+- hardcoded string leftovers
+- stale rerender or persistence bugs
+
+5. ADMIN SIDE
+- dashboard
+- notifications
+- credential requests
+- billing/invoices
+- language support
+- tables/forms/modals
+- error/loading/empty states
+- UX consistency
+- production readiness
+
+6. MANAGER SIDE
+- dashboard
+- banner
+- overview cards
+- pending documents
+- users/guests
+- doctors/hotels/transports/document types
+- guest detail
+- appointments
+- invoices
+- notifications
+- settings
+- language support
+- mobile UX
+- broken flows / missing actions
+
+7. GUEST SIDE
+- dashboard
+- doctor/hotel/transport cards
+- schedule/calendar
+- notifications
+- explore
+- documents upload/open/view
+- track/journey
+- profile/settings
+- language support
+- key login flow
+- mobile UX
+
+8. DOCUMENT FLOW
+- assign document
+- upload
+- PDF open/view
+- approve/reject
+- protected access
+- manager + guest behavior
+- stale/broken states
+- file security
+
+9. APPOINTMENT FLOW
+- create/update/cancel
+- status transitions
+- no-show / missed logic
+- manager + guest UX
+- calendar rendering
+- status colors
+- upcoming/past logic
+- data correctness
+
+10. BILLING / INVOICE FLOW
+- billing event creation
+- invoice generation
+- overdue flow
+- suspension flow
+- admin/manager visibility
+- notification coverage
+- consistency and correctness
+
+11. NOTIFICATIONS
+- admin notifications
+- manager notifications
+- guest notifications
+- notification triggers
+- unread counts
+- mark as read
+- push token registration
+- push reliability
+- Expo notifications setup
+- Android/iOS behavior
+- missing critical notifications
+
+12. FORMS / CRUD FLOWS
+- doctor create/edit/delete
+- hotel create/edit/delete
+- transport create/edit/delete
+- guest create/edit/delete
+- document type create/edit/delete
+- mobile bottom sheets / popups
+- validation
+- mutation success/failure handling
+- query invalidation
+
+13. UI / UX / MOBILE QUALITY
+- responsiveness
+- spacing
+- keyboard avoidance
+- safe area
+- bottom sheets / modals
+- premium look and feel
+- loading skeletons
+- empty states
+- error states
+- visual consistency
+- touch targets
+- typography consistency after new font rollout
+
+14. BACKEND / API QUALITY
+- route structure
+- response consistency
+- validation
+- error handling
+- logging
+- requestId/correlation
+- duplicate routes
+- shadowed routes
+- dead code
+- modularity
+- service/repository separation
+
+15. DATA / DB / INTEGRITY
+- schema correctness
+- relationship integrity
+- collision risks
+- soft delete behavior
+- audit logging
+- duplicate data risks
+- stale state risks
+- notification/device token persistence
+
+16. SECURITY
+- auth boundaries
+- clinic isolation
+- document access control
+- key generation/login safety
+- input validation
+- dangerous legacy endpoints
+- privilege escalation risks
+- secret handling
+
+17. PERFORMANCE / STABILITY
+- expensive queries
+- unnecessary rerenders
+- font loading overhead
+- stale cache
+- missing pagination
+- polling issues
+- startup performance
+- crash risks
+
+18. OBSERVABILITY / DEBUGGABILITY
+- structured logging
+- audit logs
+- actionable errors
+- silent failures
+- traceability in production
+
+PHASE 1 — TYPOGRAPHY SYSTEM REDESIGN
+After the audit, redesign the application typography system.
+
+REQUIREMENTS
+- Choose a modern premium font system suitable for a medical tourism / healthcare operations product
+- It must feel:
+  - clean
+  - modern
+  - premium
+  - readable
+  - professional
+  - trustworthy
+- Avoid default/plain fonts that feel outdated
+- Avoid overly decorative fonts
+- Build a clear typography hierarchy:
+  - display / hero
+  - page titles
+  - section titles
+  - card headings
+  - body text
+  - helper text
+  - captions
+  - button text
+  - table text
+  - badges/status text
+
+You must:
+- inspect how fonts are currently loaded
+- implement font loading correctly and safely
+- centralize typography tokens/styles
+- keep the system consistent across admin, manager, guest
+- ensure the app still starts reliably
+- avoid font-related runtime issues
+
+Acceptance criteria:
+- the app feels visibly more modern and premium
+- typography is consistent everywhere
+- font loading is production-safe
+- no startup/font crashes
+- no mixed old/new font system remains
+
+PHASE 2 — PRODUCTION-READINESS SCORING
+Before implementing fixes, give a real score by area:
+- Typography / Design System
+- Auth
+- Startup
+- i18n
+- Admin
+- Manager
+- Guest
+- Documents
+- Appointments
+- Billing
+- Notifications
+- CRUD flows
+- Mobile UX
+- Backend/API
+- Data Integrity
+- Security
+- Performance
+- Observability
+
+For each:
+- Ready
+- Needs improvement
+- Not ready
+
+Estimate a real current overall production-readiness percentage.
+
+PHASE 3 — GAP LIST
+List everything preventing the app from being truly production-ready.
+
+Classify:
+- P0 = critical blockers
+- P1 = major issues
+- P2 = important improvements
+- P3 = future enhancements
+
+PHASE 4 — IMPLEMENT THE FIXES
+After the audit, directly implement the necessary improvements in the correct order.
+
+PRIORITY ORDER
+1. Security / auth / data integrity blockers
+2. Broken core flows
+3. Startup / font / navigation stability
+4. Missing critical manager/admin/guest actions
+5. Notifications / billing / document correctness
+6. UI/UX / typography consistency
+7. Mobile reliability / modal / keyboard / safe area fixes
+8. Cleanup / dead code / maintainability hardening
+9. Final premium polish
+
+PHASE 5 — AUTH HARDENING
+Specifically harden auth to production-ready quality:
+- login correctness
+- guest key flow
+- manager/admin auth flow
+- token/session restore
+- logout consistency
+- route guards
+- role enforcement
+- device binding if present
+- language persistence through login
+- startup/auth transition stability
+
+Acceptance criteria:
+- auth flows are stable and secure
+- no broken or inconsistent login behavior
+- no reset of critical state unexpectedly
+- no obvious auth bypass risks
+
+PHASE 6 — SYSTEM-WIDE UX HARDENING
+Ensure:
+- forms are reliable
+- empty states are polished
+- loading states are clear
+- error states are clean
+- notifications are useful
+- appointments/documents/billing flows feel complete
+- manager/admin/guest surfaces feel like one product family
+- new typography improves the perceived quality everywhere
+
+PHASE 7 — CLEANUP / ARCHITECTURE IMPROVEMENT
+Keep the system SOLID:
+- thin route/controller layer
+- business rules in services/use cases
+- persistence in repositories
+- centralized design tokens/typography
+- unified i18n system
+- unified notification system
+- unified auth/session logic
+- remove dead/confusing code where safe
+- avoid duplicate logic
+
+OUTPUT FORMAT
+Use EXACTLY this structure:
+
+## 1. Executive Summary
+- short summary of current state
+- current estimated production-readiness %
+- typography/design system state
+- confidence level
+
+## 2. Full System Audit
+Break down the system from auth to all major flows.
+
+## 3. Typography Audit
+- what fonts are currently used
+- what is wrong with current typography
+- what new typography system you selected and why
+
+## 4. Production Readiness Score by Area
+For each area:
+- status
+- score
+- short reason
+
+## 5. Critical Blockers (P0)
+List all critical blockers.
+
+## 6. Major Issues (P1)
+List all major issues.
+
+## 7. Important Improvements (P2)
+List all important improvements.
+
+## 8. Future Enhancements (P3)
+List all future enhancements.
+
+## 9. Implementation Plan
+Explain the exact order of fixes.
+
+## 10. Files / Areas Updated
+List the exact files/modules changed and why.
+
+## 11. Implemented Changes
+After coding, summarize exactly what you changed.
+
+## 12. Re-Assessment
+Give the new production-readiness score after the fixes.
+
+## 13. Remaining Risks
+List any remaining risks if still under 95%.
+
+## 14. Final Verdict
+Answer clearly:
+- Is the app now at least 95% production-ready?
+- If not, what still prevents it?
+
+STRICT ENGINEERING EXPECTATIONS
+- No false “done” claim
+- No partial typography rollout disguised as global
+- No random design-only patching
+- No fake prod-ready statement without real audit and fixes
+- The final result must be a genuine, measurable quality increase
+
+IMPORTANT FINAL RULE
+Do NOT stop after analysis.
+Audit first, then directly implement the required improvements end-to-end.
+
+START NOW
+First inspect the full codebase deeply and perform the full production-readiness + typography audit.
+Then implement the necessary improvements to modernize the typography system and harden the app toward 95%+ production readiness.

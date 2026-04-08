@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   pillText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
   heroTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 30,
     color: T.text,
     textAlign: "center",
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   heroTagline: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textSec,
     textAlign: "center",
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     gap: T.sp16,
   },
   cardLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 11,
     color: T.textMuted,
     textTransform: "uppercase",
@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   featureLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },
   featureDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textSec,
     lineHeight: 17,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.border,
   },
   footerNote: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
     textAlign: "center",

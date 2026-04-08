@@ -82,7 +82,7 @@ const sectionStyles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 12,
     color: T.accent,
     letterSpacing: 0.4,
@@ -580,14 +580,14 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.text,
     height: 42,
   },
 
   listCount: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 13,
     color: T.textMuted,
     paddingHorizontal: T.sp16,
@@ -595,8 +595,8 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   empty: { paddingTop: 80, alignItems: "center", gap: T.sp8, paddingHorizontal: T.sp32 },
-  emptyTitle: { fontFamily: "Inter_600SemiBold" as any, fontSize: 16, color: T.text, textAlign: "center" },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
+  emptyTitle: { fontFamily: "PlusJakartaSans_600SemiBold" as any, fontSize: 16, color: T.text, textAlign: "center" },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center" },
 
   skeletonCard: {
     backgroundColor: T.surface,
@@ -642,8 +642,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: T.border,
   },
-  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
-  sheetSubtitle: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
+  sheetTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
+  sheetSubtitle: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textMuted, marginTop: 2 },
   sheetCloseBtn: { padding: 4 },
   sheetCloseWrap: {
     width: 30,
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   },
   field: { gap: T.sp4 },
   fieldRow: { flexDirection: "row", gap: T.sp12 },
-  fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.textMuted, letterSpacing: 0.3 },
+  fieldLabel: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12, color: T.textMuted, letterSpacing: 0.3 },
   required: { color: T.danger },
   fieldInput: {
     backgroundColor: T.bg,
@@ -672,12 +672,12 @@ const styles = StyleSheet.create({
     borderRadius: T.r10,
     paddingHorizontal: 14,
     paddingVertical: T.sp12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 15,
     color: T.text,
   },
   fieldInputError: { borderColor: T.danger },
-  errorText: { fontFamily: "Inter_500Medium", fontSize: 12, color: T.danger },
+  errorText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12, color: T.danger },
   textArea: { height: 72, textAlignVertical: "top" },
   textAreaTall: { height: 96, textAlignVertical: "top" },
 
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: T.surface,
   },
-  btnCancelText: { fontFamily: "Inter_500Medium", fontSize: 15, color: T.text },
+  btnCancelText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 15, color: T.text },
   btnSave: {
     flex: 2,
     height: 46,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  btnSaveText: { fontFamily: "Inter_600SemiBold" as any, fontSize: 15, color: "#fff" },
+  btnSaveText: { fontFamily: "PlusJakartaSans_600SemiBold" as any, fontSize: 15, color: "#fff" },
 
   toastOverlay: {
     flex: 1,
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   toastBarError: { backgroundColor: T.danger },
   toastText: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: "#fff",
   },

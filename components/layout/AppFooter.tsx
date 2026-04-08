@@ -15,10 +15,10 @@ export function AppFooter({ version = "1.0.0" }: AppFooterProps) {
 
   return (
     <View style={[styles.container, { borderTopColor: colors.border, paddingBottom: bottomPad + 8 }]}>
-      <Text style={[styles.brand, { color: colors.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+      <Text style={[styles.brand, { color: colors.textMuted, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
         Healory
       </Text>
-      <Text style={[styles.meta, { color: colors.textMuted, fontFamily: "Inter_400Regular" }]}>
+      <Text style={[styles.meta, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
         Operations Platform · v{version}
       </Text>
     </View>

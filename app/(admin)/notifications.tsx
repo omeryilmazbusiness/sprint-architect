@@ -663,8 +663,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   tabActive: { borderBottomColor: T.primary },
-  tabText: { fontFamily: "Inter_500Medium", fontSize: 14, color: T.textMuted },
-  tabTextActive: { color: T.primary, fontFamily: "Inter_600SemiBold" },
+  tabText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.textMuted },
+  tabTextActive: { color: T.primary, fontFamily: "PlusJakartaSans_600SemiBold" },
   tabBadge: {
     backgroundColor: T.primary,
     borderRadius: 10,
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     minWidth: 18,
     alignItems: "center",
   },
-  tabBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#fff" },
+  tabBadgeText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, color: "#fff" },
   toolbar: {
     flexDirection: "row",
     padding: 12,
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg,
   },
   filterToggleActive: { backgroundColor: T.primary, borderColor: T.primary },
-  filterToggleText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.textSec },
+  filterToggleText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textSec },
   filterToggleTextActive: { color: "#fff" },
   markAllBtn: {
     flexDirection: "row",
@@ -705,10 +705,10 @@ const styles = StyleSheet.create({
     borderColor: T.primary + "40",
     backgroundColor: T.primary + "10",
   },
-  markAllText: { fontFamily: "Inter_500Medium", fontSize: 13, color: T.primary },
+  markAllText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.primary },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 15, color: T.textMuted, textAlign: "center" },
-  emptySubtext: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textMuted, textAlign: "center", lineHeight: 18 },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 15, color: T.textMuted, textAlign: "center" },
+  emptySubtext: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textMuted, textAlign: "center", lineHeight: 18 },
   list: { padding: 16, gap: 12 },
   eventList: { padding: 16, gap: 10 },
   card: {
@@ -735,9 +735,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
   },
-  kindText: { fontFamily: "Inter_600SemiBold", fontSize: 11.5 },
+  kindText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 11.5 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 6 },
-  statusText: { fontFamily: "Inter_600SemiBold", fontSize: 10.5 },
+  statusText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10.5 },
   cardBody: {
     paddingHorizontal: 16,
     paddingBottom: 14,
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
   },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  infoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: T.textSec, flex: 1 },
+  infoText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 13, color: T.textSec, flex: 1 },
   cardActions: { flexDirection: "row", gap: 10, padding: 12 },
   actionBtn: {
     flex: 1,
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
   },
   actionBtnReject: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
   actionBtnGenerate: { backgroundColor: T.primary },
-  actionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  actionBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13 },
   confirmBox: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: T.border,
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  confirmWarning: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#92400E", lineHeight: 16 },
+  confirmWarning: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: "#92400E", lineHeight: 16 },
   confirmActions: { flexDirection: "row", gap: 8 },
   eventIconWrap: {
     position: "absolute",
@@ -788,11 +788,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eventHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  eventTitle: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
+  eventTitle: { flex: 1, fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.text },
   eventTitleRead: { color: T.textSec },
   severityDot: { width: 7, height: 7, borderRadius: 3.5 },
   eventBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 18,
@@ -804,8 +804,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
-  severityTagText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
-  eventTime: { fontFamily: "Inter_400Regular", fontSize: 12, color: T.textMuted },
+  severityTagText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10 },
+  eventTime: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted },
 });
 
 const credStyles = StyleSheet.create({
@@ -839,9 +839,9 @@ const credStyles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  title: { fontFamily: "Inter_700Bold", fontSize: 18, color: T.text },
+  title: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     textAlign: "center",
@@ -858,7 +858,7 @@ const credStyles = StyleSheet.create({
     alignItems: "center",
   },
   credText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 18,
     color: T.primary,
     letterSpacing: 1.5,
@@ -875,7 +875,7 @@ const credStyles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
   },
-  copyBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  copyBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: "#fff" },
   doneBtn: {
     flex: 1,
     alignItems: "center",
@@ -886,7 +886,7 @@ const credStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.border,
   },
-  doneBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: T.text },
+  doneBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.text },
   warningBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -900,7 +900,7 @@ const credStyles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: "#92400E",
     lineHeight: 16,

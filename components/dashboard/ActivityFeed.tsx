@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: T.textMuted },
+  emptyText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted },
   row: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -121,13 +121,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   message: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13.5,
     color: T.text,
     lineHeight: 18,
   },
   time: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
     flexShrink: 0,

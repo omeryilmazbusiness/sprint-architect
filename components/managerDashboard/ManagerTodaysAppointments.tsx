@@ -120,13 +120,13 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
     marginTop: 2,
   },
   emptyBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textMuted,
     textAlign: "center",
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
   },
   timeText: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 11,
     color: T.accent,
   },
@@ -158,12 +158,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   name: {
-    fontFamily: "Inter_600SemiBold" as any,
+    fontFamily: "PlusJakartaSans_600SemiBold" as any,
     fontSize: 14,
     color: T.text,
   },
   sub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textMuted,
   },
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderTopColor: T.border,
   },
   moreText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.accent,
   },

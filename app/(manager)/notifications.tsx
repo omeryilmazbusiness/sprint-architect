@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   markAllText: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     color: T.primary,
   },
 
@@ -385,14 +385,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardTitle: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.textSec,
     flex: 1,
     marginRight: 6,
   },
   cardTitleUnread: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.text,
   },
   metaRow: {
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   time: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 11,
     color: T.textMuted,
   },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   body: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
     lineHeight: 18,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
   },
   severityText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     letterSpacing: 0.5,
   },

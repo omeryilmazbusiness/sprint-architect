@@ -131,12 +131,12 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
   },
   tabText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 13,
     color: T.textSec,
   },
   tabTextActive: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     color: T.accent,
   },
   item: {
@@ -157,24 +157,24 @@ const styles = StyleSheet.create({
     minWidth: 54,
   },
   dateLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 11,
     color: T.accent,
   },
   timeLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 13,
     color: T.text,
     marginTop: 1,
   },
   itemBody: { flex: 1 },
   itemTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.text,
   },
   itemSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
     color: T.textSec,
     marginTop: 2,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
   },
   emptyBox: {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: T.textMuted,
   },
