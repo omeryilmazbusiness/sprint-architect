@@ -25,12 +25,19 @@ try {
 }
 
 // ─── Notification handler — installed once, before React renders ────────────
-
-// initNotificationHandler is idempotent, platform-guarded, and catches its
-// own errors. Calling it here (outside the component) ensures it runs before
-// the first frame, which is important for apps that can be launched via a
-// push-notification tap.
-initNotificationHandler();
+//
+// Called at module scope so the handler is set before the first frame.
+// This is important when the app is launched by tapping a push notification.
+//
+// initNotificationHandler() is:
+//   - async (dynamic import) → no top-level expo-notifications evaluation,
+//     so Android Expo Go SDK 53+ never crashes during module load.
+//   - environment-guarded → skips silently on Android Expo Go / web.
+//   - idempotent → safe to call multiple times (nop after first success).
+//   - error-safe → catches all errors internally; failure is non-fatal.
+//
+// `void` discards the returned Promise intentionally (fire-and-forget).
+void initNotificationHandler();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,12 +51,16 @@ function SystemErrorBridge() {
 
 /**
  * Sets up Android notification channels exactly once, after the component
- * tree has mounted.  ensureAndroidChannels() is already platform-guarded and
- * catches its own errors — a failure here never crashes the app.
+ * tree has mounted.
+ *
+ * ensureAndroidChannels() is:
+ *   - async + dynamic import → no module-level expo-notifications crash.
+ *   - platform + environment guarded → no-op on iOS/web/Android Expo Go.
+ *   - error-safe → catches all errors; channel failure is non-fatal.
  */
 function NotificationInit() {
   useEffect(() => {
-    ensureAndroidChannels();
+    void ensureAndroidChannels();
   }, []);
   return null;
 }

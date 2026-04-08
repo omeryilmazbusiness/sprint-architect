@@ -1,21 +1,40 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { canInitializeNotifications, isExpoGo } from "./environment";
 
 let _handlerInstalled = false;
 
 /**
- * Installs the global notification handler exactly once.
+ * Installs the global expo-notifications handler exactly once.
  *
- * Safe to call on any platform and in any environment (Expo Go, dev build,
- * standalone). On Android in Expo Go (SDK 53+) remote push is unsupported
- * and expo-notifications will throw — the try/catch keeps the app alive.
+ * This handler controls how received notifications are displayed while the
+ * app is in the foreground (alert, sound, badge). It must be set before the
+ * first notification arrives, so it is called at module scope in the root
+ * layout — but safely, via async + dynamic import.
+ *
+ * Environment behaviour:
+ * - Web                  → skipped (no native module).
+ * - Android Expo Go      → skipped (SDK 53+ removed push from Expo Go).
+ * - iOS Expo Go          → handler installed (local display still works).
+ * - Dev build            → handler installed.
+ * - Production build     → handler installed.
+ *
+ * Safety guarantees:
+ * - NO top-level import of expo-notifications, so this module never crashes
+ *   during bundle evaluation, regardless of runtime environment.
+ * - Idempotent: subsequent calls after the first success are no-ops.
+ * - All errors are caught and logged; failures are non-fatal.
  */
-export function initNotificationHandler(): void {
+export async function initNotificationHandler(): Promise<void> {
   if (_handlerInstalled) return;
-  if (Platform.OS === "web") return;
-  _handlerInstalled = true;
+
+  if (!canInitializeNotifications()) {
+    console.log(
+      `[Notifications] Handler skipped — ${isExpoGo ? "Expo Go" : "web"} environment.`,
+    );
+    return;
+  }
 
   try {
+    const Notifications = await import("expo-notifications");
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -23,7 +42,9 @@ export function initNotificationHandler(): void {
         shouldSetBadge: true,
       }),
     });
+    _handlerInstalled = true;
+    console.log("[Notifications] Handler installed.");
   } catch (err) {
-    console.warn("[Notifications] setNotificationHandler failed (Expo Go limitation on Android):", err);
+    console.warn("[Notifications] setNotificationHandler failed:", err);
   }
 }

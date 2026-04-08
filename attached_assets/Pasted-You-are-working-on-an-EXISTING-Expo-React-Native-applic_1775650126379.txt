@@ -1,0 +1,253 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to deeply inspect the current Android runtime issues and make the Android app production-ready in the cleanest, safest, most professional, SOLID-compliant way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT apply shallow patches
+- Do NOT hide errors without fixing root causes
+- First inspect the real implementation deeply
+- Then directly implement the required fixes
+- Preserve good architecture where possible
+- Refactor only where needed for correctness, stability, maintainability, platform readiness, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- The final result must be stable on Android and aligned with Expo SDK 53 realities
+- The result must also not break iOS/web unintentionally
+
+PRIMARY ERRORS TO FIX
+
+1) EXPO NOTIFICATIONS / EXPO GO ERROR
+Current error:
+- "Android push notifications functionality provided by expo-notifications was removed from Expo Go with release of SDK 53..."
+
+This means the current notification implementation is not correctly handling the difference between:
+- Expo Go
+- development build
+- standalone production build
+
+The app must behave correctly and professionally on Android.
+
+Required outcome:
+- No broken startup/runtime experience because of expo-notifications in Expo Go
+- Notification setup must be production-ready for Android builds
+- The app must gracefully handle unsupported environments
+- The implementation must clearly separate:
+  - Expo Go behavior
+  - development build behavior
+  - real production build behavior
+
+2) AUTH PROVIDER ERROR
+Current error:
+- "useAuth must be used within AuthProvider"
+
+This means part of the component tree is calling the auth hook outside the provider boundary, or provider order/lifecycle is broken.
+
+Required outcome:
+- Fix the provider hierarchy properly
+- Ensure any screen/layout/hook using useAuth is always inside AuthProvider
+- Ensure Android startup/navigation flow does not break provider mounting
+- Remove any architectural mistakes causing this error
+
+PRIMARY GOAL
+Make Android stable, professional, and production-ready by fixing:
+- notification initialization strategy
+- provider hierarchy / auth context usage
+- startup/runtime stability
+- environment handling
+- architecture cleanliness
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand ALL of the following:
+
+1. APP ROOT / PROVIDER TREE
+- app entry point
+- root layout
+- provider order
+- where AuthProvider is mounted
+- which layouts/screens call useAuth
+- whether there are routes/screens mounted outside the provider tree
+- whether startup/welcome/login flow breaks provider boundaries
+
+2. AUTH ARCHITECTURE
+- current AuthContext implementation
+- useAuth hook
+- where login/session restore happens
+- which screens depend on auth state
+- whether there are shared components/hooks calling useAuth too early
+- whether there are multiple app roots or layout trees causing context mismatch
+
+3. EXPO NOTIFICATIONS SETUP
+- where expo-notifications is initialized
+- where setNotificationHandler is called
+- where push permission is requested
+- where push token registration happens
+- whether this code runs unconditionally in Expo Go
+- whether Android notification channel setup exists
+- whether current code assumes push works in Expo Go on SDK 53
+- whether the app is trying to use removed functionality without environment guard
+
+4. PLATFORM / BUILD CONTEXT
+Inspect:
+- Expo SDK version
+- app.json / app.config.*
+- plugins
+- expo-notifications package usage
+- whether project uses Expo Go, dev build, EAS build
+- whether push flow should be gated by runtime environment checks
+
+5. STARTUP FLOW
+- welcome screen / splash
+- session restore
+- auth gate
+- notification init
+- font init
+- language init
+- provider mount order
+- whether Android startup ordering causes the current runtime errors
+
+Then directly implement the fixes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — FIX AUTH PROVIDER ARCHITECTURE
+1. Trace all useAuth usages
+2. Identify exactly which component/layout/screen is outside AuthProvider
+3. Fix the provider hierarchy properly
+4. Ensure all auth-dependent components are mounted under AuthProvider
+5. Remove any duplicated or misordered provider logic
+6. Ensure startup/login/navigation flow respects the provider tree
+
+Acceptance criteria:
+- no "useAuth must be used within AuthProvider" error remains
+- all auth screens and post-login screens work correctly
+- auth state is accessible consistently
+- no hidden provider boundary issue remains
+
+PHASE 2 — FIX EXPO NOTIFICATIONS FOR SDK 53 / EXPO GO
+1. Inspect current notification init strategy
+2. Add proper environment-aware handling for Expo Go vs development build vs production build
+3. Do NOT attempt unsupported Android push functionality inside Expo Go
+4. Gracefully disable or bypass unsupported behavior in Expo Go
+5. Keep full push functionality available for real builds/dev builds as appropriate
+6. Ensure the user experience is stable even if push is unavailable in Expo Go
+
+Required behavior:
+- In Expo Go on SDK 53, the app must not crash or behave like push is broken
+- In dev build / production build, the notification setup should remain correct and production-ready
+
+Acceptance criteria:
+- no Android runtime error from expo-notifications in Expo Go
+- app startup remains stable
+- notification setup is environment-aware and clean
+- Android production path remains valid
+
+PHASE 3 — CENTRALIZE NOTIFICATION INITIALIZATION
+Refactor the notification architecture professionally.
+
+Requirements:
+- one clear notification init module
+- one place for environment detection
+- one place for handler registration
+- one place for permission request
+- one place for token registration
+- one place for Android channel setup
+- safe fallback if notifications are unavailable
+
+Suggested structure:
+- notifications/setup.ts
+- notifications/environment.ts
+- notifications/registerPush.ts
+- notifications/channels.ts
+
+Adjust to the real project structure, but keep it clean.
+
+Acceptance criteria:
+- notification logic is centralized
+- no duplicate init paths remain
+- unsupported environments are handled gracefully
+
+PHASE 4 — ANDROID PRODUCTION HARDENING
+Audit and improve Android-specific readiness:
+- startup stability
+- auth provider hierarchy
+- notification environment handling
+- channel creation
+- permission flow
+- safe area / navigation consistency
+- no fatal dependency ordering issues
+
+Acceptance criteria:
+- Android app launches cleanly
+- login flow is stable
+- provider hierarchy is safe
+- unsupported push flow does not crash the app
+
+PHASE 5 — GENERAL PROD-READY CLEANUP
+1. Remove dead/conflicting init code
+2. Remove duplicate provider wrapping if found
+3. Improve logs/errors for easier diagnosis
+4. Ensure app still works if notifications cannot initialize
+5. Ensure auth/session restore remains stable
+6. Keep architecture SOLID:
+   - providers at root
+   - hooks only under correct providers
+   - notification service separated from UI
+   - environment handling separated from business logic
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- AuthProvider clearly mounted at the correct root boundary
+- useAuth used only inside provider-controlled tree
+- notifications init separated from auth/UI logic
+- Expo Go limitations handled explicitly
+- no duplicated startup side effects
+- Android-specific behavior isolated cleanly
+- codebase cleaner than before
+
+YOU MUST CHECK FOR THESE RISKS
+- useAuth called inside root layout before provider mount
+- modal/sheet/navigation tree mounted outside provider
+- multiple root layout groups causing provider mismatch
+- notifications initialized too early
+- Expo Go and production builds treated as the same environment
+- Android channel setup missing or misordered
+- provider tree broken during welcome/login transition
+- push token registration attempted in unsupported environment
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found for AuthProvider error
+2. Root cause found for expo-notifications / Expo Go error
+3. Exact files changed
+4. Why each fix was necessary
+5. Any architecture cleanup performed
+6. Manual test steps for Android
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of the AuthProvider hierarchy fix
+2. Summary of the Expo SDK 53 / Expo Go notifications fix
+3. Summary of the new Android-safe notification architecture
+4. Confirmation that Android startup is stable
+5. Exact files changed
+6. Manual QA checklist for:
+   - Android cold start
+   - login screen
+   - auth state usage
+   - Expo Go behavior
+   - development build behavior
+   - production build behavior
+7. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- Android no longer throws the expo-notifications Expo Go error in runtime flow
+- useAuth no longer throws provider-boundary error
+- Android startup/login is stable
+- the solution is production-ready and architecturally clean
+
+START NOW
+First inspect the provider tree, startup flow, and notifications initialization deeply.
+Then fix both issues end-to-end professionally.

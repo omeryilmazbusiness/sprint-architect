@@ -1,23 +1,34 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { apiRequest } from "@/lib/query-client";
+import { canUsePushNotifications, isExpoGo } from "./environment";
 
 /**
- * Requests notification permissions, fetches an Expo push token, and
- * registers it with the backend at the given endpoint.
+ * Requests push-notification permission, fetches an Expo push token,
+ * and registers it with the backend at the given endpoint.
  *
- * Fully safe to call in any environment:
- *  - Skips silently on web.
- *  - Handles permission denied gracefully.
- *  - Uses dynamic import so Android Expo Go (SDK 53+, which removed remote
- *    push from Expo Go) never crashes at module-load time.
+ * Environment behaviour:
+ * - Web                  → skipped (no native module).
+ * - Expo Go (any OS)     → skipped (push tokens unavailable in Expo Go).
+ * - Dev build            → registers if EAS projectId is present.
+ * - Production build     → registers; failure is logged, not thrown.
+ *
+ * Safety: NO top-level expo-notifications import — dynamic import inside
+ * the function body, after the environment guard. This means Android Expo Go
+ * never loads the native module and therefore never crashes.
+ *
+ * All errors are caught; token registration failure is non-fatal so the
+ * rest of the app continues working.
  */
 export async function registerPushToken(endpoint: string): Promise<void> {
-  try {
-    if (Platform.OS === "web") return;
+  if (!canUsePushNotifications()) {
+    console.log(
+      `[Push] Skipped — ${isExpoGo ? "Expo Go" : Platform.OS === "web" ? "web" : "unsupported"} environment.`,
+    );
+    return;
+  }
 
-    // Dynamic import avoids the top-level crash on Android Expo Go SDK 53+
-    // (expo-notifications throws during module initialisation there).
+  try {
     const Notifications = await import("expo-notifications");
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -29,7 +40,7 @@ export async function registerPushToken(endpoint: string): Promise<void> {
     }
 
     if (finalStatus !== "granted") {
-      console.log("[Push] Permission not granted — skipping token registration");
+      console.log("[Push] Permission not granted — skipping token registration.");
       return;
     }
 
@@ -38,17 +49,16 @@ export async function registerPushToken(endpoint: string): Promise<void> {
       (Constants.easConfig?.projectId as string | undefined);
 
     if (!projectId) {
-      console.log("[Push] No projectId found — skipping push token registration (expected in Expo Go dev mode)");
+      console.log("[Push] No EAS projectId found — skipping token registration.");
       return;
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-
     const token = tokenData.data;
     const platform: "ios" | "android" = Platform.OS === "ios" ? "ios" : "android";
 
     await apiRequest("POST", endpoint, { token, platform });
-    console.log(`[Push] Token registered at ${endpoint}:`, token.slice(0, 20) + "...");
+    console.log(`[Push] Token registered at ${endpoint}:`, token.slice(0, 20) + "…");
   } catch (err) {
     console.warn(`[Push] Failed to register push token at ${endpoint}:`, err);
   }
