@@ -1,0 +1,155 @@
+You are working on an EXISTING application.
+
+Your task is to replace the current airplane icon branding with the provided new logo image, and integrate that logo professionally across the app in the cleanest, safest, most professional, SOLID-compliant, production-ready way.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT break existing login, navigation, or header layouts
+- First inspect the current implementation deeply
+- Then directly implement the branding changes
+- Preserve good architecture where possible
+- Refactor only where needed for maintainability, visual consistency, correctness, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- Do NOT just drop the image randomly into screens
+- The new logo must feel intentional, premium, and properly integrated
+- The result must be mobile-first and production-ready
+
+PRIMARY REQUIREMENTS
+
+1) LOGIN SCREEN
+- Replace the current airplane icon on the login screen with the provided logo image
+- The logo must be integrated professionally
+- It must look premium, balanced, and branded
+- It must not look oversized, blurry, stretched, or awkward
+- It must fit naturally into the existing login visual hierarchy
+
+2) APP HEADERS
+- Add the same logo to the top-left area of the app header(s)
+- It should appear in a professional way across the application wherever the header branding belongs
+- It should be aligned, sized, and padded properly
+- It should not break header layout, title alignment, or action buttons
+
+3) PRODUCTION-READY BRAND INTEGRATION
+- Use the provided image as the real brand asset
+- Load it correctly and safely
+- Reuse it via a clean shared branding component if appropriate
+- Keep the implementation scalable and maintainable
+
+LOGO SOURCE
+Use the provided image file as the branding logo asset.
+
+FIRST TASK — ANALYZE BEFORE IMPLEMENTING
+Before changing anything, inspect and understand all of the following:
+
+1. CURRENT LOGIN SCREEN
+- where the airplane icon is rendered
+- whether it is an icon component, SVG, image, or custom element
+- how the login hero/header area is currently structured
+- what spacing, sizing, and branding hierarchy currently exist
+
+2. CURRENT APP HEADER STRUCTURE
+- which layouts/screens use a shared header
+- where the top-left branding/title area is defined
+- whether admin, manager, and guest headers differ
+- whether a shared header branding component already exists or should be created
+
+3. ASSET HANDLING
+- how static image assets are currently loaded in the app
+- where the best place is to store this logo asset
+- whether there is already a shared assets/constants structure
+- whether image sizing/resolution handling is safe for Android and iOS
+
+Then directly implement the requested changes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — LOGIN SCREEN LOGO REPLACEMENT
+1. Replace the airplane icon with the provided logo image
+2. Ensure the logo is sized appropriately
+3. Keep aspect ratio correct
+4. Place it in a premium and balanced way within the login screen
+5. Ensure it looks good on both Android and iOS
+6. Ensure it works in light/dark login styling if applicable
+
+Acceptance criteria:
+- airplane icon is gone
+- new logo appears on login screen
+- logo looks clean, premium, and professionally placed
+- no stretching, clipping, or awkward spacing
+
+PHASE 2 — HEADER BRANDING INTEGRATION
+1. Add the logo to the top-left area of the app header(s)
+2. Ensure proper spacing with title text and header actions
+3. Keep the result visually premium and minimal
+4. Reuse a shared branding component if that improves maintainability
+5. Ensure the logo does not make headers feel crowded
+
+Acceptance criteria:
+- logo appears in the top-left header area where appropriate
+- header layout remains clean and professional
+- no overlap with icons, titles, or safe area
+- branding feels consistent across the app
+
+PHASE 3 — SHARED BRAND COMPONENT / ASSET CLEANUP
+1. If appropriate, create a reusable brand/logo component
+2. Centralize logo sizing variants (for login vs header)
+3. Avoid duplicated ad-hoc logo code across screens
+4. Keep asset usage clean and maintainable
+
+Acceptance criteria:
+- branding integration is maintainable
+- no random duplicated image styling scattered everywhere
+- future branding changes would be easy
+
+PHASE 4 — POLISH / HARDENING
+1. Ensure crisp rendering on Android and iOS
+2. Ensure the logo scales correctly on smaller screens
+3. Ensure no layout regressions in the login screen or headers
+4. Keep loading and rendering stable
+5. Leave the codebase cleaner than before
+
+DESIGN EXPECTATIONS
+- premium
+- modern
+- minimal
+- balanced
+- medically trustworthy / health-tech appropriate
+- polished
+- not oversized
+- not decorative for the sake of decoration
+
+YOU MUST CHECK FOR THESE RISKS
+- current airplane icon may exist in more than one place
+- login header and app headers may use different structures
+- top-left logo may crowd the header if size is wrong
+- image may be too large if not resized correctly
+- different platforms may render the asset with inconsistent sharpness
+- dark/light backgrounds may require subtle adaptation in sizing or spacing, not image distortion
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. What you found in the current login/header branding structure
+2. Exact files changed
+3. Why each change was made
+4. Manual test steps
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Summary of login screen logo replacement
+2. Summary of header logo integration
+3. Exact files changed
+4. Manual QA checklist for Android and iOS
+5. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the airplane icon is replaced by the provided logo on the login screen
+- the logo appears professionally in the top-left header area
+- the result looks premium and production-ready
+- layouts remain stable on Android and iOS
+
+START NOW
+First inspect the current login icon implementation and app header structure deeply.
+Then integrate the provided logo asset end-to-end professionally.
