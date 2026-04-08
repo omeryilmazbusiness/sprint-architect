@@ -8,72 +8,45 @@ import {
 } from "@expo-google-fonts/inter";
 
 /**
- * On web, expo-font uses FontFaceObserver internally (ExpoFontLoader.web.js).
- * FontFaceObserver calls `.load(null, 6000)` which rejects after 6 seconds if the
- * browser font-loading API hasn't confirmed the font.  The rejection escapes
- * expo-font's own `.catch()` because Promise.all fires unhandledrejection on
- * individual promises before the outer chain can catch it.
- *
- * This guard is installed once at module load time (before any renders).
- * It suppresses those font-timeout rejections — the app is already resilient to
- * them via the fontError branch in _layout.tsx — and logs a DEV-only warning.
- *
- * Native: never runs (Platform.OS !== "web").
- */
-function installWebFontRejectionGuard(): void {
-  if (typeof window === "undefined") return;
-  window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
-    const msg: string = event?.reason?.message ?? "";
-    if (msg.includes("timeout exceeded") || msg.includes("ms timeout")) {
-      event.preventDefault();
-      if (__DEV__) {
-        console.warn(
-          "[FontLoader] Web font load timed out — using system font fallback." +
-            " This is expected in slow/offline environments and does not affect the app."
-        );
-      }
-    }
-  });
-}
-
-// Install once at module-import time so it is in place before any useFonts call.
-if (Platform.OS === "web") {
-  installWebFontRejectionGuard();
-}
-
-/**
  * useAppFonts — safe, cross-platform font loading hook.
  *
  * NATIVE (iOS / Android):
- *   Delegates to useFonts(). Returns [loaded, error].
+ *   Calls useFonts() with all Inter weights.
  *   App waits until fonts are ready or an error surfaces, then continues.
- *   fontError is handled gracefully in _layout.tsx.
+ *   fontError branch in _layout.tsx ensures the app always renders.
  *
  * WEB:
- *   Starts font loading in the background (creates @font-face CSS + FontFaceObserver).
- *   Returns [true, null] immediately so the app never blocks on font readiness.
- *   Text renders instantly with the system font; Inter swaps in once the browser
- *   confirms loading.  Timeout rejections are silently suppressed by the guard above.
+ *   Passes an empty font map so useFonts() resolves immediately without
+ *   spawning FontFaceObserver internally.  FontFaceObserver calls
+ *   `.load(null, 6000)` which throws an unhandled rejection in slow or
+ *   sandboxed environments (e.g. Replit dev preview) — this fix removes
+ *   that code path entirely on web.
+ *
+ *   Web uses system fonts (typically -apple-system / Segoe UI / Roboto).
+ *   This is acceptable: the app is mobile-first; web is a secondary surface.
  *
  * Guarantees:
  *   - Always resolves to a usable state.
  *   - Never throws or causes an unhandled rejection.
- *   - Works offline, on slow networks, and in environments that block font assets.
+ *   - Works offline, on slow networks, and in constrained environments.
+ *   - iOS and Android load Inter correctly and wait for readiness.
  */
 export function useAppFonts(): [boolean, Error | null] {
-  const [loaded, error] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
+  // Platform.OS is a compile-time constant per platform — passing different
+  // values is not a conditional hook call and does not violate Rules of Hooks.
+  const [loaded, error] = useFonts(
+    Platform.OS === "web"
+      ? {} // empty map → resolves immediately, no FontFaceObserver spawned
+      : {
+          Inter_400Regular,
+          Inter_500Medium,
+          Inter_600SemiBold,
+          Inter_700Bold,
+        },
+  );
 
-  if (Platform.OS === "web") {
-    // Web: always signal "ready" immediately.
-    // Font loading continues in the background; the rejection guard handles any
-    // FontFaceObserver timeouts.  UI is never blocked.
-    return [true, null];
-  }
+  // Web: signal "ready" immediately. Inter loaded on native only.
+  if (Platform.OS === "web") return [true, null];
 
   return [loaded, error];
 }

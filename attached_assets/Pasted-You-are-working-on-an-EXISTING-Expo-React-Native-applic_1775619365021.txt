@@ -1,0 +1,238 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to deeply inspect the current app, identify the REAL root causes behind startup/login/runtime issues, and harden the application to a production-ready level for BOTH iOS and Android.
+
+IMPORTANT RULES
+- Do NOT rebuild the app from scratch
+- Do NOT apply shallow patches
+- First inspect the real implementation deeply
+- Then directly implement the fixes
+- Preserve good architecture where possible
+- Refactor only where needed for correctness, reliability, UX quality, maintainability, or production readiness
+- Keep TypeScript strict
+- No `any`
+- No fragile hacks
+- No fake fixes that only hide errors
+- Fix root causes, not just symptoms
+- The result must be stable on both iOS and Android
+- If there is web-specific code interfering with mobile startup, isolate or fix it properly
+
+PRIMARY GOAL
+Understand the current runtime/startup errors and make the app production-ready on iOS and Android.
+
+KNOWN ERROR SIGNAL TO INVESTIGATE FIRST
+There is a runtime error related to font loading / startup timing, with evidence of:
+- fontfaceobserver timeout
+- 6000ms timeout exceeded
+- startup/login flow instability
+
+You must inspect whether this is caused by:
+- web-only font loading logic bleeding into native flow
+- incorrect custom font loading
+- fonts not bundled correctly
+- font loading called too early
+- wrong splash/welcome/login sequencing
+- a broken dependency or browser-oriented library being used in the wrong place
+- a bad fallback strategy when fonts fail to load
+
+FIRST TASK — ROOT CAUSE ANALYSIS
+Before changing anything, inspect and understand ALL of the following:
+
+1. APP STARTUP FLOW
+- app entry point
+- splash / welcome screen logic
+- startup timing
+- auth/session restore
+- navigation boot flow
+- login screen mount timing
+- whether the app is blocked on assets/fonts before showing UI
+
+2. FONT LOADING SYSTEM
+- where fonts are declared
+- how fonts are loaded
+- whether expo-font is used properly
+- whether fontfaceobserver or any web font loader is present
+- whether web-specific font code is running on native
+- whether a font is missing / unresolved / timing out
+- whether startup incorrectly waits too long for fonts
+
+3. WELCOME / LOGIN FLOW
+- whether the welcome screen, login screen, and font loading are coupled incorrectly
+- whether the app is delaying startup for too long
+- whether the login screen renders before fonts are safe
+- whether startup crashes because of font initialization
+
+4. PLATFORM COMPATIBILITY
+Inspect:
+- Android-specific startup and asset handling
+- iOS-specific startup and asset handling
+- Expo config / app config / plugins
+- font asset bundling
+- splash integration
+- runtime differences between Android and iOS
+
+5. NOTIFICATIONS / OTHER STARTUP SERVICES
+- inspect expo-notifications setup too
+- verify whether any notifications initialization is interfering with startup
+- ensure no initialization order issues exist
+- ensure app startup remains stable even if notifications fail
+
+6. LOGIN STABILITY
+- inspect login screen rendering
+- inspect language selector if present
+- inspect font-dependent components
+- inspect whether the crash occurs before or during login UI mount
+
+Then directly implement the fixes.
+
+IMPLEMENTATION PRIORITY
+
+PHASE 1 — IDENTIFY AND FIX THE FONT / STARTUP ROOT CAUSE
+1. Find the exact root cause of the timeout/crash
+2. Remove or isolate any wrong web-only font loading behavior from native runtime
+3. Fix font loading architecture properly
+4. Ensure startup does not fail if a font is late or unavailable
+5. Use platform-correct Expo/React Native font loading patterns
+6. Ensure the app can render safely even with fallback fonts if needed
+
+Acceptance criteria:
+- no startup crash from font loading
+- no font timeout breaking the login/start flow
+- Android starts cleanly
+- iOS starts cleanly
+
+PHASE 2 — PRODUCTION-READY FONT / ASSET ARCHITECTURE
+1. Centralize font loading cleanly
+2. Use correct Expo-native asset/font loading approach
+3. Avoid browser/web font libraries in native startup path
+4. Add safe fallbacks
+5. Ensure fonts are bundled/configured correctly
+
+Acceptance criteria:
+- one clean font loading strategy
+- no duplicate font init logic
+- startup is resilient and maintainable
+
+PHASE 3 — WELCOME / LOGIN HARDENING
+1. Inspect welcome screen and login transition
+2. Ensure welcome screen timing and font readiness do not conflict
+3. Ensure login screen can render safely
+4. Keep the premium welcome/login UX stable on both platforms
+5. Prevent flicker, blocking, or dead startup states
+
+Acceptance criteria:
+- welcome screen displays correctly
+- transition to login is smooth
+- login screen never crashes because of font/init issues
+
+PHASE 4 — IOS + ANDROID PRODUCTION HARDENING
+Audit and harden the app for both platforms:
+- startup stability
+- asset loading
+- font handling
+- notifications init
+- safe area / layout correctness
+- keyboard behavior
+- permission handling where relevant
+- no fatal startup dependency ordering issues
+
+Acceptance criteria:
+- Android is stable and clean
+- iOS is stable and clean
+- no platform-specific startup regressions remain
+
+PHASE 5 — NOTIFICATIONS SAFETY CHECK
+Even if the primary issue is fonts, inspect expo-notifications setup and ensure:
+- notifications setup does not break startup
+- Android channel setup is correct
+- iOS permission flow is safe
+- app still works if notification init fails
+- no startup crash can come from notifications initialization order
+
+Acceptance criteria:
+- notifications setup is safe
+- startup is not blocked by notification init
+- app remains usable if notifications fail to initialize
+
+PHASE 6 — GENERAL PROD-READY HARDENING
+Do a focused production-readiness pass on:
+- auth entry flow
+- startup flow
+- login flow
+- font/assets
+- notifications init
+- error handling
+- loading states
+- crash resilience
+- mobile performance
+- iOS/Android differences
+
+Target:
+- app should be at least 95% startup/login/platform ready
+
+PHASE 7 — CLEANUP
+1. Remove dead or conflicting startup/font logic
+2. Remove web-only logic from native path if inappropriate
+3. Keep architecture SOLID:
+   - startup coordinator logic separated
+   - font loading separated
+   - welcome UI separated
+   - login UI separated
+   - notifications init separated
+4. Leave the codebase cleaner than before
+
+ARCHITECTURE EXPECTATIONS
+- SOLID-compliant
+- startup logic separated from presentation
+- font loading separated from navigation flow
+- notifications init separated from auth/login flow
+- no duplicate startup side effects
+- no web-native confusion in shared runtime code
+- clean fallback behavior
+- production-ready stability
+
+YOU MUST CHECK FOR THESE RISKS
+- fontfaceobserver or browser-oriented font code being used where it should not be
+- startup blocked by non-critical assets
+- welcome screen coupled too tightly to font readiness
+- login rendered before startup state is valid
+- notifications init crashing startup
+- Android/iOS asset handling differences
+- fallback fonts not defined
+- hidden timeout logic still breaking launch
+
+OUTPUT FORMAT WHILE WORKING
+As you implement, report:
+1. Root cause found
+2. Exact files changed
+3. Why each fix was necessary
+4. Any architecture cleanup performed
+5. Manual test steps for Android and iOS
+
+FINAL DELIVERABLE
+When finished, provide:
+1. Root cause summary
+2. Summary of the font/startup fix
+3. Summary of any notification/startup safety fixes
+4. Confirmation that Android is stable
+5. Confirmation that iOS is stable
+6. Exact files changed
+7. Manual QA checklist for:
+   - cold start
+   - welcome screen
+   - login screen
+   - Android startup
+   - iOS startup
+8. Remaining future improvements if any
+
+FINAL STRICT RULE
+This task is NOT complete unless:
+- the startup error is truly understood and fixed
+- the app opens cleanly on Android
+- the app opens cleanly on iOS
+- welcome/login flow is stable
+- no font timeout/runtime issue blocks the app
+
+START NOW
+First inspect the startup flow, font loading system, login flow, and notifications initialization deeply.
+Then implement the fixes end-to-end professionally.
