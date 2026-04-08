@@ -610,7 +610,9 @@ export const tr: AppDict = {
 
   managerHotels: {
     title: "Oteller",
+    searchPlaceholder: "Otel ara…",
     emptyText: "Henüz otel yok. İlk otelinizi ekleyin.",
+    emptySearchText: "Aramanızla eşleşen otel yok.",
     formTitleAdd: "Otel Ekle",
     formTitleEdit: "Oteli Düzenle",
     fieldHotelName: "Otel Adı *",
@@ -626,6 +628,13 @@ export const tr: AppDict = {
     btnCancel: "İptal",
     btnSaveChanges: "Değişiklikleri Kaydet",
     btnAddHotel: "Otel Ekle",
+    deleteTitle: "Oteli Sil",
+    deleteMsg: "\"{name}\" otelini listeden kaldır?",
+    deleteConfirm: "Sil",
+    toastAdded: "Otel eklendi",
+    toastUpdated: "Otel güncellendi",
+    toastRemoved: "Otel silindi",
+    toastError: "Başarısız. Tekrar deneyin.",
   },
 
   managerTransports: {

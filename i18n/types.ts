@@ -647,7 +647,9 @@ export interface ManagerDoctorsDict {
 
 export interface ManagerHotelsDict {
   title: string;
+  searchPlaceholder: string;
   emptyText: string;
+  emptySearchText: string;
   formTitleAdd: string;
   formTitleEdit: string;
   fieldHotelName: string;
@@ -663,6 +665,13 @@ export interface ManagerHotelsDict {
   btnCancel: string;
   btnSaveChanges: string;
   btnAddHotel: string;
+  deleteTitle: string;
+  deleteMsg: string;
+  deleteConfirm: string;
+  toastAdded: string;
+  toastUpdated: string;
+  toastRemoved: string;
+  toastError: string;
 }
 
 export interface ManagerTransportsDict {

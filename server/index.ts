@@ -11,6 +11,10 @@ import * as path from "path";
 const app = express();
 const log = console.log;
 
+// Trust Replit / reverse-proxy X-Forwarded-For so rate-limiting resolves
+// real client IPs instead of throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set("trust proxy", 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;

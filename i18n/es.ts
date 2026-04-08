@@ -610,7 +610,9 @@ export const es: AppDict = {
 
   managerHotels: {
     title: "Hoteles",
+    searchPlaceholder: "Buscar hoteles…",
     emptyText: "Aún no hay hoteles. Añade tu primer hotel.",
+    emptySearchText: "Ningún hotel coincide con tu búsqueda.",
     formTitleAdd: "Añadir Hotel",
     formTitleEdit: "Editar Hotel",
     fieldHotelName: "Nombre del Hotel *",
@@ -626,6 +628,13 @@ export const es: AppDict = {
     btnCancel: "Cancelar",
     btnSaveChanges: "Guardar Cambios",
     btnAddHotel: "Añadir Hotel",
+    deleteTitle: "Eliminar Hotel",
+    deleteMsg: "¿Eliminar «{name}» de tu lista de hoteles?",
+    deleteConfirm: "Eliminar",
+    toastAdded: "Hotel añadido",
+    toastUpdated: "Hotel actualizado",
+    toastRemoved: "Hotel eliminado",
+    toastError: "Error. Inténtalo de nuevo.",
   },
 
   managerTransports: {

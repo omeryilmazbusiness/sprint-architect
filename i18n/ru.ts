@@ -614,7 +614,9 @@ export const ru: AppDict = {
 
   managerHotels: {
     title: "Отели",
+    searchPlaceholder: "Поиск отелей…",
     emptyText: "Отелей пока нет. Добавьте первый отель.",
+    emptySearchText: "Ни один отель не соответствует запросу.",
     formTitleAdd: "Добавить отель",
     formTitleEdit: "Редактировать отель",
     fieldHotelName: "Название отеля *",
@@ -630,6 +632,13 @@ export const ru: AppDict = {
     btnCancel: "Отмена",
     btnSaveChanges: "Сохранить изменения",
     btnAddHotel: "Добавить отель",
+    deleteTitle: "Удалить отель",
+    deleteMsg: "Удалить «{name}» из списка отелей?",
+    deleteConfirm: "Удалить",
+    toastAdded: "Отель добавлен",
+    toastUpdated: "Отель обновлён",
+    toastRemoved: "Отель удалён",
+    toastError: "Ошибка. Попробуйте снова.",
   },
 
   managerTransports: {

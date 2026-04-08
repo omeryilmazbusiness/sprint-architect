@@ -1,0 +1,211 @@
+You are working on an EXISTING Expo / React Native application.
+
+Your task is to build a CINEMATIC, PREMIUM, MOTION-DESIGN LEVEL WELCOME SCREEN for the app "HEALORY".
+
+This is NOT a simple splash screen.
+This must feel like a high-end product intro (Apple / Tesla / luxury fintech level).
+
+---
+
+## 🎯 CORE CONCEPT
+
+Use the provided circle image as a FULL BACKGROUND.
+
+The image must:
+- Fill the screen (cover mode)
+- Stay centered
+- Maintain aspect ratio (no distortion)
+- Feel like a deep, infinite dark space
+
+Then build layered motion effects ON TOP of it.
+
+---
+
+## 🎨 VISUAL DIRECTION
+
+STYLE:
+- Black / dark luxury base
+- Soft white glow + subtle gold accents
+- Cinematic depth
+- Minimal but powerful
+
+The screen should feel:
+- futuristic
+- medical-tech premium
+- calm + precise
+- expensive
+
+---
+
+## 🎬 MOTION DESIGN (CRITICAL)
+
+This is the most important part.
+
+Create layered motion:
+
+### 1) BACKGROUND BREATHING
+- The circle glow slowly scales (very subtle: 1 → 1.05 → 1)
+- Duration: 4–6 seconds loop
+- Easing: smooth, organic
+- Must feel like “breathing / pulse”
+
+### 2) LIGHT SWEEP EFFECT
+- Add a very soft horizontal light sweep across the screen
+- Very low opacity
+- Moves slowly (left → right)
+- Should feel like glass reflection, NOT a flashy beam
+
+### 3) DEPTH OVERLAY
+- Add a subtle gradient overlay (top darker, bottom slightly lighter)
+- Gives depth and readability for text
+
+### 4) PARTICLE / DUST (VERY SUBTLE)
+- Optional: very small floating particles
+- Slow movement
+- Extremely low opacity
+- Should NOT distract
+
+---
+
+## 🧱 UI LAYER
+
+### BRAND TITLE
+
+Text:
+HEALORY
+
+Style:
+- Centered (slightly above middle)
+- Letter spacing (tracking)
+- Elegant semi-bold font
+- White → subtle gold gradient or glow
+- Slight fade-in + upward motion
+
+Animation:
+- opacity: 0 → 1
+- translateY: 10 → 0
+- duration: ~600–800ms
+
+---
+
+### TAGLINE
+
+Example:
+"Precision Healthcare Experience"
+
+Style:
+- Smaller, lighter
+- Slight opacity (70–80%)
+- Positioned under HEALORY
+
+Animation:
+- delayed fade-in (after title)
+- very subtle
+
+---
+
+### LOADING LINE (IMPORTANT)
+
+- Positioned at bottom
+- Thin line (2–3px)
+- Full width with margin
+- Animated left → right fill
+
+Style:
+- gradient: soft white → soft gold
+- smooth animation (not jumpy)
+
+Optional:
+- slight glow under the line
+
+---
+
+## ⏱️ TIMING FLOW
+
+Total: ~3–4 seconds
+
+Sequence:
+1. Background visible immediately
+2. Subtle motion already active
+3. Title fades in (0.3s delay)
+4. Tagline fades in (0.6s delay)
+5. Loading line starts
+6. When complete → navigate to login
+
+---
+
+## 🧠 UX RULES
+
+- NO hard cuts
+- NO flicker
+- NO lag
+- 60fps animations
+- Must feel smooth and premium
+
+If user already authenticated:
+- shorten duration or skip
+
+---
+
+## ⚙️ TECH IMPLEMENTATION
+
+- Use react-native-reanimated (preferred)
+- Or Animated API if needed
+- Avoid heavy CPU usage
+
+Structure:
+- WelcomeScreen.tsx
+- Separate animation hooks if needed
+- Clean lifecycle (no memory leaks)
+
+---
+
+## 📱 RESPONSIVENESS
+
+- Must work on all screen sizes
+- Center alignment must remain perfect
+- SafeArea respected
+
+---
+
+## 🚫 DO NOT DO
+
+- No cheap glow
+- No fast flashy animation
+- No spinner instead of loading line
+- No heavy particle effects
+- No blocking thread
+
+---
+
+## ✅ ACCEPTANCE CRITERIA
+
+The task is complete only if:
+
+- Image is used as FULL background
+- Motion feels cinematic and premium
+- Glow breathing is subtle and elegant
+- HEALORY text looks high-end
+- Loading line is smooth and modern
+- Transition to login is seamless
+- Works perfectly on Android and iOS
+
+---
+
+## 📦 OUTPUT
+
+Provide:
+
+1. Files created/updated
+2. Animation breakdown
+3. Performance considerations
+4. Integration into startup flow
+5. How motion is controlled
+6. Manual test steps
+
+---
+
+START NOW
+
+First analyze current startup flow,
+then implement this cinematic welcome screen cleanly and professionally.

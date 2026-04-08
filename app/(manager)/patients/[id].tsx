@@ -29,6 +29,14 @@ import { AssignHotelSheet } from "@/components/guestDetail/AssignHotelSheet";
 import { AssignDocTypeSheet } from "@/components/guestDetail/AssignDocTypeSheet";
 import { CreateAppointmentSheet } from "@/components/guestDetail/CreateAppointmentSheet";
 import { useT } from "@/hooks/useT";
+import { useLanguage } from "@/context/LanguageContext";
+
+const LOCALE_BCP47: Record<string, string> = {
+  en: "en-US",
+  ru: "ru-RU",
+  tr: "tr-TR",
+  es: "es-ES",
+};
 
 interface GuestDetail {
   patient: {
@@ -99,13 +107,13 @@ function showToast(msg: string) {
   }
 }
 
-function fmtDateTime(iso: string) {
+function fmtDateTime(iso: string, bcp47 = "en-US") {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", {
+    return d.toLocaleDateString(bcp47, {
       month: "short",
       day: "numeric",
-    }) + " · " + d.toLocaleTimeString("en-US", {
+    }) + " · " + d.toLocaleTimeString(bcp47, {
       hour: "numeric",
       minute: "2-digit",
     });
@@ -121,6 +129,8 @@ export default function GuestDetailScreen() {
   const { accessToken } = useAuth();
   const t = useT();
   const tp = t.managerPatient;
+  const { locale } = useLanguage();
+  const bcp47 = LOCALE_BCP47[locale] ?? "en-US";
 
   const [showTransportSheet, setShowTransportSheet] = useState(false);
   const [showHotelSheet, setShowHotelSheet] = useState(false);
@@ -441,7 +451,7 @@ export default function GuestDetailScreen() {
               {nextAppointment.title ?? "Appointment"}
             </Text>
             <Text style={styles.apptMeta}>
-              {fmtDateTime(nextAppointment.startAt)}
+              {fmtDateTime(nextAppointment.startAt, bcp47)}
               {nextAppointment.doctor
                 ? `  ·  Dr. ${nextAppointment.doctor.fullName}`
                 : ""}
