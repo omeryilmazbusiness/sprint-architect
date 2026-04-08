@@ -45,8 +45,8 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
       DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
-      JWT_ACCESS_SECRET: ${{ secrets.JWT_SECRET }}
-      JWT_REFRESH_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
       SESSION_SECRET: ci-session-secret
       STORAGE_PROVIDER: local
     steps:
@@ -58,7 +58,16 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Run DB migrations (Neon)
+      - name: Guard - ensure TEST DB is configured
+        run: |
+          if [ -z "$DATABASE_URL_TEST" ]; then
+            echo "::error::DATABASE_URL_TEST secret is not set."
+            echo "::error::Go to GitHub Settings > Secrets > Actions and add DATABASE_URL_TEST"
+            echo "::error::pointing to a SEPARATE Neon branch/database - NEVER the production DB."
+            exit 1
+          fi
+          echo "DATABASE_URL_TEST is set - running migrations on TEST database only."
+      - name: Run DB migrations (TEST branch only)
         run: bunx drizzle-kit push --force
       - name: Run tests
         run: bun run test
