@@ -1,5 +1,21 @@
 # App Store & TestFlight (share-ready)
 
+## App icon
+
+Brand assets live under `assets/images/` (Expo) and `assets/icons/` (native size sets).
+
+| File | Role |
+|------|------|
+| `icon.png` | 1024×1024 App Store / Expo icon |
+| `splash-icon.png` | Splash screen |
+| `logo.png` / `healory-circle.png` | In-app branding |
+
+After replacing icons, refresh the native project:
+
+```bash
+npx expo prebuild --clean
+```
+
 ## Identifiers
 
 | Platform | Value |

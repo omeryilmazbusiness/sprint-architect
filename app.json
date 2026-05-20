@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#F5F7FA"
     },
     "ios": {
       "supportsTablet": false,
@@ -23,9 +23,8 @@
     "android": {
       "package": "com.healory.healthtour",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F5F7FA",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
@@ -43,7 +42,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0369A1",
+          "color": "#0EA5A4",
           "defaultChannel": "default",
           "sounds": []
         }

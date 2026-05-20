@@ -355,21 +355,6 @@ export default function LoginScreen() {
     }
   }
 
-  function fillDemo(role: "admin" | "manager") {
-    setTab("management");
-    setEmail(role === "admin" ? "admin@demo.com" : "manager@demo.com");
-    setPassword(role === "admin" ? "Admin123!" : "Manager123!");
-    setError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-
-  function fillDemoGuest() {
-    setTab("guest");
-    setGuestKey("PATIENT-TEST-0001");
-    setError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-
   async function handleForgotSubmit() {
     if (!forgotEmail.trim()) return;
     setForgotLoading(true);
@@ -612,25 +597,6 @@ export default function LoginScreen() {
                   </Pressable>
                 </View>
               )}
-
-              {/* Demo accounts */}
-              <View style={styles.demoSection}>
-                <Text style={styles.demoLabel}>{ls.demoSectionLabel}</Text>
-                <View style={styles.demoRow}>
-                  <Pressable style={styles.demoBtn} onPress={() => fillDemo("admin")}>
-                    <Ionicons name="shield-outline" size={13} color={T.primary} />
-                    <Text style={styles.demoBtnText}>{ls.demoAdmin}</Text>
-                  </Pressable>
-                  <Pressable style={styles.demoBtn} onPress={() => fillDemo("manager")}>
-                    <Ionicons name="briefcase-outline" size={13} color={T.primary} />
-                    <Text style={styles.demoBtnText}>{ls.demoManager}</Text>
-                  </Pressable>
-                  <Pressable style={[styles.demoBtn, styles.demoBtnGuest]} onPress={fillDemoGuest}>
-                    <Ionicons name="key-outline" size={13} color={T.accent} />
-                    <Text style={[styles.demoBtnText, { color: T.accent }]}>{ls.demoGuest}</Text>
-                  </Pressable>
-                </View>
-              </View>
             </View>
 
             <Text style={styles.footer}>{ls.footer}</Text>
@@ -815,32 +781,6 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   linkText: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12.5, color: T.textMuted },
-
-  // Demo section
-  demoSection: {
-    gap: 10,
-    alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: T.border,
-    paddingTop: 14,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
-  demoLabel: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 10, letterSpacing: 1.2, color: T.textMuted },
-  demoRow: { flexDirection: "row", gap: 8, justifyContent: "center" },
-  demoBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: T.border,
-    backgroundColor: T.surface,
-  },
-  demoBtnGuest: { borderColor: T.accent + "40" },
-  demoBtnText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 12.5, color: T.primary },
 
   // Footer
   footer: {

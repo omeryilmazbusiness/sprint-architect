@@ -1254,11 +1254,6 @@ export interface LoginScreenDict {
   passwordLabel: string;
   btnLogin: string;
   btnForgotPassword: string;
-  // Demo section
-  demoSectionLabel: string;
-  demoAdmin: string;
-  demoManager: string;
-  demoGuest: string;
   // Footer
   footer: string;
   // Forgot password modal

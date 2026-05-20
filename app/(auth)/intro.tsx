@@ -7,15 +7,18 @@ import {
   Pressable,
   Platform,
   Dimensions,
+  Easing,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 const INTRO_KEY = "ht_has_seen_intro";
-const DURATION  = 3800;
-const { width }  = Dimensions.get("window");
+const DURATION = 4800;
+const { width, height } = Dimensions.get("window");
 
 export async function markIntroSeen(): Promise<void> {
   await AsyncStorage.setItem(INTRO_KEY, "true");
@@ -31,68 +34,92 @@ function navigateToLogin(): void {
 }
 
 export default function IntroScreen() {
-  const insets    = useSafeAreaInsets();
-  const topPad    = Platform.OS === "web" ? 67 : insets.top;
+  const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  // ── Animation refs ────────────────────────────────────────────────────────
-  const glowScale   = useRef(new Animated.Value(0.7)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale   = useRef(new Animated.Value(0.5)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const contentY    = useRef(new Animated.Value(24)).current;
-  const contentOp   = useRef(new Animated.Value(0)).current;
-  const captionOp   = useRef(new Animated.Value(0)).current;
-  const skipOp      = useRef(new Animated.Value(0)).current;
-  const progressAn  = useRef(new Animated.Value(0)).current;
-
-  // ── Pulse refs (for the continuous glow pulse) ────────────────────────────
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const screenOp = useRef(new Animated.Value(0)).current;
+  const shimmerX = useRef(new Animated.Value(-width)).current;
+  const logoOp = useRef(new Animated.Value(0)).current;
+  const logoSc = useRef(new Animated.Value(0.72)).current;
+  const ringOp = useRef(new Animated.Value(0)).current;
+  const ringSc = useRef(new Animated.Value(0.6)).current;
+  const titleOp = useRef(new Animated.Value(0)).current;
+  const titleY = useRef(new Animated.Value(18)).current;
+  const tagOp = useRef(new Animated.Value(0)).current;
+  const pillarsOp = useRef(new Animated.Value(0)).current;
+  const pillarsY = useRef(new Animated.Value(16)).current;
+  const captionOp = useRef(new Animated.Value(0)).current;
+  const skipOp = useRef(new Animated.Value(0)).current;
+  const progressAn = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
+  const lineW = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Step 1 — glow blooms in
-    Animated.parallel([
-      Animated.timing(glowOpacity, { toValue: 1, duration: 900, useNativeDriver: true }),
-      Animated.spring(glowScale,   { toValue: 1, tension: 40, friction: 8, useNativeDriver: true }),
-    ]).start(() => {
-      // Step 2 — logo springs in
-      Animated.parallel([
-        Animated.spring(logoScale,   { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]).start(() => {
-        // Step 3 — content slides up
-        Animated.parallel([
-          Animated.timing(contentOp, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(contentY,  { toValue: 0, duration: 600, useNativeDriver: true }),
-        ]).start(() => {
-          // Step 4 — caption + skip fade in
-          Animated.parallel([
-            Animated.timing(captionOp, { toValue: 1, duration: 600, useNativeDriver: true }),
-            Animated.timing(skipOp,    { toValue: 1, duration: 500, useNativeDriver: true }),
-          ]).start();
-        });
-      });
-    });
+    Animated.timing(screenOp, {
+      toValue: 1,
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
 
-    // Continuous glow pulse
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 2200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.00, duration: 2200, useNativeDriver: true }),
-      ])
+        Animated.timing(pulse, { toValue: 1.12, duration: 2800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 2800, useNativeDriver: true }),
+      ]),
     ).start();
 
-    // Progress bar runs over full duration
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerX, {
+          toValue: width * 1.4,
+          duration: 3200,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerX, { toValue: -width, duration: 0, useNativeDriver: true }),
+      ]),
+    ).start();
+
+    const seq = Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoSc, { toValue: 1, tension: 48, friction: 7, useNativeDriver: true }),
+        Animated.timing(logoOp, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(ringOp, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.spring(ringSc, { toValue: 1, tension: 36, friction: 8, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(titleOp, { toValue: 1, duration: 550, useNativeDriver: true }),
+        Animated.spring(titleY, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
+        Animated.timing(lineW, { toValue: 1, duration: 800, useNativeDriver: false }),
+      ]),
+      Animated.timing(tagOp, { toValue: 1, duration: 450, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(pillarsOp, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(pillarsY, { toValue: 0, tension: 44, friction: 9, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(captionOp, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(skipOp, { toValue: 1, duration: 450, useNativeDriver: true }),
+      ]),
+    ]);
+    seq.start();
+
     Animated.timing(progressAn, {
       toValue: 1,
-      duration: DURATION - 300,
+      duration: DURATION - 400,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
-    // Auto-navigate after DURATION
     const timer = setTimeout(async () => {
       await markIntroSeen();
-      navigateToLogin();
+      Animated.timing(screenOp, {
+        toValue: 0,
+        duration: 380,
+        useNativeDriver: true,
+      }).start(() => navigateToLogin());
     }, DURATION);
 
     return () => clearTimeout(timer);
@@ -100,100 +127,132 @@ export default function IntroScreen() {
 
   async function handleSkip(): Promise<void> {
     await markIntroSeen();
-    navigateToLogin();
+    Animated.timing(screenOp, {
+      toValue: 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start(() => navigateToLogin());
   }
 
   const progressWidth = progressAn.interpolate({
-    inputRange:  [0, 1],
+    inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
+  const accentLineWidth = lineW.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 120],
+  });
+
   return (
-    <View style={styles.root}>
+    <Animated.View style={[styles.root, { opacity: screenOp }]}>
+      <View style={StyleSheet.absoluteFill} />
 
-      {/* ── Ambient glow layers (radial effect via stacked circles) ── */}
-      <Animated.View
-        style={[
-          styles.glowOuter,
-          {
-            opacity: glowOpacity,
-            transform: [{ scale: Animated.multiply(glowScale, pulseAnim) }],
-          },
-        ]}
-        pointerEvents="none"
-      />
-      <Animated.View
-        style={[
-          styles.glowMid,
-          { opacity: glowOpacity, transform: [{ scale: glowScale }] },
-        ]}
-        pointerEvents="none"
-      />
-      <Animated.View
-        style={[
-          styles.glowInner,
-          { opacity: glowOpacity, transform: [{ scale: glowScale }] },
-        ]}
-        pointerEvents="none"
+      {/* Cinematic vignette */}
+      <LinearGradient
+        colors={["#000000", "#030508", "#000000"]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
       />
 
-      {/* ── Skip button ── */}
-      <Animated.View style={[styles.skipWrap, { top: topPad + 16, opacity: skipOp }]}>
+      {/* Teal luxury bloom */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.bloomOuter,
+          { opacity: logoOp, transform: [{ scale: Animated.multiply(ringSc, pulse) }] },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.bloomMid, { opacity: ringOp, transform: [{ scale: ringSc }] }]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.bloomInner, { opacity: ringOp }]}
+      />
+
+      {/* Light sweep */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.shimmerBand, { transform: [{ translateX: shimmerX }, { rotate: "-18deg" }] }]}
+      >
+        <LinearGradient
+          colors={["transparent", "rgba(255,255,255,0.06)", "rgba(14,165,164,0.14)", "transparent"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.shimmerGrad}
+        />
+      </Animated.View>
+
+      {/* Top fade */}
+      <LinearGradient
+        colors={["rgba(0,0,0,0.85)", "transparent"]}
+        style={styles.topFade}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.92)"]}
+        style={styles.bottomFade}
+        pointerEvents="none"
+      />
+
+      <Animated.View style={[styles.skipWrap, { top: topPad + 14, opacity: skipOp }]}>
         <Pressable onPress={handleSkip} style={styles.skipBtn} hitSlop={12}>
           <Text style={styles.skipText}>Skip</Text>
-          <Ionicons name="arrow-forward" size={13} color="rgba(255,255,255,0.5)" />
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.45)" />
         </Pressable>
       </Animated.View>
 
-      {/* ── Logo ── */}
-      <Animated.View
-        style={[
-          styles.logoWrap,
-          { opacity: logoOpacity, transform: [{ scale: logoScale }] },
-        ]}
-      >
-        <View style={styles.logoRing}>
-          <View style={styles.logoInner}>
-            <Ionicons name="airplane" size={36} color="#ffffff" />
+      <View style={styles.center}>
+        <Animated.View
+          style={[
+            styles.logoStage,
+            { opacity: logoOp, transform: [{ scale: logoSc }] },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.logoRing,
+              { opacity: ringOp, transform: [{ scale: ringSc }] },
+            ]}
+          />
+          <BrandLogo variant="intro" animated glow />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.brandBlock,
+            { opacity: titleOp, transform: [{ translateY: titleY }] },
+          ]}
+        >
+          <Text style={styles.brandName}>Healory</Text>
+          <View style={styles.rulerRow}>
+            <Animated.View style={[styles.ruler, { width: accentLineWidth }]} />
+            <Animated.Text style={[styles.tagline, { opacity: tagOp }]}>
+              OPERATIONS PLATFORM
+            </Animated.Text>
+            <Animated.View style={[styles.ruler, { width: accentLineWidth }]} />
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
 
-      {/* ── Brand name + tagline ── */}
-      <Animated.View
-        style={[
-          styles.brandBlock,
-          { opacity: contentOp, transform: [{ translateY: contentY }] },
-        ]}
-      >
-        <Text style={styles.brandName}>Healory</Text>
-        <View style={styles.rulerRow}>
-          <View style={styles.ruler} />
-          <Text style={styles.tagline}>OPERATIONS PLATFORM</Text>
-          <View style={styles.ruler} />
-        </View>
-      </Animated.View>
+        <Animated.View
+          style={[
+            styles.pillarsRow,
+            { opacity: pillarsOp, transform: [{ translateY: pillarsY }] },
+          ]}
+        >
+          <Pillar icon="heart-outline" label="Patient Care" delay={0} />
+          <View style={styles.pillarDivider} />
+          <Pillar icon="business-outline" label="Multi-Clinic" delay={80} />
+          <View style={styles.pillarDivider} />
+          <Pillar icon="shield-checkmark-outline" label="Secure" delay={160} />
+        </Animated.View>
+      </View>
 
-      {/* ── Feature pillars ── */}
       <Animated.View
-        style={[
-          styles.pillarsRow,
-          { opacity: contentOp, transform: [{ translateY: contentY }] },
-        ]}
-      >
-        <Pillar icon="people-outline"          label="Patient Care" />
-        <View style={styles.pillarDivider} />
-        <Pillar icon="business-outline"        label="Multi-Clinic" />
-        <View style={styles.pillarDivider} />
-        <Pillar icon="shield-checkmark-outline" label="Secure" />
-      </Animated.View>
-
-      {/* ── Caption + progress ── */}
-      <Animated.View
-        style={[
-          styles.captionBlock,
-          { opacity: captionOp, paddingBottom: bottomPad + 40 },
-        ]}
+        style={[styles.captionBlock, { opacity: captionOp, paddingBottom: bottomPad + 36 }]}
       >
         <Text style={styles.captionLine1}>Your journey,</Text>
         <Text style={styles.captionLine2}>beautifully organised.</Text>
@@ -202,69 +261,109 @@ export default function IntroScreen() {
         </Text>
 
         <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
+          <Animated.View style={[styles.progressBar, { width: progressWidth }]}>
+            <LinearGradient
+              colors={["rgba(14,165,164,0.5)", "rgba(255,255,255,0.85)"]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </View>
       </Animated.View>
-
-    </View>
+    </Animated.View>
   );
 }
-
-// ─── Pillar item ───────────────────────────────────────────────────────────────
 
 function Pillar({
   icon,
   label,
+  delay,
 }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
+  delay: number;
 }) {
+  const op = useRef(new Animated.Value(0)).current;
+  const y = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(op, { toValue: 1, duration: 420, useNativeDriver: true }),
+        Animated.spring(y, { toValue: 0, tension: 52, friction: 9, useNativeDriver: true }),
+      ]).start();
+    }, 900 + delay);
+    return () => clearTimeout(t);
+  }, [delay, op, y]);
+
   return (
-    <View style={styles.pillar}>
-      <Ionicons name={icon} size={16} color="rgba(255,255,255,0.4)" />
+    <Animated.View style={[styles.pillar, { opacity: op, transform: [{ translateY: y }] }]}>
+      <View style={styles.pillarIconWrap}>
+        <Ionicons name={icon} size={15} color="rgba(14,165,164,0.85)" />
+      </View>
       <Text style={styles.pillarLabel}>{label}</Text>
-    </View>
+    </Animated.View>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────────────────────
-
-const GLOW_COLOR_OUTER = "rgba(3,105,161,0.07)";
-const GLOW_COLOR_MID   = "rgba(3,105,161,0.12)";
-const GLOW_COLOR_INNER = "rgba(3,105,161,0.20)";
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#000000",
-    alignItems: "center",
-    justifyContent: "center",
   },
-
-  // ── Glow layers ─────────────────────────────────────────────────────────────
-  glowOuter: {
+  bloomOuter: {
     position: "absolute",
-    width: width * 1.4,
-    height: width * 1.4,
-    borderRadius: width * 0.7,
-    backgroundColor: GLOW_COLOR_OUTER,
+    top: height * 0.22,
+    width: width * 1.5,
+    height: width * 1.5,
+    borderRadius: width * 0.75,
+    backgroundColor: "rgba(14,165,164,0.06)",
+    alignSelf: "center",
   },
-  glowMid: {
+  bloomMid: {
     position: "absolute",
-    width: width * 0.85,
-    height: width * 0.85,
-    borderRadius: width * 0.425,
-    backgroundColor: GLOW_COLOR_MID,
+    top: height * 0.3,
+    width: width * 0.9,
+    height: width * 0.9,
+    borderRadius: width * 0.45,
+    backgroundColor: "rgba(3,105,161,0.10)",
+    alignSelf: "center",
   },
-  glowInner: {
+  bloomInner: {
     position: "absolute",
-    width: width * 0.42,
-    height: width * 0.42,
-    borderRadius: width * 0.21,
-    backgroundColor: GLOW_COLOR_INNER,
+    top: height * 0.36,
+    width: width * 0.5,
+    height: width * 0.5,
+    borderRadius: width * 0.25,
+    backgroundColor: "rgba(14,165,164,0.14)",
+    alignSelf: "center",
   },
-
-  // ── Skip ────────────────────────────────────────────────────────────────────
+  shimmerBand: {
+    position: "absolute",
+    top: height * 0.18,
+    left: -width * 0.3,
+    width: width * 0.35,
+    height: height * 0.7,
+  },
+  shimmerGrad: {
+    flex: 1,
+    width: "100%",
+  },
+  topFade: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.22,
+  },
+  bottomFade: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.45,
+  },
   skipWrap: {
     position: "absolute",
     right: 20,
@@ -273,102 +372,97 @@ const styles = StyleSheet.create({
   skipBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
   skipText: {
-    fontFamily: "PlusJakartaSans_400Regular",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.45)",
-    letterSpacing: 0.2,
+    fontFamily: "PlusJakartaSans_500Medium",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.5)",
+    letterSpacing: 0.6,
   },
-
-  // ── Logo ────────────────────────────────────────────────────────────────────
-  logoWrap: {
-    marginBottom: 36,
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  logoStage: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 40,
   },
   logoRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    position: "absolute",
+    width: 168,
+    height: 168,
+    borderRadius: 84,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.02)",
   },
-  logoInner: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-
-  // ── Brand ────────────────────────────────────────────────────────────────────
   brandBlock: {
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   brandName: {
     fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 42,
-    color: "#ffffff",
-    letterSpacing: -1.5,
-    includeFontPadding: false,
+    fontSize: 44,
+    color: "#FFFFFF",
+    letterSpacing: -1.8,
   },
   rulerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   ruler: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.10)",
-    maxWidth: 40,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(14,165,164,0.55)",
+    maxWidth: 120,
   },
   tagline: {
     fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 10,
-    color: "rgba(255,255,255,0.30)",
-    letterSpacing: 3,
-    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.38)",
+    letterSpacing: 3.2,
   },
-
-  // ── Pillars ──────────────────────────────────────────────────────────────────
   pillarsRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 32,
-    gap: 0,
+    marginTop: 36,
   },
   pillar: {
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 18,
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  pillarIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(14,165,164,0.35)",
+    backgroundColor: "rgba(14,165,164,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   pillarLabel: {
     fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 10,
-    color: "rgba(255,255,255,0.30)",
-    letterSpacing: 0.4,
+    color: "rgba(255,255,255,0.35)",
+    letterSpacing: 0.5,
   },
   pillarDivider: {
-    width: 1,
-    height: 28,
+    width: StyleSheet.hairlineWidth,
+    height: 32,
     backgroundColor: "rgba(255,255,255,0.08)",
   },
-
-  // ── Caption ──────────────────────────────────────────────────────────────────
   captionBlock: {
     position: "absolute",
     bottom: 0,
@@ -381,26 +475,26 @@ const styles = StyleSheet.create({
   captionLine1: {
     fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 22,
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.42)",
     letterSpacing: -0.3,
   },
   captionLine2: {
     fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 22,
-    color: "#ffffff",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   captionSub: {
     fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 12,
-    color: "rgba(255,255,255,0.25)",
+    color: "rgba(255,255,255,0.28)",
     textAlign: "center",
     lineHeight: 18,
-    marginBottom: 20,
+    marginBottom: 22,
   },
   progressTrack: {
-    width: "50%",
+    width: "56%",
     height: 2,
     backgroundColor: "rgba(255,255,255,0.08)",
     borderRadius: 1,
@@ -408,7 +502,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "rgba(255,255,255,0.55)",
     borderRadius: 1,
+    overflow: "hidden",
   },
 });

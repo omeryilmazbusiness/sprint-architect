@@ -27,6 +27,8 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+.venv-logo/
+
 # macOS
 .DS_Store
 *.pem
