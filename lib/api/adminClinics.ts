@@ -49,7 +49,7 @@ export interface CreateClinicInput {
 export interface InvoiceSummary {
   id: string;
   period: string;
-  status: "DRAFT" | "ISSUED" | "PAID";
+  status: "DRAFT" | "ISSUED" | "PAID" | "UNPAID" | "PENDING";
   total: number;
   currency: string;
   patientCount: number;

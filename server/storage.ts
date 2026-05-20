@@ -30,6 +30,12 @@ export class MemStorage implements IStorage {
       role: insertUser.role ?? "MANAGER",
       clinicId: insertUser.clinicId ?? null,
       status: "ACTIVE",
+      statusReason: null,
+      fullName: null,
+      phoneE164: null,
+      mustChangePassword: false,
+      lastLoginAt: null,
+      lastLoginIp: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);

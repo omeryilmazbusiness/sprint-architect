@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
 import { z } from "zod";
+
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 
 /**
  * Well-known insecure default values used during local development.
@@ -9,6 +13,13 @@ const DEV_JWT_DEFAULTS = [
   "ht-access-secret-dev-only",
   "ht-refresh-secret-dev-only",
 ] as const;
+
+const DEV_SESSION_DEFAULTS = [
+  "change-me-to-a-long-random-string",
+  "change-me-to-a-long-random-string-in-production",
+] as const;
+
+const MIN_SESSION_SECRET_LENGTH = 32;
 
 const envSchema = z.object({
   NODE_ENV: z
@@ -63,14 +74,48 @@ const _env = parsed.data;
 // deploying, the server will exit immediately instead of silently accepting
 // forgeable tokens.
 if (_env.NODE_ENV === "production") {
-  const usingDefault =
+  const usingJwtDefault =
     (DEV_JWT_DEFAULTS as readonly string[]).includes(_env.JWT_ACCESS_SECRET) ||
     (DEV_JWT_DEFAULTS as readonly string[]).includes(_env.JWT_REFRESH_SECRET);
-  if (usingDefault) {
+  if (usingJwtDefault) {
     console.error(
       "[config] FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set " +
         "to strong, unique secrets in production. " +
         "The default development values were detected — server cannot start.",
+    );
+    process.exit(1);
+  }
+
+  const weakSession =
+    _env.SESSION_SECRET.length < MIN_SESSION_SECRET_LENGTH ||
+    (DEV_SESSION_DEFAULTS as readonly string[]).includes(_env.SESSION_SECRET);
+  if (weakSession) {
+    console.error(
+      `[config] FATAL: SESSION_SECRET must be at least ${MIN_SESSION_SECRET_LENGTH} ` +
+        "characters and must not use a development placeholder in production.",
+    );
+    process.exit(1);
+  }
+
+  if (process.env.STORAGE_PROVIDER !== "s3") {
+    console.error(
+      "[config] FATAL: STORAGE_PROVIDER must be 's3' in production. " +
+        "Local disk storage is not supported for production deployments.",
+    );
+    process.exit(1);
+  }
+
+  const smtpConfigured = !!(
+    process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.SMTP_USER &&
+    process.env.SMTP_PASS &&
+    process.env.SMTP_FROM
+  );
+  if (!smtpConfigured) {
+    console.error(
+      "[config] FATAL: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM " +
+        "must all be set in production.",
     );
     process.exit(1);
   }

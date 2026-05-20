@@ -14,6 +14,7 @@ import { pool } from "../db";
 import { hashPassword } from "../auth/password";
 import { db } from "../db";
 import { clinics, users, patients } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const PROD_LIKE_PATTERNS = [
   "neon.tech",
@@ -64,7 +65,7 @@ function safeDbName(url: string): string {
     );
 
     if (tables.length > 0) {
-      const names = tables.map((t) => `"${t.tablename}"`).join(", ");
+      const names = tables.map((t: { tablename: string }) => `"${t.tablename}"`).join(", ");
       console.log(`[resetTestDbMinimal] Dropping ${tables.length} table(s)…`);
       await client.query(`DROP TABLE IF EXISTS ${names} CASCADE`);
     }
@@ -131,6 +132,7 @@ function safeDbName(url: string): string {
   await db.insert(patients).values({
     id: PATIENT_ID,
     clinicId: CLINIC_ID,
+    fullName: "Test Patient",
     patientKey: PATIENT_KEY,
     status: "ACTIVE",
   }).onConflictDoNothing();
@@ -138,7 +140,7 @@ function safeDbName(url: string): string {
 
   await db.update(clinics)
     .set({ primaryManagerUserId: "user-test-manager-001" })
-    .where((c => c.id === CLINIC_ID) as any);
+    .where(eq(clinics.id, CLINIC_ID));
 
   const client2 = await pool.connect();
   const allTables: string[] = [];

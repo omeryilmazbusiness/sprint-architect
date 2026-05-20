@@ -6,6 +6,7 @@ import { UpdateTransport } from "./usecases/UpdateTransport";
 import { DeleteTransport } from "./usecases/DeleteTransport";
 import { createTransportSchema, updateTransportSchema } from "./schemas/managerTransports.schemas";
 import { AppError } from "../../auth/errors";
+import { param } from "../../shared/httpParams";
 
 function getClinicId(req: Request): string {
   const clinicId = (req as any).clinicId as string | undefined;
@@ -39,7 +40,7 @@ export async function handleListTransports(req: Request, res: Response, next: Ne
 export async function handleGetTransport(req: Request, res: Response, next: NextFunction) {
   try {
     const clinicId = getClinicId(req);
-    const transport = await repo.findById(req.params.id, clinicId);
+    const transport = await repo.findById(param(req, "id"), clinicId);
     if (!transport) throw new AppError("TRN-NOT-404", "Transport not found", 404);
     res.json(transport);
   } catch (e) { next(e); }
@@ -58,7 +59,7 @@ export async function handleUpdateTransport(req: Request, res: Response, next: N
   try {
     const clinicId = getClinicId(req);
     const body = validateBody(updateTransportSchema, req.body);
-    const transport = await updateUC.execute(req.params.id, clinicId, body);
+    const transport = await updateUC.execute(param(req, "id"), clinicId, body);
     res.json(transport);
   } catch (e) { next(e); }
 }
@@ -66,7 +67,7 @@ export async function handleUpdateTransport(req: Request, res: Response, next: N
 export async function handleDeleteTransport(req: Request, res: Response, next: NextFunction) {
   try {
     const clinicId = getClinicId(req);
-    await deleteUC.execute(req.params.id, clinicId);
+    await deleteUC.execute(param(req, "id"), clinicId);
     res.json({ success: true });
   } catch (e) { next(e); }
 }

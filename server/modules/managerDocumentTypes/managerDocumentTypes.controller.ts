@@ -11,6 +11,7 @@ import {
 } from "./schemas/managerDocumentTypes.schemas";
 import { AppError } from "../../auth/errors";
 import { auditLog } from "../../api/auditLogger";
+import { param } from "../../shared/httpParams";
 
 function getClinicId(req: Request): string {
   const clinicId = (req as any).clinicId as string | undefined;
@@ -83,7 +84,7 @@ export async function createDocumentType(req: Request, res: Response, next: Next
 export async function updateDocumentType(req: Request, res: Response, next: NextFunction) {
   try {
     const clinicId = getClinicId(req);
-    const { id } = req.params;
+    const id = param(req, "id");
     const body = validateBody(updateDocumentTypeBodySchema, req.body);
     const dt = await updateUC.execute(id, clinicId, { name: body.name, note: body.note });
     auditLog({
@@ -104,7 +105,7 @@ export async function updateDocumentType(req: Request, res: Response, next: Next
 export async function deleteDocumentType(req: Request, res: Response, next: NextFunction) {
   try {
     const clinicId = getClinicId(req);
-    const { id } = req.params;
+    const id = param(req, "id");
     const dt = await deleteUC.execute(id, clinicId);
     auditLog({
       clinicId,

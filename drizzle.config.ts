@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
 import { defineConfig } from "drizzle-kit";
+
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 
 /**
  * Drizzle Kit config — always targets DATABASE_URL (production / dev DB).

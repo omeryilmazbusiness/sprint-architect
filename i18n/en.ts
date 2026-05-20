@@ -1,4 +1,5 @@
 import type { AppDict } from "./types";
+import { createGuestDict, guestDetailDict } from "./bundles/guestDetailCreateGuest";
 
 export const en: AppDict = {
   adminDashboard: {
@@ -633,6 +634,11 @@ export const en: AppDict = {
     toastHasAppointments: "Doctor has appointments — cannot delete",
     toastFailedDelete: "Failed to delete doctor",
     toastFailedSave: "Failed to save doctor",
+    generalPractice: "General Practice",
+    yrsExp: "yrs exp.",
+    diplomaVerified: "Diploma verified",
+    confirmRemoveDoctor: "Remove this doctor from your clinic?",
+    btnRemove: "Remove",
   },
 
   managerHotels: {
@@ -676,6 +682,26 @@ export const en: AppDict = {
     toastFailedSave: "Failed to save",
     toastFailedUpdate: "Failed to update",
     toastFailedDelete: "Failed to delete",
+    sectionDriver: "Driver",
+    sectionVehicle: "Vehicle",
+    fieldFullName: "Full Name",
+    fieldPhone: "Phone",
+    fieldBrand: "Brand",
+    fieldModel: "Model",
+    fieldLicensePlate: "License Plate",
+    editTitle: "Edit Transport",
+    addTitle: "Add Transport",
+    errDriverRequired: "Driver name is required",
+    errPhoneRequired: "Phone is required",
+    errBrandRequired: "Brand is required",
+    errModelRequired: "Model is required",
+    errPlateRequired: "License plate is required",
+    btnSaveChanges: "Save Changes",
+    btnCancel: "Cancel",
+    unknownDriver: "Unknown Driver",
+    deleteTransportTitle: "Delete Transport",
+    deleteTransportConfirm: "This transport will be permanently removed.",
+    btnDelete: "Delete",
   },
 
   managerDocTypes: {
@@ -974,6 +1000,9 @@ export const en: AppDict = {
     feature6Label: "Exclusive Guest Offerings",
     feature6Desc: "Handpicked deals reserved for our health tourism guests",
   },
+
+  guestDetail: guestDetailDict,
+  createGuest: createGuestDict,
 
   loginScreen: {
     brandSub: "Your complete care journey, beautifully managed.",

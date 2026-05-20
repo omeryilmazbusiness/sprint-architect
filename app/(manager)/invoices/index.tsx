@@ -157,7 +157,7 @@ export default function InvoicesScreen() {
             <EmptyState 
               icon="document-text-outline" 
               title="No invoices found" 
-              description="Invoices will appear here once generated for your clinic." 
+              subtitle="Invoices will appear here once generated for your clinic." 
             />
           </View>
         }

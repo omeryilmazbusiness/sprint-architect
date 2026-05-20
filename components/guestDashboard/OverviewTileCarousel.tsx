@@ -283,7 +283,7 @@ interface Props {
 
 export function OverviewTileCarousel({ transport, hotel, documents }: Props) {
   const scrollRef  = useRef<ScrollView>(null);
-  const timerRef   = useRef<ReturnType<typeof setInterval>>();
+  const timerRef   = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const [idx, setIdx] = useState(0);
 
   function advance(from: number) {

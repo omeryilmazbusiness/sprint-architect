@@ -129,6 +129,7 @@ describe("Credential Request Workflow", () => {
       to: manager!.email,
       subject: "HealthTour — Your New Temporary Password",
       text: `Your temporary password is: ${tempPassword}`,
+      html: `<p>Your temporary password is: <strong>${tempPassword}</strong></p>`,
     });
 
     await credentialRequestRepo.resolve(cr.id, ADMIN_ID, { sentToEmail: manager!.email });

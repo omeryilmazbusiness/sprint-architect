@@ -1,4 +1,5 @@
 import type { AppDict } from "./types";
+import { createGuestDict, guestDetailDict } from "./bundles/guestDetailCreateGuest";
 
 export const ru: AppDict = {
   adminDashboard: {
@@ -633,6 +634,11 @@ export const ru: AppDict = {
     toastHasAppointments: "У врача есть приёмы — удаление невозможно",
     toastFailedDelete: "Не удалось удалить врача",
     toastFailedSave: "Не удалось сохранить врача",
+    generalPractice: "Общая практика",
+    yrsExp: "лет опыта",
+    diplomaVerified: "Диплом подтверждён",
+    confirmRemoveDoctor: "Удалить этого врача из клиники?",
+    btnRemove: "Удалить",
   },
 
   managerHotels: {
@@ -676,6 +682,26 @@ export const ru: AppDict = {
     toastFailedSave: "Не удалось сохранить",
     toastFailedUpdate: "Не удалось обновить",
     toastFailedDelete: "Не удалось удалить",
+    sectionDriver: "Водитель",
+    sectionVehicle: "Транспорт",
+    fieldFullName: "Полное имя",
+    fieldPhone: "Телефон",
+    fieldBrand: "Марка",
+    fieldModel: "Модель",
+    fieldLicensePlate: "Номер",
+    editTitle: "Редактировать транспорт",
+    addTitle: "Добавить транспорт",
+    errDriverRequired: "Укажите имя водителя",
+    errPhoneRequired: "Укажите телефон",
+    errBrandRequired: "Укажите марку",
+    errModelRequired: "Укажите модель",
+    errPlateRequired: "Укажите номер",
+    btnSaveChanges: "Сохранить",
+    btnCancel: "Отмена",
+    unknownDriver: "Неизвестный водитель",
+    deleteTransportTitle: "Удалить транспорт",
+    deleteTransportConfirm: "Транспорт будет удалён безвозвратно.",
+    btnDelete: "Удалить",
   },
 
   managerDocTypes: {
@@ -974,6 +1000,9 @@ export const ru: AppDict = {
     feature6Label: "Эксклюзивные услуги для гостей",
     feature6Desc: "Отборные предложения, зарезервированные для наших медицинских гостей",
   },
+
+  guestDetail: guestDetailDict,
+  createGuest: createGuestDict,
 
   loginScreen: {
     brandSub: "Ваш полный путь к здоровью, прекрасно организованный.",

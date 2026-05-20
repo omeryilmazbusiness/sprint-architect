@@ -1,10 +1,28 @@
 import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+/**
+ * Base URL for API calls (with trailing slash for legacy string concatenation).
+ * Prefer EXPO_PUBLIC_API_URL (full URL, e.g. http://127.0.0.1:5000 for iOS Simulator).
+ */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
-  if (!host) throw new Error("EXPO_PUBLIC_DOMAIN is not set");
-  return new URL(`https://${host}`).href;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (apiUrl) {
+    const normalized = new URL(apiUrl.includes("://") ? apiUrl : `http://${apiUrl}`);
+    return normalized.href.endsWith("/") ? normalized.href : `${normalized.href}/`;
+  }
+
+  const domain = process.env.EXPO_PUBLIC_DOMAIN?.trim();
+  if (domain) {
+    const normalized = domain.includes("://")
+      ? new URL(domain)
+      : new URL(`https://${domain}`);
+    return normalized.href.endsWith("/") ? normalized.href : `${normalized.href}/`;
+  }
+
+  throw new Error(
+    "EXPO_PUBLIC_API_URL is not set. Copy .env.local.example to .env and set EXPO_PUBLIC_API_URL=http://127.0.0.1:5000",
+  );
 }
 
 export interface ApiErrorBody {

@@ -186,7 +186,7 @@ interface Props {
 
 export function DoctorsCarousel({ doctors }: Props) {
   const scrollRef = useRef<ScrollView>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const [idx, setIdx] = useState(0);
   const count = doctors.length;
 

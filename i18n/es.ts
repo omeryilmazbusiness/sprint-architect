@@ -1,4 +1,5 @@
 import type { AppDict } from "./types";
+import { createGuestDict, guestDetailDict } from "./bundles/guestDetailCreateGuest";
 
 export const es: AppDict = {
   adminDashboard: {
@@ -629,6 +630,11 @@ export const es: AppDict = {
     toastHasAppointments: "El médico tiene citas — no se puede eliminar",
     toastFailedDelete: "Error al eliminar médico",
     toastFailedSave: "Error al guardar médico",
+    generalPractice: "Medicina general",
+    yrsExp: "años exp.",
+    diplomaVerified: "Diploma verificado",
+    confirmRemoveDoctor: "¿Eliminar este médico de la clínica?",
+    btnRemove: "Eliminar",
   },
 
   managerHotels: {
@@ -990,6 +996,9 @@ export const es: AppDict = {
     feature6Label: "Ofertas Exclusivas para Invitados",
     feature6Desc: "Ofertas seleccionadas reservadas para nuestros invitados de turismo médico",
   },
+
+  guestDetail: guestDetailDict,
+  createGuest: createGuestDict,
 
   loginScreen: {
     brandSub: "Tu viaje de salud completo, gestionado de forma impecable.",

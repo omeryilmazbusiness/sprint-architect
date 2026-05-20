@@ -188,7 +188,7 @@ describe("Billing total calculation", () => {
 
   it("uses BILLING_UNIT_PRICE_DEFAULT env when billingUnitPrice is null", () => {
     const rawEnv = "75";
-    const resolvedPrice = null ?? parseFloat(rawEnv);
+    const resolvedPrice = parseFloat(rawEnv);
     expect(resolvedPrice).toBe(75);
   });
 

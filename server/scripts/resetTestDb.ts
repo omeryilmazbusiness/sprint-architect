@@ -73,7 +73,7 @@ function safeDbName(url: string): string {
     );
 
     if (tables.length > 0) {
-      const names = tables.map((t) => `"${t.tablename}"`).join(", ");
+      const names = tables.map((t: { tablename: string }) => `"${t.tablename}"`).join(", ");
       console.log(`[resetTestDb] Dropping ${tables.length} table(s): ${names}`);
       await client.query(`DROP TABLE IF EXISTS ${names} CASCADE`);
     } else {
@@ -85,7 +85,7 @@ function safeDbName(url: string): string {
     );
 
     if (seqs.length > 0) {
-      const names = seqs.map((s) => `"${s.relname}"`).join(", ");
+      const names = seqs.map((s: { relname: string }) => `"${s.relname}"`).join(", ");
       await client.query(`DROP SEQUENCE IF EXISTS ${names} CASCADE`);
     }
 

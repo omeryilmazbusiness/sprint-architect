@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  StyleProp,
   ViewStyle,
   TextStyle,
   TextInputProps,
@@ -22,7 +23,7 @@ export function Card({
   noPad,
 }: {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   noPad?: boolean;
 }) {
   return (

@@ -12,6 +12,7 @@ import { deviceTokenRepo } from "../repositories/deviceTokenRepo";
 import { db } from "../db";
 import { clinics, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { param } from "../shared/httpParams";
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.put("/notifications/:id/read", authMiddleware, requireRole("PATIENT"), as
     if (!actor || actor.type !== "patient") {
       throw new AppError("AUTH_FORBIDDEN", "Patient access only", 403);
     }
-    const notification = await notificationRepo.markPatientRead(req.params.id, actor.sub);
+    const notification = await notificationRepo.markPatientRead(param(req, "id"), actor.sub);
     if (!notification) throw new AppError("NOT_FOUND", "Notification not found", 404);
     res.json(notification);
   } catch (e) { next(e); }

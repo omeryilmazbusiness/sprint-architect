@@ -167,7 +167,7 @@ export default function UsersScreen() {
 
   async function handleBulkDeactivate() {
     const targets: BulkDeactivateTarget[] = [];
-    for (const compositeId of selection.selectedIds) {
+    for (const compositeId of Array.from(selection.selectedIds)) {
       const [entityType, id] = compositeId.split("::");
       targets.push({ id, entityType: entityType as BulkDeactivateTarget["entityType"] });
     }
@@ -193,7 +193,7 @@ export default function UsersScreen() {
 
   async function handleBulkPurge(confirmText: string) {
     const targets: BulkPurgeTarget[] = [];
-    for (const compositeId of selection.selectedIds) {
+    for (const compositeId of Array.from(selection.selectedIds)) {
       const [entityType, id] = compositeId.split("::");
       targets.push({ id, entityType: entityType as BulkPurgeTarget["entityType"] });
     }

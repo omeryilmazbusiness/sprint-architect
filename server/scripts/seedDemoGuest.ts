@@ -15,7 +15,7 @@
  *   NODE_ENV=development tsx server/scripts/seedDemoGuest.ts
  *
  * After running, enable multi-device mode for testing:
- *   Set GUEST_MULTI_DEVICE_DEMO=true in Replit Secrets (Secrets tab)
+ *   Set GUEST_MULTI_DEVICE_DEMO=true in .env for local dev
  *   Then restart the backend workflow.
  *   To turn off: delete the secret (or set it to "false").
  */

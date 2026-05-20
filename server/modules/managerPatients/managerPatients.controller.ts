@@ -7,6 +7,7 @@ import { billingEventsRepo } from "../billingEvents/repos/BillingEventsRepo.driz
 import { listPatientsQuerySchema } from "./schemas/managerPatients.schemas";
 import type { DocSummaryFilter } from "./repos/ManagerPatientsRepo";
 import { AppError } from "../../auth/errors";
+import { param } from "../../shared/httpParams";
 
 const listPatientsUseCase = new ListPatients(managerPatientsRepo);
 const approvePatientUseCase = new ApprovePatient(managerPatientsRepo, billingEventsRepo);
@@ -56,7 +57,7 @@ export async function handleApprovePatient(
     const clinicId = (req as any).clinicId as string;
     const actorId = (req as any).user?.id ?? "unknown";
     const actorRole = (req as any).user?.role ?? "MANAGER";
-    const { id: patientId } = req.params;
+    const patientId = param(req, "id");
 
     if (!patientId) {
       throw new AppError("VAL-001", "Patient ID is required", 400);

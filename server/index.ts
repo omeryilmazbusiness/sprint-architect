@@ -13,8 +13,7 @@ import * as path from "path";
 const app = express();
 const log = console.log;
 
-// Trust Replit / reverse-proxy X-Forwarded-For so rate-limiting resolves
-// real client IPs instead of throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+// Behind reverse proxy (nginx, load balancer): trust X-Forwarded-For for rate limits.
 app.set("trust proxy", 1);
 
 declare module "http" {
@@ -27,22 +26,28 @@ function setupCors(app: express.Application) {
   app.use((req, res, next) => {
     const origins = new Set<string>();
 
-    if (process.env.REPLIT_DEV_DOMAIN) {
-      origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+    const extra = process.env.CORS_ALLOWED_ORIGINS?.split(",") ?? [];
+    for (const entry of extra) {
+      const trimmed = entry.trim();
+      if (trimmed) origins.add(trimmed);
     }
 
-    if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
-        origins.add(`https://${d.trim()}`);
-      });
+    const apiPublic = process.env.EXPO_PUBLIC_API_URL?.trim();
+    if (apiPublic) {
+      try {
+        origins.add(new URL(apiPublic).origin);
+      } catch {
+        /* ignore invalid URL */
+      }
     }
 
     const origin = req.header("origin");
-    const isLocalhost =
+    const isLocalDev =
       origin?.startsWith("http://localhost:") ||
-      origin?.startsWith("http://127.0.0.1:");
+      origin?.startsWith("http://127.0.0.1:") ||
+      origin?.startsWith("exp://");
 
-    if (origin && (origins.has(origin) || isLocalhost)) {
+    if (origin && (origins.has(origin) || isLocalDev)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
       res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -266,7 +271,7 @@ function setupErrorHandler(app: express.Application) {
   startBillingScheduler();
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`express server serving on port ${port}`);
   });
 })();

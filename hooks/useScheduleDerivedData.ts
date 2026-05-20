@@ -68,20 +68,20 @@ export function useScheduleDerivedData(
 
       if (isAfter(d, todayStart)) {
         // Future day: upcoming takes priority, then cancelled
-        if (dayAppts.some((a) => UPCOMING_STATUSES.has(a.status))) {
+        if (dayAppts.some((a: ScheduleAppt) => UPCOMING_STATUSES.has(a.status))) {
           dayMarkers[key] = "upcoming";
-        } else if (dayAppts.every((a) => CANCELLED_STATUSES.has(a.status))) {
+        } else if (dayAppts.every((a: ScheduleAppt) => CANCELLED_STATUSES.has(a.status))) {
           dayMarkers[key] = "cancelled";
         }
         continue;
       }
 
       // Past day priority: missed > completed > cancelled
-      if (dayAppts.some((a) => MISSED_STATUSES.has(a.status))) {
+      if (dayAppts.some((a: ScheduleAppt) => MISSED_STATUSES.has(a.status))) {
         dayMarkers[key] = "missed";
-      } else if (dayAppts.some((a) => DONE_STATUSES.has(a.status))) {
+      } else if (dayAppts.some((a: ScheduleAppt) => DONE_STATUSES.has(a.status))) {
         dayMarkers[key] = "completed";
-      } else if (dayAppts.every((a) => CANCELLED_STATUSES.has(a.status))) {
+      } else if (dayAppts.every((a: ScheduleAppt) => CANCELLED_STATUSES.has(a.status))) {
         dayMarkers[key] = "cancelled";
       }
     }

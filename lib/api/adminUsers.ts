@@ -39,6 +39,9 @@ export interface UnifiedListResponse {
   pageSize: number;
 }
 
+/** @deprecated Use UnifiedListResponse — kept for legacy callers */
+export type UserListResponse = UnifiedListResponse;
+
 export async function listUnifiedEntities(params?: {
   search?: string;
   entityType?: "ADMIN" | "MANAGER" | "PATIENT";

@@ -34,7 +34,7 @@ function NativeTabLayout() {
           <Label>{tl.track}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="schedule">
-          <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
+          <Icon sf={{ default: "calendar", selected: "calendar" }} />
           <Label>{tl.schedule}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="explore">
@@ -97,7 +97,6 @@ function ClassicTabLayout() {
             bottom:      tabBottom,
             height:      tabHeight,
             borderRadius: isWeb ? 0 : TAB_RADIUS,
-            borderTopWidth: 0,
             backgroundColor: isAndroid
               ? "rgba(255,255,255,0.94)"
               : "transparent",
@@ -113,6 +112,7 @@ function ClassicTabLayout() {
               borderTopWidth:  1,
               borderTopColor:  T.border,
             } : {
+              borderTopWidth: 0,
               borderWidth:  1,
               borderColor:  isIOS
                 ? "rgba(255,255,255,0.45)"

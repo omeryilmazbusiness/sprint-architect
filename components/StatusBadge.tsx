@@ -2,7 +2,18 @@ import React from "react";
 import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import Colors from "@/constants/colors";
 
-type Status = "ACTIVE" | "INACTIVE" | "PENDING" | "CONFIRMED" | "SCHEDULED" | "COMPLETED" | "SUSPENDED";
+type Status =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "PENDING"
+  | "CONFIRMED"
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "SUSPENDED"
+  | "PAID"
+  | "UNPAID"
+  | "DRAFT"
+  | "ISSUED";
 
 interface StatusBadgeProps {
   status: Status;
@@ -17,6 +28,10 @@ const STATUS_CONFIG: Record<Status, { label: string; colorKey: "statusActive" | 
   SCHEDULED: { label: "Scheduled", colorKey: "statusPending" },
   COMPLETED: { label: "Completed", colorKey: "statusInactive" },
   SUSPENDED: { label: "Suspended", colorKey: "statusInactive" },
+  PAID: { label: "Paid", colorKey: "statusActive" },
+  UNPAID: { label: "Unpaid", colorKey: "statusPending" },
+  DRAFT: { label: "Draft", colorKey: "statusPending" },
+  ISSUED: { label: "Issued", colorKey: "statusPending" },
 };
 
 export function StatusBadge({ status, small }: StatusBadgeProps) {

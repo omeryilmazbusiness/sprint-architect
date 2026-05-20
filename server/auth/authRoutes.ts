@@ -60,7 +60,11 @@ const refreshSchema = z.object({
 
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function issueTokens(user: { id: string; role: "ADMIN" | "MANAGER" | "PATIENT"; clinicId: string | null }) {
+function issueTokens(user: {
+  id: string;
+  role: "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "PATIENT";
+  clinicId: string | null;
+}) {
   const actor = {
     sub: user.id,
     role: user.role,

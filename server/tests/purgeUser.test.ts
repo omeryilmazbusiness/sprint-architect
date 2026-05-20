@@ -176,8 +176,7 @@ describe("Purge User System", () => {
       action: "TEST_ACTION",
       resourceType: "TEST",
       resourceId: TEST_USER_ID,
-      ipAddress: "127.0.0.1",
-      metadata: {},
+      metadata: null,
     });
 
     try {

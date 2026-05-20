@@ -16,8 +16,8 @@ interface Patient {
   fullName: string;
   patientKey: string;
   phone?: string;
-  phoneE164?: string;
-  email?: string;
+  phoneE164?: string | null;
+  email?: string | null;
   nationalityCode?: string;
   arrivalDate?: string | null;
   departureDate?: string | null;

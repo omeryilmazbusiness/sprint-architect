@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-native"
+  },
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "constants/**/*.ts",
+    "context/**/*.ts",
+    "context/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "i18n/**/*.ts",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "app.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "server",
+    "server_dist",
+    "ios",
+    "android",
+    "attached_assets"
+  ]
+}

@@ -1,45 +1,57 @@
-# HealthTour — Health Tourism Operations SaaS
+# HealthTour (Healory) — Health Tourism Operations SaaS
 
 Multi-tenant SaaS mobile application for health tourism clinics. Built with Expo React Native (frontend), Express + TypeScript (backend), Drizzle ORM, and PostgreSQL.
 
 ---
 
-## Database Provider
+## Local development (macOS + iOS Simulator)
 
-**Replit Built-in PostgreSQL (Local Postgres)**
+```bash
+cp .env.local.example .env
+npm install
+npm run dev
+```
 
-| Field    | Value                          |
-|----------|--------------------------------|
-| Host     | `helium` (Replit internal)     |
-| Port     | `5432`                         |
-| Driver   | `pg` (node-postgres)           |
-| ORM      | `drizzle-orm/node-postgres`    |
-| Dev/Prod DB | `heliumdb`                  |
-| Test DB  | `heliumdb_test`                |
+Press **i** in the Expo CLI to open the iOS Simulator. Full guide: [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md).
+
+**Production & App Store:** [docs/PRODUCTION.md](docs/PRODUCTION.md) · [docs/APP_STORE.md](docs/APP_STORE.md)
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Docker Postgres + migrate + seed + API + Expo |
+| `npm run db:up` | Start PostgreSQL container |
+| `npm run expo:ios:sim` | Native iOS build on iPhone 17 simulator |
+
+---
+
+## Database
+
+**PostgreSQL 16** via Docker locally (`docker compose`) or any managed Postgres in production.
+
+| Field | Local (Docker) |
+|-------|----------------|
+| Host | `localhost` |
+| Port | `55432` (host; override with `POSTGRES_HOST_PORT`) |
+| User / password | `postgres` / `postgres` |
+| Database | `healthtour` |
+| ORM | `drizzle-orm` + `pg` |
 
 ---
 
 ## Environment Variables
 
-| Variable           | Required     | Description                                                                                           |
-|--------------------|--------------|-------------------------------------------------------------------------------------------------------|
-| `DATABASE_URL`     | Always       | Production/development database connection string. Format: `postgres://user:pass@host:5432/heliumdb`  |
-| `DATABASE_URL_TEST`| For tests    | Test database connection string. If not set, auto-derived by appending `_test` to the database name.  |
-| `SESSION_SECRET`   | Always       | Secret key for JWT signing. Must be a long random string.                                             |
-| `NODE_ENV`         | Always       | `development` \| `test` \| `production`                                                               |
-| `PORT`             | Optional     | Server port (default: `5000`)                                                                         |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Always | `postgresql://postgres:postgres@localhost:5432/healthtour` |
+| `DATABASE_URL_TEST` | Tests | Optional; defaults to `<db>_test` |
+| `SESSION_SECRET` | Always | Long random string |
+| `EXPO_PUBLIC_API_URL` | Mobile | Full API URL, e.g. `http://127.0.0.1:5000` |
+| `NODE_ENV` | Always | `development` \| `test` \| `production` |
+| `PORT` | Optional | Default `5000` |
 
-### Setting secrets in Replit
+Copy `.env.local.example` to `.env` for local work.
 
-In your Replit project, go to **Secrets** (padlock icon) and add:
-
-```
-DATABASE_URL      = postgres://postgres:PASSWORD@helium:5432/heliumdb
-DATABASE_URL_TEST = postgres://postgres:PASSWORD@helium:5432/heliumdb_test
-SESSION_SECRET    = <long-random-string>
-```
-
-> The `DATABASE_URL_TEST` is optional — if not provided and `NODE_ENV=test`, it is auto-derived by replacing the database name with `<name>_test`.
+> `DATABASE_URL_TEST` is optional — if unset in test mode, the name gets a `_test` suffix automatically.
 
 ---
 
@@ -57,15 +69,15 @@ psql "$DATABASE_URL_TEST"
 
 ### TablePlus / DBeaver
 
-Use the same credentials from `DATABASE_URL`, but change the **database name** to `heliumdb_test` for the test connection:
+Use the same credentials from `DATABASE_URL`, but change the **database name** to `healthtour_test` for the test connection:
 
 | Field    | Prod/Dev       | Test              |
 |----------|----------------|-------------------|
-| Host     | `helium`       | `helium`          |
+| Host     | `localhost`    | `localhost`       |
 | Port     | `5432`         | `5432`            |
 | User     | `postgres`     | `postgres`        |
-| Password | *(from secret)*| *(same password)* |
-| Database | `heliumdb`     | `heliumdb_test`   |
+| Password | *(from .env)*  | *(same password)* |
+| Database | `healthtour`   | `healthtour_test` |
 
 ---
 
@@ -192,7 +204,7 @@ RESET_CONFIRM="YES_DELETE_ALL" \
   NODE_ENV=development tsx server/scripts/resetLaunchDb.ts
 ```
 
-You can also trigger the reset from the **"DB Reset Launch"** workflow in the Replit panel (which runs DRY-RUN mode by default — set `RESET_CONFIRM` in your secrets to enable the real wipe).
+Run the reset script directly (DRY-RUN by default — set `RESET_CONFIRM` in `.env` to enable the real wipe).
 
 ### Safety Guards (will refuse and abort if any check fails)
 
@@ -347,6 +359,6 @@ After a real wipe the script prints a post-wipe verification table — every row
 - **Frontend:** Expo (React Native + Router), React Query, TypeScript
 - **Backend:** Express, TypeScript, tsx
 - **ORM:** Drizzle ORM (drizzle-orm/node-postgres)
-- **Database:** PostgreSQL (Replit Built-in)
+- **Database:** PostgreSQL 16 (Docker locally, managed Postgres in production)
 - **Auth:** JWT (access + refresh tokens)
 - **Billing:** Automated scheduler (node-cron, Istanbul timezone)

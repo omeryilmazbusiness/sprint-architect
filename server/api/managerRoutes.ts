@@ -303,9 +303,11 @@ router.put("/patients/:id/assign-hotel", async (req, res, next) => {
     const patient = await patientRepo.findById(req.params.id, clinicId);
     if (!patient) notFound("Patient");
 
+    let assignedHotel: { name: string } | null = null;
     if (body.hotelId) {
       const hotel = await hotelRepo.findById(body.hotelId, clinicId);
       if (!hotel) throw new AppError("NOT_FOUND", "Hotel not found or belongs to another clinic", 404);
+      assignedHotel = hotel;
     }
 
     const plan = await planRepo.upsert({
@@ -318,8 +320,8 @@ router.put("/patients/:id/assign-hotel", async (req, res, next) => {
       checkOutDate: body.checkOutDate ?? null,
     });
 
-    if (body.hotelId) {
-      const hotelName = hotel?.name ?? "your hotel";
+    if (body.hotelId && assignedHotel) {
+      const hotelName = assignedHotel.name ?? "your hotel";
       notificationService.emitGuestNotification(req.params.id, clinicId, {
         type: "HOTEL_ASSIGNED",
         title: "Hotel Assigned",

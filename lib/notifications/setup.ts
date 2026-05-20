@@ -40,6 +40,8 @@ export async function initNotificationHandler(): Promise<void> {
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
       }),
     });
     _handlerInstalled = true;

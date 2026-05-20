@@ -44,7 +44,13 @@ void initNotificationHandler();
 function SystemErrorBridge() {
   const { showSystemError } = useSystemError();
   useEffect(() => {
-    setSystemErrorHandler(showSystemError);
+    setSystemErrorHandler((info) =>
+      showSystemError({
+        code: info.code ?? "SYS-001",
+        requestId: info.requestId,
+        message: info.message,
+      }),
+    );
   }, [showSystemError]);
   return null;
 }

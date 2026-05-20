@@ -1,4 +1,5 @@
 import type { AppDict } from "./types";
+import { createGuestDict, guestDetailDict } from "./bundles/guestDetailCreateGuest";
 
 export const tr: AppDict = {
   adminDashboard: {
@@ -629,6 +630,11 @@ export const tr: AppDict = {
     toastHasAppointments: "Doktorun randevuları var — silinemez",
     toastFailedDelete: "Doktor silinemedi",
     toastFailedSave: "Doktor kaydedilemedi",
+    generalPractice: "Genel Uygulama",
+    yrsExp: "yıl deneyim",
+    diplomaVerified: "Diploma doğrulandı",
+    confirmRemoveDoctor: "Bu doktor klinikten kaldırılsın mı?",
+    btnRemove: "Kaldır",
   },
 
   managerHotels: {
@@ -990,6 +996,9 @@ export const tr: AppDict = {
     feature6Label: "Özel Misafir Teklifleri",
     feature6Desc: "Sağlık turizmi misafirlerimiz için ayrılmış seçkin fırsatlar",
   },
+
+  guestDetail: guestDetailDict,
+  createGuest: createGuestDict,
 
   loginScreen: {
     brandSub: "Sağlık yolculuğunuzun tamamı, güzelce yönetildi.",
