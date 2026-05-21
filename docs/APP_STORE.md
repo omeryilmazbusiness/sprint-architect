@@ -60,9 +60,20 @@ npm run expo:ios:sim        # terminal 2 — iPhone 15 simulator
 
 Use `EXPO_PUBLIC_API_URL=http://127.0.0.1:5001` (or your API port) in `.env`.
 
+## Public Support & Privacy (GitHub Pages)
+
+Hosted from the `/docs` folder. See [GITHUB_PAGES.md](./GITHUB_PAGES.md).
+
+After enabling Pages on GitHub:
+
+| Field | Path |
+|-------|------|
+| Support URL | `https://<user>.github.io/<repo>/support/` |
+| Privacy Policy URL | `https://<user>.github.io/<repo>/privacy/` |
+
 ## App Store review checklist
 
-- [ ] Privacy policy URL in App Store Connect
+- [ ] Privacy policy URL in App Store Connect (GitHub Pages link above)
 - [ ] `NSUserNotificationsUsageDescription` (configured in `app.config.ts`)
 - [ ] Camera / photo library usage strings (configured)
 - [ ] Production build uses **HTTPS** API only (no ATS HTTP exceptions)

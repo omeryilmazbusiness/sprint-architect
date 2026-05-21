@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Healory — Legal &amp; Support</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f5f7fa;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --accent: #0ea5a4;
+        --border: #e2e8f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --card: #1e293b;
+          --text: #f1f5f9;
+          --muted: #94a3b8;
+          --border: #334155;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px;
+      }
+      h1 { margin: 0 0 8px; font-size: 1.75rem; }
+      p.lead { margin: 0 0 24px; color: var(--muted); }
+      ul { list-style: none; padding: 0; margin: 0; }
+      li + li { margin-top: 12px; }
+      a {
+        display: block;
+        padding: 16px 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      a:hover { border-color: var(--accent); }
+      a span {
+        display: block;
+        font-weight: 400;
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      footer {
+        margin-top: 24px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h1>Healory</h1>
+        <p class="lead">Health tourism operations for clinics and guests.</p>
+        <ul>
+          <li>
+            <a href="./support/">
+              Support
+              <span>Contact, help, and account assistance</span>
+            </a>
+          </li>
+          <li>
+            <a href="./privacy/">
+              Privacy Policy
+              <span>How we collect, use, and protect your data</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <footer>© 2026 Healory</footer>
+    </main>
+  </body>
+</html>
