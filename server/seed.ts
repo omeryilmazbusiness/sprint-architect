@@ -294,3 +294,13 @@ export async function seedDatabase() {
 
   console.log("[seed] Database seed complete.");
 }
+
+const isDirectRun = process.argv[1]?.includes("seed.ts");
+if (isDirectRun) {
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch((err: unknown) => {
+      console.error("[seed] Failed:", err);
+      process.exit(1);
+    });
+}
