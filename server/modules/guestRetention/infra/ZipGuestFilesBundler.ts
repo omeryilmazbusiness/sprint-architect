@@ -1,4 +1,4 @@
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import { PassThrough } from "stream";
 import { getStorageProvider } from "../../../storage/getStorageProvider";
 import { logger } from "../../../shared/logger";
@@ -11,7 +11,7 @@ export async function buildGuestFilesZip(
   }
 
   return new Promise((resolve, reject) => {
-    const archive = archiver("zip", { zlib: { level: 6 } });
+    const archive = new ZipArchive({ zlib: { level: 6 } });
     const passthrough = new PassThrough();
     const chunks: Buffer[] = [];
 
