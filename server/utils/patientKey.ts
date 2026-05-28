@@ -1,15 +1,12 @@
-import { randomBytes } from "crypto";
+/**
+ * @deprecated Import from `server/modules/guestAccessKey` — kept for existing imports.
+ */
+export {
+  generatePatientKey,
+  MAX_KEY_ATTEMPTS,
+  PATIENT_KEY_REGEX,
+  LEGACY_PATIENT_KEY_REGEX,
+  GUEST_ACCESS_KEY_REGEX,
+} from "../modules/guestAccessKey/patientKeyFacade";
 
-const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const KEY_LENGTH = 8;
-export const MAX_KEY_ATTEMPTS = 5;
-export const PATIENT_KEY_REGEX = /^PT-[A-Z0-9]{8}$/;
-
-export function generatePatientKey(): string {
-  const bytes = randomBytes(KEY_LENGTH);
-  let key = "PT-";
-  for (let i = 0; i < KEY_LENGTH; i++) {
-    key += CHARSET[bytes[i] % CHARSET.length];
-  }
-  return key;
-}
+export { guestAccessKeyGenerator } from "../modules/guestAccessKey";

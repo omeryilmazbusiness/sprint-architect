@@ -219,14 +219,22 @@ export default function GuestDetailScreen() {
       instructionText: string;
     }) =>
       apiRequest("POST", `/v1/manager/patients/${id}/assign-documents`, {
-        items: [{ documentTypeId: typeId, instructionText: instructionText || null }],
+        items: [
+          {
+            documentTypeId: typeId,
+            ...(instructionText.trim()
+              ? { instructionText: instructionText.trim() }
+              : {}),
+          },
+        ],
       }),
     onSuccess: () => {
       setShowDocSheet(false);
       invalidate();
       showToast(tp.toastDocAssigned);
     },
-    onError: () => showToast(tp.toastDocAssignFailed),
+    onError: (err: Error) =>
+      showToast(err.message?.trim() || tp.toastDocAssignFailed),
   });
 
   const updateDocStatusMutation = useMutation({

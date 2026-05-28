@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,7 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
-  Animated,
-  Dimensions,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,8 +21,7 @@ import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
 import DoctorListCard, { Doctor } from "@/components/managerDoctors/DoctorListCard";
 import { useT } from "@/hooks/useT";
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 interface DoctorForm {
   fullName: string;
@@ -91,8 +86,6 @@ const sectionStyles = StyleSheet.create({
 });
 
 export default function DoctorsScreen() {
-  const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const t = useT();
   const td = t.managerDoctors;
 
@@ -116,14 +109,6 @@ export default function DoctorsScreen() {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => clearTimeout(timer);
   }, [search]);
-
-  useEffect(() => {
-    if (showForm) {
-      Animated.spring(slideAnim, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }).start();
-    }
-  }, [showForm]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Doctor[]; total: number }>({
     queryKey: ["/v1/manager/doctors", debouncedSearch],
@@ -300,49 +285,48 @@ export default function DoctorsScreen() {
         />
       )}
 
-      <Modal
+      <CenteredAppModal
         visible={showForm}
-        transparent
-        animationType="none"
-        onRequestClose={handleClose}
-        statusBarTranslucent
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <View style={styles.sheetOverlay}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-            <Animated.View
-              style={[
-                styles.sheetContainer,
-                { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 16 },
-              ]}
+        onClose={handleClose}
+        title={editingItem ? td.formTitleEdit : td.formTitleAdd}
+        testID="doctor-form-modal"
+        footer={
+          <View style={styles.sheetActions}>
+            <Pressable
+              style={({ pressed }) => [styles.btnCancel, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={handleClose}
             >
-              <View style={styles.sheetHandle} />
-
-              <View style={styles.sheetHeader}>
-                <View>
-                  <Text style={styles.sheetTitle}>
-                    {editingItem ? td.formTitleEdit : td.formTitleAdd}
+              <Text style={styles.btnCancelText}>{td.btnCancel}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.btnSave,
+                { opacity: !form.fullName.trim() || mutation.isPending || pressed ? 0.72 : 1 },
+              ]}
+              onPress={handleSubmit}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={editingItem ? "checkmark-circle-outline" : "add-circle-outline"}
+                    size={18}
+                    color="#fff"
+                  />
+                  <Text style={styles.btnSaveText}>
+                    {editingItem ? td.btnSaveChanges : td.btnAddDoctor}
                   </Text>
-                  <Text style={styles.sheetSubtitle}>
-                    {editingItem ? td.formSubEdit : td.formSubAdd}
-                  </Text>
-                </View>
-                <Pressable onPress={handleClose} hitSlop={12} style={styles.sheetCloseBtn}>
-                  <View style={styles.sheetCloseWrap}>
-                    <Ionicons name="close" size={18} color={T.textSec} />
-                  </View>
-                </Pressable>
-              </View>
-
-              <ScrollView
-                style={{ flexShrink: 1 }}
-                contentContainerStyle={styles.sheetBody}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
+                </>
+              )}
+            </Pressable>
+          </View>
+        }
+      >
+        <Text style={styles.sheetSubtitle}>
+          {editingItem ? td.formSubEdit : td.formSubAdd}
+        </Text>
                 <View style={styles.section}>
                   <SectionLabel icon="person-outline" title={td.sectionIdentity} />
                   <View style={styles.sectionContent}>
@@ -502,43 +486,7 @@ export default function DoctorsScreen() {
                     </View>
                   </View>
                 </View>
-              </ScrollView>
-
-              <View style={styles.sheetActions}>
-                <Pressable
-                  style={({ pressed }) => [styles.btnCancel, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={handleClose}
-                >
-                  <Text style={styles.btnCancelText}>{td.btnCancel}</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.btnSave,
-                    { opacity: !form.fullName.trim() || mutation.isPending || pressed ? 0.72 : 1 },
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={mutation.isPending}
-                >
-                  {mutation.isPending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name={editingItem ? "checkmark-circle-outline" : "add-circle-outline"}
-                        size={18}
-                        color="#fff"
-                      />
-                      <Text style={styles.btnSaveText}>
-                        {editingItem ? td.btnSaveChanges : td.btnAddDoctor}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-            </Animated.View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      </CenteredAppModal>
 
       <Modal visible={!!toast} transparent animationType="none" statusBarTranslucent onRequestClose={() => {}}>
         <View style={styles.toastOverlay} pointerEvents="none" testID="doctors-screen-toast">

@@ -2,7 +2,7 @@ import { db } from "../../../db";
 import { patients, clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import type { PatientSummaryDto } from "../schemas/adminPatients.schemas";
-import { generatePatientKey, MAX_KEY_ATTEMPTS } from "../../../utils/patientKey";
+import { guestAccessKeyGenerator, MAX_KEY_ATTEMPTS } from "../../../modules/guestAccessKey";
 import { patientRepo } from "../../../repositories/patientRepo";
 import { authRepo } from "../../../repositories/authRepo";
 
@@ -71,13 +71,27 @@ export const adminPatientsReadRepo = {
   async regenerateAccessKey(
     patientId: string,
   ): Promise<string> {
-    let newKey = generatePatientKey();
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.id, patientId),
+      columns: { clinicId: true },
+    });
+    const clinic = patient
+      ? await db.query.clinics.findFirst({
+          where: eq(clinics.id, patient.clinicId),
+          columns: { name: true },
+        })
+      : null;
+    const institutionName = clinic?.name ?? "institution";
+
+    let newKey = guestAccessKeyGenerator.generate(institutionName);
     let attempts = 0;
     while (attempts < MAX_KEY_ATTEMPTS) {
       const existing = await patientRepo.findByKey(newKey);
       if (!existing) break;
-      if (++attempts >= MAX_KEY_ATTEMPTS) throw new Error("Failed to generate unique patient key after max attempts");
-      newKey = generatePatientKey();
+      if (++attempts >= MAX_KEY_ATTEMPTS) {
+        throw new Error("Failed to generate unique patient key after max attempts");
+      }
+      newKey = guestAccessKeyGenerator.generate(institutionName);
     }
 
     await db

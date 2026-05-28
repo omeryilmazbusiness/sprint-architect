@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Clipboard,
   Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +18,7 @@ import { TextField } from "@/components/ui";
 import { createUser, AdminUserCreated } from "@/lib/api/adminUsers";
 import { listClinics, ClinicListResponse } from "@/lib/api/adminClinics";
 import { useT } from "@/hooks/useT";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export interface CreateUserSheetProps {
   visible: boolean;
@@ -279,10 +279,12 @@ function OtpModal({
   const tcu = t.adminCreateUser;
   const [copied, setCopied] = useState(false);
 
-  function handleCopy() {
-    if (Clipboard?.setString) Clipboard.setString(password);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleCopy() {
+    const ok = await copyToClipboard(password);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   }
 
   return (
@@ -417,7 +419,7 @@ export default function CreateUserSheet({
     mutationFn: () => {
       if (!fullName.trim()) throw new Error("Full name is required");
       if (!email.trim()) throw new Error("Email is required");
-      if (role === "MANAGER" && !clinicId) throw new Error("Clinic is required for Manager");
+      if (role === "MANAGER" && !clinicId) throw new Error("Institution is required for Manager");
       return createUser({
         email: email.trim().toLowerCase(),
         fullName: fullName.trim(),

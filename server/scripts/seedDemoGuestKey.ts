@@ -9,21 +9,28 @@
  *
  * Usage:
  *   npm run db:seed:demo-guest
+ *
+ * Production (requires explicit opt-in):
+ *   ALLOW_PROD_DEMO_SEED=1 DATABASE_URL=<prod-url> npm run db:seed:demo-guest
  */
 
 import { db } from "../db";
 import { clinics, patients } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { departureRetentionFields } from "../modules/guestRetention";
 
 const DEMO_CLINIC_ID = "clinic-demo-001";
-const DEMO_CLINIC_NAME = "Demo Clinic";
+const DEMO_CLINIC_NAME = "Demo Institution";
 
 const DEMO_PATIENT_KEY = "PT-4S9WQ2U6";
 const DEMO_PATIENT_FULL_NAME = "Demo Guest";
+const DEMO_DEPARTURE_DATE = "2099-12-31";
 
 (async () => {
-  if (process.env.NODE_ENV === "production") {
-    console.error("[seedDemoGuest] Refusing to run in production.");
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PROD_DEMO_SEED !== "1") {
+    console.error(
+      "[seedDemoGuest] Refusing to run in production without ALLOW_PROD_DEMO_SEED=1."
+    );
     process.exit(1);
   }
 
@@ -64,7 +71,12 @@ const DEMO_PATIENT_FULL_NAME = "Demo Guest";
     if (needsUpdate) {
       await db
         .update(patients)
-        .set({ status: "ACTIVE", clinicId: DEMO_CLINIC_ID })
+        .set({
+          status: "ACTIVE",
+          clinicId: DEMO_CLINIC_ID,
+          departureDate: DEMO_DEPARTURE_DATE,
+          ...departureRetentionFields(DEMO_DEPARTURE_DATE),
+        })
         .where(eq(patients.patientKey, DEMO_PATIENT_KEY));
       console.log(`[seedDemoGuest] Updated existing patient → status=ACTIVE`);
     } else {
@@ -80,7 +92,9 @@ const DEMO_PATIENT_FULL_NAME = "Demo Guest";
       status: "ACTIVE",
       nationality: "Turkey",
       phoneE164: "+905000000000",
-    } as any);
+      departureDate: DEMO_DEPARTURE_DATE,
+      ...departureRetentionFields(DEMO_DEPARTURE_DATE),
+    });
     console.log(`[seedDemoGuest] Created patient: ${DEMO_PATIENT_FULL_NAME}`);
   }
 

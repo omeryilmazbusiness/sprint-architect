@@ -14,7 +14,7 @@ import {
   Linking,
 } from "react-native";
 import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
-import { useFocusEffect, useLocalSearchParams, router } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { GuestHeader } from "@/components/guest/GuestHeader";
@@ -58,121 +58,70 @@ function deriveCurrentStep(
   return 0;
 }
 
-// ─── Premium Animated Segmented Control ─────────────────────────────────────
+// ─── Track tabs (Plan | Files) ───────────────────────────────────────────────
 
-function SegmentedControl({
+function TrackTabBar({
   active,
   onChange,
 }: {
   active: InnerTab;
   onChange: (t: InnerTab) => void;
 }) {
-  const t = useT();
-  const tt = t.guestTrack;
-  const slideAnim = useRef(new Animated.Value(active === "journey" ? 0 : 1)).current;
-  const [trackW, setTrackW] = useState(0);
-
-  const TABS: { key: InnerTab; label: string }[] = [
-    { key: "journey",   label: tt.tabJourney   },
-    { key: "documents", label: tt.tabDocuments },
-  ];
-
-  function onLayout(e: LayoutChangeEvent) {
-    setTrackW(e.nativeEvent.layout.width);
-  }
-
-  function handlePress(tab: InnerTab) {
-    const toValue = tab === "journey" ? 0 : 1;
-    Animated.spring(slideAnim, {
-      toValue,
-      useNativeDriver: true,
-      tension: 340,
-      friction: 28,
-    }).start();
-    onChange(tab);
-  }
-
-  const pillW = trackW > 0 ? trackW / 2 : 0;
-  const translateX = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, pillW],
-  });
-
+  const tt = useT().guestTrack;
   return (
-    <View style={sc.wrap}>
-      <View style={sc.track} onLayout={onLayout}>
-        {trackW > 0 && (
-          <Animated.View
-            style={[sc.pill, { width: pillW, transform: [{ translateX }] }]}
-          />
-        )}
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={sc.tab}
-            onPress={() => handlePress(tab.key)}
-          >
-            <Text
-              style={[
-                sc.label,
-                active === tab.key ? sc.labelActive : sc.labelInactive,
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+    <View style={tb.wrap}>
+      <Pressable
+        style={[tb.chip, active === "journey" && tb.chipActive]}
+        onPress={() => onChange("journey")}
+      >
+        <Text style={[tb.chipText, active === "journey" && tb.chipTextActive]}>{tt.tabJourney}</Text>
+      </Pressable>
+      <Pressable
+        style={[tb.chip, active === "documents" && tb.chipActive]}
+        onPress={() => onChange("documents")}
+      >
+        <Text style={[tb.chipText, active === "documents" && tb.chipTextActive]}>{tt.tabDocuments}</Text>
+      </Pressable>
     </View>
   );
 }
 
-const sc = StyleSheet.create({
+const tb = StyleSheet.create({
   wrap: {
-    paddingHorizontal: T.sp16, paddingVertical: T.sp12,
-    backgroundColor: T.bg, borderBottomWidth: 1, borderBottomColor: T.border,
+    flexDirection: "row",
+    marginHorizontal: T.sp16,
+    marginTop: T.sp8,
+    marginBottom: T.sp4,
+    backgroundColor: T.surfaceSubtle,
+    borderRadius: T.r12,
+    padding: 4,
+    gap: 4,
   },
-  track: {
-    flexDirection: "row", backgroundColor: T.surfaceSubtle,
-    borderRadius: 50, padding: 3, position: "relative", height: 40,
+  chip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: T.r10,
+    alignItems: "center",
   },
-  pill: {
-    position: "absolute", top: 3, left: 3, bottom: 3, borderRadius: 50,
-    backgroundColor: T.surface, shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
-  },
-  tab:          { flex: 1, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  label:        { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14 },
-  labelActive:  { color: T.accent },
-  labelInactive: { color: T.textMuted },
+  chipActive: { backgroundColor: T.surface, ...cardShadow },
+  chipText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.textMuted },
+  chipTextActive: { fontFamily: "PlusJakartaSans_700Bold", color: T.accent },
 });
 
 // ─── Next Action Card ─────────────────────────────────────────────────────────
 
 const ACTION_CFG = {
-  doc:       { icon: "document-attach-outline" as const, color: T.warning, bg: T.warningBg, border: "#FDE68A" },
   appt:      { icon: "calendar-outline" as const, color: T.accent, bg: "#EFF6FF", border: "#BFDBFE" },
   transport: { icon: "car-outline" as const, color: T.textSec, bg: T.surfaceSubtle, border: T.border },
 };
 
 function NextActionCard() {
-  const { documents, appointments } = useGuestDashboard();
+  const { appointments } = useGuestDashboard();
   const t = useT();
   const tt = t.guestTrack;
   const { locale } = useLanguage();
 
   const action = useMemo(() => {
-    const pending = documents.filter(d => d.status === "ASSIGNED" || d.status === "REJECTED");
-    if (pending.length > 0) {
-      const n = pending.length;
-      return {
-        type: "doc" as const,
-        title: n === 1 ? tt.docActionSingular : tt.docActionPlural.replace("{n}", String(n)),
-        sub: tt.docActionSub,
-        cta: tt.docActionCta,
-        onCta: () => router.push({ pathname: "/(patient)/track", params: { tab: "documents" } }),
-      };
-    }
     const now = new Date();
     const l = locale === "ru" ? "ru-RU" : "en-US";
     const todayAppt = appointments.find(a => {
@@ -205,7 +154,7 @@ function NextActionCard() {
       };
     }
     return null;
-  }, [documents, appointments, tt, locale]);
+  }, [appointments, tt, locale]);
 
   if (!action) return null;
   const cfg = ACTION_CFG[action.type];
@@ -706,6 +655,10 @@ function DocumentsTab({ tabBarHeight }: { tabBarHeight: number }) {
       contentContainerStyle={[ds.list, { paddingBottom: tabBarHeight + 24 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.accent} />}
     >
+      <View style={ds.retentionBanner}>
+        <Ionicons name="information-circle-outline" size={16} color={T.accent} />
+        <Text style={ds.retentionText}>{tt.filesRetentionHint}</Text>
+      </View>
       <View style={ds.summary}>
         <View style={[ds.summaryChip, { backgroundColor: T.warningBg }]}>
           <Text style={[ds.summaryNum, { color: T.warning }]}>{pendingCount}</Text>
@@ -749,6 +702,24 @@ function DocumentsTab({ tabBarHeight }: { tabBarHeight: number }) {
 
 const ds = StyleSheet.create({
   list: { padding: T.sp16, gap: T.sp10 },
+  retentionBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#EFF6FF",
+    borderRadius: T.r12,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    padding: T.sp12,
+    marginBottom: T.sp4,
+  },
+  retentionText: {
+    flex: 1,
+    fontFamily: "PlusJakartaSans_400Regular",
+    fontSize: 12,
+    color: T.textSec,
+    lineHeight: 17,
+  },
   summary: { flexDirection: "row", gap: 8, marginBottom: T.sp4 },
   summaryChip: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: T.r12 },
   summaryNum:  { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18 },
@@ -810,25 +781,14 @@ const ds = StyleSheet.create({
 
 export default function TrackScreen() {
   const { bottomPadding: tabBarHeight } = useTabBarMetrics();
-  const params = useLocalSearchParams<{ tab?: string }>();
-  const [activeTab, setActiveTab] = useState<InnerTab>(
-    params.tab === "documents" ? "documents" : "journey"
-  );
-  const t = useT();
-  const tt = t.guestTrack;
-
-  useFocusEffect(
-    useCallback(() => {
-      if (params.tab === "documents") setActiveTab("documents");
-    }, [params.tab])
-  );
+  const tt = useT().guestTrack;
+  const [activeTab, setActiveTab] = useState<InnerTab>("journey");
 
   return (
     <View style={root.container}>
       <GuestHeader title={tt.pageTitle} />
       <NextActionCard />
-      <SegmentedControl active={activeTab} onChange={setActiveTab} />
-
+      <TrackTabBar active={activeTab} onChange={setActiveTab} />
       {activeTab === "journey" ? (
         <ScrollView
           style={root.scroll}

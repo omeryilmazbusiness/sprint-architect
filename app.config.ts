@@ -16,11 +16,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const iosInfoPlist: Record<string, unknown> = {
     ...(base.ios?.infoPlist as Record<string, unknown> | undefined),
     NSUserNotificationsUsageDescription:
-      "Healory uses notifications to keep you updated on your appointments, documents, and journey status.",
+      "Healory uses notifications to keep you updated on your account and activity.",
     NSCameraUsageDescription:
-      "Healory uses the camera to upload medical documents and profile photos.",
+      "Healory uses the camera to upload files and profile photos.",
     NSPhotoLibraryUsageDescription:
-      "Healory uses your photo library to upload documents and images.",
+      "Healory uses your photo library to upload files and images.",
   };
 
   if (!IS_PROD_BUILD) {

@@ -66,8 +66,8 @@ interface Props {
 export function DayAgendaCard({ selectedDay, appointments, isLoading }: Props) {
   const todaySelected = isToday(selectedDay);
   const title = todaySelected
-    ? "Today's Appointments"
-    : `Appointments for ${format(selectedDay, "MMM d")}`;
+    ? "Today's Visits"
+    : `Visits for ${format(selectedDay, "MMM d")}`;
 
   return (
     <View style={[styles.card, cardShadow]}>

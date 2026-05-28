@@ -1,17 +1,15 @@
 import React, { useState, useMemo } from "react";
 import {
-  Modal,
   View,
   Text,
   Pressable,
   FlatList,
   TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 export interface PickerOption {
   label: string;
@@ -64,139 +62,83 @@ export function FilterPickerModal({
   }
 
   return (
-    <Modal
+    <CenteredAppModal
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={title}
+      scroll={false}
+      bodyMinHeight={280}
+      testID="filter-picker-modal"
     >
-      <Pressable style={s.backdrop} onPress={handleClose} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={s.sheet}
-      >
-        <View style={s.handle} />
-        <View style={s.header}>
-          <Text style={s.title}>{title}</Text>
-          <Pressable onPress={handleClose} hitSlop={12}>
-            <Ionicons name="close" size={22} color={T.textSec} />
-          </Pressable>
+      {searchable && (
+        <View style={s.searchWrap}>
+          <Ionicons name="search-outline" size={15} color={T.textMuted} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search…"
+            placeholderTextColor={T.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={15} color={T.textMuted} />
+            </Pressable>
+          )}
         </View>
+      )}
 
-        {searchable && (
-          <View style={s.searchWrap}>
-            <Ionicons name="search-outline" size={15} color={T.textMuted} />
-            <TextInput
-              style={s.searchInput}
-              placeholder="Search…"
-              placeholderTextColor={T.textMuted}
-              value={search}
-              onChangeText={setSearch}
-              autoCapitalize="none"
-            />
-            {search.length > 0 && (
-              <Pressable onPress={() => setSearch("")} hitSlop={8}>
-                <Ionicons name="close-circle" size={15} color={T.textMuted} />
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.value}
-          style={s.list}
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
-            search.length === 0 ? (
-              <Pressable style={s.optionRow} onPress={() => handleSelect("")}>
-                <View style={s.optionText}>
-                  <Text style={[s.optionLabel, !selected ? s.optionLabelActive : null]}>
-                    {allLabel}
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.value}
+        style={s.list}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+        ListHeaderComponent={
+          search.length === 0 ? (
+            <Pressable style={s.optionRow} onPress={() => handleSelect("")}>
+              <View style={s.optionText}>
+                <Text style={[s.optionLabel, !selected ? s.optionLabelActive : null]}>{allLabel}</Text>
+              </View>
+              {!selected && <Ionicons name="checkmark" size={18} color={T.primary} />}
+            </Pressable>
+          ) : null
+        }
+        renderItem={({ item }) => {
+          const isActive = selected === item.value;
+          return (
+            <Pressable
+              style={[s.optionRow, isActive && s.optionRowActive]}
+              onPress={() => handleSelect(item.value)}
+            >
+              <View style={s.optionText}>
+                <Text style={[s.optionLabel, isActive && s.optionLabelActive]}>{item.label}</Text>
+                {item.subtitle ? (
+                  <Text style={s.optionSub} numberOfLines={1}>
+                    {item.subtitle}
                   </Text>
-                </View>
-                {!selected && (
-                  <Ionicons name="checkmark" size={18} color={T.primary} />
-                )}
-              </Pressable>
-            ) : null
-          }
-          renderItem={({ item }) => {
-            const isActive = selected === item.value;
-            return (
-              <Pressable
-                style={[s.optionRow, isActive && s.optionRowActive]}
-                onPress={() => handleSelect(item.value)}
-              >
-                <View style={s.optionText}>
-                  <Text style={[s.optionLabel, isActive && s.optionLabelActive]}>
-                    {item.label}
-                  </Text>
-                  {item.subtitle ? (
-                    <Text style={s.optionSub} numberOfLines={1}>{item.subtitle}</Text>
-                  ) : null}
-                </View>
-                {isActive && (
-                  <Ionicons name="checkmark" size={18} color={T.primary} />
-                )}
-              </Pressable>
-            );
-          }}
-          ListEmptyComponent={
-            <Text style={s.empty}>No results</Text>
-          }
-          contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : 20 }}
-        />
-      </KeyboardAvoidingView>
-    </Modal>
+                ) : null}
+              </View>
+              {isActive && <Ionicons name="checkmark" size={18} color={T.primary} />}
+            </Pressable>
+          );
+        }}
+        ListEmptyComponent={<Text style={s.empty}>No results</Text>}
+        contentContainerStyle={s.listContent}
+      />
+    </CenteredAppModal>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  sheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-    minHeight: 200,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: T.border,
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: T.border,
-  },
-  title: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 17,
-    color: T.text,
-  },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginHorizontal: 16,
-    marginVertical: 10,
+    marginTop: 12,
+    marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
     backgroundColor: T.surfaceSubtle,
@@ -210,7 +152,8 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: T.text,
   },
-  list: { flex: 1 },
+  list: { flex: 1, width: "100%" },
+  listContent: { paddingBottom: 12 },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -219,9 +162,7 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.border,
   },
-  optionRowActive: {
-    backgroundColor: T.primary + "06",
-  },
+  optionRowActive: { backgroundColor: T.primary + "06" },
   optionText: { flex: 1 },
   optionLabel: {
     fontFamily: "PlusJakartaSans_500Medium",

@@ -3,7 +3,7 @@
  *
  * Font: Plus Jakarta Sans — a modern geometric sans-serif with
  * subtle humanist touches. Clean, premium, highly readable.
- * Perfect for a health tourism operations platform.
+ * Designed for a modern operations platform.
  *
  * Weights used:
  *   400 Regular  — body text, inputs, captions

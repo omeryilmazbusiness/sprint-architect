@@ -1,6 +1,6 @@
 import { db } from "../../../db";
-import { documentTypes } from "@shared/schema";
-import { eq, and, ilike, asc, sql } from "drizzle-orm";
+import { documentTypes, patientDocuments } from "@shared/schema";
+import { eq, and, ilike, asc, sql, count } from "drizzle-orm";
 
 export interface DocumentTypeDTO {
   id: string;
@@ -15,6 +15,7 @@ export interface IManagerDocumentTypesRepo {
   create(clinicId: string, name: string, note?: string | null): Promise<DocumentTypeDTO>;
   update(id: string, clinicId: string, fields: { name?: string; note?: string | null }): Promise<DocumentTypeDTO | null>;
   delete(id: string, clinicId: string): Promise<DocumentTypeDTO | null>;
+  countAssignments(id: string, clinicId: string): Promise<number>;
 }
 
 function toDTO(row: any): DocumentTypeDTO {
@@ -82,5 +83,18 @@ export class ManagerDocumentTypesRepoDrizzle implements IManagerDocumentTypesRep
       .where(and(eq(documentTypes.id, id), eq(documentTypes.clinicId, clinicId)))
       .returning();
     return row ? toDTO(row) : null;
+  }
+
+  async countAssignments(id: string, clinicId: string): Promise<number> {
+    const [row] = await db
+      .select({ n: count() })
+      .from(patientDocuments)
+      .where(
+        and(
+          eq(patientDocuments.documentTypeId, id),
+          eq(patientDocuments.clinicId, clinicId)
+        )
+      );
+    return row?.n ?? 0;
   }
 }

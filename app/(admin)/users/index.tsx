@@ -118,7 +118,7 @@ export default function UsersScreen() {
 
   const typeOptions: PickerOption[] = [
     { value: "MANAGER", label: "Manager" },
-    { value: "PATIENT", label: "Patient" },
+    { value: "PATIENT", label: "Member" },
     { value: "ADMIN", label: "Admin" },
   ];
 

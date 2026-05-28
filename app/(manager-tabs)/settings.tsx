@@ -101,7 +101,7 @@ export default function ManagerSettingsScreen() {
             icon="people-outline"
             label={ts.rowGuests}
             subtitle={ts.rowGuestsSub}
-            onPress={() => router.push("/(manager-tabs)/users")}
+            onPress={() => router.push("/(manager-tabs)/guests")}
           />
           <Divider inset={56} />
           <ListRow
@@ -123,7 +123,7 @@ export default function ManagerSettingsScreen() {
                 {
                   text: ts.alertOk,
                   onPress: () =>
-                    Linking.openURL("mailto:support@healory.com").catch(() => {}),
+                    Linking.openURL("mailto:support@healory.app").catch(() => {}),
                 },
               ])
             }
@@ -138,7 +138,7 @@ export default function ManagerSettingsScreen() {
                 {
                   text: ts.alertOk,
                   onPress: () =>
-                    Linking.openURL("https://healory.com/privacy").catch(() => {}),
+                    Linking.openURL("https://omeryilmazbusiness.github.io/sprint-architect/privacy/").catch(() => {}),
                 },
               ])
             }

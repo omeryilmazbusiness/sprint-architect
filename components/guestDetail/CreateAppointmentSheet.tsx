@@ -3,18 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   Pressable,
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { apiRequest } from "@/lib/query-client";
+import { useT } from "@/hooks/useT";
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 interface Doctor {
   id: string;
@@ -66,6 +65,7 @@ export function CreateAppointmentSheet({
   onCreated,
 }: Props) {
   const queryClient = useQueryClient();
+  const tg = useT().guestDetail;
   const now = new Date();
 
   const [calYear, setCalYear] = useState(now.getFullYear());
@@ -176,12 +176,11 @@ export function CreateAppointmentSheet({
 
   function handleSubmit() {
     const errs: Record<string, string> = {};
-    if (!selectedDate) errs.date = "Select a date";
-    if (!selectedTime) errs.time = "Select a time";
-    if (!selectedDoctorId) errs.doctor = "Select a doctor";
-    if (!title.trim() || title.trim().length < 2)
-      errs.title = "Enter at least 2 characters";
-    if (title.trim().length > 60) errs.title = "Title is too long (max 60)";
+    if (!selectedDate) errs.date = tg.errSelectDate;
+    if (!selectedTime) errs.time = tg.errSelectTime;
+    if (!selectedDoctorId) errs.doctor = tg.errSelectDoctor;
+    if (!title.trim() || title.trim().length < 2) errs.title = tg.errTitleTooShort;
+    if (title.trim().length > 60) errs.title = tg.errTitleTooLong;
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -201,36 +200,17 @@ export function CreateAppointmentSheet({
     selectedDate || selectedTime || selectedDoctorName || title.trim();
 
   return (
-    <Modal
+    <CenteredAppModal
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={tg.newApptTitle}
+      testID="create-appointment-modal"
+      contentContainerStyle={styles.body}
     >
-      <Pressable style={styles.overlay} onPress={handleClose} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.kavWrapper}
-      >
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>New Appointment</Text>
-            <Pressable onPress={handleClose} hitSlop={12}>
-              <Ionicons name="close" size={22} color={T.textMuted} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.body}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
             {/* ── Date ── */}
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Date</Text>
+                <Text style={styles.sectionLabel}>{tg.labelDate}</Text>
                 {errors.date ? (
                   <Text style={styles.fieldError}>{errors.date}</Text>
                 ) : null}
@@ -297,7 +277,7 @@ export function CreateAppointmentSheet({
             {/* ── Time ── */}
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Time</Text>
+                <Text style={styles.sectionLabel}>{tg.labelTime}</Text>
                 {errors.time ? (
                   <Text style={styles.fieldError}>{errors.time}</Text>
                 ) : null}
@@ -332,7 +312,7 @@ export function CreateAppointmentSheet({
             {/* ── Doctor ── */}
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Doctor</Text>
+                <Text style={styles.sectionLabel}>{tg.labelDoctor}</Text>
                 {errors.doctor ? (
                   <Text style={styles.fieldError}>{errors.doctor}</Text>
                 ) : null}
@@ -346,7 +326,7 @@ export function CreateAppointmentSheet({
                 <Ionicons name="search-outline" size={16} color={T.textMuted} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search by name or specialty"
+                  placeholder={tg.searchDoctorPlaceholder}
                   placeholderTextColor={T.textMuted}
                   value={doctorSearch}
                   onChangeText={setDoctorSearch}
@@ -364,7 +344,7 @@ export function CreateAppointmentSheet({
                 />
               ) : doctors.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  {doctorSearch ? "No doctors match your search" : "No doctors available"}
+                  {doctorSearch ? tg.noDoctorsMatch : tg.noDoctorsAvailable}
                 </Text>
               ) : (
                 <View style={styles.doctorList}>
@@ -432,14 +412,14 @@ export function CreateAppointmentSheet({
             {/* ── Title ── */}
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Procedure / Title</Text>
+                <Text style={styles.sectionLabel}>{tg.labelProcedureTitle}</Text>
                 {errors.title ? (
                   <Text style={styles.fieldError}>{errors.title}</Text>
                 ) : null}
               </View>
               <TextInput
                 style={[styles.titleInput, errors.title ? styles.cardError : null]}
-                placeholder="e.g. Hair Transplant Consultation"
+                placeholder={tg.apptTitlePlaceholder}
                 placeholderTextColor={T.textMuted}
                 value={title}
                 onChangeText={(t) => {
@@ -454,7 +434,7 @@ export function CreateAppointmentSheet({
             {/* ── Preview ── */}
             {hasPreview ? (
               <View style={[styles.previewCard, cardShadow]}>
-                <Text style={styles.previewLabel}>Summary</Text>
+                <Text style={styles.previewLabel}>{tg.apptSummaryLabel}</Text>
                 {selectedDate && selectedTime && (
                   <View style={styles.previewRow}>
                     <Ionicons
@@ -480,7 +460,7 @@ export function CreateAppointmentSheet({
                 {title.trim() ? (
                   <View style={styles.previewRow}>
                     <Ionicons
-                      name="medical-outline"
+                      name="document-text-outline"
                       size={14}
                       color={T.accent}
                     />
@@ -493,7 +473,7 @@ export function CreateAppointmentSheet({
             {/* ── Error ── */}
             {mutation.isError ? (
               <Text style={styles.submitError}>
-                Failed to create appointment. Please try again.
+                {tg.createApptError}
               </Text>
             ) : null}
 
@@ -509,57 +489,17 @@ export function CreateAppointmentSheet({
               {mutation.isPending ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.submitText}>Create Appointment</Text>
+                <Text style={styles.submitText}>{tg.createApptBtn}</Text>
               )}
             </Pressable>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </CenteredAppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.42)",
-  },
-  kavWrapper: {
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "93%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: T.border,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: T.sp20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  sheetTitle: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 17,
-    color: T.text,
-  },
   body: {
-    padding: T.sp16,
-    paddingBottom: Platform.OS === "web" ? 48 : 56,
     gap: 20,
+    paddingBottom: 8,
   },
   section: {
     gap: 10,

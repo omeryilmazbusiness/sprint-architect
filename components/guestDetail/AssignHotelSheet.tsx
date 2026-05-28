@@ -3,15 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   Pressable,
   FlatList,
   ActivityIndicator,
-  Platform,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 interface Hotel {
   id: string;
@@ -44,126 +43,70 @@ export function AssignHotelSheet({
     enabled: visible,
   });
 
-  const hotels: Hotel[] = data?.rows ?? (data as any)?.items ?? [];
+  const hotels: Hotel[] = data?.rows ?? data?.items ?? [];
 
   return (
-    <Modal
+    <CenteredAppModal
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title="Assign Hotel"
+      scroll={false}
+      bodyMinHeight={320}
+      testID="assign-hotel-modal"
     >
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Assign Hotel</Text>
-          <Pressable onPress={onClose} hitSlop={10}>
-            <Ionicons name="close" size={22} color={T.textMuted} />
-          </Pressable>
+      {isLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={T.accent} />
         </View>
-
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={T.accent} />
-          </View>
-        ) : hotels.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="business-outline" size={36} color={T.textMuted} />
-            <Text style={styles.emptyText}>No hotels available</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={hotels}
-            keyExtractor={(h) => h.id}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => !assigning && onSelect(item.id)}
-                style={({ pressed }) => [
-                  styles.item,
-                  pressed && styles.itemPressed,
-                ]}
-              >
-                <View style={styles.hotelIcon}>
-                  <Ionicons name="business" size={24} color={T.accent} />
-                </View>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  {item.stars != null && (
-                    <Text style={styles.stars}>
-                      {"★".repeat(item.stars)}{"☆".repeat(5 - item.stars)}
-                    </Text>
-                  )}
-                  {item.address && (
-                    <Text style={styles.itemSub} numberOfLines={1}>
-                      {item.address}
-                    </Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
-              </Pressable>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.sep} />}
-          />
-        )}
-      </View>
-    </Modal>
+      ) : hotels.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Ionicons name="business-outline" size={36} color={T.textMuted} />
+          <Text style={styles.emptyText}>No hotels available</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={hotels}
+          keyExtractor={(h) => h.id}
+          contentContainerStyle={styles.list}
+          style={styles.flatList}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => !assigning && onSelect(item.id)}
+              disabled={assigning}
+              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+            >
+              <View style={styles.hotelIcon}>
+                <Ionicons name="bed-outline" size={22} color={T.accent} />
+              </View>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                {item.stars ? (
+                  <Text style={styles.stars}>{"★".repeat(Math.min(item.stars, 5))}</Text>
+                ) : null}
+                {item.address ? (
+                  <Text style={styles.itemSub} numberOfLines={2}>
+                    {item.address}
+                  </Text>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
+            </Pressable>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.sep} />}
+        />
+      )}
+    </CenteredAppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "72%",
-    paddingBottom: Platform.OS === "web" ? 34 : 48,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: T.border,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: T.sp20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-  },
-  sheetTitle: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 17,
-    color: T.text,
-  },
-  loadingBox: {
-    padding: 48,
-    alignItems: "center",
-  },
-  emptyBox: {
-    padding: 48,
-    alignItems: "center",
-    gap: 10,
-  },
-  emptyText: {
-    fontFamily: "PlusJakartaSans_500Medium",
-    fontSize: 14,
-    color: T.textMuted,
-  },
-  list: {
-    padding: T.sp16,
-  },
+  loadingBox: { padding: 48, alignItems: "center" },
+  emptyBox: { padding: 48, alignItems: "center", gap: 10 },
+  emptyText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 14, color: T.textMuted },
+  flatList: { flex: 1, width: "100%" },
+  list: { paddingBottom: 8 },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -172,10 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r12,
     backgroundColor: T.surfaceSubtle,
   },
-  itemPressed: {
-    opacity: 0.7,
-    backgroundColor: "#EFF6FF",
-  },
+  itemPressed: { opacity: 0.7, backgroundColor: "#EFF6FF" },
   hotelIcon: {
     width: 48,
     height: 48,
@@ -184,25 +124,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  itemInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  itemName: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    fontSize: 15,
-    color: T.text,
-  },
-  stars: {
-    fontSize: 11,
-    color: "#F59E0B",
-  },
-  itemSub: {
-    fontFamily: "PlusJakartaSans_400Regular",
-    fontSize: 12,
-    color: T.textMuted,
-  },
-  sep: {
-    height: 8,
-  },
+  itemInfo: { flex: 1, gap: 3 },
+  itemName: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
+  stars: { fontSize: 11, color: "#F59E0B" },
+  itemSub: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted },
+  sep: { height: 8 },
 });

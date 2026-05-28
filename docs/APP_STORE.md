@@ -71,14 +71,19 @@ After enabling Pages on GitHub:
 | Support URL | `https://<user>.github.io/<repo>/support/` |
 | Privacy Policy URL | `https://<user>.github.io/<repo>/privacy/` |
 
-## App Store review checklist
+## App Store review (resubmission)
 
-- [ ] Privacy policy URL in App Store Connect (GitHub Pages link above)
-- [ ] `NSUserNotificationsUsageDescription` (configured in `app.config.ts`)
-- [ ] Camera / photo library usage strings (configured)
-- [ ] Production build uses **HTTPS** API only (no ATS HTTP exceptions)
-- [ ] Demo / test accounts documented for reviewers
-- [ ] Screenshots and metadata in App Store Connect
+Full checklist, metadata copy, screenshot plan, **Guideline 5.1.1(ix)** risk assessment, and Organization-account fallback:
+
+→ **[APP_STORE_REVIEW.md](./APP_STORE_REVIEW.md)**
+
+Quick checks:
+
+- [ ] Privacy & Support URLs in App Store Connect
+- [ ] `npm run smoke:api:prod` passes (seed guest key on production)
+- [ ] Review Notes + demo accounts in APP_STORE_REVIEW.md §5
+- [ ] Screenshots recaptured (neutral EN UI)
+- [ ] Organization Developer account (if Apple requires 5.1.1(ix))
 
 ## Versioning
 

@@ -3,21 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   Pressable,
   FlatList,
   ActivityIndicator,
   TextInput,
-  Platform,
-  ScrollView,
-  KeyboardAvoidingView,
-  Dimensions,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
+import { useT } from "@/hooks/useT";
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 interface DocType {
   id: string;
@@ -38,6 +33,7 @@ export function AssignDocTypeSheet({
   onAssign,
   assigning,
 }: Props) {
+  const tg = useT().guestDetail;
   const [selectedType, setSelectedType] = useState<DocType | null>(null);
   const [instruction, setInstruction] = useState("");
   const [step, setStep] = useState<"pick" | "instruct">("pick");
@@ -73,198 +69,121 @@ export function AssignDocTypeSheet({
     setStep("pick");
   }
 
+  const title =
+    step === "pick"
+      ? tg.selectDocTypeTitle
+      : selectedType?.name ?? tg.instructionLabel;
+
   return (
-    <Modal
+    <CenteredAppModal
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-      statusBarTranslucent
+      onClose={handleClose}
+      title={title}
+      scroll={step === "instruct"}
+      bodyMinHeight={step === "pick" ? 320 : 0}
+      headerLeading={
+        step === "instruct" ? (
+          <Pressable onPress={handleBack} hitSlop={10} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={20} color={T.accent} />
+          </Pressable>
+        ) : undefined
+      }
+      testID="assign-doc-type-modal"
     >
-      <View style={styles.root}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.kavWrapper}
-          keyboardVerticalOffset={0}
-        >
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
-            <View style={styles.sheetHeader}>
-              {step === "instruct" && (
-                <Pressable onPress={handleBack} hitSlop={10} style={styles.backBtn}>
-                  <Ionicons name="arrow-back" size={20} color={T.accent} />
-                </Pressable>
-              )}
-              <Text style={styles.sheetTitle}>
-                {step === "pick"
-                  ? "Select Document Type"
-                  : selectedType?.name ?? "Add Note"}
-              </Text>
-              <Pressable onPress={handleClose} hitSlop={10}>
-                <Ionicons name="close" size={22} color={T.textMuted} />
-              </Pressable>
-            </View>
-
-            {step === "pick" ? (
-              isLoading ? (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator color={T.accent} />
-                </View>
-              ) : docTypes.length === 0 ? (
-                <View style={styles.emptyBox}>
-                  <Ionicons name="document-outline" size={36} color={T.textMuted} />
-                  <Text style={styles.emptyText}>No document types defined</Text>
-                  <Text style={styles.emptyHint}>
-                    Add document types in Document Types settings first
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={docTypes}
-                  keyExtractor={(d) => d.id}
-                  contentContainerStyle={styles.list}
-                  style={styles.flatList}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      onPress={() => handlePickType(item)}
-                      style={({ pressed }) => [
-                        styles.item,
-                        pressed && styles.itemPressed,
-                      ]}
-                    >
-                      <View style={styles.docIcon}>
-                        <Ionicons
-                          name="document-text-outline"
-                          size={20}
-                          color={T.accent}
-                        />
-                      </View>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        {item.note ? (
-                          <Text style={styles.itemNote} numberOfLines={1}>
-                            {item.note}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
-                    </Pressable>
-                  )}
-                  ItemSeparatorComponent={() => <View style={styles.sep} />}
-                />
-              )
-            ) : (
-              <ScrollView
-                contentContainerStyle={styles.instructionContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.selectedDocBadge}>
-                  <Ionicons name="document-text" size={18} color={T.accent} />
-                  <Text style={styles.selectedDocName}>
-                    {selectedType?.name}
-                  </Text>
-                </View>
-
-                {selectedType?.note ? (
-                  <Text style={styles.docTypeHint}>{selectedType.note}</Text>
-                ) : null}
-
-                <Text style={styles.label}>Instruction / Note for Guest</Text>
-                <TextInput
-                  style={styles.input}
-                  value={instruction}
-                  onChangeText={setInstruction}
-                  placeholder="e.g. Please scan and upload your passport"
-                  placeholderTextColor={T.textMuted}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  autoFocus
-                />
-
-                <Pressable
-                  onPress={handleAssign}
-                  disabled={assigning}
-                  style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
-                >
-                  {assigning ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                      <Text style={styles.assignBtnText}>Assign Document</Text>
-                    </>
-                  )}
-                </Pressable>
-              </ScrollView>
-            )}
+      {step === "pick" ? (
+        isLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={T.accent} />
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        ) : docTypes.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Ionicons name="document-outline" size={36} color={T.textMuted} />
+            <Text style={styles.emptyText}>{tg.noDocTypesDefined}</Text>
+            <Text style={styles.emptyHint}>{tg.noDocTypesHint}</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={docTypes}
+            keyExtractor={(d) => d.id}
+            contentContainerStyle={styles.list}
+            style={styles.flatList}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => handlePickType(item)}
+                style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+              >
+                <View style={styles.docIcon}>
+                  <Ionicons name="document-text-outline" size={20} color={T.accent} />
+                </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  {item.note ? (
+                    <Text style={styles.itemNote} numberOfLines={2}>
+                      {item.note}
+                    </Text>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={T.textMuted} />
+              </Pressable>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.sep} />}
+          />
+        )
+      ) : (
+        <>
+          <View style={styles.selectedDocBadge}>
+            <Ionicons name="document-text" size={18} color={T.accent} />
+            <Text style={styles.selectedDocName}>{selectedType?.name}</Text>
+          </View>
+
+          {selectedType?.note ? (
+            <Text style={styles.docTypeHint}>{selectedType.note}</Text>
+          ) : null}
+
+          <Text style={styles.label}>{tg.instructionLabel}</Text>
+          <TextInput
+            style={styles.input}
+            value={instruction}
+            onChangeText={setInstruction}
+            placeholder={tg.instructionPlaceholder}
+            placeholderTextColor={T.textMuted}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            autoFocus
+          />
+
+          <Pressable
+            onPress={handleAssign}
+            disabled={assigning}
+            style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
+          >
+            {assigning ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text style={styles.assignBtnText}>{tg.assignDocumentBtn}</Text>
+              </>
+            )}
+          </Pressable>
+        </>
+      )}
+    </CenteredAppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  kavWrapper: {
-    width: "100%",
-  },
-  sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    maxHeight: SCREEN_HEIGHT * 0.78,
-    paddingBottom: Platform.OS === "ios" ? 34 : Platform.OS === "web" ? 34 : 16,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: T.border,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: T.sp20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-    gap: 8,
-  },
-  backBtn: {
-    marginRight: 4,
-  },
-  sheetTitle: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 17,
-    color: T.text,
-    flex: 1,
-  },
-  loadingBox: {
-    padding: 48,
-    alignItems: "center",
-  },
-  emptyBox: {
-    padding: 40,
-    alignItems: "center",
-    gap: 10,
-  },
+  backBtn: { marginRight: 4 },
+  loadingBox: { padding: 48, alignItems: "center" },
+  emptyBox: { padding: 32, alignItems: "center", gap: 10 },
   emptyText: {
     fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 14,
     color: T.textMuted,
+    textAlign: "center",
   },
   emptyHint: {
     fontFamily: "PlusJakartaSans_400Regular",
@@ -272,13 +191,8 @@ const styles = StyleSheet.create({
     color: T.textMuted,
     textAlign: "center",
   },
-  flatList: {
-    flex: 1,
-  },
-  list: {
-    padding: T.sp16,
-    paddingBottom: T.sp24,
-  },
+  flatList: { flex: 1, width: "100%" },
+  list: { paddingBottom: 8, gap: 0 },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -287,10 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: T.r12,
     backgroundColor: T.surfaceSubtle,
   },
-  itemPressed: {
-    opacity: 0.7,
-    backgroundColor: "#EFF6FF",
-  },
+  itemPressed: { opacity: 0.7, backgroundColor: "#EFF6FF" },
   docIcon: {
     width: 40,
     height: 40,
@@ -299,28 +210,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  itemInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  itemName: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    fontSize: 15,
-    color: T.text,
-  },
-  itemNote: {
-    fontFamily: "PlusJakartaSans_400Regular",
-    fontSize: 12,
-    color: T.textMuted,
-  },
-  sep: {
-    height: 8,
-  },
-  instructionContent: {
-    padding: T.sp20,
-    gap: T.sp12,
-    paddingBottom: T.sp32,
-  },
+  itemInfo: { flex: 1, gap: 3 },
+  itemName: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: T.text },
+  itemNote: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 12, color: T.textMuted },
+  sep: { height: 8 },
   selectedDocBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -340,13 +233,8 @@ const styles = StyleSheet.create({
     fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 13,
     color: T.textSec,
-    paddingLeft: 2,
   },
-  label: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    fontSize: 14,
-    color: T.text,
-  },
+  label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: T.text },
   input: {
     borderWidth: 1,
     borderColor: T.border,
@@ -367,12 +255,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: T.r12,
   },
-  assignBtnDisabled: {
-    opacity: 0.6,
-  },
-  assignBtnText: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    fontSize: 15,
-    color: "#fff",
-  },
+  assignBtnDisabled: { opacity: 0.6 },
+  assignBtnText: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 15, color: "#fff" },
 });

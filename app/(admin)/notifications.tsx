@@ -10,7 +10,6 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
-  Clipboard,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +19,7 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { useT } from "@/hooks/useT";
+import { copyToClipboard } from "@/lib/clipboard";
 
 type RequestKind = "MANAGER_PASSWORD" | "GUEST_ACCESS_KEY";
 type RequestStatus = "PENDING" | "COMPLETED" | "REJECTED";
@@ -116,9 +116,9 @@ function CredentialModal({
   const tn = t.adminNotifications;
   const label = kind === "MANAGER_PASSWORD" ? tn.tempPasswordLabel : tn.newAccessKeyDisplayLabel;
 
-  function copy() {
-    if (Clipboard?.setString) Clipboard.setString(credential);
-    Alert.alert(tn.copied, `${label} ${tn.copy}.`);
+  async function copy() {
+    const ok = await copyToClipboard(credential);
+    if (ok) Alert.alert(tn.copied, `${label} ${tn.copy}.`);
   }
 
   return (

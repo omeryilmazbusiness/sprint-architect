@@ -18,7 +18,7 @@ export function invoiceEmailHtml(d: InvoiceEmailData): string {
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
         <tr><td style="background:#0A3D62;padding:28px 36px;">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">HealthTour Billing</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Healory Billing</h1>
           <p style="margin:6px 0 0;color:#90CAF9;font-size:14px;">Monthly Invoice</p>
         </td></tr>
         <tr><td style="padding:32px 36px;">
@@ -40,7 +40,7 @@ export function invoiceEmailHtml(d: InvoiceEmailData): string {
           </div>
         </td></tr>
         <tr><td style="padding:20px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">This is an automated billing email from HealthTour. Please contact support if you have questions.</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">This is an automated billing email from Healory. Please contact support if you have questions.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -51,7 +51,7 @@ export function invoiceEmailHtml(d: InvoiceEmailData): string {
 
 export function invoiceEmailText(d: InvoiceEmailData): string {
   const due = d.dueAt.toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
-  return `HealthTour — Monthly Invoice (${d.period})
+  return `Healory — Monthly Invoice (${d.period})
 
 Hello ${d.clinicName},
 
@@ -65,7 +65,7 @@ Due By:       ${due}
 
 If payment is not received by the due date, access to the platform will be suspended.
 
-HealthTour Billing`;
+Healory Billing`;
 }
 
 export interface MonthlyReportData {
@@ -108,7 +108,7 @@ export function monthlyReportHtml(d: MonthlyReportData): string {
     <tr><td align="center">
       <table width="700" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
         <tr><td style="background:#0A3D62;padding:28px 36px;">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">HealthTour — Monthly Report</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Healory — Monthly Report</h1>
           <p style="margin:6px 0 0;color:#90CAF9;font-size:14px;">Period: ${d.period}</p>
         </td></tr>
         <tr><td style="padding:32px 36px;">
@@ -137,7 +137,7 @@ export function monthlyReportHtml(d: MonthlyReportData): string {
           </table>
           <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:8px;overflow:hidden;">
             <tr style="background:#F4F6F9;">
-              <th style="padding:10px 12px;text-align:left;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.5px;">Clinic</th>
+              <th style="padding:10px 12px;text-align:left;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.5px;">Institution</th>
               <th style="padding:10px 12px;text-align:center;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.5px;">Invoice</th>
               <th style="padding:10px 12px;text-align:center;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.5px;">Status</th>
               <th style="padding:10px 12px;text-align:right;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.5px;">Amount</th>
@@ -146,7 +146,7 @@ export function monthlyReportHtml(d: MonthlyReportData): string {
           </table>
         </td></tr>
         <tr><td style="padding:20px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">HealthTour automated monthly report. Generated at ${new Date().toISOString()}.</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Healory automated monthly report. Generated at ${new Date().toISOString()}.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -159,7 +159,7 @@ export function monthlyReportText(d: MonthlyReportData): string {
   const lines = d.rows.map(
     (r) => `  ${r.clinicName.padEnd(30)} ${r.invoiceStatus.padEnd(10)} ${r.clinicStatus.padEnd(10)} ${r.currency} ${r.total.toFixed(2)}`
   );
-  return `HealthTour — Monthly Report (${d.period})
+  return `Healory — Monthly Report (${d.period})
 
 SUMMARY
 =======
@@ -167,11 +167,11 @@ Total Invoices:    ${d.totalInvoices}
 Paid:              ${d.paid}
 Unpaid:            ${d.unpaid}
 Pending:           ${d.pending}
-Suspended Clinics: ${d.suspendedClinics}
+Suspended Institutions: ${d.suspendedClinics}
 
-CLINIC BREAKDOWN
-================
-${"Clinic".padEnd(30)} ${"Invoice".padEnd(10)} ${"Clinic".padEnd(10)} Amount
+INSTITUTION BREAKDOWN
+=====================
+${"Institution".padEnd(30)} ${"Invoice".padEnd(10)} ${"Status".padEnd(10)} Amount
 ${"-".repeat(70)}
 ${lines.join("\n")}
 
@@ -193,7 +193,7 @@ export function managerPasswordResetEmailHtml(d: ManagerPasswordResetData): stri
     <tr><td align="center">
       <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
         <tr><td style="background:#0A3D62;padding:28px 36px;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">HealthTour</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Healory</h1>
           <p style="margin:6px 0 0;color:#90CAF9;font-size:13px;">Credential Reset</p>
         </td></tr>
         <tr><td style="padding:32px 36px;">
@@ -210,10 +210,10 @@ export function managerPasswordResetEmailHtml(d: ManagerPasswordResetData): stri
               <strong>Security note:</strong> This password is temporary. You will be prompted to change it on your next login. Do not share this password with anyone.
             </p>
           </div>
-          <p style="margin:0;color:#555;font-size:14px;">Log in at your clinic's HealthTour portal and change your password immediately.</p>
+          <p style="margin:0;color:#555;font-size:14px;">Log in to the Healory portal and change your password immediately.</p>
         </td></tr>
         <tr><td style="padding:16px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">HealthTour secure credential system. If you did not request this reset, contact your administrator immediately.</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Healory secure credential system. If you did not request this reset, contact your administrator immediately.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -223,7 +223,7 @@ export function managerPasswordResetEmailHtml(d: ManagerPasswordResetData): stri
 }
 
 export function managerPasswordResetEmailText(d: ManagerPasswordResetData): string {
-  return `HealthTour — New Temporary Password
+  return `Healory — New Temporary Password
 
 Hello,
 
@@ -251,7 +251,7 @@ export function guestAccessKeyEmailHtml(d: GuestAccessKeyData): string {
     <tr><td align="center">
       <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
         <tr><td style="background:#0369A1;padding:28px 36px;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">HealthTour</h1>
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Healory</h1>
           <p style="margin:6px 0 0;color:#BAE6FD;font-size:13px;">Guest Access Key</p>
         </td></tr>
         <tr><td style="padding:32px 36px;">
@@ -265,7 +265,7 @@ export function guestAccessKeyEmailHtml(d: GuestAccessKeyData): string {
           </div>
           <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:4px;padding:14px 16px;margin-bottom:24px;">
             <p style="margin:0;color:#166534;font-size:13px;line-height:1.5;">
-              <strong>How to use:</strong> Open the HealthTour app, select "Guest Login", and enter this key. Your previous key and device binding have been reset.
+              <strong>How to use:</strong> Open the Healory app, select "Access Key Login", and enter this key. Your previous key and device binding have been reset.
             </p>
           </div>
           <div style="background:#FFF8E1;border-left:4px solid #F9A825;border-radius:4px;padding:14px 16px;">
@@ -275,7 +275,7 @@ export function guestAccessKeyEmailHtml(d: GuestAccessKeyData): string {
           </div>
         </td></tr>
         <tr><td style="padding:16px 36px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">HealthTour secure patient portal. Contact your clinic if you did not request this.</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Healory secure access system. Contact your administrator if you did not request this.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -285,7 +285,7 @@ export function guestAccessKeyEmailHtml(d: GuestAccessKeyData): string {
 }
 
 export function guestAccessKeyEmailText(d: GuestAccessKeyData): string {
-  return `HealthTour — New Guest Access Key
+  return `Healory — New Access Key
 
 ${d.patientName ? `Hello ${d.patientName},` : "Hello,"}
 
@@ -293,8 +293,76 @@ A new guest access key has been generated${d.clinicName ? ` by ${d.clinicName}` 
 
 YOUR ACCESS KEY: ${d.accessKey}
 
-Open the HealthTour app → Guest Login → enter this key.
+Open the Healory app → Access Key Login → enter this key.
 Your previous key and device binding have been reset.
 
 SECURITY: Keep this key confidential.`;
+}
+
+export interface GuestRetentionArchiveEmailData {
+  institutionName: string;
+  guestName: string;
+  guestKey: string;
+  departureDate: string | null;
+  scheduledPurgeAt: Date;
+  documentCount: number;
+  visitCount: number;
+}
+
+export function guestRetentionArchiveEmailHtml(d: GuestRetentionArchiveEmailData): string {
+  const purgeAt = d.scheduledPurgeAt.toLocaleString("en-GB", {
+    timeZone: "Europe/Istanbul",
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Guest archive</title></head>
+<body style="margin:0;padding:0;background:#F4F6F9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:#0A3D62;padding:24px 32px;">
+          <h1 style="margin:0;color:#fff;font-size:20px;">Healory — Guest data archive</h1>
+          <p style="margin:8px 0 0;color:#90CAF9;font-size:13px;">${d.institutionName}</p>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <p style="margin:0 0 16px;color:#333;font-size:15px;line-height:1.6;">
+            Operational data for guest <strong>${d.guestName}</strong> (${d.guestKey}) is scheduled for removal from the platform.
+          </p>
+          <table width="100%" style="border:1px solid #E8EDF2;border-radius:8px;">
+            <tr><td style="padding:12px 16px;color:#666;font-size:13px;">Departure</td>
+              <td style="padding:12px 16px;text-align:right;font-weight:600;">${d.departureDate ?? "—"}</td></tr>
+            <tr style="background:#FAFBFC;"><td style="padding:12px 16px;color:#666;font-size:13px;">Scheduled removal</td>
+              <td style="padding:12px 16px;text-align:right;font-weight:600;">${purgeAt}</td></tr>
+            <tr><td style="padding:12px 16px;color:#666;font-size:13px;">Documents in export</td>
+              <td style="padding:12px 16px;text-align:right;font-weight:600;">${d.documentCount}</td></tr>
+            <tr style="background:#FAFBFC;"><td style="padding:12px 16px;color:#666;font-size:13px;">Visits in summary</td>
+              <td style="padding:12px 16px;text-align:right;font-weight:600;">${d.visitCount}</td></tr>
+          </table>
+          <p style="margin:20px 0 0;color:#555;font-size:14px;line-height:1.6;">
+            Attached: PDF summary and ZIP of uploaded PDFs (if any). This email is for your records before platform data removal.
+          </p>
+        </td></tr>
+        <tr><td style="padding:16px 32px;background:#F4F6F9;border-top:1px solid #E8EDF2;">
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Internal operations notification — Healory</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function guestRetentionArchiveEmailText(d: GuestRetentionArchiveEmailData): string {
+  const purgeAt = d.scheduledPurgeAt.toISOString();
+  return `Healory — Guest data archive (${d.institutionName})
+
+Guest: ${d.guestName} (${d.guestKey})
+Departure: ${d.departureDate ?? "—"}
+Scheduled removal: ${purgeAt}
+Documents: ${d.documentCount}
+Visits: ${d.visitCount}
+
+PDF summary and uploaded PDFs (ZIP) are attached for your records before platform data removal.`;
 }

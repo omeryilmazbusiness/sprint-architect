@@ -1,7 +1,9 @@
 import { db } from "../db";
-import { patients, patientPlans, patientDocuments } from "@shared/schema";
+import { patients, patientPlans, patientDocuments, clinics } from "@shared/schema";
 import { eq, and, ilike, or, count, isNull, exists, sql, inArray } from "drizzle-orm";
-import { generatePatientKey, MAX_KEY_ATTEMPTS } from "../utils/patientKey";
+import { guestAccessKeyGenerator, MAX_KEY_ATTEMPTS } from "../modules/guestAccessKey";
+import { normalizeGuestAccessKey } from "../modules/guestAccessKey/normalizeGuestAccessKey";
+import { departureRetentionFields } from "../modules/guestRetention";
 
 function serializeServices(services: string[] | undefined): string | null {
   if (!services || services.length === 0) return null;
@@ -73,15 +75,23 @@ function enrichPatient<T extends { requestedServices: string | null; requestedSe
 
 export const patientRepo = {
   async create(input: CreatePatientInput) {
+    const clinic = await db.query.clinics.findFirst({
+      where: eq(clinics.id, input.clinicId),
+      columns: { name: true },
+    });
+    const institutionName = clinic?.name ?? "institution";
+
     let patientKey: string;
     let attempts = 0;
     while (true) {
-      patientKey = generatePatientKey();
+      patientKey = guestAccessKeyGenerator.generate(institutionName);
       const existing = await db.query.patients.findFirst({
         where: eq(patients.patientKey, patientKey),
       });
       if (!existing) break;
-      if (++attempts >= MAX_KEY_ATTEMPTS) throw new Error("Failed to generate unique patient key after max attempts");
+      if (++attempts >= MAX_KEY_ATTEMPTS) {
+        throw new Error("Failed to generate unique patient key after max attempts");
+      }
     }
 
     const { requestedServices: servicesArr, ...rest } = input;
@@ -92,6 +102,7 @@ export const patientRepo = {
         patientKey,
         status: "ACTIVE",
         requestedServices: serializeServices(servicesArr),
+        ...departureRetentionFields(rest.departureDate),
       } as any)
       .returning();
     return enrichPatient(patient);
@@ -173,9 +184,12 @@ export const patientRepo = {
     return enrichPatient(row);
   },
 
-  async findByKey(patientKey: string) {
+  async findByKey(rawKey: string) {
+    const patientKey = normalizeGuestAccessKey(rawKey);
+    if (!patientKey) return null;
+
     const row = await db.query.patients.findFirst({
-      where: eq(patients.patientKey, patientKey),
+      where: sql`lower(${patients.patientKey}) = lower(${patientKey})`,
     });
     if (!row) return null;
     return enrichPatient(row);
@@ -186,6 +200,9 @@ export const patientRepo = {
     const setData: any = { ...rest };
     if (servicesArr !== undefined) {
       setData.requestedServices = serializeServices(servicesArr);
+    }
+    if (rest.departureDate !== undefined) {
+      Object.assign(setData, departureRetentionFields(rest.departureDate));
     }
     const [updated] = await db
       .update(patients)

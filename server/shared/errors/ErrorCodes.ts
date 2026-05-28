@@ -33,6 +33,10 @@ export const ErrorCodes = {
   PURGE_BLOCKED_REFERENCES:        "PURGE-003",
   PURGE_CONFIRM_MISMATCH:          "PURGE-004",
   PURGE_FORBIDDEN_NOT_SUPER_ADMIN: "PURGE-005",
+
+  RETENTION_ALREADY_PURGED:     "RET-001",
+  RETENTION_SELF_DELETE_ACTIVE: "RET-002",
+  RETENTION_ARCHIVE_NO_RECIPIENT: "RET-003",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

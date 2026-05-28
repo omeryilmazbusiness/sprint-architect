@@ -53,6 +53,11 @@ export const patientStatusEnum = pgEnum("patient_status", [
   "WAITING_APPROVAL",
 ]);
 
+export const patientRetentionSourceEnum = pgEnum("patient_retention_source", [
+  "DEPARTURE",
+  "SELF_DELETE",
+]);
+
 export const appointmentStatusEnum = pgEnum("appointment_status", [
   "SCHEDULED",
   "DONE",
@@ -142,6 +147,10 @@ export const patients = pgTable("patients", {
   requestedServices: text("requested_services"),
   notes: text("notes"),
   approvedAt: timestamp("approved_at"),
+  scheduledPurgeAt: timestamp("scheduled_purge_at"),
+  retentionArchiveSentAt: timestamp("retention_archive_sent_at"),
+  retentionPurgedAt: timestamp("retention_purged_at"),
+  retentionSource: patientRetentionSourceEnum("retention_source"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

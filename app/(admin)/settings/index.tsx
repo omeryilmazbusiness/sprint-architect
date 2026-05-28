@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
-  Clipboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -22,6 +21,7 @@ import { Card, SectionHeader, Divider } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
 import { fetchDiagnostics, type DiagnosticsResult } from "@/lib/api/adminDiagnostics";
 import { useT } from "@/hooks/useT";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const APP_VERSION = "1.0.0";
 
@@ -292,19 +292,21 @@ export default function AdminSettings() {
     router.replace("/(auth)/login");
   }
 
-  function handleCopyDiagnostics() {
+  async function handleCopyDiagnostics() {
     const payload = {
       timestamp: new Date().toISOString(),
       email: user?.email ?? "unknown",
       version: APP_VERSION,
       diagnostics: diagData ?? null,
     };
-    Clipboard?.setString?.(JSON.stringify(payload, null, 2));
-    setCopiedDiag(true);
-    setTimeout(() => setCopiedDiag(false), 2000);
+    const ok = await copyToClipboard(JSON.stringify(payload, null, 2));
+    if (ok) {
+      setCopiedDiag(true);
+      setTimeout(() => setCopiedDiag(false), 2000);
+    }
   }
 
-  function handleCopySupport() {
+  async function handleCopySupport() {
     const payload = {
       email: user?.email ?? "unknown",
       role: user?.role ?? "unknown",
@@ -312,9 +314,11 @@ export default function AdminSettings() {
       timestamp: new Date().toISOString(),
       diagnostics: diagData ?? "not loaded",
     };
-    Clipboard?.setString?.(JSON.stringify(payload, null, 2));
-    setCopiedSupport(true);
-    setTimeout(() => setCopiedSupport(false), 2000);
+    const ok = await copyToClipboard(JSON.stringify(payload, null, 2));
+    if (ok) {
+      setCopiedSupport(true);
+      setTimeout(() => setCopiedSupport(false), 2000);
+    }
   }
 
   function handleReportIssue() {

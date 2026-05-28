@@ -187,6 +187,7 @@ export const PhonePickerInput = React.forwardRef<TextInput, PhonePickerInputProp
     );
   },
 );
+PhonePickerInput.displayName = "PhonePickerInput";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

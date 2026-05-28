@@ -17,6 +17,8 @@ router.use(
 );
 
 router.get("/patients/:id/details", getGuestDetailController);
+router.get("/members/:id/details", getGuestDetailController);
 router.post("/patients/:id/reset-device-binding", resetDeviceBindingController);
+router.post("/members/:id/reset-device-binding", resetDeviceBindingController);
 
 export default router;

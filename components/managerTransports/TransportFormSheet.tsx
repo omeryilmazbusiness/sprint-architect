@@ -1,27 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
   Pressable,
   TextInput,
   ScrollView,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
-  Dimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { T } from "@/constants/adminTheme";
 import { VEHICLE_BRANDS, type VehicleBrandKey } from "@/constants/vehicleBrands";
 import { VehicleBrandLogo } from "@/components/brands/VehicleBrandLogo";
 import { PhonePickerInput, type PhonePickerValue } from "@/components/forms/PhonePickerInput";
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 
 const EMPTY_PHONE: PhonePickerValue = { raw: "", e164: null, countryCode: "TR" };
-const SCREEN_H = Dimensions.get("window").height;
 
 export interface TransportFormData {
   driverFullName: string;
@@ -49,9 +43,6 @@ interface Props {
 }
 
 export function TransportFormSheet({ visible, onClose, onSubmit, isLoading, editItem }: Props) {
-  const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
-
   const [driverFullName, setDriverFullName] = useState("");
   const [phone, setPhone] = useState<PhonePickerValue>(EMPTY_PHONE);
   const [vehicleBrand, setVehicleBrand] = useState<VehicleBrandKey | "">("");
@@ -63,7 +54,11 @@ export function TransportFormSheet({ visible, onClose, onSubmit, isLoading, edit
     if (visible) {
       if (editItem) {
         setDriverFullName(editItem.driverFullName ?? "");
-        setPhone({ raw: editItem.driverPhoneE164 ?? "", e164: editItem.driverPhoneE164 ?? null, countryCode: "TR" });
+        setPhone({
+          raw: editItem.driverPhoneE164 ?? "",
+          e164: editItem.driverPhoneE164 ?? null,
+          countryCode: "TR",
+        });
         setVehicleBrand((editItem.vehicleBrand as VehicleBrandKey) ?? "");
         setVehicleModel(editItem.vehicleModel ?? "");
         setLicensePlate(editItem.licensePlate ?? "");
@@ -71,18 +66,6 @@ export function TransportFormSheet({ visible, onClose, onSubmit, isLoading, edit
         resetForm();
       }
       setErrors({});
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_H,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
     }
   }, [visible, editItem]);
 
@@ -117,128 +100,98 @@ export function TransportFormSheet({ visible, onClose, onSubmit, isLoading, edit
   };
 
   return (
-    <Modal
+    <CenteredAppModal
       visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={editItem ? "Edit Transport" : "Add Transport"}
+      testID="transport-form-modal"
     >
-      <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View
-          style={[
-            styles.sheet,
-            { paddingBottom: insets.bottom + 16 },
-            { transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View style={styles.handle} />
+      <SectionLabel>Driver</SectionLabel>
 
-            <View style={styles.header}>
-              <Text style={styles.title}>{editItem ? "Edit Transport" : "Add Transport"}</Text>
-              <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={T.text} />
-              </Pressable>
-            </View>
+      <FieldWrapper label="Full Name" error={errors.driverFullName}>
+        <TextInput
+          style={[styles.input, !!errors.driverFullName && styles.inputError]}
+          placeholder="John Doe"
+          placeholderTextColor={T.textMuted}
+          value={driverFullName}
+          onChangeText={setDriverFullName}
+          returnKeyType="next"
+          testID="input-driver-name"
+        />
+      </FieldWrapper>
 
-            <ScrollView
-              contentContainerStyle={styles.body}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <SectionLabel>Driver</SectionLabel>
+      <FieldWrapper label="Phone" error={errors.phone}>
+        <PhonePickerInput
+          value={phone}
+          onChange={setPhone}
+          hasError={!!errors.phone}
+          testID="input-driver-phone"
+        />
+      </FieldWrapper>
 
-              <FieldWrapper label="Full Name" error={errors.driverFullName}>
-                <TextInput
-                  style={[styles.input, !!errors.driverFullName && styles.inputError]}
-                  placeholder="John Doe"
-                  placeholderTextColor={T.textMuted}
-                  value={driverFullName}
-                  onChangeText={setDriverFullName}
-                  returnKeyType="next"
-                  testID="input-driver-name"
-                />
-              </FieldWrapper>
+      <SectionLabel>Vehicle</SectionLabel>
 
-              <FieldWrapper label="Phone" error={errors.phone}>
-                <PhonePickerInput
-                  value={phone}
-                  onChange={setPhone}
-                  hasError={!!errors.phone}
-                  testID="input-driver-phone"
-                />
-              </FieldWrapper>
-
-              <SectionLabel>Vehicle</SectionLabel>
-
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, !!errors.vehicleBrand && { color: T.danger }]}>
-                  Brand {errors.vehicleBrand ? `— ${errors.vehicleBrand}` : ""}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
-                  {VEHICLE_BRANDS.map((b) => {
-                    const selected = vehicleBrand === b.key;
-                    return (
-                      <Pressable
-                        key={b.key}
-                        onPress={() => setVehicleBrand(b.key)}
-                        style={[styles.brandOption, selected && styles.brandOptionSelected]}
-                        testID={`brand-${b.key}`}
-                      >
-                        <VehicleBrandLogo brand={b.key} size={38} />
-                        <Text style={[styles.brandLabel, selected && styles.brandLabelSelected]}>
-                          {b.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-
-              <FieldWrapper label="Model" error={errors.vehicleModel}>
-                <TextInput
-                  style={[styles.input, !!errors.vehicleModel && styles.inputError]}
-                  placeholder="Vito 2020"
-                  placeholderTextColor={T.textMuted}
-                  value={vehicleModel}
-                  onChangeText={setVehicleModel}
-                  returnKeyType="next"
-                  testID="input-vehicle-model"
-                />
-              </FieldWrapper>
-
-              <FieldWrapper label="License Plate" error={errors.licensePlate}>
-                <TextInput
-                  style={[styles.input, !!errors.licensePlate && styles.inputError]}
-                  placeholder="34 ABC 123"
-                  placeholderTextColor={T.textMuted}
-                  value={licensePlate}
-                  onChangeText={(v) => setLicensePlate(v.toUpperCase())}
-                  autoCapitalize="characters"
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
-                  testID="input-license-plate"
-                />
-              </FieldWrapper>
-
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.label, !!errors.vehicleBrand && { color: T.danger }]}>
+          Brand {errors.vehicleBrand ? `— ${errors.vehicleBrand}` : ""}
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
+          {VEHICLE_BRANDS.map((b) => {
+            const selected = vehicleBrand === b.key;
+            return (
               <Pressable
-                style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isLoading ? 0.75 : 1 }]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                testID="btn-submit-transport"
+                key={b.key}
+                onPress={() => setVehicleBrand(b.key)}
+                style={[styles.brandOption, selected && styles.brandOptionSelected]}
+                testID={`brand-${b.key}`}
               >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.submitText}>{editItem ? "Save Changes" : "Add Transport"}</Text>
-                )}
+                <VehicleBrandLogo brand={b.key} size={38} />
+                <Text style={[styles.brandLabel, selected && styles.brandLabelSelected]}>{b.label}</Text>
               </Pressable>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </Animated.View>
+            );
+          })}
+        </ScrollView>
       </View>
-    </Modal>
+
+      <FieldWrapper label="Model" error={errors.vehicleModel}>
+        <TextInput
+          style={[styles.input, !!errors.vehicleModel && styles.inputError]}
+          placeholder="Vito 2020"
+          placeholderTextColor={T.textMuted}
+          value={vehicleModel}
+          onChangeText={setVehicleModel}
+          returnKeyType="next"
+          testID="input-vehicle-model"
+        />
+      </FieldWrapper>
+
+      <FieldWrapper label="License Plate" error={errors.licensePlate}>
+        <TextInput
+          style={[styles.input, !!errors.licensePlate && styles.inputError]}
+          placeholder="34 ABC 123"
+          placeholderTextColor={T.textMuted}
+          value={licensePlate}
+          onChangeText={(v) => setLicensePlate(v.toUpperCase())}
+          autoCapitalize="characters"
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+          testID="input-license-plate"
+        />
+      </FieldWrapper>
+
+      <Pressable
+        style={({ pressed }) => [styles.submitBtn, { opacity: pressed || isLoading ? 0.75 : 1 }]}
+        onPress={handleSubmit}
+        disabled={isLoading}
+        testID="btn-submit-transport"
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#FFF" size="small" />
+        ) : (
+          <Text style={styles.submitText}>{editItem ? "Save Changes" : "Add Transport"}</Text>
+        )}
+      </Pressable>
+    </CenteredAppModal>
   );
 }
 
@@ -258,7 +211,8 @@ function FieldWrapper({
   return (
     <View style={styles.fieldGroup}>
       <Text style={[styles.label, !!error && { color: T.danger }]}>
-        {label}{error ? ` — ${error}` : ""}
+        {label}
+        {error ? ` — ${error}` : ""}
       </Text>
       {children}
     </View>
@@ -266,49 +220,6 @@ function FieldWrapper({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.40)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: T.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F2F5",
-  },
-  title: {
-    flex: 1,
-    fontSize: 17,
-    fontFamily: "PlusJakartaSans_700Bold",
-    color: T.text,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  body: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-    gap: 16,
-  },
   sectionLabel: {
     fontSize: 11,
     fontFamily: "PlusJakartaSans_600SemiBold",
@@ -318,9 +229,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: -4,
   },
-  fieldGroup: {
-    gap: 8,
-  },
+  fieldGroup: { gap: 8 },
   label: {
     fontSize: 13,
     fontFamily: "PlusJakartaSans_600SemiBold",
@@ -341,10 +250,7 @@ const styles = StyleSheet.create({
     borderColor: T.danger,
     backgroundColor: "#FFF5F5",
   },
-  brandRow: {
-    gap: 10,
-    paddingVertical: 2,
-  },
+  brandRow: { gap: 10, paddingVertical: 2 },
   brandOption: {
     alignItems: "center",
     gap: 6,

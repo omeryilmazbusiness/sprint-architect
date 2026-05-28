@@ -22,8 +22,12 @@ router.use(
 );
 
 router.get("/doctors", handleListDoctors);
+router.get("/providers", handleListDoctors);
 router.post("/doctors", handleCreateDoctor);
+router.post("/providers", handleCreateDoctor);
 router.put("/doctors/:id", handleUpdateDoctor);
+router.put("/providers/:id", handleUpdateDoctor);
 router.delete("/doctors/:id", handleDeleteDoctor);
+router.delete("/providers/:id", handleDeleteDoctor);
 
 export default router;

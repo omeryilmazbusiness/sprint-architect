@@ -31,7 +31,7 @@ type Step = "danger" | "impact" | "confirm";
 function BlockedTag({ reason }: { reason: string }) {
   const labels: Record<string, string> = {
     BLOCKED_SELF: "Cannot purge yourself",
-    PRIMARY_MANAGER_DELETE_BLOCKED: "Is primary clinic manager",
+    PRIMARY_MANAGER_DELETE_BLOCKED: "Is primary institution manager",
     BLOCKED_REFERENCES_EXIST_INVOICES: "Has paid invoices",
     BLOCKED_REFERENCES_EXIST_AUDIT: "Has audit log entries",
   };
@@ -229,7 +229,7 @@ export function PurgeDangerSection({ user, onPurged }: Props) {
 
                 {mode === "ANONYMIZE" && (
                   <Text style={s.modeNote}>
-                    Anonymize will null invoice references and replace audit actor IDs with "SYSTEM_PURGED".
+                    Anonymize will null invoice references and replace audit actor IDs with SYSTEM_PURGED.
                   </Text>
                 )}
 

@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 METRO_PORT="${METRO_PORT:-8081}"
-SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 15}"
+SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 17 Pro}"
 
 if [[ ! -f .env ]]; then
   cp .env.local.example .env

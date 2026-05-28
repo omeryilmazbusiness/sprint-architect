@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingView } from "@/components/LoadingView";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/hooks/useT";
 
 interface Invoice {
   id: string;
@@ -121,6 +122,7 @@ export default function InvoicesScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const ti = useT().managerInvoices;
 
   const { data, isLoading, refetch, isRefetching } = useQuery<{ rows: Invoice[]; total: number } | Invoice[]>({
     queryKey: ["/v1/manager/invoices"],
@@ -136,7 +138,7 @@ export default function InvoicesScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <Text style={[styles.title, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
-          Invoices
+          {ti.pageTitle}
         </Text>
       </View>
 
@@ -156,8 +158,8 @@ export default function InvoicesScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState 
               icon="document-text-outline" 
-              title="No invoices found" 
-              subtitle="Invoices will appear here once generated for your clinic." 
+              title={ti.emptyText}
+              subtitle={ti.emptySubtitle} 
             />
           </View>
         }

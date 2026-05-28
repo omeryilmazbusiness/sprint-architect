@@ -157,6 +157,7 @@ const InputBox = React.forwardRef<TextInput, InputBoxProps>(
     );
   },
 );
+InputBox.displayName = "InputBox";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 

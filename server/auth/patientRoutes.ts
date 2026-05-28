@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { signAccessToken, signRefreshToken } from "./jwt";
 import { authRepo } from "../repositories/authRepo";
-import { Errors } from "./errors";
+import { AppError, Errors } from "./errors";
 import { authMiddleware, requireRole } from "./middleware";
 import { patientRepo } from "../repositories/patientRepo";
 import rateLimit from "express-rate-limit";
@@ -12,6 +12,10 @@ import { env } from "../config";
 import { clinics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "../shared/logger";
+import { requestGuestSelfDeletion } from "../modules/guestRetention/usecases/RequestGuestSelfDeletion";
+import { resolveGuestDeviceBinding } from "../modules/guestAccessKey/guestDeviceBinding";
+import { isGuestLoginAllowed } from "../modules/guestAccessKey/guestLoginEligibility";
+import { normalizeGuestAccessKey } from "../modules/guestAccessKey/normalizeGuestAccessKey";
 
 const patientLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
@@ -45,30 +49,40 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     return;
   }
 
-  const { patientKey, deviceId, platform } = parsed.data;
+  const normalizedKey = normalizeGuestAccessKey(parsed.data.patientKey);
+  if (!normalizedKey) {
+    const e = Errors.VALIDATION_ERROR("Guest access key is required");
+    res.status(e.statusCode).json({ code: e.code, message: e.message });
+    return;
+  }
+
+  const { deviceId, platform } = parsed.data;
 
   let patient: Awaited<ReturnType<typeof patientRepo.findByKey>>;
   try {
-    patient = await patientRepo.findByKey(patientKey);
+    patient = await patientRepo.findByKey(normalizedKey);
   } catch {
     const e = Errors.PATIENT_KEY_INVALID();
     auditLog({
       actorId: "unknown",
       actorRole: "GUEST",
       action: "PATIENT_LOGIN_FAILED",
-      metadata: { patientKey, reason: "key_invalid" },
+      metadata: { patientKey: normalizedKey, reason: "key_invalid" },
     });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
 
-  if (!patient || patient.status !== "ACTIVE") {
+  if (!patient || !isGuestLoginAllowed(patient.status)) {
     const e = Errors.PATIENT_KEY_INVALID();
     auditLog({
       actorId: patient?.id ?? "unknown",
       actorRole: "PATIENT",
       action: "PATIENT_LOGIN_FAILED",
-      metadata: { patientKey, reason: !patient ? "patient_not_found" : "patient_inactive" },
+      metadata: {
+        patientKey: normalizedKey,
+        reason: !patient ? "patient_not_found" : `status_${patient.status}`,
+      },
     });
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
@@ -87,31 +101,32 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     // DEV-ONLY: multi-device demo bypass — any device may use any key.
     // Device binding is neither checked nor written so the devices table
     // stays clean. This path is unreachable when NODE_ENV=production.
-    const maskedKey = `${patientKey.slice(0, 4)}****`;
+    const maskedKey = `${normalizedKey.slice(0, 4)}****`;
     logger.info("[DEMO] Guest multi-device bypass enabled", { maskedKey });
   } else {
     const existingDevice = await authRepo.getActiveDeviceForPatient(patient.id);
+    const binding = resolveGuestDeviceBinding(existingDevice?.deviceId, deviceId);
 
-    if (existingDevice) {
-      if (existingDevice.deviceId !== deviceId) {
-        // A different device is attempting to log in. Reject and audit.
-        auditLog({
-          clinicId: patient.clinicId,
-          actorId: patient.id,
-          actorRole: "PATIENT",
-          action: "PATIENT_LOGIN_FAILED",
-          resourceType: "patient",
-          resourceId: patient.id,
-          metadata: { reason: "device_already_bound", platform: platform ?? "unknown" },
-        });
-        const e = Errors.DEVICE_ALREADY_BOUND();
-        res.status(e.statusCode).json({ code: e.code, message: e.message });
-        return;
-      }
-      // Same device returning — update the last-seen timestamp for audit trail.
-      await authRepo.updateDeviceLastSeen(patient.id);
-    } else {
-      // First login — bind this device to the patient account.
+    if (binding.action === "reject_other_device") {
+      auditLog({
+        clinicId: patient.clinicId,
+        actorId: patient.id,
+        actorRole: "PATIENT",
+        action: "PATIENT_LOGIN_FAILED",
+        resourceType: "patient",
+        resourceId: patient.id,
+        metadata: {
+          reason: "device_already_bound",
+          platform: platform ?? "unknown",
+          boundDeviceId: existingDevice?.deviceId,
+        },
+      });
+      const e = Errors.DEVICE_ALREADY_BOUND();
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
+
+    if (binding.action === "bind_first_device") {
       await authRepo.bindDevice(patient.id, deviceId, platform);
       auditLog({
         clinicId: patient.clinicId,
@@ -122,6 +137,8 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
         resourceId: patient.id,
         metadata: { platform: platform ?? "unknown" },
       });
+    } else {
+      await authRepo.updateDeviceLastSeen(patient.id);
     }
   }
 
@@ -151,6 +168,31 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     },
   });
 });
+
+router.post(
+  "/account/delete",
+  authMiddleware,
+  requireRole("PATIENT"),
+  async (req: Request, res: Response): Promise<void> => {
+    const patientId = req.actor?.sub;
+    if (!patientId || req.actor?.type !== "patient") {
+      const e = Errors.FORBIDDEN("Patient access only");
+      res.status(e.statusCode).json({ code: e.code, message: e.message });
+      return;
+    }
+
+    try {
+      const result = await requestGuestSelfDeletion.execute({ patientId });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ code: err.code, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  }
+);
 
 router.post(
   "/:patientId/reset-device",

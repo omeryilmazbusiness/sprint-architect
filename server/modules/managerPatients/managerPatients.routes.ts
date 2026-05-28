@@ -21,7 +21,10 @@ router.use(
 );
 
 router.get("/patients", handleListPatients);
+router.get("/members", handleListPatients);
 router.post("/patients/:id/approve", handleApprovePatient);
+router.post("/members/:id/approve", handleApprovePatient);
 router.get("/patients/doc-summaries", handleListDocSummaries);
+router.get("/members/doc-summaries", handleListDocSummaries);
 
 export default router;

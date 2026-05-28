@@ -19,6 +19,10 @@ import { notificationService } from "../services/NotificationService";
 import { invoiceRepo } from "../repositories/invoiceRepo";
 import { billingEventsRepo } from "../modules/billingEvents/repos/BillingEventsRepo.drizzle";
 import { auditLog } from "./auditLogger";
+import { PLAN_STEP_LABELS } from "../shared/userFacingCopy";
+import { assignDocumentsToGuest } from "../modules/guestDocuments/usecases/AssignDocumentsToGuest";
+import { createGuestPatientSchema } from "@shared/schemas/createGuestPatient.schema";
+import { requestedServicesSchema } from "@shared/schemas/requestedServices.schema";
 
 const router = Router();
 
@@ -29,10 +33,19 @@ function getClinicId(req: Request): string {
   return req.clinicId;
 }
 
+function formatZodIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length ? issue.path.join(".") : "body";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
+}
+
 function validateBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
-    throw new AppError("VALIDATION_ERROR", result.error.issues.map(i => i.message).join("; "), 400);
+    throw new AppError("VALIDATION_ERROR", formatZodIssues(result.error), 400);
   }
   return result.data;
 }
@@ -41,36 +54,7 @@ function notFound(entity: string) {
   throw new AppError("NOT_FOUND", `${entity} not found`, 404);
 }
 
-const REQUESTED_SERVICES = [
-  "Dental", "Eye Surgery", "Rhinoplasty", "Hair Transplant",
-  "Plastic Surgery", "Orthopedic", "Cardiac", "IVF / Fertility",
-  "Weight Loss Surgery", "Oncology", "Other",
-] as const;
-
-const createPatientSchema = z.object({
-  fullName: z.string().min(1).max(200),
-  dateOfBirth: z.string().optional(),
-  gender: z.enum(["Male", "Female", "Other"]).optional(),
-  nationality: z.string().min(1, "Nationality is required"),
-  nationalityCode: z.string().max(2).min(2, "Nationality code required"),
-  passportNo: z.string().optional(),
-  phoneE164: z.string().min(5, "Phone is required"),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  emergencyContactName: z.string().optional(),
-  emergencyContactPhoneE164: z.string().optional(),
-  companionRelation: z.string().optional(),
-  arrivalDate: z.string().min(1, "Arrival date is required"),
-  departureDate: z.string().min(1, "Departure date is required"),
-  arrivalAirport: z.string().optional(),
-  flightNumber: z.string().optional(),
-  requestedServices: z.array(z.enum(REQUESTED_SERVICES)).min(1, "Select at least one service"),
-  notes: z.string().optional(),
-  preferredLanguage: z.string().optional(),
-}).refine(d => d.departureDate >= d.arrivalDate, {
-  message: "Departure date must be on or after arrival date",
-  path: ["departureDate"],
-});
+const createPatientSchema = createGuestPatientSchema;
 
 const updatePatientSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
@@ -89,7 +73,7 @@ const updatePatientSchema = z.object({
   departureDate: z.string().optional(),
   arrivalAirport: z.string().optional(),
   flightNumber: z.string().optional(),
-  requestedServices: z.array(z.enum(REQUESTED_SERVICES)).optional(),
+  requestedServices: requestedServicesSchema.optional(),
   requestedService: z.string().optional(),
   notes: z.string().optional(),
   preferredLanguage: z.string().optional(),
@@ -122,7 +106,7 @@ router.post("/patients", async (req, res, next) => {
     notificationService.emitAdminNotification({
       type: "GUEST_CREATED",
       title: "New Guest Registered",
-      body: `${patient.fullName} has been added to a clinic.`,
+      body: `${patient.fullName} has been added to an institution.`,
       severity: "INFO",
       relatedId: patient.id,
       relatedType: "patient",
@@ -189,18 +173,10 @@ router.put("/patients/:id/tracking", async (req, res, next) => {
       .set({ currentStep, updatedAt: new Date() })
       .where(and(eq(patientPlans.patientId, id), eq(patientPlans.clinicId, clinicId)));
 
-    const stepLabels: Record<string, string> = {
-      PRE_ARRIVAL: "Pre-Arrival Preparation",
-      ARRIVAL_TRANSFER: "Arrival & Transfer",
-      HOTEL_CHECKIN: "Hotel Check-In",
-      TREATMENT: "Treatment",
-      FOLLOWUP: "Follow-Up",
-      DEPARTURE: "Departure",
-    };
     notificationService.emitGuestNotification(id, clinicId, {
       type: "JOURNEY_UPDATED",
-      title: "Journey Updated",
-      body: `Your current status has been updated to: ${stepLabels[currentStep] ?? currentStep}.`,
+      title: "Plan Updated",
+      body: `Your current status has been updated to: ${PLAN_STEP_LABELS[currentStep] ?? currentStep}.`,
       severity: "INFO",
       relatedId: id,
       relatedType: "patient",
@@ -266,8 +242,8 @@ router.put("/patients/:id/status", async (req, res, next) => {
     if (status === "APPROVED") {
       notificationService.emitGuestNotification(id, clinicId, {
         type: "WELCOME",
-        title: "Welcome to Your Journey",
-        body: "Your account is now active. Your care team is ready to assist you.",
+        title: "Welcome",
+        body: "Your account is now active. Your support team is ready to assist you.",
         severity: "INFO",
         relatedId: id,
         relatedType: "patient",
@@ -401,12 +377,12 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
 
     if (body.doctorId) {
       const assignedDoctor = await doctorRepo.findById(body.doctorId, clinicId);
-      const doctorName = assignedDoctor?.fullName ?? "your doctor";
+      const doctorName = assignedDoctor?.fullName ?? "your provider";
       const specialty = assignedDoctor?.specialty ? ` (${assignedDoctor.specialty})` : "";
       notificationService.emitGuestNotification(req.params.id, clinicId, {
         type: "DOCTOR_ASSIGNED",
-        title: "Doctor Assigned",
-        body: `${doctorName}${specialty} has been assigned to your care.`,
+        title: "Provider Assigned",
+        body: `${doctorName}${specialty} has been assigned to your plan.`,
         severity: "INFO",
         relatedId: body.doctorId,
         relatedType: "doctor",
@@ -419,10 +395,15 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
 });
 
 const assignDocumentsSchema = z.object({
-  items: z.array(z.object({
-    documentTypeId: z.string().min(1),
-    instructionText: z.string().optional(),
-  })).min(1),
+  items: z
+    .array(
+      z.object({
+        documentTypeId: z.string().min(1),
+        /** Client may send null when the instruction field is empty. */
+        instructionText: z.string().trim().max(500).nullish(),
+      })
+    )
+    .min(1),
 });
 
 router.post("/patients/:id/assign-documents", async (req, res, next) => {
@@ -432,57 +413,11 @@ router.post("/patients/:id/assign-documents", async (req, res, next) => {
     const patient = await patientRepo.findById(req.params.id, clinicId);
     if (!patient) notFound("Patient");
 
-    const results = [];
-    for (const item of body.items) {
-      // Validate docType belongs to clinic
-      const docType = await db.query.documentTypes.findFirst({
-        where: and(eq(documentTypes.id, item.documentTypeId), eq(documentTypes.clinicId, clinicId)),
-      });
-      if (!docType) continue;
-
-      // Check if doc already exists
-      const existing = await db.query.patientDocuments.findFirst({
-        where: and(
-          eq(patientDocuments.patientId, req.params.id),
-          eq(patientDocuments.documentTypeId, item.documentTypeId),
-          eq(patientDocuments.clinicId, clinicId),
-        ),
-      });
-
-      if (existing) {
-        // Update: reset to ASSIGNED with new instructions
-        const [updated] = await db.update(patientDocuments)
-          .set({ status: "ASSIGNED", instructionText: item.instructionText ?? null, updatedAt: new Date() })
-          .where(eq(patientDocuments.id, existing.id))
-          .returning();
-        results.push(updated);
-      } else {
-        // Insert new
-        const [inserted] = await db.insert(patientDocuments)
-          .values({
-            clinicId,
-            patientId: req.params.id,
-            documentTypeId: item.documentTypeId,
-            status: "ASSIGNED",
-            instructionText: item.instructionText ?? null,
-          })
-          .returning();
-        results.push(inserted);
-      }
-    }
-
-    // Notify guest for each newly assigned document
-    for (const doc of results) {
-      notificationService.emitGuestNotification(req.params.id, clinicId, {
-        type: "DOCUMENT_ASSIGNED",
-        title: "Document Requested",
-        body: "Your clinic has requested a document. Please upload it as soon as possible.",
-        severity: "INFO",
-        relatedId: doc.id,
-        relatedType: "patient_document",
-        metadata: { documentId: doc.id, patientId: req.params.id },
-      }).catch(() => {});
-    }
+    const results = await assignDocumentsToGuest.execute({
+      clinicId,
+      patientId: req.params.id,
+      items: body.items,
+    });
 
     res.json(results);
   } catch (e) { next(e); }
@@ -524,8 +459,8 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
 
     notificationService.emitGuestNotification(req.params.id, clinicId, {
       type: "APPOINTMENT_CREATED",
-      title: "New Appointment Scheduled",
-      body: `Your appointment "${body.title}" is scheduled for ${apptDateStr}.`,
+      title: "New Visit Scheduled",
+      body: `Your visit "${body.title}" is scheduled for ${apptDateStr}.`,
       severity: "INFO",
       relatedId: appt.id,
       relatedType: "appointment",
@@ -534,7 +469,7 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
 
     notificationService.emitManagerNotification(clinicId, {
       type: "APPOINTMENT_CREATED",
-      title: "Appointment Scheduled",
+      title: "Visit Scheduled",
       body: `${patient!.fullName} — "${body.title}" on ${apptDateStr}.`,
       severity: "INFO",
       relatedId: appt.id,
@@ -594,8 +529,8 @@ router.put("/appointments/:appointmentId", async (req, res, next) => {
 
       notificationService.emitGuestNotification(appt.patientId, clinicId, {
         type: "APPOINTMENT_UPDATED",
-        title: "Appointment Updated",
-        body: `Your appointment "${appt.title}" has been updated${updatedDateStr ? ` — now on ${updatedDateStr}` : ""}.`,
+        title: "Visit Updated",
+        body: `Your visit "${appt.title}" has been updated${updatedDateStr ? ` — now on ${updatedDateStr}` : ""}.`,
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",
@@ -616,8 +551,8 @@ router.delete("/appointments/:appointmentId", async (req, res, next) => {
     if (appt && appt.patientId) {
       notificationService.emitGuestNotification(appt.patientId, clinicId, {
         type: "APPOINTMENT_CANCELLED",
-        title: "Appointment Cancelled",
-        body: `Your appointment "${appt.title}" has been cancelled. Please contact your clinic for details.`,
+        title: "Visit Cancelled",
+        body: `Your visit "${appt.title}" has been cancelled. Please contact your institution for details.`,
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",
@@ -626,8 +561,8 @@ router.delete("/appointments/:appointmentId", async (req, res, next) => {
 
       notificationService.emitManagerNotification(clinicId, {
         type: "APPOINTMENT_CANCELLED",
-        title: "Appointment Cancelled",
-        body: `Appointment "${appt.title}" was cancelled.`,
+        title: "Visit Cancelled",
+        body: `Visit "${appt.title}" was cancelled.`,
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",

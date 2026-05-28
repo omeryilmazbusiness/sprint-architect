@@ -12,8 +12,8 @@ export const TRACKING_STEPS = [
   { key: "PRE_ARRIVAL",      label: "Pre-Arrival" },
   { key: "ARRIVAL_TRANSFER", label: "Arrival & Transfer" },
   { key: "HOTEL_CHECKIN",    label: "Hotel Check-In" },
-  { key: "TREATMENT",        label: "Treatment" },
-  { key: "FOLLOWUP",         label: "Recovery & Follow-Up" },
+  { key: "TREATMENT",        label: "Service" },
+  { key: "FOLLOWUP",         label: "Follow-Up" },
   { key: "DEPARTURE",        label: "Departure" },
 ];
 
@@ -46,7 +46,7 @@ export function GuestTrackingStepper({ currentStep, onUpdateStep, updating }: Pr
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Patient Journey</Text>
+        <Text style={styles.title}>Guest Plan</Text>
         {updating && (
           <Text style={styles.updatingLabel}>Updating…</Text>
         )}

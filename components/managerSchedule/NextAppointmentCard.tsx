@@ -33,7 +33,7 @@ export function NextAppointmentCard({ appointment, isLoading }: Props) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.dot, { backgroundColor: T.accent }]} />
-          <Text style={styles.headerTitle}>Next Appointment</Text>
+          <Text style={styles.headerTitle}>Next Visit</Text>
         </View>
         {appointment && <StatusPill status={appointment.status} />}
       </View>
@@ -45,7 +45,7 @@ export function NextAppointmentCard({ appointment, isLoading }: Props) {
       ) : !appointment ? (
         <View style={styles.empty}>
           <Ionicons name="time-outline" size={22} color={T.border} />
-          <Text style={styles.emptyText}>No upcoming appointments.</Text>
+          <Text style={styles.emptyText}>No upcoming visits.</Text>
         </View>
       ) : (
         <Pressable

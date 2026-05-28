@@ -1,11 +1,17 @@
-export const SERVICES = [
-  { code: "RINOPLASTY", label: "Rinoplasti" },
-  { code: "EYE", label: "Göz" },
-  { code: "DENTAL", label: "Diş" },
-] as const;
+import {
+  GUEST_REQUESTED_SERVICES,
+  type GuestRequestedServiceCode,
+} from "@shared/guestRequestedServices";
+import { GUEST_REQUESTED_SERVICE_LABELS_EN } from "./guestRequestedServiceLabels";
 
-export type ServiceCode = (typeof SERVICES)[number]["code"];
+/** Clinic institution services (admin clinic create). Aligns with guest intake catalog. */
+export const SERVICES = GUEST_REQUESTED_SERVICES.map((s) => ({
+  code: s.code,
+  label: GUEST_REQUESTED_SERVICE_LABELS_EN[s.code],
+})) as ReadonlyArray<{ code: GuestRequestedServiceCode; label: string }>;
+
+export type ServiceCode = GuestRequestedServiceCode;
 
 export function serviceLabel(code: string): string {
-  return SERVICES.find((s) => s.code === code)?.label ?? code;
+  return GUEST_REQUESTED_SERVICE_LABELS_EN[code as GuestRequestedServiceCode] ?? code;
 }

@@ -82,7 +82,7 @@ export function ManagerTodaysAppointments({ appointments, isLoading, total }: Pr
           {total > appointments.length && (
             <Pressable
               style={styles.moreRow}
-              onPress={() => router.push("/(manager-tabs)/users")}
+              onPress={() => router.push("/(manager-tabs)/guests")}
             >
               <Text style={styles.moreText}>
                 +{total - appointments.length} more today

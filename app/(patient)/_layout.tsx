@@ -22,8 +22,12 @@ const TAB_RADIUS = 24;
 function NativeTabLayout() {
   const t = useT();
   const tl = t.guestTabLabels;
+  const insets = useSafeAreaInsets();
+  // NativeTabs does not inset scroll content — reserve tab bar + home indicator.
+  const bottomPadding = insets.bottom + TAB_H;
+
   return (
-    <TabBarMetricsProvider mode="native" bottomPadding={0}>
+    <TabBarMetricsProvider mode="native" bottomPadding={bottomPadding}>
       <NativeTabs>
         <NativeTabs.Trigger name="dashboard">
           <Icon sf={{ default: "house", selected: "house.fill" }} />
@@ -56,11 +60,13 @@ type TabIconProps = { focused: boolean; color: string; size: number };
 
 function tabIcon(
   outline: React.ComponentProps<typeof Ionicons>["name"],
-  filled:  React.ComponentProps<typeof Ionicons>["name"],
+  filled: React.ComponentProps<typeof Ionicons>["name"],
 ) {
-  return ({ focused, color, size }: TabIconProps) => (
-    <Ionicons name={focused ? filled : outline} size={size} color={color} />
-  );
+  function TabBarIcon({ focused, color, size }: TabIconProps) {
+    return <Ionicons name={focused ? filled : outline} size={size} color={color} />;
+  }
+  TabBarIcon.displayName = `TabBarIcon(${String(outline)})`;
+  return TabBarIcon;
 }
 
 function ClassicTabLayout() {

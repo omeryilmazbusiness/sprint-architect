@@ -3,7 +3,7 @@ import { pingDatabase } from "../../../shared/infra/dbPing";
 import type { HealthCheckDto } from "../schemas/health.schemas";
 
 const APP_VERSION = process.env.APP_VERSION ?? "1.0.0";
-const SERVICE_NAME = "HealthTour API";
+const SERVICE_NAME = "Healory API";
 
 function resolveStorageCheck(): HealthCheckDto["checks"]["storage"] {
   const provider = process.env.STORAGE_PROVIDER ?? "local";

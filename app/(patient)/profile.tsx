@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Linking,
 } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import { useTabBarMetrics } from "@/components/layout/TabBarMetricsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +18,8 @@ import { useGuestProfile } from "@/hooks/guest/useGuestProfile";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { useT } from "@/hooks/useT";
 import { useLanguage } from "@/context/LanguageContext";
+import { apiRequest } from "@/lib/query-client";
+import { copyToClipboard } from "@/lib/clipboard";
 
 // ─── Country flag helper ────────────────────────────────────────────────────────
 
@@ -88,8 +89,11 @@ function Divider() {
 export default function ProfileScreen() {
   const { logout } = useAuth();
   const { bottomPadding: tabBarHeight } = useTabBarMetrics();
+  // Extra space so sign-out stays above the floating tab bar on long profiles.
+  const scrollBottomPadding = tabBarHeight + 48;
   const { isLoading, isError, refetch, patient, manager } = useGuestProfile();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [copied, setCopied] = useState(false);
   const t = useT();
   const tp = t.guestProfile;
@@ -107,9 +111,13 @@ export default function ProfileScreen() {
 
   async function copyKey() {
     if (!patient?.patientKey) return;
-    await Clipboard.setStringAsync(patient.patientKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyToClipboard(patient.patientKey);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      Alert.alert(tp.copy, patient.patientKey);
+    }
   }
 
   function handleLogout() {
@@ -131,6 +139,36 @@ export default function ProfileScreen() {
       await logout();
     } finally {
       setLoggingOut(false);
+    }
+  }
+
+  function handleDeleteAccount() {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(tp.deleteAccountWebMsg)) {
+        void doDeleteAccount();
+      }
+    } else {
+      Alert.alert(tp.deleteAccountTitle, tp.deleteAccountBody, [
+        { text: tp.deleteAccountCancel, style: "cancel" },
+        { text: tp.deleteAccountConfirm, style: "destructive", onPress: () => void doDeleteAccount() },
+      ]);
+    }
+  }
+
+  async function doDeleteAccount() {
+    setDeletingAccount(true);
+    try {
+      await apiRequest("POST", "/v1/patient/account/delete");
+      if (Platform.OS === "web") {
+        alert(`${tp.deleteAccountSuccessTitle}\n${tp.deleteAccountSuccessBody}`);
+      } else {
+        Alert.alert(tp.deleteAccountSuccessTitle, tp.deleteAccountSuccessBody);
+      }
+      await logout();
+    } catch {
+      Alert.alert(tp.deleteAccountTitle, tp.deleteAccountError);
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -187,8 +225,10 @@ export default function ProfileScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: tabBarHeight + 24 },
+          { paddingBottom: scrollBottomPadding },
         ]}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero card ── */}
@@ -415,11 +455,31 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
+        {/* ── Delete account ── */}
+        <View style={[styles.card, cardShadow, styles.deleteCard]}>
+          <SectionHeader label={tp.deleteAccountTitle} />
+          <Text style={styles.deleteBody}>{tp.deleteAccountBody}</Text>
+          <Pressable
+            style={[styles.deleteBtn, deletingAccount && { opacity: 0.6 }]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount || loggingOut}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator size="small" color={T.danger} />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={18} color={T.danger} />
+                <Text style={styles.deleteBtnText}>{tp.deleteAccountConfirm}</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
         {/* ── Sign out ── */}
         <Pressable
           style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
           onPress={handleLogout}
-          disabled={loggingOut}
+          disabled={loggingOut || deletingAccount}
         >
           {loggingOut ? (
             <ActivityIndicator size="small" color={T.danger} />
@@ -598,6 +658,35 @@ const styles = StyleSheet.create({
     fontFamily: "PlusJakartaSans_500Medium",
     fontSize: 14,
     color: T.text,
+  },
+
+  deleteCard: {
+    paddingBottom: T.sp16,
+  },
+  deleteBody: {
+    fontFamily: "PlusJakartaSans_400Regular",
+    fontSize: 13,
+    color: T.textSec,
+    lineHeight: 20,
+    paddingHorizontal: T.sp16,
+    paddingBottom: T.sp12,
+  },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: T.sp16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.dangerBorder,
+    backgroundColor: T.dangerBg,
+  },
+  deleteBtnText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 14,
+    color: T.danger,
   },
 
   logoutBtn: {

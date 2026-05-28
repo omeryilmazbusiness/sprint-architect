@@ -68,7 +68,7 @@ jobs:
           fi
           echo "DATABASE_URL_TEST is set - running migrations on TEST database only."
       - name: Run DB migrations (TEST branch only)
-        run: bunx drizzle-kit push --force
+        run: bun run db:push:test
       - name: Run tests
         run: bun run test
 

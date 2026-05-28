@@ -40,8 +40,8 @@ export async function ensureAndroidChannels(): Promise<void> {
     });
 
     await Notifications.setNotificationChannelAsync("appointments", {
-      name: "Appointments",
-      description: "Appointment reminders and updates",
+      name: "Visits",
+      description: "Visit reminders and schedule updates",
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       sound: "default",
@@ -59,8 +59,8 @@ export async function ensureAndroidChannels(): Promise<void> {
     });
 
     await Notifications.setNotificationChannelAsync("journey", {
-      name: "Journey",
-      description: "Journey and tracking updates",
+      name: "Plan",
+      description: "Plan and tracking updates",
       importance: Notifications.AndroidImportance.DEFAULT,
       sound: "default",
       showBadge: true,

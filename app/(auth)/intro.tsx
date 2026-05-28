@@ -243,9 +243,9 @@ export default function IntroScreen() {
             { opacity: pillarsOp, transform: [{ translateY: pillarsY }] },
           ]}
         >
-          <Pillar icon="heart-outline" label="Patient Care" delay={0} />
+          <Pillar icon="heart-outline" label="Member Care" delay={0} />
           <View style={styles.pillarDivider} />
-          <Pillar icon="business-outline" label="Multi-Clinic" delay={80} />
+          <Pillar icon="business-outline" label="Multi-Site" delay={80} />
           <View style={styles.pillarDivider} />
           <Pillar icon="shield-checkmark-outline" label="Secure" delay={160} />
         </Animated.View>
@@ -257,7 +257,7 @@ export default function IntroScreen() {
         <Text style={styles.captionLine1}>Your journey,</Text>
         <Text style={styles.captionLine2}>beautifully organised.</Text>
         <Text style={styles.captionSub}>
-          Premium health tourism management for modern clinics.
+          Premium operations management for modern teams.
         </Text>
 
         <View style={styles.progressTrack}>

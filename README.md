@@ -1,6 +1,6 @@
-# HealthTour (Healory) — Health Tourism Operations SaaS
+# Healory — Operations SaaS
 
-Multi-tenant SaaS mobile application for health tourism clinics. Built with Expo React Native (frontend), Express + TypeScript (backend), Drizzle ORM, and PostgreSQL.
+Multi-tenant SaaS mobile application for operations teams. Built with Expo React Native (frontend), Express + TypeScript (backend), Drizzle ORM, and PostgreSQL.
 
 ---
 

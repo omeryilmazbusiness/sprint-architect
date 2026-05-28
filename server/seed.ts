@@ -23,11 +23,14 @@ export async function seedDatabase() {
   await db.insert(clinics)
     .values({
       id: CLINIC_ID,
-      name: "Demo Clinic",
+      name: "Demo Institution",
       status: "ACTIVE",
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: clinics.id,
+      set: { name: "Demo Institution" },
+    });
 
   // Seed Users
   const adminPasswordHash = await hashPassword("Admin123!");
@@ -103,10 +106,9 @@ export async function seedDatabase() {
   await Promise.all([
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Passport Photocopy", code: "PASSPORT_COPY", isRequired: true }).onConflictDoNothing(),
     db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Visa", code: "VISA", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Medical History", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Travel Insurance", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Lab Results (recent)", isRequired: false, description: "Blood tests from last 3 months" }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Consent Form", isRequired: true }).onConflictDoNothing(),
+    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Internal reference (staff only)", code: "INTERNAL_REF", isRequired: false }).onConflictDoNothing(),
+    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Travel Insurance", code: "TRAVEL_INSURANCE", isRequired: true }).onConflictDoNothing(),
+    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Consent Form", code: "CONSENT_FORM", isRequired: true }).onConflictDoNothing(),
   ]);
 
   // Update codes on existing document types for this clinic
@@ -123,6 +125,15 @@ export async function seedDatabase() {
     }
     if (dt.name === "Visa" && !dt.code) {
       await db.update(documentTypes).set({ code: "VISA" }).where(eq(documentTypes.id, dt.id));
+    }
+    if (dt.name === "Travel Insurance" && !dt.code) {
+      await db.update(documentTypes).set({ code: "TRAVEL_INSURANCE" }).where(eq(documentTypes.id, dt.id));
+    }
+    if (dt.name === "Consent Form" && !dt.code) {
+      await db.update(documentTypes).set({ code: "CONSENT_FORM" }).where(eq(documentTypes.id, dt.id));
+    }
+    if ((dt.name === "Medical History" || dt.name === "Lab Results (recent)") && dt.code !== "INTERNAL_REF") {
+      await db.update(documentTypes).set({ code: "INTERNAL_REF", name: "Internal reference (staff only)" }).where(eq(documentTypes.id, dt.id));
     }
   }
   console.log("[seed] Document type codes updated");
@@ -214,7 +225,7 @@ export async function seedDatabase() {
         type: "Consultation",
         startAt: new Date("2026-03-11T09:00:00Z"),
         endAt: new Date("2026-03-11T10:00:00Z"),
-        locationText: "Demo Clinic – Cardiology Wing, 3rd Floor",
+        locationText: "Demo Institution – Cardiology Wing, 3rd Floor",
         status: "SCHEDULED",
         notes: "Bring all recent lab results",
       },
@@ -226,7 +237,7 @@ export async function seedDatabase() {
         type: "Surgery",
         startAt: new Date("2026-03-14T08:00:00Z"),
         endAt: new Date("2026-03-14T14:00:00Z"),
-        locationText: "Demo Clinic – OR Block 2",
+        locationText: "Demo Institution – OR Block 2",
         status: "SCHEDULED",
       },
       {
@@ -236,7 +247,7 @@ export async function seedDatabase() {
         title: "Post-Op Check-Up",
         type: "Follow-up",
         startAt: new Date("2026-03-18T11:00:00Z"),
-        locationText: "Demo Clinic – Cardiology Wing, 3rd Floor",
+        locationText: "Demo Institution – Cardiology Wing, 3rd Floor",
         status: "SCHEDULED",
       },
     ]);
@@ -265,8 +276,8 @@ export async function seedDatabase() {
     {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
-      title: "New appointment scheduled",
-      body: "Sarah Mitchell has an appointment with Dr. Aydin Kaya tomorrow at 09:00",
+      title: "New visit scheduled",
+      body: "Sarah Mitchell has a visit with provider Aydin Kaya tomorrow at 09:00",
       type: "APPOINTMENT",
       status: "UNREAD",
       relatedType: "appointment",
@@ -275,7 +286,7 @@ export async function seedDatabase() {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
       title: "Document uploaded",
-      body: "Patient Sarah Mitchell uploaded their passport document",
+      body: "Guest Sarah Mitchell uploaded their passport file",
       type: "DOCUMENT",
       status: "UNREAD",
       relatedType: "document",
@@ -283,8 +294,8 @@ export async function seedDatabase() {
     {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
-      title: "Patient checked in",
-      body: "New patient registered at Demo Clinic",
+      title: "Guest checked in",
+      body: "New member registered at Demo Institution",
       type: "INFO",
       status: "READ",
       relatedType: "patient",

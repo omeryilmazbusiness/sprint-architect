@@ -103,7 +103,7 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
         color={T.primary}
         subtitle={td.kpiSubActiveGuests}
         badgeLabel={td.kpiView}
-        onPress={() => router.push("/(manager-tabs)/users")}
+        onPress={() => router.push("/(manager-tabs)/guests")}
       />
       <KpiCard
         label={td.kpiApptToday}
@@ -122,7 +122,7 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
         color="#2ECF8F"
         subtitle={td.kpiSubUpcoming7}
         badgeLabel={td.kpiView}
-        onPress={() => router.push("/(manager-tabs)/users")}
+        onPress={() => router.push("/(manager-tabs)/guests")}
       />
       <KpiCard
         label={td.kpiPendingDocs}
@@ -134,7 +134,7 @@ export function ManagerKpiGrid({ data, isLoading, onAppointmentsTodayPress }: Pr
         highlight={kpis.pendingDocuments > 0}
         onPress={() =>
           router.push({
-            pathname: "/(manager-tabs)/users",
+            pathname: "/(manager-tabs)/guests",
             params: { tab: "Pending Docs" },
           })
         }

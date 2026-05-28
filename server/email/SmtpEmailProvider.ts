@@ -9,6 +9,7 @@ function inferEmailType(subject: string): string {
   if (s.includes("password") || s.includes("temporary")) return "RESET_PASSWORD";
   if (s.includes("monthly") || s.includes("report")) return "MONTHLY_REPORT";
   if (s.includes("access key") || s.includes("guest")) return "GUEST_ACCESS_KEY";
+  if (s.includes("archive") || s.includes("retention")) return "GUEST_RETENTION_ARCHIVE";
   return "GENERAL";
 }
 
@@ -41,6 +42,11 @@ export class SmtpEmailProvider implements EmailProvider {
         subject: message.subject,
         html: message.html,
         text: message.text,
+        attachments: message.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        })),
       });
       logger.info("[email:smtp] Email sent successfully", {
         subject: message.subject,

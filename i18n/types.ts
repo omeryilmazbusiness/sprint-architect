@@ -414,7 +414,7 @@ export interface AdminCreateUserDict {
 
 export interface ManagerTabLabelsDict {
   dashboard: string;
-  users: string;
+  guests: string;
   services: string;
   invoices: string;
   settings: string;
@@ -564,6 +564,7 @@ export interface ManagerInvoicesDict {
   breakdownGuests: string;
   breakdownTotal: string;
   emptyText: string;
+  emptySubtitle: string;
   guestsSingular: string;
   guestsPlural: string;
 }
@@ -871,9 +872,20 @@ export interface CreateGuestDict {
   searchCountryPlaceholder: string;
   // ServicesPickerModal
   servicesTitle: string;
+  servicesSubtitle: string;
   confirmSelectAtLeast: string;
   confirmServices: string;
   serviceLabels: Record<string, string>;
+  // Wizard
+  stepGuestTitle: string;
+  stepGuestSubtitle: string;
+  stepServicesTitle: string;
+  stepServicesSubtitle: string;
+  stepTravelTitle: string;
+  stepTravelSubtitle: string;
+  wizardStepOf: string;
+  btnNext: string;
+  btnBack: string;
   // Form header
   headerTitle: string;
   successHeaderTitle: string;
@@ -1170,6 +1182,7 @@ export interface GuestTrackDict {
   docTryAgain: string;
   docEmpty: string;
   docEmptySub: string;
+  filesRetentionHint: string;
 }
 
 export interface GuestNotificationsDict {
@@ -1214,6 +1227,16 @@ export interface GuestProfileDict {
   // Error
   errorTitle: string;
   tryAgain: string;
+  // Self-delete
+  deleteAccountTitle: string;
+  deleteAccountBody: string;
+  deleteAccountConfirm: string;
+  deleteAccountCancel: string;
+  deleteAccountWebMsg: string;
+  deleteAccountSuccessTitle: string;
+  deleteAccountSuccessBody: string;
+  deleteAccountError: string;
+  deleteAccountInProgress: string;
 }
 
 export interface GuestExploreDict {

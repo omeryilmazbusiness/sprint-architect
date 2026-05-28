@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  Modal,
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  ScrollView,
   Alert,
   RefreshControl,
 } from "react-native";
@@ -24,8 +19,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { apiRequest } from "@/lib/query-client";
 import { useT } from "@/hooks/useT";
-
-const SCREEN_H = Dimensions.get("window").height;
+import { CenteredAppModal } from "@/components/modals/CenteredAppModal";
 const QK = ["/v1/manager/document-types"] as const;
 
 interface DocumentTypeItem {
@@ -101,7 +95,13 @@ export default function DocumentTypesScreen() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiRequest("DELETE", `/v1/manager/document-types/${id}`);
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.code === "DOC-TYPE-002") {
+          throw new Error("This type is assigned to guests and cannot be removed.");
+        }
+        throw new Error(j?.message ?? "Failed to delete");
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK });
@@ -314,8 +314,6 @@ interface FormSheetProps {
 }
 
 function DocumentTypeFormSheet({ visible, tdt, onClose, onSubmit, isLoading, errorMessage, editingItem }: FormSheetProps) {
-  const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [nameError, setNameError] = useState("");
@@ -326,11 +324,8 @@ function DocumentTypeFormSheet({ visible, tdt, onClose, onSubmit, isLoading, err
       setName(editingItem?.name ?? "");
       setNote(editingItem?.note ?? "");
       setNameError("");
-      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: SCREEN_H, duration: 220, useNativeDriver: true }).start();
     }
-  }, [visible]);
+  }, [visible, editingItem]);
 
   const handleSubmit = () => {
     const trimmed = name.trim();
@@ -341,77 +336,68 @@ function DocumentTypeFormSheet({ visible, tdt, onClose, onSubmit, isLoading, err
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }, { transform: [{ translateY: slideAnim }] }]}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View style={styles.handle} />
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{isEditing ? tdt.formTitleEdit : tdt.formTitleAdd}</Text>
-              <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color={T.text} />
-              </Pressable>
-            </View>
-            <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              {!!errorMessage && (
-                <View style={styles.errorBanner}>
-                  <Ionicons name="warning-outline" size={16} color={T.danger} style={{ marginRight: 6 }} />
-                  <Text style={styles.errorBannerText}>{errorMessage}</Text>
-                </View>
-              )}
-              <View style={styles.field}>
-                <Text style={[styles.label, !!nameError && { color: T.danger }]}>
-                  {tdt.labelName} {nameError ? `— ${nameError}` : ""}
-                  {!nameError && <Text style={styles.required}> *</Text>}
-                </Text>
-                <TextInput
-                  style={[styles.input, !!nameError && styles.inputError]}
-                  placeholder={tdt.fieldNamePlaceholder}
-                  placeholderTextColor={T.textMuted}
-                  value={name}
-                  onChangeText={(v) => { setName(v); if (nameError) setNameError(""); }}
-                  returnKeyType="next"
-                  testID="input-doc-type-name"
-                  maxLength={60}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>
-                  {tdt.labelDescription} <Text style={styles.optional}>{tdt.labelDescriptionOptional}</Text>
-                </Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder={tdt.fieldDescPlaceholder}
-                  placeholderTextColor={T.textMuted}
-                  value={note}
-                  onChangeText={setNote}
-                  multiline
-                  numberOfLines={3}
-                  returnKeyType="done"
-                  testID="input-doc-type-note"
-                  maxLength={240}
-                />
-                <Text style={styles.charCount}>{note.length}/240</Text>
-              </View>
-            </ScrollView>
-            <View style={styles.sheetActions}>
-              <Pressable style={({ pressed }) => [styles.btnSecondary, { opacity: pressed ? 0.7 : 1 }]} onPress={onClose}>
-                <Text style={styles.btnSecondaryText}>{tdt.btnCancel}</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.btnPrimary, { opacity: pressed || isLoading ? 0.75 : 1 }]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                testID="btn-save-doc-type"
-              >
-                {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>{isEditing ? tdt.btnUpdate : tdt.btnSave}</Text>}
-              </Pressable>
-            </View>
-          </KeyboardAvoidingView>
-        </Animated.View>
+    <CenteredAppModal
+      visible={visible}
+      onClose={onClose}
+      title={isEditing ? tdt.formTitleEdit : tdt.formTitleAdd}
+      testID="document-type-form-modal"
+      footer={
+        <View style={styles.sheetActions}>
+          <Pressable style={({ pressed }) => [styles.btnSecondary, { opacity: pressed ? 0.7 : 1 }]} onPress={onClose}>
+            <Text style={styles.btnSecondaryText}>{tdt.btnCancel}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnPrimary, { opacity: pressed || isLoading ? 0.75 : 1 }]}
+            onPress={handleSubmit}
+            disabled={isLoading}
+            testID="btn-save-doc-type"
+          >
+            {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimaryText}>{isEditing ? tdt.btnUpdate : tdt.btnSave}</Text>}
+          </Pressable>
+        </View>
+      }
+    >
+      {!!errorMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={16} color={T.danger} style={{ marginRight: 6 }} />
+          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+        </View>
+      )}
+      <View style={styles.field}>
+        <Text style={[styles.label, !!nameError && { color: T.danger }]}>
+          {tdt.labelName} {nameError ? `— ${nameError}` : ""}
+          {!nameError && <Text style={styles.required}> *</Text>}
+        </Text>
+        <TextInput
+          style={[styles.input, !!nameError && styles.inputError]}
+          placeholder={tdt.fieldNamePlaceholder}
+          placeholderTextColor={T.textMuted}
+          value={name}
+          onChangeText={(v) => { setName(v); if (nameError) setNameError(""); }}
+          returnKeyType="next"
+          testID="input-doc-type-name"
+          maxLength={60}
+        />
       </View>
-    </Modal>
+      <View style={styles.field}>
+        <Text style={styles.label}>
+          {tdt.labelDescription} <Text style={styles.optional}>{tdt.labelDescriptionOptional}</Text>
+        </Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder={tdt.fieldDescPlaceholder}
+          placeholderTextColor={T.textMuted}
+          value={note}
+          onChangeText={setNote}
+          multiline
+          numberOfLines={3}
+          returnKeyType="done"
+          testID="input-doc-type-note"
+          maxLength={240}
+        />
+        <Text style={styles.charCount}>{note.length}/240</Text>
+      </View>
+    </CenteredAppModal>
   );
 }
 
@@ -459,13 +445,6 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 14, color: T.textMuted, textAlign: "center", lineHeight: 20 },
   emptyBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: T.accent, marginTop: 8 },
   emptyBtnText: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: "#fff" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: T.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden" },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", alignSelf: "center", marginTop: 10, marginBottom: 4 },
-  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F0F2F5" },
-  sheetTitle: { fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: T.text },
-  closeBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "#F4F6F9", alignItems: "center", justifyContent: "center" },
-  sheetBody: { padding: 20, gap: 20 },
   field: { gap: 6 },
   label: { fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 13, color: T.textSec },
   required: { color: T.danger },
@@ -476,7 +455,7 @@ const styles = StyleSheet.create({
   charCount: { fontFamily: "PlusJakartaSans_400Regular", fontSize: 11, color: T.textMuted, textAlign: "right", marginTop: 2 },
   errorBanner: { flexDirection: "row", alignItems: "center", backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA", borderRadius: 10, padding: 12 },
   errorBannerText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 13, color: T.danger, flex: 1 },
-  sheetActions: { flexDirection: "row", paddingHorizontal: 20, paddingTop: 12, gap: 12, borderTopWidth: 1, borderTopColor: "#F0F2F5" },
+  sheetActions: { flexDirection: "row", gap: 12 },
   btnSecondary: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center", backgroundColor: T.surface },
   btnSecondaryText: { fontFamily: "PlusJakartaSans_500Medium", fontSize: 15, color: T.text },
   btnPrimary: { flex: 2, height: 48, borderRadius: 12, backgroundColor: T.accent, alignItems: "center", justifyContent: "center" },

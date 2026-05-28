@@ -1,5 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+function makeChain(returnValue: unknown) {
+  const chain: {
+    set: ReturnType<typeof vi.fn>;
+    where: ReturnType<typeof vi.fn>;
+    returning: ReturnType<typeof vi.fn>;
+  } = {
+    set: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+    returning: vi.fn(() => Promise.resolve(returnValue)),
+  };
+  return chain;
+}
+
 vi.mock("../db", () => ({
   db: {
     query: {
@@ -7,8 +20,12 @@ vi.mock("../db", () => ({
       invoices: { findFirst: vi.fn(), findMany: vi.fn() },
     },
     select: vi.fn(),
-    update: vi.fn(),
+    update: vi.fn(() => makeChain([])),
     insert: vi.fn(),
+    transaction: vi.fn(async (fn: (trx: { update: ReturnType<typeof vi.fn> }) => Promise<void>) => {
+      const trx = { update: vi.fn(() => makeChain([])) };
+      return fn(trx);
+    }),
   },
 }));
 
@@ -31,15 +48,15 @@ import { db } from "../db";
 import { markOverdueInvoicesAsUnpaid, reactivateClinicAfterPayment } from "../billing/billingService";
 import { auditLog } from "../api/auditLogger";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockDb = db as any;
 
-function makeChain(returnValue: any) {
-  const chain: any = {
-    set: vi.fn(() => chain),
-    where: vi.fn(() => chain),
-    returning: vi.fn(() => Promise.resolve(returnValue)),
-  };
-  return chain;
+function mockTransaction() {
+  const trxUpdate = vi.fn(() => makeChain([]));
+  mockDb.transaction = vi.fn(async (fn: (trx: { update: typeof trxUpdate }) => Promise<void>) => {
+    await fn({ update: trxUpdate });
+  });
+  return trxUpdate;
 }
 
 describe("RollPendingToUnpaid — markOverdueInvoicesAsUnpaid", () => {
@@ -61,12 +78,12 @@ describe("RollPendingToUnpaid — markOverdueInvoicesAsUnpaid", () => {
     ];
     mockDb.query.invoices.findMany.mockResolvedValue(overdueInvoices);
 
-    const updateChain = makeChain([]);
-    mockDb.update = vi.fn(() => updateChain);
+    const trxUpdate = mockTransaction();
 
     await markOverdueInvoicesAsUnpaid();
 
-    expect(mockDb.update).toHaveBeenCalled();
+    expect(mockDb.transaction).toHaveBeenCalled();
+    expect(trxUpdate).toHaveBeenCalled();
     expect(auditLog).toHaveBeenCalledTimes(2);
 
     const logCalls = (auditLog as any).mock.calls;
@@ -88,8 +105,7 @@ describe("RollPendingToUnpaid — markOverdueInvoicesAsUnpaid", () => {
       { id: "inv-3", clinicId: "clinic-X", status: "PENDING" },
     ];
     mockDb.query.invoices.findMany.mockResolvedValue(overdueInvoices);
-    const updateChain = makeChain([]);
-    mockDb.update = vi.fn(() => updateChain);
+    mockTransaction();
 
     await markOverdueInvoicesAsUnpaid();
 
@@ -105,12 +121,12 @@ describe("MarkInvoicePaid — reactivateClinicAfterPayment", () => {
   });
 
   it("reactivates clinic and users, logs reactivation", async () => {
-    const updateChain = makeChain([]);
-    mockDb.update = vi.fn(() => updateChain);
+    const trxUpdate = mockTransaction();
 
     await reactivateClinicAfterPayment("clinic-1", "admin-user-1");
 
-    expect(mockDb.update).toHaveBeenCalled();
+    expect(mockDb.transaction).toHaveBeenCalled();
+    expect(trxUpdate).toHaveBeenCalled();
     expect(auditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         clinicId: "clinic-1",
@@ -122,8 +138,7 @@ describe("MarkInvoicePaid — reactivateClinicAfterPayment", () => {
   });
 
   it("uses 'system' as actor when no paidByUserId provided", async () => {
-    const updateChain = makeChain([]);
-    mockDb.update = vi.fn(() => updateChain);
+    mockTransaction();
 
     await reactivateClinicAfterPayment("clinic-2");
 

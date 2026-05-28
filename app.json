@@ -2,7 +2,7 @@
   "expo": {
     "name": "Healory",
     "slug": "healthtour",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "healory",
@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.healory.healthtour",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "Healory uses notifications to keep you updated on your appointments, documents, and journey status."
+        "NSUserNotificationsUsageDescription": "Healory uses notifications to keep you updated on your account and activity."
       }
     },
     "android": {

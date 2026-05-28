@@ -4,9 +4,11 @@ import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { seedDatabase } from "./seed";
 import { startBillingScheduler } from "./billing/scheduler";
+import { startGuestRetentionScheduler } from "./modules/guestRetention/scheduler";
 import { requestIdMiddleware } from "./shared/middleware/requestId";
 import { globalErrorHandler } from "./shared/middleware/errorHandler";
 import { logger } from "./shared/logger";
+import { GUEST_ACCESS_KEY_FORMAT_VERSION } from "./modules/guestAccessKey";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -269,9 +271,11 @@ function setupErrorHandler(app: express.Application) {
   setupErrorHandler(app);
 
   startBillingScheduler();
+  startGuestRetentionScheduler();
 
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(port, "0.0.0.0", () => {
     log(`express server serving on port ${port}`);
+    log(`guest access key format v${GUEST_ACCESS_KEY_FORMAT_VERSION} (XXXX-YYYY-####)`);
   });
 })();

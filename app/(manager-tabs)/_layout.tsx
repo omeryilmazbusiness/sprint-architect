@@ -18,9 +18,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
         <Label>{tl.dashboard}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="users">
+      <NativeTabs.Trigger name="guests">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>{tl.users}</Label>
+        <Label>{tl.guests}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="services">
         <Icon sf={{ default: "square.stack", selected: "square.stack.fill" }} />
@@ -81,14 +81,15 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="users"
+        name="guests"
         options={{
-          title: tl.users,
+          title: tl.guests,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="users" options={{ href: null }} />
       <Tabs.Screen
         name="services"
         options={{

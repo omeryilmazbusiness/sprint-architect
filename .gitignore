@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# Bundled server output (built in CI / locally via npm run server:build)
+server_dist/
+
 # Expo
 .expo/
 dist/

@@ -9,6 +9,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { COUNTRIES } from "@/constants/countries";
+import { guestRequestedServiceLabel } from "@/constants/guestRequestedServiceLabels";
+import { normalizeRequestedServiceCode } from "@shared/guestRequestedServices";
+import { useT } from "@/hooks/useT";
 
 interface GuestInfo {
   phoneE164: string | null;
@@ -48,12 +51,6 @@ function fmtDate(s: string | null | undefined) {
   }
 }
 
-function fmtService(s: string) {
-  return s
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function InfoRow({
   icon,
@@ -96,8 +93,14 @@ function InfoRow({
 }
 
 export function GuestInfoCard({ info }: Props) {
+  const t = useT();
   const [notesExpanded, setNotesExpanded] = useState(false);
   const country = getCountryInfo(info.nationalityCode);
+
+  function serviceLabel(raw: string) {
+    const code = normalizeRequestedServiceCode(raw);
+    return guestRequestedServiceLabel(code, t.createGuest.serviceLabels);
+  }
   const arrFmt = fmtDate(info.arrivalDate);
   const depFmt = fmtDate(info.departureDate);
 
@@ -214,7 +217,7 @@ export function GuestInfoCard({ info }: Props) {
           <View style={styles.chipRow}>
             {info.requestedServices.map((s) => (
               <View key={s} style={styles.chip}>
-                <Text style={styles.chipText}>{fmtService(s)}</Text>
+                <Text style={styles.chipText}>{serviceLabel(s)}</Text>
               </View>
             ))}
           </View>

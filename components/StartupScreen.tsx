@@ -282,7 +282,7 @@ export default function StartupScreen() {
         ]}
       >
         <ProgressLine duration={TOTAL_MS - 400} />
-        <Text style={styles.bottomLabel}>HEALORY · HEALTH TOURISM PLATFORM</Text>
+        <Text style={styles.bottomLabel}>HEALORY · OPERATIONS PLATFORM</Text>
       </Animated.View>
     </Animated.View>
   );

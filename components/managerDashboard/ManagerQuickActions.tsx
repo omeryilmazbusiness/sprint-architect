@@ -50,7 +50,7 @@ export function ManagerQuickActions() {
       bgColor: "#6366F115",
       onPress: () =>
         router.push({
-          pathname: "/(manager-tabs)/users",
+          pathname: "/(manager-tabs)/guests",
           params: { openCreate: "1" },
         }),
     },
@@ -66,7 +66,7 @@ export function ManagerQuickActions() {
       label: td.qaAllGuests,
       color: T.primary,
       bgColor: T.primary + "14",
-      onPress: () => router.push("/(manager-tabs)/users"),
+      onPress: () => router.push("/(manager-tabs)/guests"),
     },
     {
       icon: "layers-outline",

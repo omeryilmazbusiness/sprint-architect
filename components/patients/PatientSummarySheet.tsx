@@ -8,7 +8,6 @@ import {
   ScrollView,
   Animated,
   Platform,
-  Clipboard,
   Linking,
   Alert,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { copyToClipboard } from "@/lib/clipboard";
 import { StatusPill } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -141,14 +141,8 @@ function PatientKeyRow({
   const [revealed, setRevealed] = useState(false);
 
   async function handleCopy() {
-    try {
-      if (Clipboard?.setString) {
-        Clipboard.setString(patientKey);
-      }
-      onCopied();
-    } catch {
-      /* ignore */
-    }
+    const ok = await copyToClipboard(patientKey);
+    if (ok) onCopied();
   }
 
   return (
@@ -194,8 +188,8 @@ function NewKeyBanner({
   onDismiss: () => void;
 }) {
   async function handleCopy() {
-    if (Clipboard?.setString) Clipboard.setString(newKey);
-    Alert.alert("Copied", "New access key copied to clipboard.");
+    const ok = await copyToClipboard(newKey);
+    if (ok) Alert.alert("Copied", "New access key copied to clipboard.");
   }
 
   return (
@@ -208,7 +202,7 @@ function NewKeyBanner({
         </Pressable>
       </View>
       <Text style={styles.newKeyValue}>{newKey}</Text>
-      <Text style={styles.newKeyHint}>Share this key with the patient. It won't be shown again.</Text>
+      <Text style={styles.newKeyHint}>Share this key with the guest. It will not be shown again.</Text>
       <Pressable style={styles.newKeyCopyBtn} onPress={handleCopy}>
         <Ionicons name="copy-outline" size={14} color="#16A34A" />
         <Text style={styles.newKeyCopyText}>Copy Key</Text>
@@ -246,7 +240,7 @@ function SheetContent({
 
   function handleDeactivate() {
     Alert.alert(
-      "Deactivate Patient",
+      "Deactivate Guest",
       `Deactivate ${patient.fullName}? Their access will be suspended. This can be reviewed later.`,
       [
         { text: "Cancel", style: "cancel" },
@@ -506,7 +500,7 @@ function SheetContent({
               <Ionicons name="person-remove-outline" size={16} color={T.danger} />
             )}
             <Text style={[styles.actionBtnText, { color: T.danger }]}>
-              {isDeactivating ? "Deactivating…" : "Deactivate Patient"}
+              {isDeactivating ? "Deactivating…" : "Deactivate Guest"}
             </Text>
           </Pressable>
         )}

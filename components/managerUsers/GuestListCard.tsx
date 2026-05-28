@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { copyToClipboard } from "@/lib/clipboard";
 import { StatusPill } from "@/components/ui";
 
 interface Patient {
@@ -55,12 +56,9 @@ function fmtDate(s?: string | null) {
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function copyToClipboard(text: string) {
-  if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
-    navigator.clipboard.writeText(text).catch(() => null);
-  } else {
-    Alert.alert("Guest Key", text, [{ text: "OK" }]);
-  }
+async function copyGuestKey(text: string) {
+  const ok = await copyToClipboard(text);
+  if (!ok) Alert.alert("Guest Key", text, [{ text: "OK" }]);
 }
 
 interface Props {
@@ -87,9 +85,9 @@ function GuestListCard({ patient, onPress, flagEmoji }: Props) {
   if (patient.hasTodayAppointment)
     tags.push({ label: "Today Appt", warn: false, accent: true });
 
-  function handleCopy(e: any) {
+  function handleCopy(e: { stopPropagation?: () => void }) {
     e?.stopPropagation?.();
-    copyToClipboard(patient.patientKey);
+    void copyGuestKey(patient.patientKey);
   }
 
   return (

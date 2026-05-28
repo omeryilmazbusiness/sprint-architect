@@ -3,11 +3,11 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { authMiddleware, requireRole } from "../auth/middleware";
 import { signAccessToken } from "../auth/jwt";
-import { getStorageProvider } from "../storage/getStorageProvider";
-import { documentRepo } from "../repositories/documentRepo";
 import { AppError } from "../auth/errors";
 import { auditLog } from "./auditLogger";
-import { notificationService } from "../services/NotificationService";
+import { uploadGuestDocument } from "../modules/guestDocuments";
+import { documentRepo } from "../repositories/documentRepo";
+import { getStorageProvider } from "../storage/getStorageProvider";
 import { db } from "../db";
 import { patientDocuments } from "@shared/schema";
 
@@ -53,72 +53,17 @@ router.post(
         throw new AppError("DOC-UP-001", "No file received", 400);
       }
 
-      const mime = req.file.mimetype;
-      const originalName = req.file.originalname ?? "";
-      const ext = originalName.split(".").pop()?.toLowerCase() ?? "";
-
-      if (mime !== "application/pdf" || ext !== "pdf") {
-        throw new AppError("DOC-UP-001", "Only PDF files are accepted (application/pdf, .pdf extension)", 422);
-      }
-
       const docId = req.params.id as string;
-      const doc = await documentRepo.findById(docId);
-
-      if (!doc) {
-        throw new AppError("DOC-UP-404", "Document assignment not found", 404);
-      }
-
-      if (doc.patientId !== req.actor!.sub) {
-        throw new AppError("DOC-UP-003", "You are not the owner of this document", 403);
-      }
-
-      const storageProvider = getStorageProvider();
-      const storageKey = await storageProvider.saveFile({
-        clinicId: doc.clinicId,
-        patientId: doc.patientId,
+      const result = await uploadGuestDocument.execute({
+        patientId: req.actor!.sub,
+        documentId: docId,
         buffer: req.file.buffer,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
+        mimeType: req.file.mimetype,
+        originalName: req.file.originalname ?? "",
+        fileSizeBytes: req.file.size,
       });
 
-      const now = new Date();
-      const updated = await documentRepo.updateDocument(docId, doc.clinicId, {
-        fileUrl: storageKey,
-        fileName: originalName,
-        fileMime: mime,
-        fileSize: req.file.size,
-        status: "UPLOADED",
-        uploadedAt: now,
-        rejectionReason: null,
-      });
-
-      auditLog({
-        clinicId: doc.clinicId,
-        actorId: req.actor!.sub,
-        actorRole: req.actor!.role,
-        action: "DOCUMENT_UPLOADED",
-        resourceType: "patient_document",
-        resourceId: docId,
-      });
-
-      notificationService.emitManagerNotification(doc.clinicId, {
-        type: "DOCUMENT_UPLOADED",
-        title: "Document Uploaded",
-        body: `A guest has uploaded a document: ${originalName}`,
-        severity: "INFO",
-        relatedId: docId,
-        relatedType: "patient_document",
-        metadata: { patientId: doc.patientId, fileName: originalName },
-      }).catch(() => {});
-
-      res.json({
-        id: updated.id,
-        status: updated.status,
-        fileName: updated.fileName,
-        fileMime: updated.fileMime,
-        fileSize: updated.fileSize,
-        uploadedAt: updated.uploadedAt,
-      });
+      res.json(result);
     } catch (error) {
       next(error);
     }
