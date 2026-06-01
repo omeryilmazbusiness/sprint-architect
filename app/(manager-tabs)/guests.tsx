@@ -409,7 +409,7 @@ function DoctorsTab() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="medical-outline" size={40} color={T.border} />
+              <Ionicons name="person-outline" size={40} color={T.border} />
               <Text style={styles.emptyTitle}>
                 {debouncedSearch ? tu.emptyDoctorsTitle : td.emptyTitle}
               </Text>

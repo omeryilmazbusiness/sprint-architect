@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import type { UnifiedEntity } from "@/lib/api/adminUsers";
+import { DISPLAY_TERMS } from "@/constants/terminology";
 
 function entityColor(type: string): string {
   if (type === "PATIENT") return T.accent;
@@ -11,7 +12,7 @@ function entityColor(type: string): string {
 }
 
 function entityLabel(type: string): string {
-  if (type === "PATIENT") return "Patient";
+  if (type === "PATIENT") return DISPLAY_TERMS.patient;
   if (type === "ADMIN") return "Admin";
   return "Manager";
 }

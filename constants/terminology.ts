@@ -5,8 +5,8 @@
 export const DISPLAY_TERMS = {
   clinic: "Institution",
   clinics: "Institutions",
-  patient: "Client",
-  patients: "Clients",
+  patient: "Member",
+  patients: "Members",
   doctor: "Provider",
   doctors: "Providers",
   appointment: "Visit",
@@ -18,4 +18,11 @@ export const DISPLAY_TERMS = {
   journey: "Plan",
   document: "File",
   documents: "Files",
+} as const;
+
+/** English role labels for legacy screens without i18n wiring. */
+export const ROLE_LABELS = {
+  ADMIN: "System Administrator",
+  MANAGER: "Institution Staff",
+  PATIENT: "Member",
 } as const;

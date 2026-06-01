@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, endOfMonth, startOfMonth } from "date-fns";
 import { apiRequest } from "@/lib/query-client";
+import { DISPLAY_TERMS } from "@/constants/terminology";
 
 export interface ScheduleAppt {
   id: string;
@@ -26,7 +27,7 @@ function normalizeAppt(raw: RawAppt): ScheduleAppt {
   return {
     id: raw.id,
     startAt: raw.startAt,
-    title: raw.title || raw.type || "Appointment",
+    title: raw.title || raw.type || DISPLAY_TERMS.appointment,
     status: raw.status,
     patientId: raw.patient?.id ?? null,
     patientName: raw.patient?.fullName ?? "Guest",

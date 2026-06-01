@@ -54,7 +54,7 @@ export function DoctorProfileCard({ doctor }: Props) {
       {/* Specialty */}
       {doctor.specialty ? (
         <View style={styles.specialtyRow}>
-          <Ionicons name="medical-outline" size={11} color={T.accent} />
+          <Ionicons name="person-outline" size={11} color={T.accent} />
           <Text style={styles.specialty} numberOfLines={1}>{doctor.specialty}</Text>
         </View>
       ) : null}

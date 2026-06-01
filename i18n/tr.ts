@@ -731,7 +731,7 @@ export const tr: AppDict = {
 
   appointmentsToday: {
     sheetTitle: "Bugünkü Ziyaretlar",
-    searchPlaceholder: "Üye, sağlayıcı veya işlem ara…",
+    searchPlaceholder: "Üye, sağlayıcı veya ziyaret ara…",
     errorTitle: "Ziyaretlar yüklenemedi",
     errorBody: "Bağlantınızı kontrol edin ve tekrar deneyin.",
     retry: "Tekrar Dene",
@@ -842,7 +842,7 @@ export const tr: AppDict = {
     noPhoneSub: "{label} telefonu mevcut değil.",
     cannotCall: "Arama yapılamıyor",
     cannotCallSub: "Cihazınız telefon araması yapamıyor.",
-    drPrefix: "Dr. ",
+    drPrefix: "",
   },
 
   guestSchedule: {
@@ -868,7 +868,7 @@ export const tr: AppDict = {
     kpiUpcoming: "Yaklaşan",
     kpiCompleted: "Tamamlanan",
     kpiMissed: "Kaçırılan",
-    searchPlaceholder: "Sağlayıcı veya işlem ara…",
+    searchPlaceholder: "Sağlayıcı veya ziyaret ara…",
     filterByStatus: "Duruma Göre Filtrele",
     filterByRange: "Tarih Aralığına Göre Filtrele",
     clearFilters: "Temizle",
@@ -878,7 +878,7 @@ export const tr: AppDict = {
     emptyFilteredSub: "Filtreleri veya arama terimini ayarlamayı deneyin.",
     emptyClean: "Henüz ziyaret yok",
     emptyCleanSub: "Kurumunuz yakında ziyaret planlayacak.",
-    drPrefix: "Dr. ",
+    drPrefix: "",
   },
 
   guestTrack: {
@@ -908,7 +908,7 @@ export const tr: AppDict = {
     docActionCta: "Belgeleri Aç",
     apptTodayTitle: "Bugün saat {time}'de ziyaret",
     viewSchedule: "Programı Gör",
-    drPrefix: "Dr. ",
+    drPrefix: "",
     docStatusPending: "Beklemede",
     docStatusUnderReview: "İnceleniyor",
     docStatusApproved: "Onaylandı",

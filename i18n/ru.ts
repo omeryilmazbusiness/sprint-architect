@@ -735,7 +735,7 @@ export const ru: AppDict = {
 
   appointmentsToday: {
     sheetTitle: "Визиты сегодня",
-    searchPlaceholder: "Поиск участника, специалиста или процедуры…",
+    searchPlaceholder: "Поиск участника, специалиста или визита…",
     errorTitle: "Не удалось загрузить визиты",
     errorBody: "Проверьте соединение и попробуйте снова.",
     retry: "Повторить",
@@ -846,7 +846,7 @@ export const ru: AppDict = {
     noPhoneSub: "Телефон {label} недоступен.",
     cannotCall: "Звонок невозможен",
     cannotCallSub: "Ваше устройство не поддерживает звонки.",
-    drPrefix: "Д-р ",
+    drPrefix: "",
   },
 
   guestSchedule: {
@@ -872,7 +872,7 @@ export const ru: AppDict = {
     kpiUpcoming: "Предстоящие",
     kpiCompleted: "Завершённые",
     kpiMissed: "Пропущенные",
-    searchPlaceholder: "Поиск специалиста или процедуры…",
+    searchPlaceholder: "Поиск специалиста или визита…",
     filterByStatus: "Фильтр по статусу",
     filterByRange: "Фильтр по датам",
     clearFilters: "Очистить",
@@ -882,7 +882,7 @@ export const ru: AppDict = {
     emptyFilteredSub: "Попробуйте изменить фильтры или поисковый запрос.",
     emptyClean: "Визитов пока нет",
     emptyCleanSub: "Учреждение запланирует визиты в ближайшее время.",
-    drPrefix: "Д-р ",
+    drPrefix: "",
   },
 
   guestTrack: {
@@ -912,7 +912,7 @@ export const ru: AppDict = {
     docActionCta: "Открыть документы",
     apptTodayTitle: "Визит сегодня в {time}",
     viewSchedule: "Посмотреть расписание",
-    drPrefix: "Д-р ",
+    drPrefix: "",
     docStatusPending: "Ожидает",
     docStatusUnderReview: "На проверке",
     docStatusApproved: "Одобрен",

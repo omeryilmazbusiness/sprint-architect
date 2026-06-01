@@ -29,6 +29,7 @@ import { AssignHotelSheet } from "@/components/guestDetail/AssignHotelSheet";
 import { AssignDocTypeSheet } from "@/components/guestDetail/AssignDocTypeSheet";
 import { CreateAppointmentSheet } from "@/components/guestDetail/CreateAppointmentSheet";
 import { useT } from "@/hooks/useT";
+import { DISPLAY_TERMS } from "@/constants/terminology";
 import { useLanguage } from "@/context/LanguageContext";
 
 const LOCALE_BCP47: Record<string, string> = {
@@ -278,7 +279,7 @@ export default function GuestDetailScreen() {
 
   function handleCancelAppointment(apptId: string, title: string) {
     if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm(`Cancel "${title || "appointment"}"?`)) {
+      if (typeof window !== "undefined" && window.confirm(`Cancel "${title || DISPLAY_TERMS.appointment.toLowerCase()}"?`)) {
         cancelAppointmentMutation.mutate(apptId);
       }
     } else {
@@ -440,7 +441,7 @@ export default function GuestDetailScreen() {
                   onPress={() =>
                     handleCancelAppointment(
                       nextAppointment.id,
-                      nextAppointment.title ?? "Appointment"
+                      nextAppointment.title ?? DISPLAY_TERMS.appointment
                     )
                   }
                   style={styles.apptCancelBtn}
@@ -456,12 +457,12 @@ export default function GuestDetailScreen() {
               </View>
             </View>
             <Text style={styles.apptTitle}>
-              {nextAppointment.title ?? "Appointment"}
+              {nextAppointment.title ?? DISPLAY_TERMS.appointment}
             </Text>
             <Text style={styles.apptMeta}>
               {fmtDateTime(nextAppointment.startAt, bcp47)}
               {nextAppointment.doctor
-                ? `  ·  Dr. ${nextAppointment.doctor.fullName}`
+                ? `  ·  ${nextAppointment.doctor.fullName}`
                 : ""}
             </Text>
           </View>

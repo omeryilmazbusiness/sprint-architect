@@ -65,7 +65,7 @@ function getIcon(type: NotifType): React.ComponentProps<typeof Ionicons>["name"]
     case "JOURNEY_UPDATED":       return "map-outline";
     case "HOTEL_ASSIGNED":        return "bed-outline";
     case "TRANSPORT_ASSIGNED":    return "car-outline";
-    case "DOCTOR_ASSIGNED":       return "medical-outline";
+    case "DOCTOR_ASSIGNED":       return "person-outline";
     case "WELCOME":               return "heart-outline";
     default:                      return "notifications-outline";
   }

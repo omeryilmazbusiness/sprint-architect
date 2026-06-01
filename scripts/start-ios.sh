@@ -27,7 +27,13 @@ free_port "${METRO_PORT}"
 echo "Starting Metro for $(basename "$ROOT") on http://127.0.0.1:${METRO_PORT} ..."
 EXPO_NO_INTERACTIVE=1 npx expo start --port "${METRO_PORT}" --localhost --clear &
 METRO_PID=$!
-trap 'kill $METRO_PID 2>/dev/null || true' EXIT INT TERM
+# Keep Metro running after install — only stop on Ctrl+C in this terminal.
+cleanup_metro() {
+  echo ""
+  echo "Stopping Metro (PID ${METRO_PID})..."
+  kill "${METRO_PID}" 2>/dev/null || true
+}
+trap cleanup_metro INT TERM
 
 for i in {1..90}; do
   if curl -sf "http://127.0.0.1:${METRO_PORT}/status" >/dev/null 2>&1; then
@@ -46,4 +52,10 @@ REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 \
 RCT_METRO_PORT="${METRO_PORT}" \
 npx expo run:ios --device "${SIMULATOR_NAME}" --no-bundler
 
-echo "Done. Metro on port ${METRO_PORT} (PID ${METRO_PID}). Ctrl+C stops Metro."
+echo ""
+echo "Healory is running."
+echo "  Metro:  http://127.0.0.1:${METRO_PORT} (PID ${METRO_PID})"
+echo "  API:    start in another terminal: npm run server:dev"
+echo "  Stop Metro: kill ${METRO_PID}"
+# Re-open app with correct deep link (after Info.plist scheme fix).
+xcrun simctl openurl booted "healory://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A${METRO_PORT}" 2>/dev/null || true

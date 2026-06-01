@@ -29,19 +29,19 @@ export type GuestRequestedServiceMeta = {
 };
 
 export const GUEST_REQUESTED_SERVICES: readonly GuestRequestedServiceMeta[] = [
-  { code: "RHINOPLASTY", icon: "body-outline" },
-  { code: "EYE", icon: "eye-outline" },
+  { code: "RHINOPLASTY", icon: "cube-outline" },
+  { code: "EYE", icon: "scan-outline" },
   { code: "HAIR", icon: "cut-outline" },
-  { code: "DENTAL", icon: "happy-outline" },
+  { code: "DENTAL", icon: "grid-outline" },
   { code: "PLASTIC", icon: "sparkles-outline" },
-  { code: "ORTHOPEDIC", icon: "fitness-outline" },
-  { code: "CARDIAC", icon: "heart-outline" },
-  { code: "IVF", icon: "flower-outline" },
+  { code: "ORTHOPEDIC", icon: "walk-outline" },
+  { code: "CARDIAC", icon: "pulse-outline" },
+  { code: "IVF", icon: "leaf-outline" },
   { code: "BARIATRIC", icon: "scale-outline" },
-  { code: "ONCOLOGY", icon: "medkit-outline" },
+  { code: "ONCOLOGY", icon: "layers-outline" },
   { code: "DERMATOLOGY", icon: "water-outline" },
-  { code: "ENT", icon: "ear-outline" },
-  { code: "UROLOGY", icon: "pulse-outline" },
+  { code: "ENT", icon: "radio-outline" },
+  { code: "UROLOGY", icon: "funnel-outline" },
   { code: "CHECKUP", icon: "clipboard-outline" },
   { code: "OTHER", icon: "ellipsis-horizontal-outline" },
 ] as const;

@@ -1,4 +1,5 @@
 import type { CreateGuestDict, GuestDetailDict } from "../types";
+import { GUEST_REQUESTED_SERVICE_LABELS_TR } from "@/constants/guestRequestedServiceLabels";
 
 export const guestDetailDict: GuestDetailDict = {
   change: "Değiştir",
@@ -60,7 +61,7 @@ export const guestDetailDict: GuestDetailDict = {
   labelDate: "Tarih",
   labelTime: "Saat",
   labelDoctor: "Sağlayıcı",
-  labelProcedureTitle: "İşlem Başlığı",
+  labelProcedureTitle: "Ziyaret Başlığı",
   apptSummaryLabel: "Özet",
   searchDoctorPlaceholder: "Sağlayıcı ara…",
   noDoctorsMatch: "Aramanızla eşleşen sağlayıcı yok",
@@ -73,39 +74,21 @@ export const guestDetailDict: GuestDetailDict = {
   moreDoctors: "daha fazla",
   createApptError: "Ziyaret oluşturulamadı",
   createApptBtn: "Ziyaret Oluştur",
-  apptTitlePlaceholder: "İşlem başlığı",
-};
-
-const SERVICE_LABELS: Record<string, string> = {
-  RHINOPLASTY: "Rinoplasti",
-  EYE: "Göz Cerrahisi",
-  HAIR: "Saç Ekimi",
-  DENTAL: "Diş",
-  PLASTIC: "Plastik Cerrahi",
-  ORTHOPEDIC: "Ortopedi",
-  CARDIAC: "Kardiyoloji",
-  IVF: "Tüp Bebek",
-  BARIATRIC: "Obezite Cerrahisi",
-  ONCOLOGY: "Onkoloji",
-  DERMATOLOGY: "Dermatoloji",
-  ENT: "KBB",
-  UROLOGY: "Üroloji",
-  CHECKUP: "Sağlık Kontrolü",
-  OTHER: "Diğer",
+  apptTitlePlaceholder: "ör. Yerinde danışma",
 };
 
 export const createGuestDict: CreateGuestDict = {
   nationalityTitle: "Uyruk Seç",
   searchCountryPlaceholder: "Ülke ara…",
   servicesTitle: "Talep Edilen Hizmetler",
-  servicesSubtitle: "Misafirin ilgilendiği tüm işlemleri seçin",
+  servicesSubtitle: "Misafirin ilgilendiği tüm hizmet paketlerini seçin",
   confirmSelectAtLeast: "En az birini seçin",
   confirmServices: "Devam",
-  serviceLabels: SERVICE_LABELS,
+  serviceLabels: { ...GUEST_REQUESTED_SERVICE_LABELS_TR },
   stepGuestTitle: "Misafir bilgileri",
   stepGuestSubtitle: "Ad, uyruk ve iletişim",
   stepServicesTitle: "Talep edilen hizmetler",
-  stepServicesSubtitle: "Misafir hangi tedavileri arıyor?",
+  stepServicesSubtitle: "Misafir hangi hizmet paketlerine ihtiyaç duyuyor?",
   stepTravelTitle: "Seyahat tarihleri",
   stepTravelSubtitle: "Varış ve ayrılış tarihleri",
   wizardStepOf: "Adım {current} / {total}",

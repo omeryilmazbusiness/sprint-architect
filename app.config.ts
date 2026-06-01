@@ -21,6 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "Healory uses the camera to upload files and profile photos.",
     NSPhotoLibraryUsageDescription:
       "Healory uses your photo library to upload files and images.",
+    ITSAppUsesNonExemptEncryption: false,
   };
 
   if (!IS_PROD_BUILD) {

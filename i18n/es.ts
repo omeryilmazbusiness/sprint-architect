@@ -731,7 +731,7 @@ export const es: AppDict = {
 
   appointmentsToday: {
     sheetTitle: "Visitas de Hoy",
-    searchPlaceholder: "Buscar miembro, proveedor o procedimiento…",
+    searchPlaceholder: "Buscar miembro, proveedor o visita…",
     errorTitle: "No se pudieron cargar las visitas",
     errorBody: "Comprueba tu conexión e inténtalo de nuevo.",
     retry: "Reintentar",
@@ -842,7 +842,7 @@ export const es: AppDict = {
     noPhoneSub: "El teléfono de {label} no está disponible.",
     cannotCall: "No se puede llamar",
     cannotCallSub: "Tu dispositivo no puede realizar llamadas telefónicas.",
-    drPrefix: "Dr. ",
+    drPrefix: "",
   },
 
   guestSchedule: {
@@ -868,7 +868,7 @@ export const es: AppDict = {
     kpiUpcoming: "Próximas",
     kpiCompleted: "Completadas",
     kpiMissed: "Perdidas",
-    searchPlaceholder: "Buscar proveedor o procedimiento…",
+    searchPlaceholder: "Buscar proveedor o visita…",
     filterByStatus: "Filtrar por Estado",
     filterByRange: "Filtrar por Rango de Fechas",
     clearFilters: "Limpiar",
@@ -878,7 +878,7 @@ export const es: AppDict = {
     emptyFilteredSub: "Intenta ajustar los filtros o el término de búsqueda.",
     emptyClean: "Aún no hay visitas",
     emptyCleanSub: "Tu institución programará las visitas pronto.",
-    drPrefix: "Dr. ",
+    drPrefix: "",
   },
 
   guestTrack: {
@@ -908,7 +908,7 @@ export const es: AppDict = {
     docActionCta: "Abrir Documentos",
     apptTodayTitle: "Visita hoy a las {time}",
     viewSchedule: "Ver Agenda",
-    drPrefix: "Dr. ",
+    drPrefix: "",
     docStatusPending: "Pendiente",
     docStatusUnderReview: "En Revisión",
     docStatusApproved: "Aprobado",

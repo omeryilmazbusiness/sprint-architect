@@ -40,7 +40,7 @@ function ApptRow({ appt }: ApptRowProps) {
         </Text>
         <Text style={styles.sub} numberOfLines={1}>
           {appt.title}
-          {appt.doctorName ? ` · Dr. ${appt.doctorName}` : ""}
+          {appt.doctorName ? ` · ${appt.doctorName}` : ""}
         </Text>
       </View>
       <StatusPill status={appt.status} />

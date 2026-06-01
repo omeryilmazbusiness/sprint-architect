@@ -22,6 +22,7 @@ import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
+import { DISPLAY_TERMS } from "@/constants/terminology";
 
 interface Patient {
   id: string;
@@ -166,7 +167,7 @@ function CreatePatientModal({ visible, onClose, colors, clinicId }: {
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
           <Text style={[styles.modalTitle, { color: colors.text, fontFamily: "PlusJakartaSans_700Bold" }]}>
-            {created ? "Patient Created" : "New Patient"}
+            {created ? `${DISPLAY_TERMS.patient} Created` : `New ${DISPLAY_TERMS.patient}`}
           </Text>
           {!created && (
             <Pressable onPress={submit} disabled={mutation.isPending} testID="submit-create-patient">

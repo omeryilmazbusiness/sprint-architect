@@ -1,4 +1,5 @@
 import type { CreateGuestDict, GuestDetailDict } from "../types";
+import { GUEST_REQUESTED_SERVICE_LABELS_RU } from "@/constants/guestRequestedServiceLabels";
 
 export const guestDetailDict: GuestDetailDict = {
   change: "Изменить",
@@ -60,7 +61,7 @@ export const guestDetailDict: GuestDetailDict = {
   labelDate: "Дата",
   labelTime: "Время",
   labelDoctor: "Специалист",
-  labelProcedureTitle: "Название процедуры",
+  labelProcedureTitle: "Название визита",
   apptSummaryLabel: "Сводка",
   searchDoctorPlaceholder: "Поиск специалистов…",
   noDoctorsMatch: "Нет специалистов по вашему запросу",
@@ -73,39 +74,21 @@ export const guestDetailDict: GuestDetailDict = {
   moreDoctors: "ещё",
   createApptError: "Не удалось создать визит",
   createApptBtn: "Создать визит",
-  apptTitlePlaceholder: "Название процедуры",
-};
-
-const SERVICE_LABELS: Record<string, string> = {
-  RHINOPLASTY: "Ринопластика",
-  EYE: "Офтальмология",
-  HAIR: "Пересадка волос",
-  DENTAL: "Стоматология",
-  PLASTIC: "Пластическая хирургия",
-  ORTHOPEDIC: "Ортопедия",
-  CARDIAC: "Кардиология",
-  IVF: "ЭКО",
-  BARIATRIC: "Бариатрическая хирургия",
-  ONCOLOGY: "Онкология",
-  DERMATOLOGY: "Дерматология",
-  ENT: "ЛОР",
-  UROLOGY: "Урология",
-  CHECKUP: "Медосмотр",
-  OTHER: "Другое",
+  apptTitlePlaceholder: "напр. Консультация на месте",
 };
 
 export const createGuestDict: CreateGuestDict = {
   nationalityTitle: "Выбор гражданства",
   searchCountryPlaceholder: "Поиск страны…",
   servicesTitle: "Запрошенные услуги",
-  servicesSubtitle: "Выберите все интересующие процедуры",
+  servicesSubtitle: "Выберите все интересующие пакеты услуг",
   confirmSelectAtLeast: "Выберите хотя бы одну",
   confirmServices: "Далее",
-  serviceLabels: SERVICE_LABELS,
+  serviceLabels: { ...GUEST_REQUESTED_SERVICE_LABELS_RU },
   stepGuestTitle: "Данные гостя",
   stepGuestSubtitle: "Имя, гражданство и контакт",
   stepServicesTitle: "Запрошенные услуги",
-  stepServicesSubtitle: "Какие процедуры интересуют гостя?",
+  stepServicesSubtitle: "Какие пакеты услуг нужны гостю?",
   stepTravelTitle: "Даты поездки",
   stepTravelSubtitle: "Дата прибытия и отъезда",
   wizardStepOf: "Шаг {current} из {total}",

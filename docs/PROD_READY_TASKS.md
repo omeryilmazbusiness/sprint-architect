@@ -34,8 +34,8 @@ Last audit: manager, guest, admin UI surfaces. Goal: no user-visible **clinic / 
 |----|------|------------|--------|
 | P0-1 | Replace all UI copy **Organization → Institution** (en/tr/es/ru) | i18n | ✅ |
 | P0-2 | Demo seed name `Demo Clinic` → `Demo Institution` (+ DB update on seed) | `server/seed.ts` | ✅ (re-run seed on env) |
-| P0-3 | Remove hardcoded English "clinic/patient/doctor/appointment" in components | `components/`, `app/` | 🔄 (CreateAppt, invoices, purge done) |
-| P0-4 | Neutralize **service type** labels (Dental, IVF, Hair Transplant…) in create-guest flow | `CreateGuestSheet`, i18n bundles | ✅ display labels |
+| P0-3 | Remove hardcoded English "clinic/patient/doctor/appointment" in components | `components/`, `app/` | ✅ legacy tabs, settings, operations, admin rows |
+| P0-4 | Neutralize **service type** labels (Dental, IVF, Hair Transplant…) in create-guest flow | `constants/guestRequestedServiceLabels.ts`, i18n bundles | ✅ Service Package A–M |
 | P0-5 | Production: `git push main` → CD, `db:push`, `ALLOW_PROD_DEMO_SEED=1 npm run db:seed:demo-guest` | ops | ⬜ |
 | P0-6 | Recapture App Store screenshots (EN, no medical/service list visible) | ASC | ⬜ |
 | P0-7 | **Organization** Apple Developer account OR accept 5.1.1(ix) path | business | ⬜ |
@@ -49,7 +49,7 @@ Last audit: manager, guest, admin UI surfaces. Goal: no user-visible **clinic / 
 | P1-1 | App Store Connect metadata per `APP_STORE_REVIEW.md` (Institution not Clinic) | |
 | P1-2 | Rename admin tab route label only: `clinics` tab shows "Institutions" (done via i18n) | |
 | P1-3 | Guest upload (SOLID) + departure purge + T−1h manager PDF/ZIP | [PLAN_GUEST_UPLOAD_AND_RETENTION.md](./PLAN_GUEST_UPLOAD_AND_RETENTION.md) — Epics A–F ✅ (G QA ⬜) |
-| P1-4 | `medical-outline` icons → `person-outline` / `briefcase-outline` where decorative | |
+| P1-4 | `medical-outline` icons → `person-outline` / `briefcase-outline` where decorative | ✅ |
 | P1-5 | Notification titles from API ("Clinic Suspended", "Doctor Assigned") → neutral server copy | `managerRoutes.ts`, `billingService.ts` | ✅ |
 | P1-6 | Email templates: clinic/patient wording | `server/email/templates.ts` | ✅ partial (monthly report) |
 | P1-7 | Bundle ID `com.healory.healthtour` — long-term rename optional | |

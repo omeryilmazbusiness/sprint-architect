@@ -137,7 +137,7 @@ function DoctorCardContent({
       {/* Card header: category chip + appointment/certified badge */}
       <View style={s.header}>
         <View style={s.chipRow}>
-          <Ionicons name="medical-outline" size={12} color={T.accent} />
+          <Ionicons name="person-outline" size={12} color={T.accent} />
           <Text style={s.chip}>{tg.doctorChip}</Text>
         </View>
 

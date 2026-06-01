@@ -50,20 +50,20 @@ export async function seedDatabase() {
   const [doc1, doc2, doc3] = await Promise.all([
     db.insert(doctors).values({
       clinicId: CLINIC_ID,
-      fullName: "Dr. Aydin Kaya",
-      specialty: "Cardiovascular Surgery",
+      fullName: "Aydin Kaya",
+      specialty: "Operations Lead",
       phone: "+90 212 555 0101",
     }).onConflictDoNothing().returning(),
     db.insert(doctors).values({
       clinicId: CLINIC_ID,
-      fullName: "Dr. Fatma Ozturk",
-      specialty: "Fertility & IVF",
+      fullName: "Fatma Ozturk",
+      specialty: "Guest Services",
       phone: "+90 212 555 0102",
     }).onConflictDoNothing().returning(),
     db.insert(doctors).values({
       clinicId: CLINIC_ID,
-      fullName: "Dr. Mehmet Yilmaz",
-      specialty: "Orthopedic Surgery",
+      fullName: "Mehmet Yilmaz",
+      specialty: "Logistics Coordinator",
       phone: "+90 212 555 0103",
     }).onConflictDoNothing().returning(),
   ]);

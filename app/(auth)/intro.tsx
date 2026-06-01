@@ -243,7 +243,7 @@ export default function IntroScreen() {
             { opacity: pillarsOp, transform: [{ translateY: pillarsY }] },
           ]}
         >
-          <Pillar icon="heart-outline" label="Member Care" delay={0} />
+          <Pillar icon="people-outline" label="Team Care" delay={0} />
           <View style={styles.pillarDivider} />
           <Pillar icon="business-outline" label="Multi-Site" delay={80} />
           <View style={styles.pillarDivider} />

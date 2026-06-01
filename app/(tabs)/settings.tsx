@@ -18,6 +18,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { DISPLAY_TERMS, ROLE_LABELS } from "@/constants/terminology";
 
 interface Clinic {
   id: string;
@@ -105,10 +106,10 @@ export default function SettingsScreen() {
   const displayName = user?.email ?? user?.fullName ?? "User";
   const roleLabel =
     user?.role === "ADMIN"
-      ? "System Administrator"
+      ? ROLE_LABELS.ADMIN
       : user?.role === "MANAGER"
-      ? "Clinic Manager"
-      : "Patient";
+      ? ROLE_LABELS.MANAGER
+      : ROLE_LABELS.PATIENT;
 
   return (
     <ScrollView
@@ -137,7 +138,7 @@ export default function SettingsScreen() {
             </Text>
             {user?.clinicId && (
               <Text style={[styles.adminClinic, { color: colors.accent, fontFamily: "PlusJakartaSans_400Regular" }]}>
-                Clinic ID: {user.clinicId}
+                {DISPLAY_TERMS.clinic} ID: {user.clinicId}
               </Text>
             )}
           </View>
@@ -159,7 +160,7 @@ export default function SettingsScreen() {
         {user?.role === "ADMIN" && (
           <>
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
-              CLINICS
+              {DISPLAY_TERMS.clinics.toUpperCase()}
             </Text>
             <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {(clinics ?? []).map((clinic, idx) => (
@@ -179,7 +180,7 @@ export default function SettingsScreen() {
                       {clinic.name}
                     </Text>
                     <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
-                      {clinic.patientCount} patients
+                      {clinic.patientCount} {DISPLAY_TERMS.patients.toLowerCase()}
                     </Text>
                   </View>
                   <StatusBadge status={clinic.status as any} small />

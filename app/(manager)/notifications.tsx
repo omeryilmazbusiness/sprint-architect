@@ -56,7 +56,7 @@ function getIcon(type: string): React.ComponentProps<typeof Ionicons>["name"] {
     case "CLINIC_SUSPENDED":       return "ban-outline";
     case "HOTEL_ASSIGNED":         return "bed-outline";
     case "TRANSPORT_ASSIGNED":     return "car-outline";
-    case "DOCTOR_ASSIGNED":        return "medical-outline";
+    case "DOCTOR_ASSIGNED":        return "person-outline";
     case "JOURNEY_UPDATED":        return "map-outline";
     case "WELCOME":                return "heart-outline";
     case "SCHEDULER_FAILED":

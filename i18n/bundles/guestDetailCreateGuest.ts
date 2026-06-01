@@ -1,4 +1,5 @@
 import type { CreateGuestDict, GuestDetailDict } from "../types";
+import { GUEST_REQUESTED_SERVICE_LABELS_EN } from "@/constants/guestRequestedServiceLabels";
 
 /** Shared guest-detail + create-guest strings (English). Import into each locale file. */
 export const guestDetailDict: GuestDetailDict = {
@@ -61,7 +62,7 @@ export const guestDetailDict: GuestDetailDict = {
   labelDate: "Date",
   labelTime: "Time",
   labelDoctor: "Provider",
-  labelProcedureTitle: "Procedure Title",
+  labelProcedureTitle: "Visit Title",
   apptSummaryLabel: "Summary",
   searchDoctorPlaceholder: "Search providers…",
   noDoctorsMatch: "No providers match your search",
@@ -77,36 +78,18 @@ export const guestDetailDict: GuestDetailDict = {
   apptTitlePlaceholder: "e.g. On-site consultation",
 };
 
-const SERVICE_LABELS: Record<string, string> = {
-  RHINOPLASTY: "Rhinoplasty",
-  EYE: "Eye Surgery",
-  HAIR: "Hair Transplant",
-  DENTAL: "Dental",
-  PLASTIC: "Plastic Surgery",
-  ORTHOPEDIC: "Orthopedic",
-  CARDIAC: "Cardiac",
-  IVF: "IVF / Fertility",
-  BARIATRIC: "Bariatric / Weight Loss",
-  ONCOLOGY: "Oncology",
-  DERMATOLOGY: "Dermatology",
-  ENT: "ENT",
-  UROLOGY: "Urology",
-  CHECKUP: "Health Check-up",
-  OTHER: "Other",
-};
-
 export const createGuestDict: CreateGuestDict = {
   nationalityTitle: "Select Nationality",
   searchCountryPlaceholder: "Search country…",
   servicesTitle: "Requested Services",
-  servicesSubtitle: "Select all procedures the guest is interested in",
+  servicesSubtitle: "Select all service packages the guest is interested in",
   confirmSelectAtLeast: "Select at least one",
   confirmServices: "Continue",
-  serviceLabels: SERVICE_LABELS,
+  serviceLabels: { ...GUEST_REQUESTED_SERVICE_LABELS_EN },
   stepGuestTitle: "Guest details",
   stepGuestSubtitle: "Name, nationality and contact",
   stepServicesTitle: "Requested services",
-  stepServicesSubtitle: "What treatments is the guest seeking?",
+  stepServicesSubtitle: "Which service packages does the guest need?",
   stepTravelTitle: "Travel dates",
   stepTravelSubtitle: "When does the guest arrive and leave?",
   wizardStepOf: "Step {current} of {total}",

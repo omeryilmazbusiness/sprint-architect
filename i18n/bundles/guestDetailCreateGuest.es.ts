@@ -1,4 +1,5 @@
 import type { CreateGuestDict, GuestDetailDict } from "../types";
+import { GUEST_REQUESTED_SERVICE_LABELS_ES } from "@/constants/guestRequestedServiceLabels";
 
 export const guestDetailDict: GuestDetailDict = {
   change: "Cambiar",
@@ -60,7 +61,7 @@ export const guestDetailDict: GuestDetailDict = {
   labelDate: "Fecha",
   labelTime: "Hora",
   labelDoctor: "Proveedor",
-  labelProcedureTitle: "Título del procedimiento",
+  labelProcedureTitle: "Título de la visita",
   apptSummaryLabel: "Resumen",
   searchDoctorPlaceholder: "Buscar proveedores…",
   noDoctorsMatch: "Ningún proveedor coincide con tu búsqueda",
@@ -73,39 +74,21 @@ export const guestDetailDict: GuestDetailDict = {
   moreDoctors: "más",
   createApptError: "No se pudo crear la visita",
   createApptBtn: "Crear visita",
-  apptTitlePlaceholder: "Título del procedimiento",
-};
-
-const SERVICE_LABELS: Record<string, string> = {
-  RHINOPLASTY: "Rinoplastia",
-  EYE: "Cirugía ocular",
-  HAIR: "Trasplante capilar",
-  DENTAL: "Dental",
-  PLASTIC: "Cirugía plástica",
-  ORTHOPEDIC: "Ortopedia",
-  CARDIAC: "Cardiología",
-  IVF: "FIV / Fertilidad",
-  BARIATRIC: "Cirugía bariátrica",
-  ONCOLOGY: "Oncología",
-  DERMATOLOGY: "Dermatología",
-  ENT: "ORL",
-  UROLOGY: "Urología",
-  CHECKUP: "Chequeo médico",
-  OTHER: "Otro",
+  apptTitlePlaceholder: "p. ej. Consulta en sitio",
 };
 
 export const createGuestDict: CreateGuestDict = {
   nationalityTitle: "Seleccionar nacionalidad",
   searchCountryPlaceholder: "Buscar país…",
   servicesTitle: "Servicios solicitados",
-  servicesSubtitle: "Selecciona todos los procedimientos de interés",
+  servicesSubtitle: "Selecciona todos los paquetes de servicio de interés",
   confirmSelectAtLeast: "Selecciona al menos uno",
   confirmServices: "Continuar",
-  serviceLabels: SERVICE_LABELS,
+  serviceLabels: { ...GUEST_REQUESTED_SERVICE_LABELS_ES },
   stepGuestTitle: "Datos del invitado",
   stepGuestSubtitle: "Nombre, nacionalidad y contacto",
   stepServicesTitle: "Servicios solicitados",
-  stepServicesSubtitle: "¿Qué tratamientos busca el invitado?",
+  stepServicesSubtitle: "¿Qué paquetes de servicio necesita el invitado?",
   stepTravelTitle: "Fechas de viaje",
   stepTravelSubtitle: "Llegada y salida del invitado",
   wizardStepOf: "Paso {current} de {total}",

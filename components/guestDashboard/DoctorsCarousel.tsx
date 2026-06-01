@@ -82,7 +82,7 @@ function DoctorSlide({ doctor }: { doctor: DoctorItem }) {
           </Text>
           {doctor.specialty ? (
             <View style={s.specialtyRow}>
-              <Ionicons name="medical-outline" size={12} color={T.accent} />
+              <Ionicons name="person-outline" size={12} color={T.accent} />
               <Text style={s.specialty} numberOfLines={1}>
                 {doctor.specialty}
               </Text>

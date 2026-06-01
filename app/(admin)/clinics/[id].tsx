@@ -163,7 +163,7 @@ export default function ClinicDetailScreen() {
               <View style={styles.chipsRow}>
                 {data.services.map((svc) => (
                   <View key={svc} style={styles.serviceChip}>
-                    <Ionicons name="medical-outline" size={12} color={T.accent} />
+                    <Ionicons name="person-outline" size={12} color={T.accent} />
                     <Text style={styles.serviceChipText}>{serviceLabel(svc)}</Text>
                   </View>
                 ))}

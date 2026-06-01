@@ -438,7 +438,7 @@ function SheetContent({
             <View style={styles.card}>
               {patient.requestedService && (
                 <InfoRow
-                  icon="medical-outline"
+                  icon="person-outline"
                   label="Requested Service"
                   value={patient.requestedService}
                 />
