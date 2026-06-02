@@ -12,6 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const base = (appJson.expo ?? {}) as ExpoConfig;
   const apiUrl =
     process.env.EXPO_PUBLIC_API_URL?.trim() || "http://127.0.0.1:5000";
+  const reviewMode = process.env.EXPO_PUBLIC_REVIEW_MODE === "1";
 
   const iosInfoPlist: Record<string, unknown> = {
     ...(base.ios?.infoPlist as Record<string, unknown> | undefined),
@@ -51,6 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extra: {
       ...((base.extra as Record<string, unknown>) ?? {}),
       apiUrl,
+      reviewMode,
       eas: {
         projectId: process.env.EAS_PROJECT_ID ?? EAS_PROJECT_ID,
       },

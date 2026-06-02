@@ -16,6 +16,8 @@ import { eq } from "drizzle-orm";
 import { hashPassword } from "./auth/password";
 
 const CLINIC_ID = "clinic-demo-001";
+const REVIEW_MODE = process.env.EXPO_PUBLIC_REVIEW_MODE === "1" || process.env.REVIEW_MODE === "1";
+const DEMO_CLINIC_NAME = REVIEW_MODE ? "Demo Community" : "Demo Institution";
 
 export async function seedDatabase() {
   console.log("[seed] Starting database seed...");
@@ -23,13 +25,13 @@ export async function seedDatabase() {
   await db.insert(clinics)
     .values({
       id: CLINIC_ID,
-      name: "Demo Institution",
+      name: DEMO_CLINIC_NAME,
       status: "ACTIVE",
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
     })
     .onConflictDoUpdate({
       target: clinics.id,
-      set: { name: "Demo Institution" },
+      set: { name: DEMO_CLINIC_NAME },
     });
 
   // Seed Users
@@ -103,13 +105,29 @@ export async function seedDatabase() {
     meetingPointText: "Hotel Lobby - Daily 08:30",
   }).onConflictDoNothing().returning();
 
-  await Promise.all([
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Passport Photocopy", code: "PASSPORT_COPY", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Visa", code: "VISA", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Internal reference (staff only)", code: "INTERNAL_REF", isRequired: false }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Travel Insurance", code: "TRAVEL_INSURANCE", isRequired: true }).onConflictDoNothing(),
-    db.insert(documentTypes).values({ clinicId: CLINIC_ID, name: "Consent Form", code: "CONSENT_FORM", isRequired: true }).onConflictDoNothing(),
-  ]);
+  const demoDocTypes = REVIEW_MODE
+    ? [
+        { name: "Profile Photo", code: "PROFILE_PHOTO", isRequired: true },
+        { name: "Travel Itinerary (PDF)", code: "ITINERARY_PDF", isRequired: false },
+        { name: "Ticket / Reservation", code: "TICKET_RESERVATION", isRequired: false },
+        { name: "Internal note (staff only)", code: "INTERNAL_REF", isRequired: false },
+      ]
+    : [
+        { name: "Passport Photocopy", code: "PASSPORT_COPY", isRequired: true },
+        { name: "Visa", code: "VISA", isRequired: true },
+        { name: "Internal reference (staff only)", code: "INTERNAL_REF", isRequired: false },
+        { name: "Travel Insurance", code: "TRAVEL_INSURANCE", isRequired: true },
+        { name: "Consent Form", code: "CONSENT_FORM", isRequired: true },
+      ];
+
+  await Promise.all(
+    demoDocTypes.map((dt) =>
+      db
+        .insert(documentTypes)
+        .values({ clinicId: CLINIC_ID, name: dt.name, code: dt.code, isRequired: dt.isRequired })
+        .onConflictDoNothing(),
+    ),
+  );
 
   // Update codes on existing document types for this clinic
   const existingDocTypes = await db.query.documentTypes.findMany({
@@ -117,20 +135,23 @@ export async function seedDatabase() {
   });
 
   for (const dt of existingDocTypes) {
-    if (dt.name === "Passport / ID" && !dt.code) {
-      await db.update(documentTypes).set({ code: "PASSPORT_COPY", name: "Passport Photocopy" }).where(eq(documentTypes.id, dt.id));
-    }
-    if (dt.name === "Passport Photocopy" && !dt.code) {
-      await db.update(documentTypes).set({ code: "PASSPORT_COPY" }).where(eq(documentTypes.id, dt.id));
-    }
-    if (dt.name === "Visa" && !dt.code) {
-      await db.update(documentTypes).set({ code: "VISA" }).where(eq(documentTypes.id, dt.id));
-    }
-    if (dt.name === "Travel Insurance" && !dt.code) {
-      await db.update(documentTypes).set({ code: "TRAVEL_INSURANCE" }).where(eq(documentTypes.id, dt.id));
-    }
-    if (dt.name === "Consent Form" && !dt.code) {
-      await db.update(documentTypes).set({ code: "CONSENT_FORM" }).where(eq(documentTypes.id, dt.id));
+    // Legacy normalization for older seeded names
+    if (!REVIEW_MODE) {
+      if (dt.name === "Passport / ID" && !dt.code) {
+        await db.update(documentTypes).set({ code: "PASSPORT_COPY", name: "Passport Photocopy" }).where(eq(documentTypes.id, dt.id));
+      }
+      if (dt.name === "Passport Photocopy" && !dt.code) {
+        await db.update(documentTypes).set({ code: "PASSPORT_COPY" }).where(eq(documentTypes.id, dt.id));
+      }
+      if (dt.name === "Visa" && !dt.code) {
+        await db.update(documentTypes).set({ code: "VISA" }).where(eq(documentTypes.id, dt.id));
+      }
+      if (dt.name === "Travel Insurance" && !dt.code) {
+        await db.update(documentTypes).set({ code: "TRAVEL_INSURANCE" }).where(eq(documentTypes.id, dt.id));
+      }
+      if (dt.name === "Consent Form" && !dt.code) {
+        await db.update(documentTypes).set({ code: "CONSENT_FORM" }).where(eq(documentTypes.id, dt.id));
+      }
     }
     if ((dt.name === "Medical History" || dt.name === "Lab Results (recent)") && dt.code !== "INTERNAL_REF") {
       await db.update(documentTypes).set({ code: "INTERNAL_REF", name: "Internal reference (staff only)" }).where(eq(documentTypes.id, dt.id));
@@ -216,38 +237,42 @@ export async function seedDatabase() {
   });
 
   if (existingAppts.length === 0 && doc1.length > 0) {
+    const venue = REVIEW_MODE ? "Demo Community Hub" : `${DEMO_CLINIC_NAME} – Cardiology Wing, 3rd Floor`;
+    const eventType1 = REVIEW_MODE ? "Meetup" : "Consultation";
+    const eventType2 = REVIEW_MODE ? "Event" : "Surgery";
+    const eventType3 = REVIEW_MODE ? "Check-in" : "Follow-up";
     await db.insert(appointments).values([
       {
         clinicId: CLINIC_ID,
         patientId: patient1Id,
         doctorId: doc1[0].id,
-        title: "Pre-Op Cardiac Consultation",
-        type: "Consultation",
+        title: REVIEW_MODE ? "Welcome Meetup" : "Pre-Op Cardiac Consultation",
+        type: eventType1,
         startAt: new Date("2026-03-11T09:00:00Z"),
         endAt: new Date("2026-03-11T10:00:00Z"),
-        locationText: "Demo Institution – Cardiology Wing, 3rd Floor",
+        locationText: venue,
         status: "SCHEDULED",
-        notes: "Bring all recent lab results",
+        notes: REVIEW_MODE ? "Bring your questions and say hello." : "Bring all recent lab results",
       },
       {
         clinicId: CLINIC_ID,
         patientId: patient1Id,
         doctorId: doc1[0].id,
-        title: "Cardiac Surgery",
-        type: "Surgery",
+        title: REVIEW_MODE ? "City Walk Event" : "Cardiac Surgery",
+        type: eventType2,
         startAt: new Date("2026-03-14T08:00:00Z"),
         endAt: new Date("2026-03-14T14:00:00Z"),
-        locationText: "Demo Institution – OR Block 2",
+        locationText: REVIEW_MODE ? "Downtown Meetup Point" : `${DEMO_CLINIC_NAME} – OR Block 2`,
         status: "SCHEDULED",
       },
       {
         clinicId: CLINIC_ID,
         patientId: patient1Id,
         doctorId: doc1[0].id,
-        title: "Post-Op Check-Up",
-        type: "Follow-up",
+        title: REVIEW_MODE ? "Community Check-in" : "Post-Op Check-Up",
+        type: eventType3,
         startAt: new Date("2026-03-18T11:00:00Z"),
-        locationText: "Demo Institution – Cardiology Wing, 3rd Floor",
+        locationText: venue,
         status: "SCHEDULED",
       },
     ]);
@@ -276,8 +301,10 @@ export async function seedDatabase() {
     {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
-      title: "New visit scheduled",
-      body: "Sarah Mitchell has a visit with provider Aydin Kaya tomorrow at 09:00",
+      title: REVIEW_MODE ? "New event scheduled" : "New visit scheduled",
+      body: REVIEW_MODE
+        ? "Sarah Mitchell has a new event tomorrow at 09:00"
+        : "Sarah Mitchell has a visit with provider Aydin Kaya tomorrow at 09:00",
       type: "APPOINTMENT",
       status: "UNREAD",
       relatedType: "appointment",
@@ -285,8 +312,10 @@ export async function seedDatabase() {
     {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
-      title: "Document uploaded",
-      body: "Guest Sarah Mitchell uploaded their passport file",
+      title: REVIEW_MODE ? "New upload" : "Document uploaded",
+      body: REVIEW_MODE
+        ? "Sarah Mitchell uploaded a new file"
+        : "Guest Sarah Mitchell uploaded their passport file",
       type: "DOCUMENT",
       status: "UNREAD",
       relatedType: "document",
@@ -295,7 +324,7 @@ export async function seedDatabase() {
       clinicId: CLINIC_ID,
       targetRole: "MANAGER",
       title: "Guest checked in",
-      body: "New member registered at Demo Institution",
+      body: REVIEW_MODE ? "A new member joined Demo Community" : `New member registered at ${DEMO_CLINIC_NAME}`,
       type: "INFO",
       status: "READ",
       relatedType: "patient",

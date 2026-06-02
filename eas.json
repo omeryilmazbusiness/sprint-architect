@@ -35,6 +35,17 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sprint-architect-production.up.railway.app"
       }
+    },
+    "review": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://sprint-architect-production.up.railway.app",
+        "EXPO_PUBLIC_REVIEW_MODE": "1"
+      }
     }
   },
   "submit": {
@@ -47,6 +58,13 @@
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "internal"
+      }
+    },
+    "review": {
+      "ios": {
+        "appleId": "omerfarukyilmazrbusiness@gmail.com",
+        "ascAppId": "6771757756",
+        "appleTeamId": "4WJ7D3Y4ZD"
       }
     }
   }
