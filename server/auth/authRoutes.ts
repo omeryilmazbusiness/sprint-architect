@@ -19,12 +19,16 @@ import { eq } from "drizzle-orm";
 import { runBillingCycle } from "../billing/billingService";
 import { auditLog } from "../api/auditLogger";
 
+const DEMO_EMAIL_SUFFIX = "@demo.com";
+
 const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 5,
+  max: 12,
   standardHeaders: true,
   legacyHeaders: false,
   validate: false,
+  skipSuccessfulRequests: true,
+  skip: (req) => String(req.body?.email ?? "").toLowerCase().endsWith(DEMO_EMAIL_SUFFIX),
   keyGenerator: (req) => {
     const ip = (req.ip ?? "unknown").replace(/^::ffff:/, "");
     const email = (req.body?.email ?? "").toLowerCase();
