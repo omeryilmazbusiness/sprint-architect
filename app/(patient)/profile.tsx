@@ -20,6 +20,7 @@ import { useT } from "@/hooks/useT";
 import { useLanguage } from "@/context/LanguageContext";
 import { apiRequest } from "@/lib/query-client";
 import { copyToClipboard } from "@/lib/clipboard";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 
 // ─── Country flag helper ────────────────────────────────────────────────────────
 
@@ -357,7 +358,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.infoText}>
                   <Text style={styles.infoLabel}>{tp.labelClinic}</Text>
-                  <Text style={styles.infoValue}>{patient.clinicName}</Text>
+                  <Text style={styles.infoValue}>{frameDisplayText(patient.clinicName)}</Text>
                 </View>
               </View>
             ) : null}

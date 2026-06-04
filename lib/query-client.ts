@@ -1,5 +1,11 @@
 import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+export const REVIEW_MODE_HEADER = "X-Healory-Review-Mode";
+
+/** Community framing on API responses (notifications, dashboard labels from DB). */
+export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
+  return { ...extra, [REVIEW_MODE_HEADER]: "1" };
+}
 
 /**
  * Base URL for API calls (with trailing slash for legacy string concatenation).
@@ -110,8 +116,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const baseUrl = getApiUrl();
   const url = new URL(route, baseUrl);
-  const headers: Record<string, string> = {};
-  if (data) headers["Content-Type"] = "application/json";
+  const headers = apiHeaders(data ? { "Content-Type": "application/json" } : undefined);
   if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
 
   let res = await fetch(url.toString(), {
@@ -150,7 +155,7 @@ export const getQueryFn: <T>(options: {
     const route = queryKey.join("/") as string;
     const url = new URL(route.startsWith("/") ? route : `/${route}`, baseUrl);
 
-    const headers: Record<string, string> = {};
+    const headers = apiHeaders();
     if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
 
     let res = await fetch(url.toString(), { credentials: "include", headers });

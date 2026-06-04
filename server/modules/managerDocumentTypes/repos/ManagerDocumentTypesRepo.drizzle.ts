@@ -18,12 +18,19 @@ export interface IManagerDocumentTypesRepo {
   countAssignments(id: string, clinicId: string): Promise<number>;
 }
 
-function toDTO(row: any): DocumentTypeDTO {
+function toDTO(row: { id: string; name: string; description?: string | null; createdAt?: Date | string | null }): DocumentTypeDTO {
+  const raw = row.createdAt;
+  const createdAt =
+    raw instanceof Date
+      ? raw
+      : raw
+        ? new Date(raw)
+        : new Date();
   return {
     id: row.id,
     name: row.name,
     note: row.description ?? null,
-    createdAt: row.createdAt,
+    createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
   };
 }
 

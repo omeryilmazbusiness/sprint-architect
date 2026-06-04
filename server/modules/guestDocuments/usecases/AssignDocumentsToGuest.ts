@@ -25,7 +25,7 @@ export class AssignDocumentsToGuest {
       if (!docType) {
         throw new AppError(
           "DOC-ASSIGN-404",
-          "One or more document types were not found for this institution",
+          "One or more upload types were not found for this community",
           404
         );
       }

@@ -12,6 +12,7 @@ import { COUNTRIES } from "@/constants/countries";
 import { guestRequestedServiceLabel } from "@/constants/guestRequestedServiceLabels";
 import { normalizeRequestedServiceCode } from "@shared/guestRequestedServices";
 import { useT } from "@/hooks/useT";
+import { isReviewMode } from "@/lib/isReviewMode";
 
 interface GuestInfo {
   phoneE164: string | null;
@@ -123,7 +124,7 @@ export function GuestInfoCard({ info }: Props) {
     <View style={[styles.card, cardShadow]}>
       <View style={styles.sectionHeader}>
         <Ionicons name="person-circle-outline" size={16} color={T.accent} />
-        <Text style={styles.sectionTitle}>Guest Details</Text>
+        <Text style={styles.sectionTitle}>{t.guestDetail.infoSectionTitle}</Text>
       </View>
 
       {country && (
@@ -133,13 +134,13 @@ export function GuestInfoCard({ info }: Props) {
         </View>
       )}
 
-      {info.passportNo && (
+      {!isReviewMode() && info.passportNo ? (
         <InfoRow
           icon="card-outline"
           label="Passport"
           value={info.passportNo}
         />
-      )}
+      ) : null}
 
       {info.dateOfBirth && (
         <InfoRow
@@ -213,7 +214,7 @@ export function GuestInfoCard({ info }: Props) {
 
       {info.requestedServices.length > 0 && (
         <View style={styles.servicesBlock}>
-          <Text style={styles.servicesLabel}>Services Requested</Text>
+          <Text style={styles.servicesLabel}>{t.guestDetail.labelServicesRequested}</Text>
           <View style={styles.chipRow}>
             {info.requestedServices.map((s) => (
               <View key={s} style={styles.chip}>

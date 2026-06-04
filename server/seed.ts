@@ -14,10 +14,14 @@ import {
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "./auth/password";
+import {
+  COMMUNITY_UPLOAD_TYPE_PRESETS,
+  isSensitiveDocumentType,
+} from "@shared/communityUploadTypes";
 
 const CLINIC_ID = "clinic-demo-001";
 const REVIEW_MODE = process.env.EXPO_PUBLIC_REVIEW_MODE === "1" || process.env.REVIEW_MODE === "1";
-const DEMO_CLINIC_NAME = REVIEW_MODE ? "Demo Community" : "Demo Institution";
+const DEMO_CLINIC_NAME = "Demo Community";
 
 export async function seedDatabase() {
   console.log("[seed] Starting database seed...");
@@ -105,23 +109,8 @@ export async function seedDatabase() {
     meetingPointText: "Hotel Lobby - Daily 08:30",
   }).onConflictDoNothing().returning();
 
-  const demoDocTypes = REVIEW_MODE
-    ? [
-        { name: "Profile Photo", code: "PROFILE_PHOTO", isRequired: true },
-        { name: "Travel Itinerary (PDF)", code: "ITINERARY_PDF", isRequired: false },
-        { name: "Ticket / Reservation", code: "TICKET_RESERVATION", isRequired: false },
-        { name: "Internal note (staff only)", code: "INTERNAL_REF", isRequired: false },
-      ]
-    : [
-        { name: "Passport Photocopy", code: "PASSPORT_COPY", isRequired: true },
-        { name: "Visa", code: "VISA", isRequired: true },
-        { name: "Internal reference (staff only)", code: "INTERNAL_REF", isRequired: false },
-        { name: "Travel Insurance", code: "TRAVEL_INSURANCE", isRequired: true },
-        { name: "Consent Form", code: "CONSENT_FORM", isRequired: true },
-      ];
-
   await Promise.all(
-    demoDocTypes.map((dt) =>
+    COMMUNITY_UPLOAD_TYPE_PRESETS.map((dt) =>
       db
         .insert(documentTypes)
         .values({ clinicId: CLINIC_ID, name: dt.name, code: dt.code, isRequired: dt.isRequired })
@@ -129,35 +118,20 @@ export async function seedDatabase() {
     ),
   );
 
-  // Update codes on existing document types for this clinic
   const existingDocTypes = await db.query.documentTypes.findMany({
     where: eq(documentTypes.clinicId, CLINIC_ID),
   });
 
   for (const dt of existingDocTypes) {
-    // Legacy normalization for older seeded names
-    if (!REVIEW_MODE) {
-      if (dt.name === "Passport / ID" && !dt.code) {
-        await db.update(documentTypes).set({ code: "PASSPORT_COPY", name: "Passport Photocopy" }).where(eq(documentTypes.id, dt.id));
-      }
-      if (dt.name === "Passport Photocopy" && !dt.code) {
-        await db.update(documentTypes).set({ code: "PASSPORT_COPY" }).where(eq(documentTypes.id, dt.id));
-      }
-      if (dt.name === "Visa" && !dt.code) {
-        await db.update(documentTypes).set({ code: "VISA" }).where(eq(documentTypes.id, dt.id));
-      }
-      if (dt.name === "Travel Insurance" && !dt.code) {
-        await db.update(documentTypes).set({ code: "TRAVEL_INSURANCE" }).where(eq(documentTypes.id, dt.id));
-      }
-      if (dt.name === "Consent Form" && !dt.code) {
-        await db.update(documentTypes).set({ code: "CONSENT_FORM" }).where(eq(documentTypes.id, dt.id));
-      }
-    }
-    if ((dt.name === "Medical History" || dt.name === "Lab Results (recent)") && dt.code !== "INTERNAL_REF") {
-      await db.update(documentTypes).set({ code: "INTERNAL_REF", name: "Internal reference (staff only)" }).where(eq(documentTypes.id, dt.id));
+    if (isSensitiveDocumentType(dt.name, dt.code)) {
+      await db
+        .delete(patientDocuments)
+        .where(eq(patientDocuments.documentTypeId, dt.id));
+      await db.delete(documentTypes).where(eq(documentTypes.id, dt.id));
+      console.log(`[seed] Removed sensitive document type: ${dt.name}`);
     }
   }
-  console.log("[seed] Document type codes updated");
+  console.log("[seed] Community upload types ready");
 
   const docTypes = await db.query.documentTypes.findMany({
     where: eq(documentTypes.clinicId, CLINIC_ID),
@@ -176,7 +150,6 @@ export async function seedDatabase() {
       phone: "+44 20 7946 0301",
       email: "sarah.mitchell@example.com",
       nationality: "British",
-      passportNo: "GBR123456",
       arrivalDate: "2026-03-10",
       departureDate: "2026-03-24",
       status: "ACTIVE",
@@ -202,7 +175,6 @@ export async function seedDatabase() {
       phone: "+1 310 555 0201",
       email: "james.thornton@example.com",
       nationality: "American",
-      passportNo: "USA987654",
       arrivalDate: "2026-03-15",
       departureDate: "2026-04-01",
       status: "PENDING",

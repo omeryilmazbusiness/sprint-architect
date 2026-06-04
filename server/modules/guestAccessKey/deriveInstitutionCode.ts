@@ -8,7 +8,7 @@ export function getInstitutionLetterPool(institutionName: string): string {
     .replace(/[^a-zA-Z]/g, "")
     .toUpperCase();
 
-  return letters.length > 0 ? letters : "INSTITUTION";
+  return letters.length > 0 ? letters : "COMMUNITY";
 }
 
 /**

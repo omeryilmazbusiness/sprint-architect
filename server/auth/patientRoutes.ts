@@ -16,12 +16,18 @@ import { requestGuestSelfDeletion } from "../modules/guestRetention/usecases/Req
 import { resolveGuestDeviceBinding } from "../modules/guestAccessKey/guestDeviceBinding";
 import { isGuestLoginAllowed } from "../modules/guestAccessKey/guestLoginEligibility";
 import { normalizeGuestAccessKey } from "../modules/guestAccessKey/normalizeGuestAccessKey";
+import { isAppReviewDemoKey } from "../modules/guestAccessKey/isAppReviewDemoKey";
+import { isReviewClientRequest } from "../shared/middleware/reviewMode";
 
 const patientLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const key = String(req.body?.patientKey ?? "");
+    return isAppReviewDemoKey(key);
+  },
   message: { code: "RATE_LIMIT_EXCEEDED", message: "Too many requests, please try again later." },
 });
 
@@ -51,7 +57,7 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
 
   const normalizedKey = normalizeGuestAccessKey(parsed.data.patientKey);
   if (!normalizedKey) {
-    const e = Errors.VALIDATION_ERROR("Guest access key is required");
+    const e = Errors.VALIDATION_ERROR("Invite code is required");
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
@@ -97,10 +103,21 @@ router.post("/auth/login", patientLoginLimiter, async (req: Request, res: Respon
     }
   }
 
-  if (env.guestMultiDeviceDemo) {
+  const reviewDemoKey = isAppReviewDemoKey(normalizedKey);
+  const reviewClient = isReviewClientRequest(req);
+  const relaxDeviceBinding = reviewDemoKey || reviewClient;
+
+  if (relaxDeviceBinding) {
+    // App Store / review client: clear binding so any device can sign in with invite code.
+    await authRepo.revokeDevice(patient.id);
+    await authRepo.bindDevice(patient.id, deviceId, platform);
+    logger.info("[review-demo] Member login (device binding reset)", {
+      maskedKey: `${normalizedKey.slice(0, 4)}****`,
+      reviewClient,
+      reviewDemoKey,
+    });
+  } else if (env.guestMultiDeviceDemo) {
     // DEV-ONLY: multi-device demo bypass — any device may use any key.
-    // Device binding is neither checked nor written so the devices table
-    // stays clean. This path is unreachable when NODE_ENV=production.
     const maskedKey = `${normalizedKey.slice(0, 4)}****`;
     logger.info("[DEMO] Guest multi-device bypass enabled", { maskedKey });
   } else {

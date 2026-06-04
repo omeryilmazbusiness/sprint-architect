@@ -1,28 +1,36 @@
 /**
- * User-facing terminology for App Store review builds.
- * Internal API paths and database names are unchanged in this phase.
+ * Production user-facing terminology — community & events (not regulated-services framing).
  */
 export const DISPLAY_TERMS = {
-  clinic: "Institution",
-  clinics: "Institutions",
+  clinic: "Community",
+  clinics: "Communities",
   patient: "Member",
   patients: "Members",
-  doctor: "Provider",
-  doctors: "Providers",
-  appointment: "Visit",
-  appointments: "Visits",
-  guest: "Guest",
-  guests: "Guests",
-  manager: "Staff",
-  treatment: "Service",
-  journey: "Plan",
-  document: "File",
-  documents: "Files",
+  doctor: "Host",
+  doctors: "Hosts",
+  appointment: "Event",
+  appointments: "Events",
+  guest: "Member",
+  guests: "Members",
+  manager: "Host",
+  treatment: "Experience",
+  journey: "Timeline",
+  document: "Upload",
+  documents: "Uploads",
 } as const;
 
-/** English role labels for legacy screens without i18n wiring. */
+export type DisplayTerms = typeof DISPLAY_TERMS;
+
+export function getDisplayTerms(): DisplayTerms {
+  return DISPLAY_TERMS;
+}
+
 export const ROLE_LABELS = {
-  ADMIN: "System Administrator",
-  MANAGER: "Institution Staff",
+  ADMIN: "Platform Admin",
+  MANAGER: "Community Host",
   PATIENT: "Member",
 } as const;
+
+export function getRoleLabels() {
+  return ROLE_LABELS;
+}

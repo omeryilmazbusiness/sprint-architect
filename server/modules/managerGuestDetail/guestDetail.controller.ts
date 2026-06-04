@@ -6,6 +6,8 @@ import { eq, and } from "drizzle-orm";
 import { auditLog } from "../../api/auditLogger";
 import { AppError } from "../../shared/errors/AppError";
 import { ErrorCodes } from "../../shared/errors/ErrorCodes";
+import { frameGuestDetailResponse } from "../../shared/frameUserFacingText";
+import { isReviewRequest } from "../../shared/middleware/reviewMode";
 
 export async function getGuestDetailController(
   req: Request,
@@ -16,7 +18,9 @@ export async function getGuestDetailController(
     const clinicId = (req as any).clinicId as string;
     const id = req.params.id as string;
     const detail = await getGuestDetailUseCase(clinicId, id);
-    res.json(detail);
+    res.json(
+      frameGuestDetailResponse(detail as unknown as Record<string, unknown>, isReviewRequest(req)),
+    );
   } catch (err) {
     next(err);
   }
@@ -43,7 +47,7 @@ export async function resetDeviceBindingController(
     });
 
     if (!patient) {
-      throw new AppError(ErrorCodes.NOT_FOUND, "Guest not found", 404);
+      throw new AppError(ErrorCodes.NOT_FOUND, "Member not found", 404);
     }
 
     // Revoke all active device bindings (soft revoke — preserves history)

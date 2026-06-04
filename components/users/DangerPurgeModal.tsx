@@ -22,7 +22,7 @@ interface Props {
 
 const RULES = [
   "Your own account cannot be deleted",
-  "Primary institution managers cannot be deleted",
+  "Primary community hosts cannot be deleted",
   "Accounts that have recorded invoice payments cannot be deleted",
   "This action is permanent and cannot be undone",
 ];

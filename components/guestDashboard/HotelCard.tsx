@@ -65,7 +65,7 @@ export function HotelCard({ hotel }: Props) {
         <View style={styles.emptyBody}>
           <Ionicons name="bed-outline" size={34} color={T.border} />
           <Text style={styles.emptyTitle}>Hotel not assigned yet</Text>
-          <Text style={styles.emptySub}>Your institution will update this soon.</Text>
+          <Text style={styles.emptySub}>Your community host will update this soon.</Text>
         </View>
       ) : (
         <>

@@ -95,7 +95,7 @@ export const createGuestDict: CreateGuestDict = {
   btnNext: "Далее",
   btnBack: "Назад",
   headerTitle: "Новый гость",
-  successHeaderTitle: "Гость создан",
+  successHeaderTitle: "Участник создан",
   sectionIdentity: "Личные данные",
   sectionContact: "Контакты",
   sectionTravelService: "Поездка и услуги",

@@ -23,8 +23,21 @@ import { PLAN_STEP_LABELS } from "../shared/userFacingCopy";
 import { assignDocumentsToGuest } from "../modules/guestDocuments/usecases/AssignDocumentsToGuest";
 import { createGuestPatientSchema } from "@shared/schemas/createGuestPatient.schema";
 import { requestedServicesSchema } from "@shared/schemas/requestedServices.schema";
+import {
+  frameNotificationFields,
+  frameUserFacingText,
+} from "../shared/frameUserFacingText";
+import { isReviewRequest } from "../shared/middleware/reviewMode";
 
 const router = Router();
+
+function framedCopy(req: Request, title: string, body: string): { title: string; body: string } {
+  const review = isReviewRequest(req);
+  return {
+    title: frameUserFacingText(title, review),
+    body: frameUserFacingText(body, review),
+  };
+}
 
 router.use(authMiddleware, requireRole("MANAGER", "ADMIN"), requireActiveClinic, clinicScopeMiddleware);
 
@@ -105,8 +118,11 @@ router.post("/patients", async (req, res, next) => {
 
     notificationService.emitAdminNotification({
       type: "GUEST_CREATED",
-      title: "New Guest Registered",
-      body: `${patient.fullName} has been added to an institution.`,
+      ...framedCopy(
+        req,
+        "New Member Registered",
+        `${patient.fullName} has been added to a community.`,
+      ),
       severity: "INFO",
       relatedId: patient.id,
       relatedType: "patient",
@@ -175,8 +191,11 @@ router.put("/patients/:id/tracking", async (req, res, next) => {
 
     notificationService.emitGuestNotification(id, clinicId, {
       type: "JOURNEY_UPDATED",
-      title: "Plan Updated",
-      body: `Your current status has been updated to: ${PLAN_STEP_LABELS[currentStep] ?? currentStep}.`,
+      ...framedCopy(
+        req,
+        "Timeline Updated",
+        `Your current status has been updated to: ${PLAN_STEP_LABELS[currentStep] ?? currentStep}.`,
+      ),
       severity: "INFO",
       relatedId: id,
       relatedType: "patient",
@@ -230,8 +249,11 @@ router.put("/patients/:id/status", async (req, res, next) => {
     if (status === "APPROVED" || status === "ENDED") {
       notificationService.emitAdminNotification({
         type: status === "APPROVED" ? "GUEST_APPROVED" : "GUEST_STATUS_CHANGED",
-        title: status === "APPROVED" ? "Guest Approved" : "Guest Status Changed",
-        body: `${existing!.fullName} is now ${status.toLowerCase()}.`,
+        ...framedCopy(
+          req,
+          status === "APPROVED" ? "Member Approved" : "Member Status Changed",
+          `${existing!.fullName} is now ${status.toLowerCase()}.`,
+        ),
         severity: "INFO",
         relatedId: id,
         relatedType: "patient",
@@ -300,8 +322,11 @@ router.put("/patients/:id/assign-hotel", async (req, res, next) => {
       const hotelName = assignedHotel.name ?? "your hotel";
       notificationService.emitGuestNotification(req.params.id, clinicId, {
         type: "HOTEL_ASSIGNED",
-        title: "Hotel Assigned",
-        body: `Your accommodation has been arranged at ${hotelName}${body.checkInDate ? ` — check-in ${body.checkInDate}` : ""}.`,
+        ...framedCopy(
+          req,
+          "Stay Assigned",
+          `Your stay has been arranged at ${hotelName}${body.checkInDate ? ` — check-in ${body.checkInDate}` : ""}.`,
+        ),
         severity: "INFO",
         relatedId: body.hotelId,
         relatedType: "hotel",
@@ -340,8 +365,11 @@ router.put("/patients/:id/assign-transport", async (req, res, next) => {
       const driverInfo = transport?.driverName ? ` — driver: ${transport.driverName}` : "";
       notificationService.emitGuestNotification(req.params.id, clinicId, {
         type: "TRANSPORT_ASSIGNED",
-        title: "Transport Arranged",
-        body: `Your transport has been arranged${driverInfo}. Check the Track tab for details.`,
+        ...framedCopy(
+          req,
+          "Transport Arranged",
+          `Your transport has been arranged${driverInfo}. Check the Timeline tab for details.`,
+        ),
         severity: "INFO",
         relatedId: body.transportId,
         relatedType: "transport",
@@ -381,8 +409,11 @@ router.put("/patients/:id/assign-doctor", async (req, res, next) => {
       const specialty = assignedDoctor?.specialty ? ` (${assignedDoctor.specialty})` : "";
       notificationService.emitGuestNotification(req.params.id, clinicId, {
         type: "DOCTOR_ASSIGNED",
-        title: "Provider Assigned",
-        body: `${doctorName}${specialty} has been assigned to your plan.`,
+        ...framedCopy(
+          req,
+          "Host Assigned",
+          `${doctorName}${specialty} has been assigned to your timeline.`,
+        ),
         severity: "INFO",
         relatedId: body.doctorId,
         relatedType: "doctor",
@@ -459,8 +490,11 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
 
     notificationService.emitGuestNotification(req.params.id, clinicId, {
       type: "APPOINTMENT_CREATED",
-      title: "New Visit Scheduled",
-      body: `Your visit "${body.title}" is scheduled for ${apptDateStr}.`,
+      ...framedCopy(
+        req,
+        "New Event Scheduled",
+        `Your event "${frameUserFacingText(body.title, isReviewRequest(req))}" is scheduled for ${apptDateStr}.`,
+      ),
       severity: "INFO",
       relatedId: appt.id,
       relatedType: "appointment",
@@ -469,8 +503,11 @@ router.post("/patients/:id/appointments", async (req, res, next) => {
 
     notificationService.emitManagerNotification(clinicId, {
       type: "APPOINTMENT_CREATED",
-      title: "Visit Scheduled",
-      body: `${patient!.fullName} — "${body.title}" on ${apptDateStr}.`,
+      ...framedCopy(
+        req,
+        "Event Scheduled",
+        `${patient!.fullName} — "${frameUserFacingText(body.title, isReviewRequest(req))}" on ${apptDateStr}.`,
+      ),
       severity: "INFO",
       relatedId: appt.id,
       relatedType: "appointment",
@@ -529,8 +566,11 @@ router.put("/appointments/:appointmentId", async (req, res, next) => {
 
       notificationService.emitGuestNotification(appt.patientId, clinicId, {
         type: "APPOINTMENT_UPDATED",
-        title: "Visit Updated",
-        body: `Your visit "${appt.title}" has been updated${updatedDateStr ? ` — now on ${updatedDateStr}` : ""}.`,
+        ...framedCopy(
+          req,
+          "Event Updated",
+          `Your event "${frameUserFacingText(appt.title, isReviewRequest(req))}" has been updated${updatedDateStr ? ` — now on ${updatedDateStr}` : ""}.`,
+        ),
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",
@@ -551,8 +591,11 @@ router.delete("/appointments/:appointmentId", async (req, res, next) => {
     if (appt && appt.patientId) {
       notificationService.emitGuestNotification(appt.patientId, clinicId, {
         type: "APPOINTMENT_CANCELLED",
-        title: "Visit Cancelled",
-        body: `Your visit "${appt.title}" has been cancelled. Please contact your institution for details.`,
+        ...framedCopy(
+          req,
+          "Event Cancelled",
+          `Your event "${frameUserFacingText(appt.title, isReviewRequest(req))}" has been cancelled. Please contact your community host for details.`,
+        ),
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",
@@ -561,8 +604,11 @@ router.delete("/appointments/:appointmentId", async (req, res, next) => {
 
       notificationService.emitManagerNotification(clinicId, {
         type: "APPOINTMENT_CANCELLED",
-        title: "Visit Cancelled",
-        body: `Visit "${appt.title}" was cancelled.`,
+        ...framedCopy(
+          req,
+          "Event Cancelled",
+          `Event "${frameUserFacingText(appt.title, isReviewRequest(req))}" was cancelled.`,
+        ),
         severity: "WARNING",
         relatedId: appt.id,
         relatedType: "appointment",
@@ -729,10 +775,13 @@ router.put("/documents/:id", async (req, res, next) => {
 
       notificationService.emitManagerNotification(clinicId, {
         type: body.status === "APPROVED" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
-        title: body.status === "APPROVED" ? "Document Approved" : "Document Rejected",
-        body: body.status === "APPROVED"
-          ? `A document has been approved and marked ready.`
-          : `A document was rejected. Reason: ${(body as any).rejectionReason ?? "Not specified"}`,
+        ...framedCopy(
+          req,
+          body.status === "APPROVED" ? "Upload Approved" : "Upload Rejected",
+          body.status === "APPROVED"
+            ? `An upload has been approved and marked ready.`
+            : `An upload was rejected. Reason: ${(body as any).rejectionReason ?? "Not specified"}`,
+        ),
         severity: body.status === "REJECTED" ? "WARNING" : "INFO",
         relatedId: doc!.id,
         relatedType: "patient_document",
@@ -742,10 +791,13 @@ router.put("/documents/:id", async (req, res, next) => {
       if (doc!.patientId) {
         notificationService.emitGuestNotification(doc!.patientId, clinicId, {
           type: body.status === "APPROVED" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
-          title: body.status === "APPROVED" ? "Document Approved" : "Document Needs Attention",
-          body: body.status === "APPROVED"
-            ? "Your document has been reviewed and approved."
-            : `Your document was rejected. Reason: ${(body as any).rejectionReason ?? "Please re-upload a clearer file."}`,
+          ...framedCopy(
+            req,
+            body.status === "APPROVED" ? "Upload Approved" : "Upload Needs Attention",
+            body.status === "APPROVED"
+              ? "Your upload has been reviewed and approved."
+              : `Your upload was rejected. Reason: ${(body as any).rejectionReason ?? "Please re-upload a clearer file."}`,
+          ),
           severity: body.status === "REJECTED" ? "WARNING" : "INFO",
           relatedId: doc!.id,
           relatedType: "patient_document",
@@ -762,8 +814,12 @@ router.get("/clinic-info", async (req, res, next) => {
   try {
     const clinicId = getClinicId(req);
     const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
-    if (!clinic) throw new AppError("NOT_FOUND", "Clinic not found", 404);
-    res.json({ id: clinic.id, name: clinic.name, status: clinic.status });
+    if (!clinic) throw new AppError("NOT_FOUND", "Community not found", 404);
+    res.json({
+      id: clinic.id,
+      name: frameUserFacingText(clinic.name, true),
+      status: clinic.status,
+    });
   } catch (e) { next(e); }
 });
 
@@ -852,7 +908,8 @@ router.get("/notifications", async (req, res, next) => {
       status as "UNREAD" | "READ",
       limit ? Number(limit) : undefined
     );
-    res.json(list);
+    const review = isReviewRequest(req);
+    res.json(review ? list.map((n) => frameNotificationFields(n, true)) : list);
   } catch (e) { next(e); }
 });
 

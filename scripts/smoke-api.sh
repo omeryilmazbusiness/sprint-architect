@@ -41,7 +41,16 @@ check "POST admin login" "$CODE" "200"
 for KEY in PATIENT-TEST-0001 PT-4S9WQ2U6; do
   CODE=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_BASE/v1/patient/auth/login" \
     -H "Content-Type: application/json" \
+    -H "X-Healory-Review-Mode: 1" \
     -d "{\"patientKey\":\"$KEY\",\"deviceId\":\"smoke-$KEY\"}" || echo "000")
+  CODE2=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_BASE/v1/patient/auth/login" \
+    -H "Content-Type: application/json" \
+    -H "X-Healory-Review-Mode: 1" \
+    -d "{\"patientKey\":\"$KEY\",\"deviceId\":\"smoke-${KEY}-ipad\"}" || echo "000")
+  if [[ "$KEY" == "PT-4S9WQ2U6" && "$CODE" == "200" && "$CODE2" != "200" ]]; then
+    echo "  FAIL second device login $KEY (got $CODE2, want 200 — deploy server + seed)"
+    FAIL=$((FAIL + 1))
+  fi
   if [[ "$KEY" == "PT-4S9WQ2U6" && "$CODE" == "401" ]]; then
     echo "  SKIP guest $KEY (401 — run: npx tsx server/scripts/seedDemoGuestKey.ts)"
   else

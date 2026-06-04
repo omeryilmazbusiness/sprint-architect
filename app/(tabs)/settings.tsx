@@ -18,7 +18,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { DISPLAY_TERMS, ROLE_LABELS } from "@/constants/terminology";
+import { getDisplayTerms, getRoleLabels } from "@/constants/terminology";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 
 interface Clinic {
   id: string;
@@ -104,12 +105,14 @@ export default function SettingsScreen() {
     : "??";
 
   const displayName = user?.email ?? user?.fullName ?? "User";
+  const roles = getRoleLabels();
+  const terms = getDisplayTerms();
   const roleLabel =
     user?.role === "ADMIN"
-      ? ROLE_LABELS.ADMIN
+      ? roles.ADMIN
       : user?.role === "MANAGER"
-      ? ROLE_LABELS.MANAGER
-      : ROLE_LABELS.PATIENT;
+      ? roles.MANAGER
+      : roles.PATIENT;
 
   return (
     <ScrollView
@@ -138,7 +141,7 @@ export default function SettingsScreen() {
             </Text>
             {user?.clinicId && (
               <Text style={[styles.adminClinic, { color: colors.accent, fontFamily: "PlusJakartaSans_400Regular" }]}>
-                {DISPLAY_TERMS.clinic} ID: {user.clinicId}
+                {terms.clinic} ID: {user.clinicId}
               </Text>
             )}
           </View>
@@ -160,7 +163,7 @@ export default function SettingsScreen() {
         {user?.role === "ADMIN" && (
           <>
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
-              {DISPLAY_TERMS.clinics.toUpperCase()}
+              {terms.clinics.toUpperCase()}
             </Text>
             <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {(clinics ?? []).map((clinic, idx) => (
@@ -177,10 +180,10 @@ export default function SettingsScreen() {
                   </View>
                   <View style={styles.clinicInfo}>
                     <Text style={[styles.clinicName, { color: colors.text, fontFamily: "PlusJakartaSans_600SemiBold" }]}>
-                      {clinic.name}
+                      {frameDisplayText(clinic.name)}
                     </Text>
                     <Text style={[styles.clinicPatients, { color: colors.textSecondary, fontFamily: "PlusJakartaSans_400Regular" }]}>
-                      {clinic.patientCount} {DISPLAY_TERMS.patients.toLowerCase()}
+                      {clinic.patientCount} {terms.patients.toLowerCase()}
                     </Text>
                   </View>
                   <StatusBadge status={clinic.status as any} small />

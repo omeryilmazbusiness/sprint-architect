@@ -419,7 +419,7 @@ export default function CreateUserSheet({
     mutationFn: () => {
       if (!fullName.trim()) throw new Error("Full name is required");
       if (!email.trim()) throw new Error("Email is required");
-      if (role === "MANAGER" && !clinicId) throw new Error("Institution is required for Manager");
+      if (role === "MANAGER" && !clinicId) throw new Error("Community is required for Host");
       return createUser({
         email: email.trim().toLowerCase(),
         fullName: fullName.trim(),

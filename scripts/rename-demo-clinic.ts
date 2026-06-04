@@ -11,7 +11,7 @@ const DEMO_ID = "clinic-demo-001";
 async function main() {
   const result = await db
     .update(clinics)
-    .set({ name: "Demo Institution" })
+    .set({ name: "Demo Community" })
     .where(eq(clinics.id, DEMO_ID))
     .returning({ id: clinics.id, name: clinics.name });
 

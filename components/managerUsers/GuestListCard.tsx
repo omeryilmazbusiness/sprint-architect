@@ -58,7 +58,8 @@ function fmtDate(s?: string | null) {
 
 async function copyGuestKey(text: string) {
   const ok = await copyToClipboard(text);
-  if (!ok) Alert.alert("Guest Key", text, [{ text: "OK" }]);
+  const label = "Invite Code";
+  if (!ok) Alert.alert(label, text, [{ text: "OK" }]);
 }
 
 interface Props {

@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 import { EmptyState } from "@/components/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useT } from "@/hooks/useT";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 import { useLanguage } from "@/context/LanguageContext";
 
 type NotifSeverity = "INFO" | "WARNING" | "CRITICAL";
@@ -184,7 +185,7 @@ function NotifCard({
             style={[styles.title, isUnread && styles.titleUnread]}
             numberOfLines={1}
           >
-            {item.title}
+            {frameDisplayText(item.title)}
           </Text>
           <View style={styles.metaRow}>
             <Text style={styles.time}>{timeAgo}</Text>
@@ -200,7 +201,7 @@ function NotifCard({
         </View>
 
         <Text style={styles.body} numberOfLines={3}>
-          {item.body}
+          {frameDisplayText(item.body)}
         </Text>
 
         {/* Severity badge — only for WARNING/CRITICAL */}

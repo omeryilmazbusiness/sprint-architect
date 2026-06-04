@@ -18,6 +18,7 @@ import { GUEST_BANNERS } from "@/constants/guestBanners";
 import { T } from "@/constants/adminTheme";
 import type { ManagerDashboardData } from "@/hooks/useManagerDashboard";
 import { useT } from "@/hooks/useT";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 import type { ManagerBannerDict } from "@/i18n/types";
 
 // ─── Sizing (mirrors GuestBannerCarousel exactly) ─────────────────────────────
@@ -66,7 +67,7 @@ function buildSlides(
     {
       imageIndex: 0,
       contextLabel: strings.slide0Context,
-      title: clinicName ?? "Dashboard",
+      title: clinicName ? frameDisplayText(clinicName) : "Dashboard",
       subtitle: timeGreeting(strings),
       stats: [
         { value: data.kpis.appointmentsToday, label: strings.statApptToday },

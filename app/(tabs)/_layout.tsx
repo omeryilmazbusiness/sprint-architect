@@ -6,9 +6,10 @@ import { Platform, StyleSheet, useColorScheme, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import Colors from "@/constants/colors";
-import { DISPLAY_TERMS } from "@/constants/terminology";
+import { getDisplayTerms } from "@/constants/terminology";
 
 function NativeTabLayout() {
+  const terms = getDisplayTerms();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -17,7 +18,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="patients">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>{DISPLAY_TERMS.patients}</Label>
+        <Label>{terms.patients}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="operations">
         <Icon sf={{ default: "calendar", selected: "calendar" }} />
@@ -32,6 +33,7 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
+  const terms = getDisplayTerms();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
@@ -83,7 +85,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="patients"
         options={{
-          title: DISPLAY_TERMS.patients,
+          title: terms.patients,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),

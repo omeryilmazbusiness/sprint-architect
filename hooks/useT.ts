@@ -1,5 +1,7 @@
 import { dictionaries } from "@/i18n";
+import { applyReviewOverlay } from "@/i18n/review";
 import { useLanguage } from "@/context/LanguageContext";
+import { isReviewMode } from "@/lib/isReviewMode";
 import type { AppDict } from "@/i18n";
 
 /**
@@ -14,5 +16,6 @@ import type { AppDict } from "@/i18n";
  */
 export function useT(): AppDict {
   const { locale } = useLanguage();
-  return dictionaries[locale];
+  const base = dictionaries[locale];
+  return isReviewMode() ? applyReviewOverlay(base, locale) : base;
 }

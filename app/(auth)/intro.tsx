@@ -33,7 +33,20 @@ function navigateToLogin(): void {
   router.replace("/(auth)/login");
 }
 
+const INTRO_COPY = {
+  tagline: "COMMUNITY & EVENTS",
+  pillars: [
+    { icon: "people-outline" as const, label: "Members" },
+    { icon: "calendar-outline" as const, label: "Events" },
+    { icon: "images-outline" as const, label: "Shared Media" },
+  ],
+  caption1: "Your community,",
+  caption2: "beautifully connected.",
+  captionSub: "Plan events, share uploads, and stay in sync with your group.",
+} as const;
+
 export default function IntroScreen() {
+  const copy = INTRO_COPY;
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -231,7 +244,7 @@ export default function IntroScreen() {
           <View style={styles.rulerRow}>
             <Animated.View style={[styles.ruler, { width: accentLineWidth }]} />
             <Animated.Text style={[styles.tagline, { opacity: tagOp }]}>
-              OPERATIONS PLATFORM
+              {copy.tagline}
             </Animated.Text>
             <Animated.View style={[styles.ruler, { width: accentLineWidth }]} />
           </View>
@@ -243,22 +256,20 @@ export default function IntroScreen() {
             { opacity: pillarsOp, transform: [{ translateY: pillarsY }] },
           ]}
         >
-          <Pillar icon="people-outline" label="Team Care" delay={0} />
+          <Pillar icon={copy.pillars[0].icon} label={copy.pillars[0].label} delay={0} />
           <View style={styles.pillarDivider} />
-          <Pillar icon="business-outline" label="Multi-Site" delay={80} />
+          <Pillar icon={copy.pillars[1].icon} label={copy.pillars[1].label} delay={80} />
           <View style={styles.pillarDivider} />
-          <Pillar icon="shield-checkmark-outline" label="Secure" delay={160} />
+          <Pillar icon={copy.pillars[2].icon} label={copy.pillars[2].label} delay={160} />
         </Animated.View>
       </View>
 
       <Animated.View
         style={[styles.captionBlock, { opacity: captionOp, paddingBottom: bottomPad + 36 }]}
       >
-        <Text style={styles.captionLine1}>Your journey,</Text>
-        <Text style={styles.captionLine2}>beautifully organised.</Text>
-        <Text style={styles.captionSub}>
-          Premium operations management for modern teams.
-        </Text>
+        <Text style={styles.captionLine1}>{copy.caption1}</Text>
+        <Text style={styles.captionLine2}>{copy.caption2}</Text>
+        <Text style={styles.captionSub}>{copy.captionSub}</Text>
 
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressBar, { width: progressWidth }]}>

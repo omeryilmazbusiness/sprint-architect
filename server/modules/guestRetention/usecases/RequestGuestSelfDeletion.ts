@@ -27,7 +27,7 @@ export class RequestGuestSelfDeletion {
   async execute(input: RequestGuestSelfDeletionInput): Promise<RequestGuestSelfDeletionResult> {
     const guest = await this.repo.findGuestForSelfDelete(input.patientId);
     if (!guest) {
-      throw new AppError(ErrorCodes.NOT_FOUND, "Guest not found", 404);
+      throw new AppError(ErrorCodes.NOT_FOUND, "Member not found", 404);
     }
     if (guest.retentionPurgedAt) {
       throw new AppError(ErrorCodes.RETENTION_ALREADY_PURGED, "Account already removed", 410);

@@ -46,7 +46,7 @@ export default function ServicesScreen() {
 
   const SERVICES: ServiceCard[] = [
     {
-      icon: "medkit-outline",
+      icon: "people-outline",
       label: ts.svcDoctorsLabel,
       description: ts.svcDoctorsDesc,
       color: "#6366F1",

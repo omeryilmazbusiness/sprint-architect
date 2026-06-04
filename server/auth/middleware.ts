@@ -74,7 +74,7 @@ export async function requireActiveClinic(
 
   const clinicId = req.actor.clinicId;
   if (!clinicId) {
-    const e = Errors.FORBIDDEN("No clinic associated with this account.");
+    const e = Errors.FORBIDDEN("No community associated with this account.");
     res.status(e.statusCode).json({ code: e.code, message: e.message });
     return;
   }
@@ -82,7 +82,7 @@ export async function requireActiveClinic(
   try {
     const clinic = await db.query.clinics.findFirst({ where: eq(clinics.id, clinicId) });
     if (!clinic) {
-      const e = Errors.FORBIDDEN("Clinic not found.");
+      const e = Errors.FORBIDDEN("Community not found.");
       res.status(e.statusCode).json({ code: e.code, message: e.message });
       return;
     }

@@ -12,6 +12,7 @@ import {
 import { AppError } from "../../auth/errors";
 import { auditLog } from "../../api/auditLogger";
 import { param } from "../../shared/httpParams";
+import { isSensitiveDocumentType } from "@shared/communityUploadTypes";
 
 function getClinicId(req: Request): string {
   const clinicId = (req as any).clinicId as string | undefined;
@@ -55,7 +56,21 @@ export async function listDocumentTypes(req: Request, res: Response, next: NextF
     const clinicId = getClinicId(req);
     const { search } = validateQuery(listDocumentTypesQuerySchema, req.query);
     const result = await listUC.execute(clinicId, search);
-    res.json(result);
+    const publicItems = result.items.filter(
+      (item) => !isSensitiveDocumentType(item.name, null),
+    );
+    res.json({
+      items: publicItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        note: item.note,
+        createdAt:
+          item.createdAt instanceof Date
+            ? item.createdAt.toISOString()
+            : new Date(item.createdAt).toISOString(),
+      })),
+      totalCount: publicItems.length,
+    });
   } catch (e) {
     next(e);
   }

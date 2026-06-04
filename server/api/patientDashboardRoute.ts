@@ -13,6 +13,11 @@ import { db } from "../db";
 import { clinics, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { param } from "../shared/httpParams";
+import {
+  frameNotificationFields,
+  framePatientDashboardResponse,
+} from "../shared/frameUserFacingText";
+import { isReviewRequest } from "../shared/middleware/reviewMode";
 
 const router = Router();
 
@@ -49,7 +54,8 @@ router.get("/notifications", authMiddleware, requireRole("PATIENT"), async (req,
       actor.sub,
       limit ? Number(limit) : undefined,
     );
-    res.json(list);
+    const review = isReviewRequest(req);
+    res.json(review ? list.map((n) => frameNotificationFields(n, true)) : list);
   } catch (e) { next(e); }
 });
 
@@ -167,7 +173,7 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
       uniqueDoctors = allDoctors.rows.filter(d => doctorIdSet.has(d.id));
     }
 
-    res.json({
+    const payload = {
       patient: {
         id: patient.id,
         fullName: patient.fullName,
@@ -251,7 +257,10 @@ router.get("/dashboard", authMiddleware, requireRole("PATIENT"), async (req, res
         instructionText: d.instructionText ?? null,
         rejectionReason: d.status === "REJECTED" ? (d.rejectionReason ?? null) : null,
       })),
-    });
+    };
+    res.json(
+      framePatientDashboardResponse(payload, isReviewRequest(req)),
+    );
   } catch (e) {
     next(e);
   }

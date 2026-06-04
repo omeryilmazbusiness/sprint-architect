@@ -9,7 +9,13 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
-import { getApiUrl, setAuthTokens, setUnauthorizedHandler, queryClient } from "@/lib/query-client";
+import {
+  apiHeaders,
+  getApiUrl,
+  setAuthTokens,
+  setUnauthorizedHandler,
+  queryClient,
+} from "@/lib/query-client";
 
 export type UserRole = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "PATIENT";
 
@@ -88,7 +94,7 @@ async function secureDelete(key: string): Promise<void> {
 async function apiPost<T>(path: string, body: unknown, accessToken?: string): Promise<T> {
   const base = getApiUrl();
   const url = new URL(path, base).toString();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers = apiHeaders({ "Content-Type": "application/json" });
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
   const data = await res.json() as { message?: string; code?: string };

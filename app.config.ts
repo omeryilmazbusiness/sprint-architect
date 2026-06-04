@@ -16,12 +16,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   const iosInfoPlist: Record<string, unknown> = {
     ...(base.ios?.infoPlist as Record<string, unknown> | undefined),
-    NSUserNotificationsUsageDescription:
-      "Healory uses notifications to keep you updated on your account and activity.",
-    NSCameraUsageDescription:
-      "Healory uses the camera to upload files and profile photos.",
-    NSPhotoLibraryUsageDescription:
-      "Healory uses your photo library to upload files and images.",
+    NSUserNotificationsUsageDescription: reviewMode
+      ? "Healory sends updates about your community events and shared activity."
+      : "Healory uses notifications to keep you updated on your account and activity.",
+    NSCameraUsageDescription: reviewMode
+      ? "Healory uses the camera so you can add photos to your community profile and uploads."
+      : "Healory uses the camera to upload files and profile photos.",
+    NSPhotoLibraryUsageDescription: reviewMode
+      ? "Healory uses your photo library to share images with your community."
+      : "Healory uses your photo library to upload files and images.",
     ITSAppUsesNonExemptEncryption: false,
   };
 

@@ -1,0 +1,56 @@
+=== REVIEW NOTES (App Store Connect → App Review Information → Notes) ===
+
+Healory v1.2.4 — social community & events app (individual developer).
+
+NOT a health, medical, insurance, visa, or identity-document app.
+Removed passport/visa/insurance upload categories. Upload types are optional community photos only.
+
+FULL REVIEW ACCESS — App Store Connect sign-in (username + password):
+  Email: manager@demo.com
+  Password: Manager123!
+  In app: open "Host Login" → sign in → members, events, upload types, settings.
+
+Optional member demo (invite code — do NOT enter in username field):
+  Member Login tab → PT-4S9WQ2U6 → Continue
+
+Optional admin: admin@demo.com / Admin123!
+
+Contact: omerfarukyilmazrbusiness@gmail.com
+
+=== DESCRIPTION (App Store → Description) ===
+
+Healory helps communities and event organizers stay connected.
+
+Plan meetups, share timelines, and collect optional member photos—without medical services or travel-document workflows.
+
+FOR HOSTS
+• Manage members and invite codes
+• Schedule community events
+• Request optional uploads (profile photo, event snapshots)
+• Activity notifications
+
+FOR MEMBERS
+• Sign in with a private invite code
+• View your timeline and upcoming events
+• Share photos your community requested
+• Profile and notification settings
+
+Healory is group coordination software for social communities and events. It does not provide diagnosis, treatment, prescriptions, clinical care, visa processing, or insurance services.
+
+Questions? See our in-app Support link or contact us via App Store Connect.
+
+=== SUBTITLE (30 chars) ===
+
+Community & event plans
+
+=== PROMOTIONAL TEXT ===
+
+Coordinate your community: events, timelines, and optional photo sharing. Invite-only members. Simple host tools. No medical or travel-document features.
+
+=== KEYWORDS ===
+
+community,events,meetup,schedule,timeline,group,organizer,members,photos,social
+
+=== RESOLUTION CENTER (short lead) ===
+
+Build 1.2.4 removes all passport/visa/insurance upload types. Please re-evaluate as Social Networking under our individual developer account. Full access: manager@demo.com / Manager123! (Host Login).

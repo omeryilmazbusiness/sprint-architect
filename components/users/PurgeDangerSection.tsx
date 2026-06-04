@@ -31,7 +31,7 @@ type Step = "danger" | "impact" | "confirm";
 function BlockedTag({ reason }: { reason: string }) {
   const labels: Record<string, string> = {
     BLOCKED_SELF: "Cannot purge yourself",
-    PRIMARY_MANAGER_DELETE_BLOCKED: "Is primary institution manager",
+    PRIMARY_MANAGER_DELETE_BLOCKED: "Is primary community host",
     BLOCKED_REFERENCES_EXIST_INVOICES: "Has paid invoices",
     BLOCKED_REFERENCES_EXIST_AUDIT: "Has audit log entries",
   };

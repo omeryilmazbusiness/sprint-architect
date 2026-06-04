@@ -18,7 +18,7 @@ export async function exportGuestArchivePdf(bundle: GuestArchiveBundle): Promise
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(18).text("Guest operational archive", { align: "center" });
+    doc.fontSize(18).text("Member operational archive", { align: "center" });
     doc.moveDown(0.5);
     doc.fontSize(10).fillColor("#555").text(bundle.institutionName, { align: "center" });
     doc.fillColor("#000");
@@ -29,7 +29,7 @@ export async function exportGuestArchivePdf(bundle: GuestArchiveBundle): Promise
       doc.font("Helvetica").text(value || "—");
     };
 
-    doc.fontSize(12).font("Helvetica-Bold").text("Guest");
+    doc.fontSize(12).font("Helvetica-Bold").text("Member");
     doc.moveDown(0.3);
     line("Name", bundle.fullName);
     line("Access key", bundle.guestKey);

@@ -224,7 +224,7 @@ export function DoctorsCarousel({ doctors }: Props) {
         </View>
         <Text style={s.emptyTitle}>Your care team will appear here.</Text>
         <Text style={s.emptySub}>
-          Providers appear here once assigned to your service plan.
+          Hosts appear here once assigned to your timeline.
         </Text>
       </View>
     );

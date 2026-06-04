@@ -1,0 +1,47 @@
+Hello App Review Team,
+
+Thank you for reviewing Healory (Submission ID 6ebc252b-fb0f-44a4-a5b9-1417921983fe). We have addressed Guideline 2.1 and respectfully ask for re-evaluation under Guideline 5.1.1(ix) as a community and events app submitted by an individual developer—not a regulated health or clinical services app.
+
+Healory coordinates community timelines, scheduled events, and optional member photo uploads. It does not provide medical diagnosis, treatment, prescriptions, clinical care, visa processing, or insurance services.
+
+CHANGES IN BUILD 1.2.3
+• Removed sensitive document categories (passport, visa, travel insurance, consent forms) from the product and demo community data
+• Renamed flows to community language (Member / Host / Upload Types)
+• Fixed App Review demo sign-in (host credentials + member invite code device binding)
+• Primary category positioning: social / community coordination
+
+---
+
+Guideline 5.1.1(ix) — Organization account
+
+We understand your concern about sensitive data. Healory does not operate as a healthcare provider or regulated-services marketplace. The individual developer (Omer Yilmaz) publishes coordination software only; communities using the app are independent.
+
+We have removed identity- and travel-document upload types from the app experience. Remaining uploads are optional community media (e.g. profile photo, event snapshot). We respectfully request that the app be evaluated as a Social Networking / community events app appropriate for an individual Apple Developer account, or please advise which specific features still trigger 5.1.1(ix) so we can remove them.
+
+---
+
+Guideline 2.1 — Demo access (full functionality)
+
+Please use App Store Connect sign-in fields (username and password):
+
+  Email: manager@demo.com
+  Password: Manager123!
+
+In the app: open the "Host Login" tab and sign in. This unlocks the full host experience (members, events, upload types, settings).
+
+Optional member path (invite code—not a username or password):
+  1. Member Login tab
+  2. Invite code: PT-4S9WQ2U6
+  3. Continue
+
+Build 1.2.3 resets device binding for this demo code on any review device.
+
+Optional admin: admin@demo.com / Admin123!
+
+---
+
+We are happy to provide additional information or remove any remaining feature you consider out of scope for an individual developer account.
+
+Best regards,
+Omer Yilmaz
+Developer, Healory

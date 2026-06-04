@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { StatusBadge } from "@/components/StatusBadge";
-import { DISPLAY_TERMS } from "@/constants/terminology";
+import { getDisplayTerms } from "@/constants/terminology";
 
 interface UpcomingAppointment {
   id: string;
@@ -173,7 +173,7 @@ export default function OperationsScreen() {
                   },
                 ]}
               >
-                {t === "appointments" ? DISPLAY_TERMS.appointments : "Resources"}
+                {t === "appointments" ? getDisplayTerms().appointments : "Resources"}
               </Text>
             </Pressable>
           ))}
@@ -201,7 +201,7 @@ export default function OperationsScreen() {
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
                 <Text style={[styles.emptyText, { color: colors.textMuted, fontFamily: "PlusJakartaSans_400Regular" }]}>
-                  {`No upcoming ${DISPLAY_TERMS.appointments.toLowerCase()}`}
+                  {`No upcoming ${getDisplayTerms().appointments.toLowerCase()}`}
                 </Text>
               </View>
             )}
@@ -211,7 +211,7 @@ export default function OperationsScreen() {
         {activeTab === "resources" && (
           <View style={styles.resourcesGrid}>
             <ResourceCard
-              title={DISPLAY_TERMS.doctors}
+              title={getDisplayTerms().doctors}
               icon="person-outline"
               route="/(manager)/doctors"
               colors={colors}

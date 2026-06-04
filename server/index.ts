@@ -6,6 +6,7 @@ import { seedDatabase } from "./seed";
 import { startBillingScheduler } from "./billing/scheduler";
 import { startGuestRetentionScheduler } from "./modules/guestRetention/scheduler";
 import { requestIdMiddleware } from "./shared/middleware/requestId";
+import { reviewModeMiddleware } from "./shared/middleware/reviewMode";
 import { globalErrorHandler } from "./shared/middleware/errorHandler";
 import { logger } from "./shared/logger";
 import { GUEST_ACCESS_KEY_FORMAT_VERSION } from "./modules/guestAccessKey";
@@ -52,7 +53,10 @@ function setupCors(app: express.Application) {
     if (origin && (origins.has(origin) || isLocalDev)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Healory-Review-Mode",
+      );
       res.header("Access-Control-Allow-Credentials", "true");
     }
 
@@ -262,6 +266,7 @@ function setupErrorHandler(app: express.Application) {
     }),
   );
   app.use(requestIdMiddleware);
+  app.use(reviewModeMiddleware);
   setupBodyParsing(app);
   setupRequestLogging(app);
   configureExpoAndLanding(app);

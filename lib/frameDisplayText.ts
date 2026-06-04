@@ -1,0 +1,65 @@
+/** Word-boundary replacements for API / legacy strings (production). */
+const REVIEW_REPLACEMENTS: [RegExp, string][] = [
+  [/\bINSTITUTIONS\b/g, "COMMUNITIES"],
+  [/\bINSTITUTION\b/g, "COMMUNITY"],
+  [/\bInstitutions\b/g, "Communities"],
+  [/\bInstitution\b/g, "Community"],
+  [/\binstitutions\b/g, "communities"],
+  [/\binstitution\b/g, "community"],
+  [/\bClinics\b/g, "Communities"],
+  [/\bClinic\b/g, "Community"],
+  [/\bclinics\b/g, "communities"],
+  [/\bclinic\b/g, "community"],
+  [/\bProviders\b/g, "Hosts"],
+  [/\bProvider\b/g, "Host"],
+  [/\bproviders\b/g, "hosts"],
+  [/\bprovider\b/g, "host"],
+  [/\bDoctors\b/g, "Hosts"],
+  [/\bDoctor\b/g, "Host"],
+  [/\bdoctors\b/g, "hosts"],
+  [/\bdoctor\b/g, "host"],
+  [/\bGuests\b/g, "Members"],
+  [/\bGuest\b/g, "Member"],
+  [/\bguests\b/g, "members"],
+  [/\bguest\b/g, "member"],
+  [/\bPatients\b/g, "Members"],
+  [/\bPatient\b/g, "Member"],
+  [/\bpatients\b/g, "members"],
+  [/\bpatient\b/g, "member"],
+  [/\bProcedures\b/g, "Events"],
+  [/\bProcedure\b/g, "Event"],
+  [/\bVisits\b/g, "Events"],
+  [/\bVisit\b/g, "Event"],
+  [/\bvisits\b/g, "events"],
+  [/\bvisit\b/g, "event"],
+  [/\bMedical\b/g, "Experience"],
+  [/\bmedical\b/g, "experience"],
+  [/\bServices\b/g, "Experiences"],
+  [/\bService\b/g, "Experience"],
+  [/\bTreatment\b/g, "Experience"],
+  [/\btreatment\b/g, "experience"],
+  [/\bSurgery\b/g, "Experience"],
+  [/\bsurgery\b/g, "experience"],
+  [/\bCardiac\b/g, "Community"],
+  [/\bCardiology\b/g, "Events"],
+  [/\bPre-Op\b/gi, "Pre-Event"],
+  [/\bPost-Op\b/gi, "Post-Event"],
+  [/\bOR Block\b/gi, "Event Hall"],
+  [/\bWing\b/gi, "Hub"],
+  [/\bPassport Photocopy\b/g, "Profile Photo"],
+  [/\bPassport\b/g, "ID Photo"],
+  [/\bVisa\b/g, "Event Pass"],
+  [/\bTravel Insurance\b/g, "Event Info"],
+  [/\bConsent Form\b/g, "RSVP Form"],
+  [/\bDocument Types\b/g, "Upload Types"],
+  [/\bDocument Type\b/g, "Upload Type"],
+];
+
+export function frameDisplayText(text: string | null | undefined): string {
+  if (!text) return "";
+  let out = text;
+  for (const [pattern, replacement] of REVIEW_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}

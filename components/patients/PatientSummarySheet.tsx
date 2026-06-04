@@ -20,6 +20,7 @@ import { T, cardShadow } from "@/constants/adminTheme";
 import { copyToClipboard } from "@/lib/clipboard";
 import { StatusPill } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
+import { isReviewMode } from "@/lib/isReviewMode";
 import {
   getPatientSummary,
   deactivatePatient,
@@ -395,7 +396,7 @@ function SheetContent({
                   value={patient.nationality}
                 />
               )}
-              {patient.passportNo && (
+              {!isReviewMode() && patient.passportNo ? (
                 <>
                   {patient.nationality && <View style={styles.cardDivider} />}
                   <InfoRow
@@ -404,7 +405,7 @@ function SheetContent({
                     value={patient.passportNo}
                   />
                 </>
-              )}
+              ) : null}
               {patient.arrivalDate && (
                 <>
                   {(patient.nationality || patient.passportNo) && <View style={styles.cardDivider} />}

@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
+import { useT } from "@/hooks/useT";
 
 export const TRACKING_STEPS = [
   { key: "PRE_ARRIVAL",      label: "Pre-Arrival" },
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function GuestTrackingStepper({ currentStep, onUpdateStep, updating }: Props) {
+  const t = useT();
   const [optimisticStep, setOptimisticStep] = useState<string | null>(null);
 
   const displayStep = optimisticStep ?? currentStep;
@@ -46,7 +48,7 @@ export function GuestTrackingStepper({ currentStep, onUpdateStep, updating }: Pr
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Guest Plan</Text>
+        <Text style={styles.title}>{t.guestDetail.journeyTitle}</Text>
         {updating && (
           <Text style={styles.updatingLabel}>Updating…</Text>
         )}

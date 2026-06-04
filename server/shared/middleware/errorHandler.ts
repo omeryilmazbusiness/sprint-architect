@@ -3,6 +3,11 @@ import { ZodError } from "zod";
 import { AppError } from "../errors/AppError";
 import { ErrorCodes } from "../errors/ErrorCodes";
 import { logger } from "../logger";
+import { frameUserFacingText } from "../frameUserFacingText";
+
+function frameMsg(message: string): string {
+  return frameUserFacingText(message, true);
+}
 
 const SYS_USER_MSG =
   "Sistem şu anda bakım sürecindedir. Lütfen daha sonra tekrar deneyin.";
@@ -38,7 +43,7 @@ export function globalErrorHandler(
 
     res.status(err.statusCode).json({
       code: err.code,
-      message: err.userMessage,
+      message: frameMsg(err.userMessage),
       requestId,
       ...(err.details ? { details: err.details } : {}),
     });

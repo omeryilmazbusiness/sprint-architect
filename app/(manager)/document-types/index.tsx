@@ -272,9 +272,15 @@ function DocumentTypeCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const created = new Date(item.createdAt).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
+  const parsed = item.createdAt ? new Date(item.createdAt) : null;
+  const created =
+    parsed && !Number.isNaN(parsed.getTime())
+      ? parsed.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "—";
   return (
     <View style={[styles.card, cardShadow]}>
       <View style={styles.cardLeft}>

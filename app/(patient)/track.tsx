@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getApiUrl, queryClient as qc } from "@/lib/query-client";
 import { T, cardShadow } from "@/constants/adminTheme";
 import { useT } from "@/hooks/useT";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 import { useLanguage } from "@/context/LanguageContext";
 
 type InnerTab = "journey" | "documents";
@@ -239,7 +240,7 @@ function JourneyTab() {
 
   const hasClinicContact = patient?.clinicSupportPhone || patient?.clinicSupportEmail;
   const supportTitle = patient?.clinicName
-    ? `${patient.clinicName}${tt.clinicSupportSuffix}`
+    ? `${frameDisplayText(patient.clinicName)}${tt.clinicSupportSuffix}`
     : tt.clinicSupportFallback;
 
   return (

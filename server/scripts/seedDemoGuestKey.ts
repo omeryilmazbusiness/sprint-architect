@@ -16,14 +16,16 @@
 
 import { db } from "../db";
 import { clinics, patients } from "@shared/schema";
+import { authRepo } from "../repositories/authRepo";
 import { eq } from "drizzle-orm";
 import { departureRetentionFields } from "../modules/guestRetention";
 
 const DEMO_CLINIC_ID = "clinic-demo-001";
-const DEMO_CLINIC_NAME = "Demo Institution";
+/** Apple review demo — always community framing on prod. */
+const DEMO_CLINIC_NAME = "Demo Community";
 
 const DEMO_PATIENT_KEY = "PT-4S9WQ2U6";
-const DEMO_PATIENT_FULL_NAME = "Demo Guest";
+const DEMO_PATIENT_FULL_NAME = "Demo Member";
 const DEMO_DEPARTURE_DATE = "2099-12-31";
 
 (async () => {
@@ -98,7 +100,16 @@ const DEMO_DEPARTURE_DATE = "2099-12-31";
     console.log(`[seedDemoGuest] Created patient: ${DEMO_PATIENT_FULL_NAME}`);
   }
 
-  // ── 3. Summary ───────────────────────────────────────────────────────────
+  // ── 3. Clear device bindings (App Review may use multiple iPads) ───────────
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.patientKey, DEMO_PATIENT_KEY),
+  });
+  if (patient) {
+    await authRepo.revokeDevice(patient.id);
+    console.log(`[seedDemoGuest] Cleared device bindings for ${DEMO_PATIENT_KEY}`);
+  }
+
+  // ── 4. Summary ───────────────────────────────────────────────────────────
   console.log(``);
   console.log(`┌─────────────────────────────────────┐`);
   console.log(`│   Demo Guest Key ready               │`);
@@ -109,9 +120,9 @@ const DEMO_DEPARTURE_DATE = "2099-12-31";
   console.log(`└─────────────────────────────────────┘`);
   console.log(``);
   console.log(`How to test:`);
-  console.log(`  1. Open the app → Guest Login tab`);
-  console.log(`  2. Enter key: ${DEMO_PATIENT_KEY}`);
-  console.log(`  3. Tap Sign In`);
+  console.log(`  1. Open the app → Member Login tab`);
+  console.log(`  2. Enter invite code: ${DEMO_PATIENT_KEY}`);
+  console.log(`  3. Tap Continue`);
 
   process.exit(0);
 })();

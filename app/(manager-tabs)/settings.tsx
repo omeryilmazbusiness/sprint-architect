@@ -17,6 +17,7 @@ import { ManagerHeader } from "@/components/manager/ManagerHeader";
 import { Card, SectionHeader, ListRow, Divider, StatusPill } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/hooks/useT";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 
 interface ClinicInfo {
   id: string;
@@ -73,7 +74,7 @@ export default function ManagerSettingsScreen() {
                   <Ionicons name="business-outline" size={20} color={T.primary} />
                 </View>
                 <View style={styles.clinicInfo}>
-                  <Text style={styles.clinicName}>{clinic.name}</Text>
+                  <Text style={styles.clinicName}>{frameDisplayText(clinic.name)}</Text>
                   <Text style={styles.clinicId}>ID: {clinic.id.slice(0, 8)}…</Text>
                 </View>
                 <StatusPill status={clinic.status} small />

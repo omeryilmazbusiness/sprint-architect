@@ -79,7 +79,7 @@ export const patientRepo = {
       where: eq(clinics.id, input.clinicId),
       columns: { name: true },
     });
-    const institutionName = clinic?.name ?? "institution";
+    const institutionName = clinic?.name ?? "community";
 
     let patientKey: string;
     let attempts = 0;

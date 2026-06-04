@@ -7,7 +7,7 @@ export async function getGuestDetailUseCase(
 ): Promise<GuestDetailDTO> {
   const detail = await fetchGuestDetail(clinicId, patientId);
   if (!detail) {
-    throw new AppError("NOT_FOUND", "Guest not found", 404);
+    throw new AppError("NOT_FOUND", "Member not found", 404);
   }
   return detail;
 }

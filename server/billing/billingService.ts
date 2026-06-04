@@ -285,8 +285,8 @@ export async function markOverdueInvoicesAsUnpaid(): Promise<void> {
 
     notificationService.emitAdminNotification({
       type: "CLINIC_SUSPENDED",
-      title: "Institution Suspended",
-      body: `An institution has been suspended due to ${clinicOverdueInvoices.length} unpaid invoice(s).`,
+      title: "Community Paused",
+      body: `A community has been paused due to ${clinicOverdueInvoices.length} unpaid invoice(s).`,
       severity: "CRITICAL",
       relatedId: clinicId,
       relatedType: "clinic",

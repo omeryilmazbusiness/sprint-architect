@@ -23,7 +23,7 @@ export class SendPrePurgeArchiveEmail {
   async execute(input: SendPrePurgeArchiveEmailInput): Promise<{ sent: boolean; to?: string }> {
     const bundle = await this.repo.loadArchiveBundle(input.patientId, input.clinicId);
     if (!bundle) {
-      throw new AppError(ErrorCodes.NOT_FOUND, "Guest not found or not scheduled for removal", 404);
+      throw new AppError(ErrorCodes.NOT_FOUND, "Member not found or not scheduled for removal", 404);
     }
 
     const to = await this.repo.resolveManagerRecipientEmail(input.clinicId);

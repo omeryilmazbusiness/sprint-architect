@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { T, cardShadow } from "@/constants/adminTheme";
 import type { UnifiedEntity } from "@/lib/api/adminUsers";
-import { DISPLAY_TERMS } from "@/constants/terminology";
+import { getDisplayTerms } from "@/constants/terminology";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 
 function entityColor(type: string): string {
   if (type === "PATIENT") return T.accent;
@@ -12,7 +13,7 @@ function entityColor(type: string): string {
 }
 
 function entityLabel(type: string): string {
-  if (type === "PATIENT") return DISPLAY_TERMS.patient;
+  if (type === "PATIENT") return getDisplayTerms().patient;
   if (type === "ADMIN") return "Admin";
   return "Manager";
 }
@@ -114,7 +115,7 @@ export function UserListRowCard({
         <View style={styles.chips}>
           {item.clinicName ? (
             <Chip
-              label={item.clinicName}
+              label={frameDisplayText(item.clinicName)}
               color={T.accent}
               bg={T.accent + "12"}
             />

@@ -15,6 +15,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LOCALE_FLAGS } from "@/i18n";
 import { LanguageSelectorSheet } from "@/components/admin/LanguageSelectorSheet";
 import { BrandLogo } from "@/components/common/BrandLogo";
+import { frameDisplayText } from "@/lib/frameDisplayText";
 
 interface ManagerHeaderProps {
   title: string;
@@ -77,7 +78,9 @@ export function ManagerHeader({
           <View style={styles.titleBlock}>
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
             {subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {frameDisplayText(subtitle)}
+              </Text>
             ) : null}
           </View>
 

@@ -114,7 +114,7 @@ export const guestRetentionReadRepo: IGuestRetentionReadRepo = {
       }));
 
     return {
-      institutionName: clinic?.name ?? "Institution",
+      institutionName: clinic?.name ?? "Community",
       guestKey: patient.patientKey,
       fullName: patient.fullName,
       email: patient.email,

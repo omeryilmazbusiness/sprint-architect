@@ -34,6 +34,7 @@
     "db:migrate": "drizzle-kit push",
     "db:seed": "tsx server/seed.ts",
     "db:seed:demo-guest": "tsx server/scripts/seedDemoGuestKey.ts",
+    "db:sanitize:prod-uploads": "tsx server/scripts/sanitizeCommunityUploadTypesProd.ts",
     "prod:ready:check": "bash scripts/prod-ready-check.sh",
     "test:db:reset": "NODE_ENV=test tsx server/scripts/resetTestDb.ts",
     "test:db:minimal-reset": "NODE_ENV=test DATABASE_URL=${DATABASE_URL_TEST:-$DATABASE_URL} tsx server/scripts/resetTestDbMinimal.ts",
