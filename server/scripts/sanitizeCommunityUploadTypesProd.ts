@@ -5,7 +5,7 @@
  */
 import { db } from "../db";
 import { clinics, documentTypes, patientDocuments } from "@shared/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import {
   COMMUNITY_UPLOAD_TYPE_PRESETS,
   isSensitiveDocumentType,
@@ -44,9 +44,12 @@ async function main() {
   }
 
   for (const preset of COMMUNITY_UPLOAD_TYPE_PRESETS) {
-    const exists = rows.find(
-      (r) => r.code === preset.code || r.name.toLowerCase() === preset.name.toLowerCase(),
-    );
+    const exists = await db.query.documentTypes.findFirst({
+      where: and(
+        eq(documentTypes.clinicId, DEMO_CLINIC_ID),
+        eq(documentTypes.code, preset.code),
+      ),
+    });
     if (!exists) {
       await db.insert(documentTypes).values({
         clinicId: DEMO_CLINIC_ID,

@@ -66,26 +66,18 @@ const DEMO_DEPARTURE_DATE = "2099-12-31";
   });
 
   if (existingPatient) {
-    const needsUpdate =
-      existingPatient.status !== "ACTIVE" ||
-      existingPatient.clinicId !== DEMO_CLINIC_ID;
-
-    if (needsUpdate) {
-      await db
-        .update(patients)
-        .set({
-          status: "ACTIVE",
-          clinicId: DEMO_CLINIC_ID,
-          departureDate: DEMO_DEPARTURE_DATE,
-          ...departureRetentionFields(DEMO_DEPARTURE_DATE),
-        })
-        .where(eq(patients.patientKey, DEMO_PATIENT_KEY));
-      console.log(`[seedDemoGuest] Updated existing patient → status=ACTIVE`);
-    } else {
-      console.log(
-        `[seedDemoGuest] Patient already exists with correct status. Nothing to do.`
-      );
-    }
+    await db
+      .update(patients)
+      .set({
+        fullName: DEMO_PATIENT_FULL_NAME,
+        status: "ACTIVE",
+        clinicId: DEMO_CLINIC_ID,
+        departureDate: DEMO_DEPARTURE_DATE,
+        passportNo: null,
+        ...departureRetentionFields(DEMO_DEPARTURE_DATE),
+      })
+      .where(eq(patients.patientKey, DEMO_PATIENT_KEY));
+    console.log(`[seedDemoGuest] Updated demo member (name, active, no passport)`);
   } else {
     await db.insert(patients).values({
       clinicId: DEMO_CLINIC_ID,

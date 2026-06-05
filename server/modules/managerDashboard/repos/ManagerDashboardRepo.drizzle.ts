@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import type { IManagerDashboardRepo, ManagerDashboardData } from "./ManagerDashboardRepo";
 import type { DashboardAppt, PendingGuestDocSummary } from "../schemas/managerDashboard.schemas";
+import { isSensitiveDocumentType } from "@shared/communityUploadTypes";
 
 function mapAppt(a: {
   id: string;
@@ -193,6 +194,9 @@ export class DrizzleManagerDashboardRepo implements IManagerDashboardRepo {
         });
       }
       const entry = byPatient.get(pid)!;
+      if (row.documentType?.name && isSensitiveDocumentType(row.documentType.name, null)) {
+        continue;
+      }
       if (row.status === "ASSIGNED") {
         entry.pending += 1;
         if (row.documentType?.name) {

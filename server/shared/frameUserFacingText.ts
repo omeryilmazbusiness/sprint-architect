@@ -96,11 +96,14 @@ export function framePatientDashboardResponse<T extends Record<string, unknown>>
           }
         : a.doctor,
     })),
-    doctors: p.doctors?.map((d) => ({
-      ...d,
-      specialty: f(d.specialty, true),
-      bio: f(d.bio, true),
-    })),
+    doctors: p.doctors?.map((d) => {
+      const { diplomaUrl: _d, ...rest } = d as { diplomaUrl?: string | null };
+      return {
+        ...rest,
+        specialty: f(d.specialty, true),
+        bio: f(d.bio, true),
+      };
+    }),
     documents: p.documents
       ?.filter(
         (d) =>
@@ -139,4 +142,44 @@ export function frameGuestDetailResponse<T extends Record<string, unknown>>(
     typeName: doc.typeName ? f(doc.typeName, true) ?? doc.typeName : doc.typeName,
   }));
   return { ...detail, info, documents } as T;
+}
+
+/** Manager dashboard — frame labels; drop sensitive pending upload names. */
+export function frameManagerDashboardResponse<T extends Record<string, unknown>>(
+  payload: T,
+  reviewMode: boolean,
+): T {
+  if (!reviewMode) return payload;
+  const d = payload as {
+    pendingGuestDocs?: Array<{
+      patientName?: string;
+      pendingDocNames?: string[];
+    }>;
+    todayAppointments?: Array<{ title?: string; patientName?: string }>;
+    monthAppointments?: Array<{ title?: string; patientName?: string }>;
+    upcomingNext7Days?: number;
+  };
+  const mapAppt = (a: { title?: string; patientName?: string }) => ({
+    ...a,
+    title: a.title ? f(a.title, true) ?? a.title : a.title,
+    patientName: a.patientName
+      ? f(a.patientName.replace(/Demo Guest/i, "Demo Member"), true) ?? a.patientName
+      : a.patientName,
+  });
+  return {
+    ...payload,
+    pendingGuestDocs: d.pendingGuestDocs
+      ?.map((row) => ({
+        ...row,
+        patientName: row.patientName
+          ? f(row.patientName.replace(/Demo Guest/i, "Demo Member"), true) ?? row.patientName
+          : row.patientName,
+        pendingDocNames: row.pendingDocNames
+          ?.filter((n) => !isSensitiveDocumentType(n, null))
+          .map((n) => f(n, true) ?? n),
+      }))
+      .filter((row) => (row.pendingDocNames?.length ?? 0) > 0),
+    todayAppointments: d.todayAppointments?.map(mapAppt),
+    monthAppointments: d.monthAppointments?.map(mapAppt),
+  } as T;
 }
