@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, setSystemErrorHandler } from "@/lib/query-client";
 import { AuthProvider } from "@/context/AuthContext";
@@ -91,34 +92,39 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <KeyboardProvider>
-            <LanguageProvider>
-              <SystemErrorProvider>
-                <NotificationInit />
-                <SystemErrorBridge />
-                <AuthProvider>
-                  <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(patient)" />
-                    <Stack.Screen name="(guest)" />
-                    <Stack.Screen name="(manager)" />
-                    <Stack.Screen name="(manager-tabs)" />
-                    <Stack.Screen name="(admin)" />
-                  </Stack>
-                </AuthProvider>
-                <MaintenanceBottomSheet />
-                {/* Cinematic welcome overlay — fades out after startup */}
-                <StartupScreen />
-              </SystemErrorProvider>
-            </LanguageProvider>
-          </KeyboardProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary
+        onError={(error, stack) => {
+          console.error("[ErrorBoundary]", error.message, stack);
+        }}
+      >
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <KeyboardProvider>
+              <LanguageProvider>
+                <SystemErrorProvider>
+                  <NotificationInit />
+                  <SystemErrorBridge />
+                  <AuthProvider>
+                    <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+                      <Stack.Screen name="index" />
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen name="(auth)" />
+                      <Stack.Screen name="(patient)" />
+                      <Stack.Screen name="(guest)" />
+                      <Stack.Screen name="(manager)" />
+                      <Stack.Screen name="(manager-tabs)" />
+                      <Stack.Screen name="(admin)" />
+                    </Stack>
+                  </AuthProvider>
+                  <MaintenanceBottomSheet />
+                  <StartupScreen />
+                </SystemErrorProvider>
+              </LanguageProvider>
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

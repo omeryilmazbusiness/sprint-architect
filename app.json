@@ -2,7 +2,7 @@
   "expo": {
     "name": "Healory",
     "slug": "healthtour",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "healory",
@@ -14,7 +14,7 @@
       "backgroundColor": "#F5F7FA"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.healory.healthtour",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Healory uses notifications to keep you updated on your account and activity."
@@ -51,7 +51,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true,
+      "reactCompiler": false,
       "tsconfigPaths": true
     }
   }

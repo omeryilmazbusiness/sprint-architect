@@ -1,0 +1,37 @@
+=== REVIEW NOTES — Healory 1.2.5 (iPad fix) ===
+
+Build 1.2.5 fixes Guideline 2.1(a): app crashed on iPad at launch (missing SafeAreaProvider).
+iPad is now fully supported (supportsTablet: true).
+
+FULL REVIEW ACCESS:
+  Username: manager@demo.com
+  Password: Manager123!
+  In app: Host Login tab → sign in.
+
+Optional member: Member Login → PT-4S9WQ2U6
+Optional admin: admin@demo.com / Admin123!
+
+Healory is a community & events app (individual developer). No medical or identity-document data.
+
+Contact: omerfarukyilmazrbusiness@gmail.com
+
+=== RESOLUTION CENTER REPLY ===
+
+Hello App Review Team,
+
+Thank you for reporting Guideline 2.1(a) on iPad (build 1.2.4).
+
+We identified and fixed the launch crash: the root layout was missing SafeAreaProvider, which caused a render error on iPad when StartupScreen and other screens called useSafeAreaInsets().
+
+Build 1.2.5 changes:
+• Added SafeAreaProvider at app root
+• Enabled native iPad support (supportsTablet: true)
+• Disabled experimental React Compiler for production stability
+
+Please test on iPad with:
+  Host Login → manager@demo.com / Manager123!
+
+We believe this resolves the "Something went wrong" screen on iPad Air.
+
+Best regards,
+Omer Yilmaz
